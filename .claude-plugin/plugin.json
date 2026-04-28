@@ -1,7 +1,7 @@
 {
   "name": "ck-code",
-  "description": "Spec-driven workflow plugin: design -> plan -> build -> ship, with auto-generated per-project experts and tech guides. Skills, agents, and commands.",
-  "version": "0.1.0",
+  "description": "Spec-driven workflow plugin: design -> plan -> build -> ship. Transforms specs into architecture docs, epics/stories, and auto-generated expert and language-guide skills tailored to your tech stack.",
+  "version": "1.0.0",
   "author": {
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"

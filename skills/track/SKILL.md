@@ -1,8 +1,10 @@
 ---
 name: track
 description: >
-  Show project progress dashboard. Tracks story status, suggests next
-  story to implement, displays epic completion percentages.
+  Use to view project progress and decide what to work on next. Default shows
+  full dashboard with statuses (TODO, IN PROGRESS, DONE, blocked). The 'next'
+  variant suggests the next unblocked story. The 'progress' variant shows epic
+  completion percentages and velocity. Run before /ck-code:build to pick a story.
 argument-hint: "[status|next|progress]"
 ---
 

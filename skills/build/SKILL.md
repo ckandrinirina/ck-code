@@ -1,9 +1,10 @@
 ---
 name: build
 description: >
-  Implement a story using TDD (red-green-refactor) with SOLID principles.
-  Auto-detects expert and guide skills. Runs QA validation with dev-QA loop.
-  Tracks everything in the story file. Use after /ck-code:plan to implement stories.
+  Use when you have a story file ready and need to implement it via TDD
+  (red-green-refactor) with SOLID principles. Auto-loads expert and guide
+  skills based on file types. Runs a dev-QA validation loop (max 3 iterations)
+  and tracks all progress in the story file. Requires /ck-code:plan to have run.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 ---
@@ -11,155 +12,96 @@ disable-model-invocation: true
 # Implement Story — TDD Story Implementation Orchestrator
 
 Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
-and automated QA validation. Orchestrates the full cycle: plan → test → implement → refactor → QA → commit.
+and automated QA validation. Cycle: plan → test → implement → refactor → QA → commit.
 
----
+For example dialogues emitted at each phase, see [references/examples.md](references/examples.md).
+For a worked TDD walkthrough (SOLID templates, test mappings, quality checks), see [references/tdd-walkthrough.md](references/tdd-walkthrough.md).
+For story-file templates appended at each phase, see [references/story-template.md](references/story-template.md).
 
 ## INPUT
 
-`$ARGUMENTS` is an optional path to a story markdown file.
-
-**If `$ARGUMENTS` is provided:** Read and validate that story file.
-
-**If `$ARGUMENTS` is empty:** Enter interactive story selection (see Phase 1).
+`$ARGUMENTS` is an optional path to a story markdown file. If provided: read and
+validate. If empty: enter interactive selection (Phase 1.2).
 
 ---
 
 ## PHASE 1: STORY SELECTION
 
-**Goal:** Identify which story to implement.
-
 ### 1.1 If Story Path Provided
 
-1. Read the story file at `$ARGUMENTS` using the Read tool
-2. Validate it has the expected format (title, description, acceptance criteria, status)
-3. If the file doesn't exist or isn't a valid story, tell the user and stop
+Read the story at `$ARGUMENTS`. Validate it has the expected format (title,
+description, acceptance criteria, status). If invalid or missing, tell the user and stop.
 
 ### 1.2 If No Story Path (Interactive)
 
-1. Use Glob to find all story files: `tasks/*/epics/*/stories/*.md`
-2. Read each story file's header to extract: title, status, size, dependencies
-3. Filter to only `Status: TODO` stories
-4. Check dependencies — remove stories whose "Blocked by" stories are not `DONE`
-5. Sort remaining stories by:
-   - Epic number (lower first)
-   - Story number within epic (lower first)
-   - Size (S before M before L before XL)
-6. Present the list:
-
-```
-## Stories Ready for Implementation
-
-| # | Story | Epic | Size | Dependencies |
-|---|-------|------|------|-------------|
-| 1 | [01-01] Setup server scaffold | Foundation | M | None |
-| 2 | [01-02] gRPC service definition | Foundation | S | None |
-| 3 | [02-01] Plugin scanner | VST/AU Hosting | L | Blocked by 01-01 (done) |
-
-Which story to implement? (enter number or path)
-```
-
-If no stories are ready, tell the user: "No unblocked TODO stories found. Check `tasks/` or run `/ck-code:plan` to generate stories."
+1. Glob `tasks/*/epics/*/stories/*.md`
+2. Read each header to extract: title, status, size, dependencies
+3. Filter to `Status: TODO` only
+4. Remove stories whose "Blocked by" stories are not `DONE`
+5. Sort by: epic number, then story number, then size (S < M < L < XL)
+6. Present as a table (see examples). If no stories are ready, tell the user
+   to check `tasks/` or run `/ck-code:plan`.
 
 ### 1.3 Load Story Context
 
-Once a story is selected:
-
-1. Read the full story file
-2. Extract all structured fields:
-   - **Title** and **Description**
-   - **Acceptance Criteria** (the checklist items)
-   - **Technical Notes**
-   - **Files to Create/Modify** (the action table)
-   - **Dependencies** (blocked by / blocks)
-   - **Epic** reference
-   - **Size** (S/M/L/XL)
-3. Read the parent `EPIC.md` for broader context
-4. Read `ROADMAP.md` if it exists, to understand where this story fits
+Once a story is selected, read the full file and extract all structured fields:
+**Title**, **Description**, **Acceptance Criteria** (the checklist items),
+**Technical Notes**, **Files to Create/Modify** (the action table),
+**Dependencies** (blocked by / blocks), **Epic** reference, **Size** (S/M/L/XL).
+Then read the parent `EPIC.md` and `ROADMAP.md` (if it exists) for broader context.
 
 ### 1.4 Detect Linked GitHub Issues
 
-Check if this story has a corresponding GitHub Issue:
-
-1. Search for story issues matching `[EE-SS]` in the title:
-   ```bash
-   gh issue list --label "story" --state open --json number,title
-   ```
-2. Search for the parent epic issue:
-   ```bash
-   gh issue list --label "epic" --state open --json number,title
-   ```
-3. If found, store the issue numbers for later use in `/ck-code:ship`
-4. Present: "Linked GitHub Issue: #[number] — [title]" (or "No linked issue found")
-
-This context is used during implementation to reference the issue and during
-`/ck-code:ship` to auto-close or comment on the issue.
+Search for story and epic issues, store the numbers for `/ck-code:ship`:
+```bash
+gh issue list --label "story" --state open --json number,title
+gh issue list --label "epic"  --state open --json number,title
+```
+Present the linked issue (or "No linked issue found").
 
 ### 1.4 Update Story Status
 
-Edit the story file to change status:
-```
-> **Status:** TODO
-```
-→
-```
-> **Status:** IN PROGRESS
-```
+Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See
+[references/story-template.md](references/story-template.md) for the exact transition.
 
 ---
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING
 
-**Goal:** Automatically determine which expert and guide skills to invoke.
-
 ### 2.1 Read Project Architecture
 
-Read ALL of these files from `docs/architecture/` (if they exist) — do not skip any:
-- `tech-stack.md` — know what technologies are used
-- `folder-structure.md` — know where to put files
-- `components.md` — understand system components
-- `api-contracts.md` — understand API interfaces
-- `database-schema.md` — understand data models
-- `dev-guide.md` — know how to build, run, test
-
-Also check for `ROADMAP.md` at the project root.
+Read ALL of these from `docs/architecture/` (if they exist) — do not skip any:
+`tech-stack.md`, `folder-structure.md`, `components.md`, `api-contracts.md`,
+`database-schema.md`, `dev-guide.md`. Also check `ROADMAP.md` at the project root.
 
 ### 2.2 Detect Required Expert Skills
 
-Analyze the story's "Files to Create/Modify" and "Technical Notes" to determine which experts are needed:
+Analyze the story's "Files to Create/Modify" and "Technical Notes":
 
 ```
-DETECTION RULES:
+File path                                     → Expert
+mobile/, app/, components/, screens/, ui/     → expert-frontend
+server/, api/, backend/, services/            → expert-backend
+.test., .spec., __tests__/                    → expert-qa (always loaded)
+docker/, .github/, ci/, deploy/               → expert-devops
+DB migrations, .sql, schema changes           → expert-backend
 
-Files in mobile/, app/, components/, screens/, ui/ → expert-frontend
-Files in server/, api/, backend/, services/ → expert-backend
-Files with .test., .spec., __tests__/ → expert-qa (always loaded anyway)
-Files in docker/, .github/, ci/, deploy/ → expert-devops
-Database migrations, .sql files, schema changes → expert-backend
-
-ALSO CHECK Technical Notes for keywords:
-"frontend", "UI", "component", "screen" → expert-frontend
-"API", "endpoint", "server", "handler" → expert-backend
-"deploy", "CI", "docker", "pipeline" → expert-devops
+Technical Notes keyword                       → Expert
+"frontend"/"UI"/"component"/"screen"          → expert-frontend
+"API"/"endpoint"/"server"/"handler"           → expert-backend
+"deploy"/"CI"/"docker"/"pipeline"             → expert-devops
 ```
 
-**expert-qa is ALWAYS loaded regardless of story type** — it reviews all implementation for test quality and edge cases. Do not skip it.
+**expert-qa is ALWAYS loaded regardless of story type** — it reviews implementation
+for test quality and edge cases. Do not skip it.
 
 ### 2.3 Detect Required Guide Skills
 
-Based on file extensions in "Files to Create/Modify":
-
-```
-.rs → guide-rust
-.cpp, .h, .hpp → guide-cpp (also check for guide-juce if JUCE is used)
-.ts, .tsx → guide-typescript
-.tsx + mobile/ → guide-react-native
-.py → guide-python
-.go → guide-go
-.java, .kt → guide-java
-.swift → guide-swift
-+ any framework-specific guides (guide-axum, guide-juce, etc.)
-```
+By file extension in "Files to Create/Modify":
+`.rs` → guide-rust; `.cpp/.h/.hpp` → guide-cpp (+ guide-juce if JUCE);
+`.ts/.tsx` → guide-typescript; `.tsx` in `mobile/` → guide-react-native;
+`.py` → guide-python; `.go` → guide-go; `.java/.kt` → guide-java;
+`.swift` → guide-swift; plus any framework-specific guides (guide-axum, guide-juce, etc.).
 
 ### 2.4 Load Skills & Warn
 
@@ -167,28 +109,24 @@ Based on file extensions in "Files to Create/Modify":
 ```bash
 find .claude/skills -type f -name "*.md" | sort
 ```
-This is the authoritative list of available skills. Never claim a skill is missing without running this first. Skills live in subdirectories (`experts/`, `guides/`) that are not surfaced by the Skill tool's system listing.
+This is the authoritative list. Never claim a skill is missing without running
+this first. Skills live in subdirectories (`experts/`, `guides/`) that are not
+surfaced by the Skill tool's system listing.
 
-**Step 2 — Load each detected skill:**
-- Try the `Skill` tool first (e.g., `Skill("experts/backend")`)
-- If the Skill tool returns an error, fall back to `Read` on the SKILL.md file directly (e.g., `Read(".claude/skills/experts/backend/SKILL.md")`) and apply the guidance manually
-- Always load `experts/qa/SKILL.md` unconditionally
+**Step 2 — Load each detected skill:** Try `Skill` tool first
+(e.g., `Skill("experts/backend")`); on error, fall back to
+`Read(".claude/skills/experts/backend/SKILL.md")` and apply manually.
+Always load `experts/qa/SKILL.md` unconditionally.
 
-**Step 3 — Warn about truly missing skills:**
-If a skill was expected but does NOT appear in the filesystem check output:
-```
-Missing recommended skills:
-- guide-rust (not found — run /ck-code:team to create it)
-
-Continue without these? YES / GENERATE FIRST
-```
-If GENERATE FIRST → tell user to run `/ck-code:team` and come back
+**Step 3 — Warn about truly missing skills:** If a skill was expected but does NOT
+appear in the filesystem check output, ask `Continue without these? YES / GENERATE FIRST`
+(see examples). If GENERATE FIRST → tell user to run `/ck-code:team` and come back.
 
 ---
 
 ## PHASE 3: IMPLEMENTATION PLANNING
 
-**Goal:** Create a detailed, SOLID-compliant implementation plan before writing any code.
+Create a SOLID-compliant plan **before writing any code.**
 
 ### 3.1 Research (if needed)
 
@@ -205,109 +143,41 @@ Review the acceptance criteria. If any are vague or incomplete:
 
 ### 3.3 Design with SOLID
 
-Plan the implementation applying each SOLID principle:
-
-```
-## SOLID Analysis for This Story
-
-**S — Single Responsibility:**
-- [Each new file/class and its ONE responsibility]
-
-**O — Open/Closed:**
-- [Existing code to extend via abstractions, NOT modify]
-- [Extension points to create for future flexibility]
-
-**L — Liskov Substitution:**
-- [Any new types must be substitutable for their parent types]
-
-**I — Interface Segregation:**
-- [Keep interfaces focused — no methods the caller doesn't need]
-
-**D — Dependency Inversion:**
-- [High-level modules depend on abstractions, not concrete implementations]
-- [Where to inject dependencies]
-```
+Plan the implementation applying each SOLID principle (S, O, L, I, D). Fill out
+the SOLID Analysis template in [references/tdd-walkthrough.md](references/tdd-walkthrough.md)
+for: single responsibility per file/class, open/closed extension points, Liskov-substitutable
+new types, focused interfaces, and dependency inversion via injection. Every
+principle must be addressed before moving on.
 
 ### 3.4 Create Subtasks
 
-Break the work into ordered subtasks using TaskCreate:
+Break the work into ordered subtasks using TaskCreate (template in
+[references/tdd-walkthrough.md](references/tdd-walkthrough.md)). The fixed
+ordering and dependencies are mandatory:
 
-```
-Typical task breakdown:
-
-1. "Write tests for [story title]"
-   - activeForm: "Writing tests for [story title]"
-   
-2. "Implement [component/module A]"
-   - activeForm: "Implementing [component A]"
-
-3. "Implement [component/module B]" (if applicable)
-   - activeForm: "Implementing [component B]"
-
-4. "Refactor [story title] implementation"
-   - activeForm: "Refactoring [story title]"
-
-5. "QA validation for [story title]"
-   - activeForm: "Running QA for [story title]"
-
-6. "Complete [story title] — update docs and commit"
-   - activeForm: "Completing [story title]"
-```
-
-Set dependencies: implementation blocked by tests, refactor blocked by implementation,
-QA blocked by refactor, completion blocked by QA.
+- tests → implementation → refactor → QA → completion
+- Implementation is blocked by tests; refactor is blocked by implementation;
+  QA is blocked by refactor; completion is blocked by QA.
 
 ### 3.5 Update Story File
 
-**Do this BEFORE writing any implementation code.** The story file is the source of truth — the plan must exist in it before work begins, not appended after the fact.
+**Do this BEFORE writing any implementation code.** The story file is the source
+of truth — the plan must exist in it before work begins, not appended after the fact.
 
-Append the implementation plan to the story file using Edit:
-
-```markdown
-
----
-
-## Implementation Plan
-
-**Planned:** [date]
-**Skills loaded:** [list of expert/guide skills detected]
-**SOLID approach:** [1-line summary]
-
-### Subtasks
-1. [ ] Write tests ([count] tests planned)
-2. [ ] Implement [component A]
-3. [ ] Implement [component B]
-4. [ ] Refactor for SOLID compliance
-5. [ ] QA validation
-6. [ ] Update docs and commit
-
-### Design Notes
-[Key design decisions, patterns chosen, abstractions planned]
-```
+Append the Implementation Plan block (template in
+[references/story-template.md](references/story-template.md)) to the story file using Edit.
 
 ### 3.6 Confirm Plan
 
-Present the plan to the user:
-
-```
-## Implementation Plan for [Story Title]
-
-**Tests to write:** [count] (from [count] acceptance criteria)
-**Files to create:** [list]
-**Files to modify:** [list]
-**SOLID approach:** [summary]
-**Estimated subtasks:** [count]
-
-Proceed with TDD implementation? YES / ADJUST
-```
-
-Wait for user confirmation.
+Present the plan to the user (template in
+[references/examples.md](references/examples.md)) and **wait for user confirmation**
+(`YES / ADJUST`) before proceeding.
 
 ---
 
 ## PHASE 4: TDD — WRITE TESTS FIRST (RED PHASE)
 
-**Goal:** Write failing tests that define the expected behavior before any implementation.
+Write failing tests that define expected behavior **before any implementation.**
 
 ### 4.1 Start Test Task
 
@@ -315,26 +185,16 @@ Mark the test-writing task as `in_progress` using TaskUpdate.
 
 ### 4.2 Determine Test Structure
 
-- Read existing test files in the project to understand conventions:
-  - Test file naming (`.test.ts`, `_test.rs`, `test_*.py`, etc.)
-  - Test file location (co-located, `__tests__/`, `tests/`, etc.)
-  - Test framework (Jest, cargo test, pytest, Catch2, etc.)
-  - Assertion style
-  - Mock/stub patterns
-- Follow the patterns from guide skills if loaded
+Read existing test files to learn project conventions: file naming
+(`.test.ts`, `_test.rs`, `test_*.py`), location (co-located, `__tests__/`, `tests/`),
+framework (Jest, cargo test, pytest, Catch2), assertion style, mock/stub patterns.
+Follow the patterns from loaded guide skills.
 
 ### 4.3 Write Tests from Acceptance Criteria
 
-For EACH acceptance criterion in the story, write at minimum one test:
-
-```
-Acceptance Criterion: "WebSocket server accepts connections on port 8765"
-→ Test: test_server_accepts_websocket_connection_on_configured_port()
-
-Acceptance Criterion: "Messages are serialized in MessagePack format"
-→ Test: test_message_serialization_uses_messagepack()
-→ Test: test_message_deserialization_handles_invalid_msgpack()
-```
+For EACH acceptance criterion in the story, write at minimum one test. Worked
+example mapping criteria → test names is in
+[references/tdd-walkthrough.md](references/tdd-walkthrough.md).
 
 Also add tests for:
 - **Edge cases** — empty input, boundary values, max limits
@@ -343,35 +203,18 @@ Also add tests for:
 
 ### 4.4 Run Tests — Confirm RED
 
-Run the test suite:
-```bash
-# Detect and run the appropriate test command
-# (cargo test, npm test, pytest, etc.)
-```
+Run the test suite (cargo test, npm test, pytest, etc.).
+**Expected result: ALL new tests FAIL.** If any new test passes without
+implementation, the test is likely wrong (testing something that already exists
+or is trivially true) — review and fix.
 
-**Expected result: ALL new tests FAIL.**
-
-If any new test passes without implementation → the test is likely wrong (testing
-something that already exists or is trivially true). Review and fix.
-
-Present:
-```
-## RED Phase Complete
-
-**Tests written:** [count]
-**All failing:** YES (expected)
-**Test output:** [summary of failures]
-
-Moving to GREEN phase — implementing to make tests pass.
-```
-
-Mark test task as `completed`.
+Present the RED Phase Complete block (see examples). Mark test task as `completed`.
 
 ---
 
 ## PHASE 5: IMPLEMENTATION (GREEN PHASE)
 
-**Goal:** Write the minimum code necessary to make ALL tests pass.
+Write the **minimum** code necessary to make ALL tests pass.
 
 ### 5.1 Start Implementation Tasks
 
@@ -379,124 +222,69 @@ Mark the first implementation task as `in_progress`.
 
 ### 5.2 Implement
 
-Follow this order:
-1. Create new files listed in the story's "Files to Create/Modify"
-2. Modify existing files as specified
-3. After each significant change, run the tests
-4. Stop as soon as all tests pass — don't over-engineer
+Order: (1) create new files from the story's "Files to Create/Modify";
+(2) modify existing files as specified; (3) run tests after each significant
+change; (4) stop as soon as all tests pass — don't over-engineer.
 
 **Implementation rules:**
 - Follow SOLID principles from the Phase 3 plan
-- Follow the loaded guide skills' best practices
-- Follow the loaded expert skills' coding standards
+- Follow loaded guide skills' best practices and expert skills' coding standards
 - Reuse existing code — check `docs/architecture/` and scan existing files
 - Write the simplest code that passes the tests
 - Add inline comments only where logic isn't self-evident
 
 ### 5.3 Run Tests — Confirm GREEN
 
-Run the full test suite:
-```bash
-# Run test command
-```
+Run the full test suite. **Expected: ALL tests PASS.** If tests fail, read the
+output and fix the implementation (NOT the tests, unless the test itself has a
+bug). Re-run until green.
 
-**Expected result: ALL tests PASS.**
-
-If tests still fail:
-- Read the failure output
-- Fix the implementation (not the tests, unless the test itself has a bug)
-- Re-run until green
-
-Present:
-```
-## GREEN Phase Complete
-
-**Tests passing:** [X]/[X] (all green)
-**Files created:** [list]
-**Files modified:** [list]
-
-Moving to REFACTOR phase.
-```
-
-Mark implementation task(s) as `completed`.
+Present the GREEN Phase Complete block (see examples). Mark implementation task(s) as `completed`.
 
 ---
 
 ## PHASE 6: REFACTOR PHASE
 
-**Goal:** Improve code quality without changing behavior. Tests must stay green.
+Improve code quality without changing behavior. **Tests must stay green throughout.**
 
 ### 6.1 SOLID Review
 
-Review all new/modified code against SOLID:
-
-```
-## SOLID Compliance Check
-
-S — Single Responsibility:
-  [x] Each function does one thing
-  [x] Each file/class has one reason to change
-  [ ] ISSUE: [function X] handles both [A] and [B] → split
-
-O — Open/Closed:
-  [x] Extended via abstractions, not modification
-  
-L — Liskov Substitution:
-  [x] Subtypes are substitutable
-
-I — Interface Segregation:
-  [x] No fat interfaces
-
-D — Dependency Inversion:
-  [x] Depends on abstractions
-  [ ] ISSUE: [module X] directly instantiates [concrete Y] → inject
-```
+Review all new/modified code against SOLID using the SOLID Compliance Check
+template in [references/tdd-walkthrough.md](references/tdd-walkthrough.md).
+Every principle (S, O, L, I, D) must be checked. Record any violation as an
+ISSUE entry to fix in 6.2.
 
 ### 6.2 Apply Refactorings
 
-For each issue found:
-1. Apply the refactoring
-2. Run tests → must still pass
-3. If tests break → revert and reconsider
-
-Common refactorings:
-- Extract function/method for duplicated code
-- Rename for clarity
-- Introduce interface/trait for dependency inversion
-- Split large functions by responsibility
-- Move code to appropriate module per folder structure
+For each issue: (1) apply the refactoring, (2) run tests — must still pass,
+(3) if tests break, revert and reconsider. Common refactorings: extract function,
+rename, introduce interface/trait for dependency inversion, split large functions,
+move code to the correct module per `folder-structure.md`.
 
 ### 6.3 Final Green Check
 
-Run full test suite one more time:
-```bash
-# Run test command
-```
-
-Present:
-```
-## REFACTOR Phase Complete
-
-**Refactorings applied:** [count]
-**Tests still passing:** [X]/[X] (all green)
-
-Moving to QA validation.
-```
+Run full test suite one more time and present the REFACTOR Phase Complete block (see examples).
 
 ---
 
 ## PHASE 7: QA VALIDATION
 
-**Goal:** Comprehensive quality check. The QA expert reviews the work — not a self-review.
+The QA expert skills review the work — this is **not** a self-review.
+
+**Preferred subagent_type:** delegate the validation pass to `ck-code:qa-validator`
+if available (defined in this plugin's `agents/` folder — runs the test suite,
+maps results to acceptance criteria, reports failures with file:line citations).
+If the subagent_type is not registered, do the steps below inline.
 
 ### 7.0 Load QA Expert Skills (mandatory, do not skip)
 
-Before doing any QA, load both QA skills by reading them directly:
+Before any QA, load both QA skills directly:
 ```
 Read(".claude/skills/experts/qa/SKILL.md")
 Read(".claude/skills/experts/qa-project/SKILL.md")
 ```
-Apply their standards throughout this entire phase. A self-review without loading these skills does NOT count as QA validation.
+Apply their standards throughout this entire phase. A self-review without loading
+these skills does NOT count as QA validation.
 
 ### 7.1 Start QA Task
 
@@ -504,303 +292,129 @@ Mark the QA task as `in_progress`.
 
 ### 7.2 Acceptance Criteria Verification
 
-Go through EACH acceptance criterion from the story and verify:
-- Is there a test covering it? (should be, from Phase 4)
-- Does the implementation actually fulfill it?
-- Mark each as PASS or FAIL with explanation
+For EACH acceptance criterion: confirm a test covers it (should be, from Phase 4),
+confirm the implementation fulfills it, mark PASS or FAIL with explanation.
 
 ### 7.3 Run Full Test Suite
 
-```bash
-# Run all tests, not just the new ones
-```
-
-Check for regressions in existing tests.
+Run all tests, not just the new ones. Check for regressions in existing tests.
 
 ### 7.4 Code Quality Checks
 
-Run all applicable quality tools. Detect which are available and run them:
-
-```bash
-# TypeScript projects
-npx tsc --noEmit        # Type checking
-npx eslint .            # Linting
-npx prettier --check .  # Formatting
-
-# Rust projects
-cargo clippy            # Linting
-cargo fmt -- --check    # Formatting
-
-# Python projects
-mypy .                  # Type checking
-ruff check .            # Linting
-black --check .         # Formatting
-
-# C++ / JUCE projects
-cmake --build build -- -v 2>&1 | grep -iE "warning:|error:" | grep -v "_deps"
-# clang-format --dry-run --Werror Source/*.cpp Source/*.h   (if .clang-format exists)
-# Zero compiler warnings in project-owned files is the quality bar
-```
+Run all applicable quality tools. Detect which are available per stack — full
+command list (TypeScript / Rust / Python / C++ / JUCE) is in
+[references/tdd-walkthrough.md](references/tdd-walkthrough.md). Zero compiler
+warnings in project-owned files is the quality bar.
 
 ### 7.5 Architecture Compliance
 
-Check the implementation against `docs/architecture/`:
-- Are new files in the correct directories per `folder-structure.md`?
-- Do API shapes match `api-contracts.md`?
-- Does the data flow follow `data-flow.md`?
-- Are database changes consistent with `database-schema.md`?
+Check the implementation against `docs/architecture/`: new files in correct
+directories per `folder-structure.md`, API shapes match `api-contracts.md`,
+data flow follows `data-flow.md`, DB changes consistent with `database-schema.md`.
 
 ### 7.6 Edge Case Analysis
 
-Look for scenarios the tests might not cover:
-- Null/undefined/empty inputs
-- Concurrent access (if applicable)
-- Resource cleanup (file handles, connections)
-- Error propagation through the call chain
+Look for scenarios tests might not cover: null/undefined/empty inputs, concurrent
+access (if applicable), resource cleanup (file handles, connections), error
+propagation through the call chain.
 
 ### 7.7 Present QA Report
 
-```
-## QA Report: [Story Title]
-
-### Acceptance Criteria
-- [x] Criterion 1 — PASS
-- [x] Criterion 2 — PASS
-- [ ] Criterion 3 — FAIL: [specific reason]
-
-### Test Results
-- Total tests: [X]
-- Passing: [X]
-- Failing: [X]
-- New regressions: [X]
-
-### Code Quality
-- Type checking: PASS / FAIL
-- Linting: PASS / FAIL ([count] warnings)
-- Formatting: PASS / FAIL
-
-### Architecture Compliance: PASS / FAIL
-[Notes on any deviations]
-
-### Edge Cases
-- [Edge case 1]: COVERED / MISSING
-- [Edge case 2]: COVERED / MISSING
-
-### Issues Found
-| # | Severity | Description | Location |
-|---|----------|-------------|----------|
-| 1 | HIGH | [issue] | [file:line] |
-| 2 | MEDIUM | [issue] | [file:line] |
-| 3 | LOW | [issue] | [file:line] |
-
-### Verdict: PASS / NEEDS FIXES
-```
+Emit the QA Report block (template in [references/examples.md](references/examples.md)).
+It must include: per-criterion PASS/FAIL, test totals + new regressions, code
+quality results, architecture compliance, edge case coverage, an Issues Found
+table with severity, and a final `Verdict: PASS / NEEDS FIXES`.
 
 ### 7.8 Handle Results
 
-**If PASS (no issues):**
-- Mark QA task as `completed`
-- Proceed to Phase 8
+**If PASS (no issues):** mark QA task as `completed`, proceed to Phase 8.
 
 **If NEEDS FIXES:**
 - Present the issues clearly
 - Track the QA iteration count (max 3)
-- If iteration < 3:
-  ```
-  QA found [X] issues. Looping back to fix.
-  Iteration: [N]/3
-  ```
-  - Fix each issue (write test for it if missing, then fix code)
-  - Re-run Phase 6 (refactor)
-  - Re-run Phase 7 (QA) with fresh check
-- If iteration = 3:
-  ```
-  QA has run 3 times and issues remain:
-  [list remaining issues]
-  
-  Please review and advise:
-  A) FIX MANUALLY — I'll attempt specific fixes you suggest
-  B) ACCEPT AS-IS — Proceed with known issues (I'll document them)
-  C) ABORT — Stop implementation, revert to TODO status
-  ```
+- **If iteration < 3:** announce `[N]/3` (see examples), fix each issue (write
+  test for it if missing, then fix code), re-run Phase 6 (refactor), then re-run
+  Phase 7 (QA) with fresh check.
+- **If iteration = 3:** escalate to user with three options — **A) FIX MANUALLY**
+  (attempt specific fixes the user suggests), **B) ACCEPT AS-IS** (proceed with
+  known issues, document them), **C) ABORT** (stop implementation, revert story
+  to TODO status). Exact wording in [references/examples.md](references/examples.md).
+  Do NOT silently continue past iteration 3.
 
 ---
 
 ## PHASE 8: COMPLETION
 
-**Goal:** Finalize the story, update tracking, and optionally commit.
-
 ### 8.1 Update Story File — Status
 
-Edit the story file to update status:
-```
-> **Status:** IN PROGRESS
-```
-→
-```
-> **Status:** DONE
-```
+Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
+**Note:** Per 8.7, this transition only happens after the user confirms manual testing PASS.
 
 ### 8.2 Update Story File — Implementation Summary
 
-Append to the story file:
+Append the Implementation Summary block (template in
+[references/story-template.md](references/story-template.md)) to the story file.
+It must record: TDD iteration count, QA iteration count, tests written, files
+created/modified counts, what was implemented, a precise Files Touched list,
+SOLID compliance summary, and notes.
 
-```markdown
-
----
-
-## Implementation Summary
-
-**Completed:** [date]
-**TDD Iterations:** [count] (red→green→refactor cycles)
-**QA Iterations:** [count]
-**Tests written:** [count]
-**Files created:** [count]
-**Files modified:** [count]
-
-### What Was Implemented
-- [Key implementation point 1]
-- [Key implementation point 2]
-
-### Files Touched
-[Precise reference of every file and line changed — no descriptions, just locations]
-
-```
-CREATED  src/server/ws/handler.rs
-CREATED  src/server/ws/mod.rs
-MODIFIED src/server/main.rs:12,45-48,92
-MODIFIED src/server/config.rs:8,23
-CREATED  tests/ws_handler_test.rs
-```
-
-### SOLID Compliance
-- [How SOLID was applied — 1 line per principle]
-
-### Notes
-[Any important notes for future developers]
-```
+**Files Touched precision (mandatory):**
+- CREATED files: path only (e.g., `CREATED src/ws/handler.rs`)
+- MODIFIED files: path + exact line numbers (e.g., `MODIFIED src/main.rs:12,45-48,92`)
+- Use `git diff --stat` and `git diff` to collect precise lines
+- No descriptions — paths + line numbers only
 
 ### 8.3 Update Story Checklist in Story File
 
-Mark all acceptance criteria as checked:
-```
-- [x] Criterion 1
-- [x] Criterion 2
-- [x] Criterion 3
-```
+Mark all acceptance criteria as `[x]` checked in the story file.
 
 ### 8.4 Update Parent Epic
 
-Read the parent EPIC.md and update the story's status in the stories table:
-```
-| 01 | [Title] | M | DONE |
-```
+Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
 
 ### 8.5 Update Implementation Plan Subtasks
 
-Mark all subtasks in the story's Implementation Plan section as done:
-```
-1. [x] Write tests (5 tests)
-2. [x] Implement server handler
-3. [x] Implement client serializer
-4. [x] Refactor for SOLID compliance
-5. [x] QA validation
-6. [x] Update docs and commit
-```
+Mark all subtasks in the story's Implementation Plan section as `[x]` done.
 
 ### 8.6 Mark All Claude Tasks Completed
 
-Use TaskUpdate to mark all remaining tasks as `completed`.
-Use TaskList to show final summary.
+Use TaskUpdate to mark all remaining tasks as `completed`. Use TaskList to show final summary.
 
 ### 8.7 User Manual Testing — REQUIRED before marking story DONE
 
-**Do NOT mark the story as DONE or update the EPIC until the user explicitly confirms PASS here.**
-The story status must stay IN PROGRESS until manual verification is complete.
+**Do NOT mark the story as DONE or update the EPIC until the user explicitly
+confirms PASS here.** The story status must stay IN PROGRESS until manual
+verification is complete.
 
-```
-Story implementation complete!
+Present the manual-testing prompt (see examples) listing specific scenarios from
+the acceptance criteria plus an edge case to try. Ask `Result? PASS / ISSUES`.
 
-Please manually test the feature:
-- [Specific test scenario 1 from acceptance criteria]
-- [Specific test scenario 2]
-- [Edge case to try]
-
-Result? PASS / ISSUES
-```
-
-**If ISSUES:** Ask what's wrong, loop back to Phase 5 for targeted fixes.
-
-**If PASS:** Proceed to update story to DONE, update EPIC, then move to 8.8.
+- **If ISSUES:** Ask what's wrong, loop back to Phase 5 for targeted fixes.
+- **If PASS:** Proceed to update story to DONE, update EPIC, then move to 8.8.
 
 ### 8.8 Ship (Commit + PR + Issue Updates)
 
-**If PASS:**
-```
-Ready to ship! Options:
+**If PASS:** Present the ship options (see examples):
 
-A) SHIP — Run /ck-code:ship to commit, PR, and update GitHub Issues
-B) SKIP — Don't commit yet (run /ck-code:ship later manually)
-```
-
-If SHIP: Invoke the `/ck-code:ship` skill with the story file path.
-`/ck-code:ship` handles: branch creation, staging, commit message, PR, and GitHub Issue updates
-(closing story issue, updating epic checklist).
-
-If SKIP: Remind the user they can run `/ck-code:ship [story-path]` later.
+- **A) SHIP** — Invoke `/ck-code:ship` with the story file path. It handles
+  branch creation, staging, commit message, PR, and GitHub Issue updates
+  (closing story issue, updating epic checklist).
+- **B) SKIP** — Don't commit yet. Remind the user they can run
+  `/ck-code:ship [story-path]` later manually.
 
 ---
 
 ## IMPORTANT GUIDELINES
 
-### TDD is Non-Negotiable
-- Tests are ALWAYS written before implementation code
-- The Red→Green→Refactor cycle is followed strictly
-- No implementation code without a failing test first
-- Exception: trivial boilerplate (config files, type exports) that can't meaningfully fail
-
-### SOLID is Enforced Twice
-- **Phase 3 (Planning):** Design with SOLID in mind
-- **Phase 6 (Refactor):** Verify SOLID compliance in the actual code
-
-### QA Loop Has a Safety Valve
-- Maximum 3 dev↔QA iterations
-- After 3 iterations, escalate to user with options
-- This prevents infinite loops on edge cases
-
-### Story File is the Source of Truth
-- All tracking happens IN the story file (status, plan, summary)
-- The story file grows as implementation progresses
-- After completion, the story file is a complete record of what was done
-
-### Files Touched Must Be Precise
-- The "Files Touched" section in the Implementation Summary must list every file
-- For CREATED files: just the path (e.g., `CREATED src/ws/handler.rs`)
-- For MODIFIED files: path + exact line numbers changed (e.g., `MODIFIED src/main.rs:12,45-48,92`)
-- Use `git diff --stat` and `git diff` to collect the precise lines after implementation
-- No descriptions — just file paths and line numbers for quick reference
-- This enables future developers (and AI) to instantly locate what was changed
-
-### Skill Loading is Automatic
-- The orchestrator detects and loads relevant skills without user input
-- If skills are missing, it warns but doesn't block
-- Expert skills provide domain knowledge; guide skills provide language best practices
-
-### Context7 Research is Targeted
-- Only research during Phase 3 (planning)
-- Only for unfamiliar patterns or technologies
-- Don't research basics — trust loaded guide skills for conventions
-
-### Language: English
-- All output, comments, commit messages, and documentation in English
-- Regardless of the spec or story language
+### Hard Rules (non-negotiable)
+- **TDD:** Tests are ALWAYS written before implementation. Strict Red→Green→Refactor. No implementation code without a failing test first. Exception: trivial boilerplate (config, type exports) that can't meaningfully fail.
+- **SOLID enforced twice:** Phase 3 (design) AND Phase 6 (verify in actual code). Both passes are mandatory.
+- **QA loop cap = 3.** After 3 dev↔QA iterations, escalate to the user with FIX MANUALLY / ACCEPT AS-IS / ABORT. Never silently continue past 3.
+- **Story file is source of truth.** Status, plan, summary all live in the story file and are updated as work progresses.
+- **Language: English** for all output, comments, commit messages, and docs — regardless of spec/story language.
 
 ### JUCE Test Runner Rules
 When writing JUCE unit tests, always:
-- Use `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — JUCE docs recommend this for console-app test runners; it prevents CoreMidi/Singleton assertions caused by `AudioDeviceManager` needing a MessageManager
-- Use ASCII-only strings in all `beginTest()`, `expect()`, and other JUCE String-constructing calls — `juce::String(const char*)` asserts that all bytes are ≤ 127; use `-` not `—`, `...` not `…`
+- Use `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions from `AudioDeviceManager` needing a MessageManager
+- Use ASCII-only strings in `beginTest()`, `expect()`, and JUCE String-constructing calls — `juce::String(const char*)` asserts bytes ≤ 127 (use `-` not `—`, `...` not `…`)
 - Use a single meaningful assertion instead of looping hundreds of `expect()` calls — e.g. find max amplitude rather than 512 individual sample checks
-
-### Reusability
-- This skill works with any project that has stories in the `tasks/` format
-- No project-specific references — everything is derived from the story file and architecture docs
