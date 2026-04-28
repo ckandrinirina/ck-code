@@ -29,8 +29,8 @@ Spec-driven workflow plugin for [Claude Code](https://www.anthropic.com/claude-c
 ## Install
 
 ```bash
-# 1) Add this repo as a marketplace (replace OWNER/REPO once published)
-/plugin marketplace add OWNER/REPO
+# 1) Add this repo as a marketplace
+/plugin marketplace add ckandrinirina/ck-code
 
 # 2) Install the plugin
 /plugin install ck-code@ck-marketplace
