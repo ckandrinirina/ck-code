@@ -131,7 +131,7 @@ Create a SOLID-compliant plan **before writing any code.**
 ### 3.1 Research (if needed)
 
 If the story involves patterns or technologies that could benefit from current docs:
-- Use context7 MCP to look up relevant framework documentation
+- Use context7 (MCP tools if available, else `npx -y @upstash/context7`) to look up relevant framework documentation
 - Use WebSearch for uncommon patterns referenced in technical notes
 - Only research what's actually needed — don't research well-known basics
 

@@ -93,7 +93,7 @@ C) ABORT
 ## Skills Generated
 
 **Project:** [project-name]
-**Research source:** context7 MCP + WebSearch
+**Research source:** context7 (MCP or `ctx7` CLI) + WebSearch
 **Date:** [date]
 
 ### Expert Roles

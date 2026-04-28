@@ -141,7 +141,9 @@ Each skill folder is self-contained: the main `SKILL.md` is the entry point, and
 - **Claude Code** — required (CLI, IDE extension, or desktop app)
 - **gh CLI** — required for `/ck-code:publish` and `/ck-code:ship` GitHub Issue features
 - **git** — required for `/ck-code:parallel-build` (uses worktrees)
-- **context7 MCP** — recommended for `/ck-code:team` to fetch up-to-date framework best practices
+- **[context7](https://context7.com)** — recommended for `/ck-code:team`, `/ck-code:design`, `/ck-code:plan`, and `/ck-code:build` to fetch up-to-date framework documentation. Either form works:
+  - **MCP server** — install once into Claude Code; tools auto-discovered
+  - **`ctx7` CLI** — `npx -y @upstash/context7 setup` (one-time auth), then commands run inline via Bash. Recommended when MCP isn't configured or for parallel sub-agents that don't inherit the MCP host
 
 ## Contributing
 

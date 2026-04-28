@@ -128,7 +128,8 @@ and PARTIAL dimensions, see [references/qna-examples.md](references/qna-examples
 
 ### Research During Refinement
 
-When the user mentions specific technologies, use context7 MCP or WebSearch to:
+When the user mentions specific technologies, use context7 (MCP tools if
+available, else the `ctx7` CLI via `npx -y @upstash/context7`) or WebSearch to:
 - Look up current best practices for project structure
 - Verify standard folder conventions for the frameworks mentioned
 - Check for recommended configuration patterns
