@@ -1,0 +1,14 @@
+{
+  "name": "ck-marketplace",
+  "owner": {
+    "name": "ckandrinirina",
+    "email": "ckandrinirina@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "ck-code",
+      "source": "./",
+      "description": "Spec-driven workflow plugin: design, plan, build, ship, with per-project experts and tech guides."
+    }
+  ]
+}
