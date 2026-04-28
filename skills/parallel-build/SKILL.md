@@ -40,6 +40,12 @@ Glob `tasks/*/epics/*/stories/*.md`. For each, Read and extract:
 - Story ID from path: epic `02_juce-engine` + story `05_mixer.md` → `02-05`
 - Epic display name from parent folder (`02_juce-engine` → `02 · JUCE Engine`)
 
+**Shell note (zsh):** If you batch-scan with a `for` loop in Bash instead of Read,
+never name the captured variable `status` — `status` is a read-only special
+parameter in zsh (mirrors `$?`) and the assignment will fail with
+`read-only variable: status`. Use `st=`, `state=`, or `story_status=` instead.
+Same applies to other zsh-reserved names: `path`, `cdpath`, `manpath`, `prompt`.
+
 ### 1.2 Resolve Dependency Graph
 
 Build map: story ID → `{ status, size, epic, blockedBy: [] }`. A story is **ready** if
