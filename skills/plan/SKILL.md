@@ -106,7 +106,7 @@ Use extended thinking (ultrathink) to reason through ambiguities. Extract:
 
 ### 1.3 Research Tech Stack (when beneficial)
 
-If the spec references frameworks/libraries/protocols that would benefit from current documentation lookup, use context7 MCP or WebSearch to confirm current best practices, identify version-specific considerations, and understand standard project structures. Only do this for unfamiliar or rapidly-evolving technologies.
+If the spec references frameworks/libraries/protocols that would benefit from current documentation lookup, use context7 (MCP tools if available, else the `ctx7` CLI via `npx -y @upstash/context7`) or WebSearch to confirm current best practices, identify version-specific considerations, and understand standard project structures. Only do this for unfamiliar or rapidly-evolving technologies.
 
 ### 1.4 Identify Dependencies & Complexity
 
