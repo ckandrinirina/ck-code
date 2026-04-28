@@ -37,6 +37,22 @@ Whether you're building a new project from scratch or adding a feature to an exi
 
 That's it — restart your Claude Code session and the `/ck-code:*` commands are available.
 
+## Update
+
+To update the plugin to the latest version:
+
+```bash
+/plugin update ck-code@ck-marketplace
+```
+
+Then restart your Claude Code session for the updated commands to take effect.
+
+> **Note:** If the update command is not available in your Claude Code version, you can reinstall manually:
+> ```bash
+> /plugin uninstall ck-code@ck-marketplace
+> /plugin install ck-code@ck-marketplace
+> ```
+
 ## Per-project opt-in
 
 Installation alone does not activate the plugin in every project. Enable it explicitly per project by adding to that project's `.claude/settings.json`:
