@@ -36,14 +36,6 @@ Spec-driven workflow plugin for [Claude Code](https://www.anthropic.com/claude-c
 /plugin install ck-code@ck-marketplace
 ```
 
-For local development against an unpublished checkout:
-
-```bash
-claude --plugin-dir ~/Dev/ck-code
-# inside the session:
-/reload-plugins
-```
-
 ## Per-project opt-in
 
 Installation alone does not activate the plugin in every project. Enable it explicitly per project by adding to that project's `.claude/settings.json`:
