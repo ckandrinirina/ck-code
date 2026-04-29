@@ -10,6 +10,7 @@ description: >
 ## Workflow Order
 
 ```
+0. /ck-code:pre-spec → (Optional) Stakeholder-ready feature spec for review
 1. /ck-code:design   → Refine spec into architecture docs
 2. /ck-code:team     → Generate expert + guide skills
 3. /ck-code:plan     → Create epics, stories, roadmap
@@ -21,6 +22,27 @@ description: >
 ```
 
 ## Commands
+
+### /ck-code:pre-spec [feature-description | notes-file | existing-slug | issue-url]
+Generate or adjust a stakeholder-ready feature specification — descriptive,
+non-technical, ready to share with PMs, designers, or leadership for review.
+Output goes to a local folder and/or a GitHub issue (with labels and project
+assignment). Re-invoke later to apply adjustments — the skill detects existing
+specs, edits them in place, and re-syncs the linked GitHub issue.
+
+```
+/ck-code:pre-spec                                 # Interactive: pick existing or create
+/ck-code:pre-spec "add intelligent bots for free games"
+/ck-code:pre-spec docs/notes/feature-draft.md     # CREATE from a notes file
+/ck-code:pre-spec intelligent-bot-system          # ADJUST existing slug
+/ck-code:pre-spec https://github.com/.../issues/809   # ADJUST via issue URL
+```
+
+**Output:** `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ `.metadata.json`)
+and/or GitHub issue. Tone is descriptive — no code, no file paths, no
+internal tooling references.
+
+---
 
 ### /ck-code:design [spec-file]
 Refine a specification into detailed architecture docs in `docs/architecture/`.
@@ -155,6 +177,7 @@ Examples: `guide-rust`, `guide-cpp`, `guide-react-native`, `guide-axum`
 ## Adding a Feature Later
 
 ```
+/ck-code:pre-spec "describe the feature"     # 0. (Optional) Align stakeholders first
 /ck-code:design docs/new-feature.md          # 1. Extend architecture docs
 /ck-code:team --regenerate                   # 2. Refresh experts with new context
 /ck-code:plan docs/new-feature.md            # 3. Generate feature epics/stories

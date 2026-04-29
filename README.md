@@ -89,15 +89,16 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 ## The full workflow
 
 ```
-/ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:publish  →  /ck-code:track
-                                                                                 ↓
-                                                                         /ck-code:build  →  /ck-code:ship
-                                                                                 ↑
-                                                                         /ck-code:fix  ──┘
+/ck-code:pre-spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:publish  →  /ck-code:track
+   (optional)                                                                                          ↓
+                                                                                            /ck-code:build  →  /ck-code:ship
+                                                                                                       ↑
+                                                                                            /ck-code:fix  ──┘
 ```
 
 | Skill | Purpose | Input | Output |
 |-------|---------|-------|--------|
+| `/ck-code:pre-spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon) | feature description or notes file | `docs/pre-specs/` and/or GitHub issue |
 | `/ck-code:design` | Refine a spec into architecture docs | spec file | `docs/architecture/` |
 | `/ck-code:team` | Generate per-project expert + guide skills | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
 | `/ck-code:plan` | Create epics, stories, roadmap | spec file | `tasks/YYYY-MM-DD_<project>/` |
@@ -136,6 +137,7 @@ ck-code/
 │   ├── conflict-analyzer.md
 │   └── story-implementer.md
 ├── skills/
+│   ├── pre-spec/                  # stakeholder-ready feature spec (create + adjust)
 │   ├── design/                    # spec → architecture docs
 │   ├── plan/                      # architecture → epics/stories
 │   ├── team/                      # generate per-project experts + guides
@@ -149,6 +151,22 @@ ck-code/
 │   └── help/                      # command reference
 └── README.md
 ```
+
+## Per-feature spec folder
+
+Pre-specs and downstream design output share a single folder per feature so
+they stay adjacent throughout the lifecycle:
+
+```
+docs/specs/YYYY-MM-DD_<slug>/
+├── pre-spec.md            # Stakeholder-friendly version (from /ck-code:pre-spec)
+├── .metadata.json         # Slug, GitHub issue link, status, language
+└── feature-spec.md        # (later, optional) Design-pass output
+```
+
+`/ck-code:pre-spec` creates these on first run and re-uses them on
+subsequent invocations to apply adjustments — keeping the local file and
+the linked GitHub issue in sync.
 
 Each skill folder is self-contained: the main `SKILL.md` is the entry point, and any bulky templates or examples live alongside it in a `references/` subfolder that loads on demand.
 
