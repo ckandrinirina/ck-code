@@ -6,7 +6,7 @@ description: >
   auto-link epics and close story issues. Enforces conventional commits.
   Never adds AI/Claude references to commits or PRs. Works standalone for any commit.
 argument-hint: "[path-to-story.md]"
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Bash(git *) Bash(gh *) Bash(sleep *)
 ---
 
