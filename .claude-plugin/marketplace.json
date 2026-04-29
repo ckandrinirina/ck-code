@@ -9,6 +9,15 @@
       "name": "ck-code",
       "source": "./",
       "description": "Spec-driven workflow plugin: design, plan, build, ship, with per-project experts and tech guides."
+    },
+    {
+      "name": "ck-tools",
+      "source": {
+        "source": "github",
+        "repo": "ckandrinirina/ck-tools",
+        "ref": "v0.1.0"
+      },
+      "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores. Coexists with ck-code."
     }
   ]
 }
