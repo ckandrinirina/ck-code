@@ -15,7 +15,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-tools",
-        "ref": "v0.1.1"
+        "ref": "v0.2.0"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores. Coexists with ck-code."
     }
