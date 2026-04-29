@@ -1,12 +1,112 @@
 # Pre-Spec Templates & Q&A Banks
 
-> Verbatim structure for the descriptive feature pre-spec output, plus the
-> question banks the skill draws from. Translate section titles to the
-> chosen output language. Keep section anchors ASCII.
+> Bulky reference content for the `pre-spec` skill: metadata schema,
+> GitHub publishing procedure, language localization table, question
+> banks, forgotten-details checklist, and section templates.
 
 ---
 
-## Question bank (Phase C3 — Conversational refinement)
+## `.metadata.json` schema
+
+```json
+{
+  "slug": "intelligent-bot-system",
+  "title": "<full title used in the file and issue>",
+  "language": "French",
+  "createdAt": "2026-04-29",
+  "updatedAt": "2026-04-29",
+  "status": "draft",
+  "github": {
+    "repo": "owner/repo-name",
+    "issueNumber": 809,
+    "issueUrl": "https://github.com/owner/repo-name/issues/809",
+    "projectUrl": "https://github.com/orgs/owner/projects/1"
+  },
+  "tags": ["..."],
+  "stage": "pre-spec",
+  "linkedDesign": null
+}
+```
+
+`github` is `null` when no issue is linked. `linkedDesign` becomes a path
+to the design output once `/ck-code:design` runs.
+
+### Status enum
+
+| Status | Meaning |
+|---|---|
+| `draft` | Just created, may still receive substantive edits |
+| `ready-for-design` | User has locked the spec; ready for an architecture pass |
+| `design-in-progress` | `/ck-code:design` has started using it |
+| `implemented` | Code has shipped at least one increment |
+| `shipped` | Feature is live in production |
+
+---
+
+## GitHub publishing procedure
+
+### Target repository
+
+1. Check project memory and `CLAUDE.md` for an "issues live in X" rule.
+   Memory takes priority.
+2. Else default to `gh repo view --json nameWithOwner -q .nameWithOwner`.
+3. Confirm with user before creating.
+
+### Labels
+
+```bash
+gh label list --repo <repo>
+```
+
+Pick product / type labels matching the project (e.g. product label,
+"Feature" or "Conception" type). Confirm with user.
+
+### Project assignment (optional)
+
+If memory or user input mentions a project:
+
+```bash
+gh project list --owner <owner>
+```
+
+Pick by number/title.
+
+### Preview
+
+Show the user the title and the first ~30 lines of the generated body.
+Wait for explicit YES before creating.
+
+### Create
+
+```bash
+gh issue create \
+  --repo <owner>/<repo> \
+  --title "<title>" \
+  --body-file docs/specs/YYYY-MM-DD_<slug>/pre-spec.md \
+  --label "<l1>" --label "<l2>"
+```
+
+### Add to project
+
+```bash
+gh project item-add <project-number> --owner <owner> --url <issue-url>
+```
+
+### Re-sync (ADJUST mode)
+
+```bash
+gh issue view <num> --repo <repo> --json body --jq .body > /tmp/<slug>-remote.md
+diff /tmp/<slug>-remote.md docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
+# Resolve conflicts with user if non-empty.
+gh issue edit <num> --repo <repo> --body-file docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
+```
+
+Sync labels / project membership with `gh issue edit --add-label` /
+`--remove-label` and `gh project item-add` if needed.
+
+---
+
+## Question bank (Phase 2 — Conversational refinement)
 
 Adapt to the feature type. Skip dimensions already clear from the user's
 description. Ask 2-3 per round, max 3-4 rounds.
