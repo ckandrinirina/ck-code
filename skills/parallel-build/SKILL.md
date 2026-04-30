@@ -139,6 +139,75 @@ Worktree isolation rules:
 Record success/failure per story (capture error message on failure). Print status
 summary (format in `references/conflict-format.md`).
 
+## PHASE 3.5: STORY FILE & CODE INTEGRITY VERIFICATION
+
+After all agents finish, verify each completed story is properly recorded and no
+implementation was silently lost. Run this before conflict analysis so that
+integrity issues are surfaced early.
+
+### 3.5.1 Story File Status Check
+
+For each **successfully completed** story, read the story file from its worktree
+path (returned by the agent):
+
+```bash
+grep -E "^Status:" tasks/<epic>/stories/<story>.md
+```
+
+Verify:
+- `Status: DONE` is set — the `/ck-code:build` skill must have updated it.
+- If `Status:` is still `TODO` or `IN PROGRESS`, flag as ⚠️ **Story file not updated**.
+
+Also scan for acceptance criteria / task checkboxes in the story file and verify
+they are all marked `[x]` (checked). Any unchecked item → ⚠️ **Incomplete acceptance criteria**.
+
+### 3.5.2 Code Change Integrity Check
+
+For each successfully completed story, inspect what the agent actually changed in its
+branch relative to `main`:
+
+**3.5.2a — Non-empty diff**
+
+```bash
+git diff --stat main...story/XX-YY
+```
+
+If the output is empty (no files changed), flag as ⚠️ **No implementation detected** —
+the agent may have exited without producing output.
+
+**3.5.2b — Unexpected file deletions**
+
+```bash
+git diff main...story/XX-YY --diff-filter=D --name-only
+```
+
+Any deleted file is flagged as ⚠️ **Unexpected file deletion: [file]**. Deletion of a
+file that was in scope (e.g. a file explicitly replaced by the story) is acceptable only
+if a new file clearly supersedes it; otherwise treat it as potential code loss.
+
+**3.5.2c — Pure-deletion files (code loss signal)**
+
+For each modified file, check the addition/deletion balance:
+
+```bash
+git diff main...story/XX-YY -- <file> | grep -c "^+"   # additions
+git diff main...story/XX-YY -- <file> | grep -c "^-"   # deletions
+```
+
+If a file has zero additions and one or more deletions, flag as
+⚠️ **Possible code loss in [file]** (lines were removed with nothing added back).
+
+### 3.5.3 Report & Gate
+
+Print the integrity report (format in `references/conflict-format.md`).
+
+Escalation rules:
+- ⚠️ **warning** (incomplete criteria, pure-deletion ratio) → story proceeds to QA/merge
+  but the warning must appear in the Phase 6 summary so the operator can review.
+- 🚫 **BLOCKED** (story file not updated, no implementation detected, unexpected file
+  deletion) → story is removed from the merge-eligible set. Keep its worktree. Report
+  in Phase 6 under "Review needed".
+
 ## PHASE 4: CONFLICT ANALYSIS
 
 Detect file-level conflicts between completed story branches before any merge. Only
@@ -250,6 +319,7 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 - **Always dispatch all agents in one message** — not sequentially. True parallelism
   requires multiple Agent calls in a single turn.
 - **Always isolate** each agent in its own worktree (`isolation: worktree`).
+- **Always run story file & code integrity verification** (Phase 3.5) after agents complete — catch missing status updates and code loss before conflict analysis.
 - **Always run dry-run merge conflict detection** (Phase 4) before any merge.
 - **Always delete** agent worktrees after merging — `git worktree remove -f -f` then
   `git worktree prune`.

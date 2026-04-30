@@ -19,6 +19,24 @@ Ready stories (N available):
 Pick stories to implement (e.g. "1 3 4" or "all"):
 ```
 
+## Phase 3.5 — Story File & Code Integrity Report
+
+```
+Story File & Code Integrity:
+─────────────────────────────────────────────────────
+  02-05  →  ✓ Status: DONE   ✓ All acceptance criteria checked   ✓ 12 files changed (+347 / -12)
+  03-01  →  ✓ Status: DONE   ⚠ Incomplete criteria: "API rate limiting" unchecked
+             ⚠ Possible code loss in server/src/handlers.rs  (0 additions, 8 deletions)
+  02-06  →  🚫 Status: IN PROGRESS  — story file not updated  →  BLOCKED from merge
+             🚫 No implementation detected (empty diff)        →  BLOCKED from merge
+─────────────────────────────────────────────────────
+Integrity summary:
+  ✓ Clean:    02-05
+  ⚠ Warnings: 03-01  (proceeds to QA — operator review required at merge)
+  🚫 Blocked:  02-06  (worktree kept — fix before merging)
+─────────────────────────────────────────────────────
+```
+
 ## Phase 4.4 — Conflict Analysis Report
 
 ```
