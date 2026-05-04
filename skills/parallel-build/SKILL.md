@@ -1,11 +1,6 @@
 ---
 name: parallel-build
-description: >
-  Use when multiple stories are ready (dependencies met) and you want to
-  implement them in parallel. Discovers unblocked stories, lets you select
-  which to run, dispatches parallel sub-agents in isolated git worktrees each
-  invoking /ck-code:build, then runs conflict analysis and integration QA before
-  merge. Reports file conflicts before any merge happens.
+description: Use to implement multiple ready stories concurrently in isolated git worktrees. Argument is optional space-separated story IDs (e.g. `02-05 03-01`); if omitted, picks interactively.
 argument-hint: "[story-ids...]  # optional: pre-select stories e.g. 02-05 03-01"
 user-invocable: true
 ---
@@ -27,35 +22,25 @@ References:
 - If provided: skip Phase 2, go directly to Phase 3 with those stories.
 - If empty: run interactive selection (Phase 2).
 
-## PHASE 1: DISCOVERY
+## PHASE 1: DISCOVERY (index-driven)
 
 Find all stories ready to implement.
 
-### 1.1 Parse Story Files
+### 1.1 Read the Index
 
-Glob `tasks/*/epics/*/stories/*.md`. For each, Read and extract:
-- `Status:` (`TODO` / `DONE` / `IN PROGRESS` / `SKIP`)
-- `Size:` (`S` / `M` / `L` / `XL`)
-- `Blocked by:` list in Dependencies section
-- Story ID from path: epic `02_juce-engine` + story `05_mixer.md` → `02-05`
-- Epic display name from parent folder (`02_juce-engine` → `02 · JUCE Engine`)
+Read `tasks/*/STORIES_INDEX.md` — one Read covers every story across every epic. The table already contains `ID`, `Title`, `Status`, `Size`, `Blocked by`, and `File` columns; no per-story file reads are needed at this phase.
 
-**Shell note (zsh):** If you batch-scan with a `for` loop in Bash instead of Read,
-never name the captured variable `status` — `status` is a read-only special
-parameter in zsh (mirrors `$?`) and the assignment will fail with
-`read-only variable: status`. Use `st=`, `state=`, or `story_status=` instead.
-Same applies to other zsh-reserved names: `path`, `cdpath`, `manpath`, `prompt`.
+**Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
 
-### 1.2 Resolve Dependency Graph
+Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index is the source of truth for selection.
 
-Build map: story ID → `{ status, size, epic, blockedBy: [] }`. A story is **ready** if
-`Status: TODO` AND every ID in `Blocked by:` has `Status: DONE` (empty `Blocked by:`
-is always ready).
+### 1.2 Resolve Ready Set
+
+A story is **ready** if its `Status` is `TODO` AND every ID in its `Blocked by` cell resolves to `Status: DONE` in the same table (empty `Blocked by` is always ready). Build the ready list directly from the index rows.
 
 ### 1.3 Handle Empty Result
 
-If no ready stories: tell the user which TODO stories are still blocked and which of
-their blocking deps are not yet DONE. Stop.
+If no stories are ready: list the still-blocked `TODO` stories and which of their `Blocked by` IDs are not yet `DONE` (the index has both). Stop.
 
 ## PHASE 2: INTERACTIVE SELECTION
 
@@ -141,25 +126,15 @@ summary (format in `references/conflict-format.md`).
 
 ## PHASE 3.5: STORY FILE & CODE INTEGRITY VERIFICATION
 
-After all agents finish, verify each completed story is properly recorded and no
-implementation was silently lost. Run this before conflict analysis so that
-integrity issues are surfaced early.
+After all agents finish, verify each completed story is properly recorded and no implementation was silently lost. Run this before conflict analysis so that integrity issues are surfaced early.
 
-### 3.5.1 Story File Status Check
+### 3.5.1 Story Status Check (index + spot-check)
 
-For each **successfully completed** story, read the story file from its worktree
-path (returned by the agent):
+Re-read the project's `STORIES_INDEX.md` once. For each **successfully completed** story, confirm its row in the index now reads `Status: DONE`. The `/ck-code:build` skill is responsible for updating BOTH the story file and the index in the same phase — disagreement here points to a build-skill bug.
 
-```bash
-grep -E "^Status:" tasks/<epic>/stories/<story>.md
-```
+If a row is still `TODO` or `IN PROGRESS` → flag as ⚠️ **Story file not updated** and read just that one story file to confirm whether the build skill updated the file but missed the index, or missed both. Do NOT re-read every completed story file by default — only read the ones flagged by the index check.
 
-Verify:
-- `Status: DONE` is set — the `/ck-code:build` skill must have updated it.
-- If `Status:` is still `TODO` or `IN PROGRESS`, flag as ⚠️ **Story file not updated**.
-
-Also scan for acceptance criteria / task checkboxes in the story file and verify
-they are all marked `[x]` (checked). Any unchecked item → ⚠️ **Incomplete acceptance criteria**.
+Acceptance-criteria checkboxes are validated by the build skill's QA phase, not here.
 
 ### 3.5.2 Code Change Integrity Check
 

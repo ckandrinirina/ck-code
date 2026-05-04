@@ -1,10 +1,6 @@
 ---
 name: plan
-description: >
-  Use when you have architecture documentation and need to break it into
-  implementation epics, stories, and a roadmap with dependencies. Auto-detects
-  new projects vs. feature additions. Stories are sized S/M/L/XL with explicit
-  dependencies. Requires /ck-code:design to have run first.
+description: Use to break a project specification or feature description into epics, stories, and a roadmap under `tasks/`. Argument is the path to the spec file.
 argument-hint: "<path-to-spec-file>"
 ---
 
@@ -198,7 +194,15 @@ For the epic template, see [references/templates.md#epic-template](references/te
 
 For the story file template, see [references/templates.md#story-template](references/templates.md#story-template).
 
-### 4.5 ROADMAP.md Content
+### 4.5 STORIES_INDEX.md Content
+
+After all story files are written, generate `tasks/<slug>/STORIES_INDEX.md` from the in-memory list of stories you just authored. Format and mutation protocol: see [`ck-code/references/stories-index.md`](../../../references/stories-index.md). Template: [references/templates.md#stories-index-template](references/templates.md#stories-index-template).
+
+This index is the single source of truth that downstream skills (`build`, `parallel-build`, `track`) read to find ready stories — they will NOT scan individual story files for status. Every row must be present and correctly populated here.
+
+**Continue Mode:** read the existing `STORIES_INDEX.md`, insert new rows for the appended stories in `ID` order, then write the merged file. Do not regenerate from scratch — preserve any current `Status` values for unchanged rows.
+
+### 4.6 ROADMAP.md Content
 
 For the roadmap template, see [references/roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).
 

@@ -1,10 +1,6 @@
 ---
 name: build
-description: >
-  Use when you have a story file ready and need to implement it via TDD
-  (red-green-refactor) with SOLID principles. Auto-loads expert and guide
-  skills based on file types. Runs a dev-QA validation loop (max 3 iterations)
-  and tracks all progress in the story file. Requires /ck-code:plan to have run.
+description: Use to implement a single story from `tasks/` end-to-end. Argument is an optional story file path; if omitted, picks the next ready story interactively.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 ---
@@ -32,23 +28,19 @@ validate. If empty: enter interactive selection (Phase 1.2).
 Read the story at `$ARGUMENTS`. Validate it has the expected format (title,
 description, acceptance criteria, status). If invalid or missing, tell the user and stop.
 
-### 1.2 If No Story Path (Interactive)
+### 1.2 If No Story Path (Interactive — index-driven)
 
-1. Glob `tasks/*/epics/*/stories/*.md`
-2. Read each header to extract: title, status, size, dependencies
-3. Filter to `Status: TODO` only
-4. Remove stories whose "Blocked by" stories are not `DONE`
-5. Sort by: epic number, then story number, then size (S < M < L < XL)
-6. Present as a table (see examples). If no stories are ready, tell the user
-   to check `tasks/` or run `/ck-code:plan`.
+1. Read `tasks/*/STORIES_INDEX.md` (the project-level index — one Read covers every story).
+2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
+3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
+4. Sort by epic, then story number, then size (S < M < L < XL).
+5. Present as a table (see examples). If empty: tell the user nothing is ready and which deps are still missing. Suggest `/ck-code:plan` if the index is empty.
+
+Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index has everything you need.
 
 ### 1.3 Load Story Context
 
-Once a story is selected, read the full file and extract all structured fields:
-**Title**, **Description**, **Acceptance Criteria** (the checklist items),
-**Technical Notes**, **Files to Create/Modify** (the action table),
-**Dependencies** (blocked by / blocks), **Epic** reference, **Size** (S/M/L/XL).
-Then read the parent `EPIC.md` and `ROADMAP.md` (if it exists) for broader context.
+Once a story is selected, read **only that story's full file** (the index already gave you status/size/deps for selection). Extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Then read the parent `EPIC.md` (small, always useful). Read `ROADMAP.md` ONLY if the story's technical notes reference it explicitly — otherwise skip.
 
 ### 1.4 Detect Linked GitHub Issues
 
@@ -59,20 +51,29 @@ gh issue list --label "epic"  --state open --json number,title
 ```
 Present the linked issue (or "No linked issue found").
 
-### 1.4 Update Story Status
+### 1.4 Update Story Status (story file + index, same phase)
 
-Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See
-[references/story-template.md](references/story-template.md) for the exact transition.
+Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See [references/story-template.md](references/story-template.md) for the exact transition.
+
+Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `TODO` to `IN PROGRESS`. The story file and the index must never disagree — see the mutation protocol in [`../../../references/stories-index.md`](../../../references/stories-index.md).
 
 ---
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING
 
-### 2.1 Read Project Architecture
+### 2.1 Read Project Architecture (scoped — load only what the story touches)
 
-Read ALL of these from `docs/architecture/` (if they exist) — do not skip any:
-`tech-stack.md`, `folder-structure.md`, `components.md`, `api-contracts.md`,
-`database-schema.md`, `dev-guide.md`. Also check `ROADMAP.md` at the project root.
+Always read `docs/architecture/folder-structure.md` (small and universally useful). Beyond that, load architecture docs **only** for the domains the story actually touches, derived from the story's `## Files to Create/Modify` table:
+
+| Touched paths in story | Load (in addition to folder-structure.md) |
+|---|---|
+| `client/`, `ui/`, `components/`, `screens/`, `mobile/`, `app/` | `components.md`, `dev-guide.md` |
+| `server/`, `api/`, `backend/`, `services/` | `api-contracts.md`, `dev-guide.md` |
+| `*.sql`, `migrations/`, schema changes | `database-schema.md` |
+| `docker/`, `.github/`, `ci/`, `deploy/` | `tech-stack.md` |
+| Cross-cutting (story touches both client and server) | `components.md`, `api-contracts.md`, `dev-guide.md` |
+
+Skip files that are already absent on disk. Do NOT read `ROADMAP.md` here — Phase 1.3 already pulled it if relevant.
 
 ### 2.2 Detect Required Expert Skills
 
@@ -345,9 +346,12 @@ table with severity, and a final `Verdict: PASS / NEEDS FIXES`.
 
 ## PHASE 8: COMPLETION
 
-### 8.1 Update Story File — Status
+### 8.1 Update Story File — Status (story file + index, same phase)
 
 Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
+
+Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../../references/stories-index.md`](../../../references/stories-index.md).
+
 **Note:** Per 8.7, this transition only happens after the user confirms manual testing PASS.
 
 ### 8.2 Update Story File — Implementation Summary

@@ -1,10 +1,6 @@
 ---
 name: track
-description: >
-  Use to view project progress and decide what to work on next. Default shows
-  full dashboard with statuses (TODO, IN PROGRESS, DONE, blocked). The 'next'
-  variant suggests the next unblocked story. The 'progress' variant shows epic
-  completion percentages and velocity. Run before /ck-code:build to pick a story.
+description: Use to view project progress, list ready stories, or pick the next one to implement. Argument is `status` (default), `next`, or `progress`.
 argument-hint: "[status|next|progress]"
 ---
 
@@ -27,51 +23,36 @@ story statuses, and recommendations for what to implement next.
 
 ---
 
-## PHASE 1: SCAN STORIES
+## PHASE 1: SCAN STORIES (index-driven)
 
 **This phase runs for ALL commands.**
 
 ### 1.1 Find All Task Plans
 
-Use Glob to find all task plan folders: `tasks/*/PROJECT_OVERVIEW.md` and `tasks/*/FEATURE_OVERVIEW.md`
+Use Glob to find all task plan folders: `tasks/*/PROJECT_OVERVIEW.md` and `tasks/*/FEATURE_OVERVIEW.md`.
 
 If no task plans found:
 ```
-No task plans found in tasks/. 
+No task plans found in tasks/.
 Run /ck-code:plan to generate epics and stories first.
 ```
 → STOP
 
-### 1.2 Find All Stories
+### 1.2 Read the Index per Plan
 
-For each task plan folder, use Glob to find:
-- All epic files: `tasks/*/epics/*/EPIC.md`
-- All story files: `tasks/*/epics/*/stories/*.md`
+For each plan folder, Read `tasks/<slug>/STORIES_INDEX.md`. The table has every column you need: `Epic`, `ID`, `Title`, `Status`, `Size`, `Blocked by`, `File`.
 
-### 1.3 Parse Each Story
+**Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../references/stories-index.md`](../../references/stories-index.md), then re-read.
 
-Read each story file and extract:
-- **Story ID:** from filename and path (e.g., `01-03`)
-- **Title:** from the `# Story` header
-- **Epic:** from the `> **Epic:**` field
-- **Size:** from the `> **Size:**` field
-- **Status:** from the `> **Status:**` field (TODO / IN PROGRESS / DONE)
-- **Blocked by:** from the `## Dependencies` section
-- **Blocks:** from the `## Dependencies` section
+Do NOT glob `tasks/*/epics/*/stories/*.md`. The index is the source of truth for status / size / dependencies. Read individual story files only if `progress` mode needs the Implementation Summary block for velocity calculation (Phase 6 below).
 
-### 1.4 Parse Each Epic
+### 1.3 Build Dependency Graph
 
-Read each EPIC.md and extract:
-- **Epic ID:** from the `# Epic [NN]` header
-- **Title:** from the header
-- **Story count:** from the stories table
-- **Completed stories:** count of DONE stories
+For each row in the index, mark it as `ready` if `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table. Mark as `blocked` otherwise.
 
-### 1.5 Build Dependency Graph
+### 1.4 Epic Aggregation (lazy)
 
-For each story with dependencies:
-- Check if blocking stories are DONE
-- Mark as `ready` (all blockers done) or `blocked` (some blockers not done)
+Group rows by their `Epic` column to compute per-epic completion counts (DONE / total). Only Read the per-epic `EPIC.md` files if the user requested `progress` mode and you need the epic's full title or metadata that's not in the index.
 
 ---
 
