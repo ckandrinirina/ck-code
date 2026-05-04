@@ -1,10 +1,6 @@
 ---
 name: ship
-description: >
-  Use after /ck-code:build or /ck-code:fix when you need to commit, create a PR,
-  and update linked GitHub Issues. Detects story context from branch name to
-  auto-link epics and close story issues. Enforces conventional commits.
-  Never adds AI/Claude references to commits or PRs. Works standalone for any commit.
+description: Use to commit work, open a PR, and update linked GitHub Issues after a story or fix is complete. Argument is an optional story file path. Also works for any standalone commit.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: false
 allowed-tools: Bash(git *) Bash(gh *) Bash(sleep *)

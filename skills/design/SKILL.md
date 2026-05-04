@@ -1,11 +1,6 @@
 ---
 name: design
-description: >
-  Use when you have a project specification file and need to generate architecture
-  documentation (folder structure, components, APIs, database schema, tech stack).
-  Fills specification gaps through targeted questions. Works for new projects and
-  for adding new features to existing projects. Never modifies the original spec.
-  First step in the ck-code workflow — runs before /ck-code:plan.
+description: Use to generate architecture documentation (`docs/architecture/`) from a project specification or feature description. Argument is the path to the spec file.
 argument-hint: "[path-to-spec-file]"
 ---
 

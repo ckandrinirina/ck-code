@@ -1,8 +1,6 @@
 ---
 name: help
-description: >
-  Quick reference for all available project skills. Shows commands,
-  workflow order, and usage examples. Use when unsure which skill to run.
+description: Use when unsure which ck-code skill to run, or to see the full workflow order and usage examples.
 ---
 
 # Project Skills — Quick Reference

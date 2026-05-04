@@ -1,10 +1,6 @@
 ---
 name: fix
-description: >
-  Use when you find a bug in a story (DONE or IN PROGRESS) that needs diagnosis
-  and a minimal fix. QA reproduces with a failing test before any code change.
-  Enforces minimal, focused fixes — no opportunistic refactoring. Includes
-  root-cause analysis and regression testing. For non-story bugs, handle separately.
+description: Use to diagnose and minimally fix a bug tied to an existing story (DONE or IN PROGRESS). Argument is an optional story file path; if omitted, picks interactively.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 ---

@@ -1,6 +1,6 @@
 ---
 name: qa-validator
-description: Reproduces bugs with failing tests and runs the dev-QA validation loop for /ck-code:build and /ck-code:fix. Verifies acceptance criteria, runs the test suite, writes minimal repro tests for bugs, and reports failures with file:line citations. Use when build or fix needs an isolated QA pass.
+description: Use when `/ck-code:build` or `/ck-code:fix` needs an isolated QA pass — failing test for a bug, acceptance-criteria verification, and a test-suite run with file:line citations.
 tools: Read, Bash, Grep, Glob
 ---
 

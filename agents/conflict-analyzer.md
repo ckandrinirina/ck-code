@@ -1,6 +1,6 @@
 ---
 name: conflict-analyzer
-description: Dry-runs merges between branches to detect file-level and semantic conflicts before /ck-code:parallel-build integrates worktrees. Reports affected files, line ranges, and a recommended merge order. Use only when multiple parallel branches need integration analysis.
+description: Use when `/ck-code:parallel-build` needs to know whether multiple completed branches will merge cleanly. Returns a conflict report and a safe merge order.
 tools: Read, Bash, Grep
 ---
 

@@ -1,13 +1,6 @@
 ---
 name: pre-spec
-description: >
-  Use BEFORE /ck-code:design when a feature idea needs stakeholder review
-  before any architecture work starts. Generates a descriptive,
-  non-developer-friendly specification (locally and/or as a GitHub issue
-  with labels and project assignment). Re-invoke on an existing slug or
-  issue URL to apply adjustments — the skill edits the local file in place
-  and re-syncs the linked GitHub issue. Once validated, the pre-spec feeds
-  /ck-code:design.
+description: Use before `/ck-code:design` to draft a stakeholder-friendly specification (locally and/or as a GitHub issue). Re-invoke on an existing slug or issue URL to apply edits.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
 ---
 

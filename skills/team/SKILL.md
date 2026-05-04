@@ -1,13 +1,6 @@
 ---
 name: team
-description: >
-  Use after /ck-code:design to generate project-tailored expert skills (frontend,
-  backend, QA, DevOps, analyst) and language/framework guides (Rust, TypeScript,
-  React Native, etc.). Researches current best practices via context7 before
-  generating, so guides reflect up-to-date recommendations. Auto-detects missing
-  skills on subsequent runs — generates only what's needed. Use --check to audit
-  without generating, --regenerate to refresh all. Auto-loaded by /ck-code:build
-  and /ck-code:fix.
+description: Use to generate project-tailored expert skills and language guides from architecture docs. Argument is `--check` to audit only or `--regenerate` to refresh all; default generates missing.
 argument-hint: "[--check|--regenerate]"
 disable-model-invocation: true
 ---

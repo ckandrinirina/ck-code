@@ -1,10 +1,6 @@
 ---
 name: publish
-description: >
-  Use after /ck-code:plan to push epics and stories from tasks/ into GitHub Issues.
-  Creates linked epic and story issues with size labels (S/M/L/XL). Detects
-  duplicates and updates existing issues. Requires gh CLI authenticated and
-  a GitHub remote.
+description: Use to push epics and stories from `tasks/` into GitHub Issues. Argument is an optional `tasks/<slug>/` folder path. Requires `gh` CLI authenticated.
 argument-hint: "[tasks-folder-path]"
 disable-model-invocation: true
 allowed-tools: Bash(gh *) Bash(sleep *)

@@ -1,6 +1,6 @@
 ---
 name: story-implementer
-description: Implements a single story via TDD inside a git worktree. Used by /ck-code:parallel-build to run multiple story implementations concurrently in isolation. Wraps /ck-code:build with worktree-aware setup and reporting.
+description: Use when `/ck-code:parallel-build` dispatches a story for end-to-end TDD implementation inside a pre-created git worktree.
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

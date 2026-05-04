@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Use when the user wants to understand what was just implemented, learn the technologies involved, or know how to manually verify that something works. Triggers on "explain", "what was implemented", "how do I check", "I want to learn", "what is this", "how does this work".
+description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works. Triggers on "explain", "what was implemented", "how do I check", "how does this work".
 user-invocable: true
 ---
 
