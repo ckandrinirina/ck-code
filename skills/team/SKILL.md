@@ -314,6 +314,12 @@ or new tech additions. For the exact layout, see
 
 ---
 
+## NEXT
+
+Run `/ck-code:plan <spec-file>` to break the architecture into epics, stories, and a roadmap.
+
+---
+
 ## IMPORTANT GUIDELINES
 
 - **Research is MANDATORY.** Phase 1.6 (context7/WebSearch research) MUST run

@@ -177,6 +177,10 @@ Brief block reporting:
 - ADJUST: bulleted list of changes applied
 - Hint about re-invocation: `/ck-code:pre-spec <slug>` to adjust again
 
+## NEXT
+
+Once stakeholders sign off and the spec status is `ready-for-design`, run `/ck-code:design <path-to-pre-spec.md>` to produce the architecture docs.
+
 ---
 
 ## CROSS-SKILL CONVENTION — feeding /ck-code:design

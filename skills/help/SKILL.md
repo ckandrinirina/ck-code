@@ -1,23 +1,14 @@
 ---
 name: help
-description: Use when unsure which ck-code skill to run, or to see the full workflow order and usage examples.
+description: Use when unsure which ck-code skill to run, or to look up command syntax, expected outputs, and the full workflow order. Static reference — for an active state-aware recommendation, use `/ck-code:start` instead.
+argument-hint: "[command-name]"
 ---
 
 # Project Skills — Quick Reference
 
-## Workflow Order
-
-```
-0. /ck-code:pre-spec → (Optional) Stakeholder-ready feature spec for review
-1. /ck-code:design   → Refine spec into architecture docs
-2. /ck-code:team     → Generate expert + guide skills
-3. /ck-code:plan     → Create epics, stories, roadmap
-4. /ck-code:publish  → Push epics/stories to GitHub Issues
-5. /ck-code:track    → Check progress, find next story
-6. /ck-code:build    → Implement a story (TDD + QA)
-7. /ck-code:fix      → Fix a bug in a story (diagnose + TDD fix)
-8. /ck-code:ship     → Commit, PR, and update GitHub Issues
-```
+The full workflow graph, hand-offs, output locations, and "when to use which"
+decision tree live in [`../../references/workflow-map.md`](../../references/workflow-map.md).
+This file lists the per-command syntax and examples.
 
 ## Commands
 
@@ -195,3 +186,37 @@ Examples: `guide-rust`, `guide-cpp`, `guide-react-native`, `guide-axum`
 /ck-code:ship tasks/.../stories/01_setup.md  # Commit + PR + update issues
 /ck-code:ship                                # Standalone commit (no story)
 ```
+
+---
+
+## When to Use Which
+
+**`publish` vs `ship`** — these are **sequential, not alternatives**:
+
+- **`/ck-code:publish`** mirrors the *plan* (epics + stories) into GitHub
+  Issues so anyone can see what's coming. Run once, after `/ck-code:plan`.
+  Artefact: GitHub Issues.
+- **`/ck-code:ship`** mirrors the *implementation* — commit, open PR,
+  close the linked story issue, update the epic checklist. Run once per
+  story/fix after `/ck-code:build` or `/ck-code:fix`. Artefact: code.
+
+Most projects run both. Skip `publish` only if you don't track work in
+GitHub Issues.
+
+**`build` vs `parallel-build`** — pick by scope, not by preference:
+
+- **`/ck-code:build`** — one story at a time, full TDD discipline,
+  deepest QA. Default for solo work.
+- **`/ck-code:parallel-build`** — multiple **independent** ready stories,
+  each in its own git worktree, dispatched as parallel sub-agents. Use
+  when the index has 3+ stories with no `Blocked by` between them. Each
+  sub-agent invokes `/ck-code:build` internally — no quality is lost.
+
+**`fix` vs `build`** — `fix` is for bugs in already-implemented stories
+(diagnoses → reproduction test → minimal fix). `build` is for new
+acceptance criteria. Never use `build` to "rebuild" a buggy story —
+`fix` keeps the original story file, appends a Bug Report section, and
+preserves history.
+
+For the full workflow graph, hand-off table, and output-location
+reference: see [`../../references/workflow-map.md`](../../references/workflow-map.md).

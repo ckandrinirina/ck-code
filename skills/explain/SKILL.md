@@ -1,6 +1,7 @@
 ---
 name: explain
 description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works. Triggers on "explain", "what was implemented", "how do I check", "how does this work".
+argument-hint: "[file-or-concept]"
 user-invocable: true
 ---
 

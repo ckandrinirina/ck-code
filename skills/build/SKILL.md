@@ -61,67 +61,17 @@ Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID`
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING
 
-### 2.1 Read Project Architecture (scoped — load only what the story touches)
+Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md):
 
-Always read `docs/architecture/folder-structure.md` (small and universally useful). Beyond that, load architecture docs **only** for the domains the story actually touches, derived from the story's `## Files to Create/Modify` table:
-
-| Touched paths in story | Load (in addition to folder-structure.md) |
-|---|---|
-| `client/`, `ui/`, `components/`, `screens/`, `mobile/`, `app/` | `components.md`, `dev-guide.md` |
-| `server/`, `api/`, `backend/`, `services/` | `api-contracts.md`, `dev-guide.md` |
-| `*.sql`, `migrations/`, schema changes | `database-schema.md` |
-| `docker/`, `.github/`, `ci/`, `deploy/` | `tech-stack.md` |
-| Cross-cutting (story touches both client and server) | `components.md`, `api-contracts.md`, `dev-guide.md` |
-
-Skip files that are already absent on disk. Do NOT read `ROADMAP.md` here — Phase 1.3 already pulled it if relevant.
-
-### 2.2 Detect Required Expert Skills
-
-Analyze the story's "Files to Create/Modify" and "Technical Notes":
-
-```
-File path                                     → Expert
-mobile/, app/, components/, screens/, ui/     → expert-frontend
-server/, api/, backend/, services/            → expert-backend
-.test., .spec., __tests__/                    → expert-qa (always loaded)
-docker/, .github/, ci/, deploy/               → expert-devops
-DB migrations, .sql, schema changes           → expert-backend
-
-Technical Notes keyword                       → Expert
-"frontend"/"UI"/"component"/"screen"          → expert-frontend
-"API"/"endpoint"/"server"/"handler"           → expert-backend
-"deploy"/"CI"/"docker"/"pipeline"             → expert-devops
-```
-
-**expert-qa is ALWAYS loaded regardless of story type** — it reviews implementation
-for test quality and edge cases. Do not skip it.
-
-### 2.3 Detect Required Guide Skills
-
-By file extension in "Files to Create/Modify":
-`.rs` → guide-rust; `.cpp/.h/.hpp` → guide-cpp (+ guide-juce if JUCE);
-`.ts/.tsx` → guide-typescript; `.tsx` in `mobile/` → guide-react-native;
-`.py` → guide-python; `.go` → guide-go; `.java/.kt` → guide-java;
-`.swift` → guide-swift; plus any framework-specific guides (guide-axum, guide-juce, etc.).
-
-### 2.4 Load Skills & Warn
-
-**Step 1 — Filesystem check FIRST (mandatory):**
-```bash
-find .claude/skills -type f -name "*.md" | sort
-```
-This is the authoritative list. Never claim a skill is missing without running
-this first. Skills live in subdirectories (`experts/`, `guides/`) that are not
-surfaced by the Skill tool's system listing.
-
-**Step 2 — Load each detected skill:** Try `Skill` tool first
-(e.g., `Skill("experts/backend")`); on error, fall back to
-`Read(".claude/skills/experts/backend/SKILL.md")` and apply manually.
-Always load `experts/qa/SKILL.md` unconditionally.
-
-**Step 3 — Warn about truly missing skills:** If a skill was expected but does NOT
-appear in the filesystem check output, ask `Continue without these? YES / GENERATE FIRST`
-(see examples). If GENERATE FIRST → tell user to run `/ck-code:team` and come back.
+1. **Read scoped architecture docs** — always `folder-structure.md`, plus the
+   docs matching the paths in the story's "Files to Create/Modify" table.
+2. **Detect required experts** by file path + Technical Notes keywords.
+   `expert-qa` is **always** loaded.
+3. **Detect required guides** by file extension.
+4. **Load** each detected skill (filesystem check → `Skill` tool → fallback
+   to `Read`); warn about any truly missing skills with
+   `Continue without these? YES / GENERATE FIRST` (template in
+   [references/examples.md](references/examples.md)).
 
 ---
 
@@ -270,77 +220,32 @@ Run full test suite one more time and present the REFACTOR Phase Complete block 
 
 ## PHASE 7: QA VALIDATION
 
-The QA expert skills review the work — this is **not** a self-review.
+QA expert skills review the work — this is **not** a self-review.
 
-**Preferred subagent_type:** delegate the validation pass to `ck-code:qa-validator`
-if available (defined in this plugin's `agents/` folder — runs the test suite,
-maps results to acceptance criteria, reports failures with file:line citations).
-If the subagent_type is not registered, do the steps below inline.
+**Preferred subagent_type:** delegate to `ck-code:qa-validator` if available
+(defined in this plugin's `agents/` folder — runs the test suite, maps
+results to acceptance criteria, reports failures with file:line citations).
+If the subagent_type is not registered, run the inline procedure.
 
-### 7.0 Load QA Expert Skills (mandatory, do not skip)
+Mark the QA task `in_progress`, then follow the shared procedure in
+[`../../../references/qa-validation.md`](../../../references/qa-validation.md):
 
-Before any QA, load both QA skills directly:
-```
-Read(".claude/skills/experts/qa/SKILL.md")
-Read(".claude/skills/experts/qa-project/SKILL.md")
-```
-Apply their standards throughout this entire phase. A self-review without loading
-these skills does NOT count as QA validation.
+1. Load `experts/qa/SKILL.md` + `experts/qa-project/SKILL.md` (mandatory).
+2. Acceptance-criteria verification (per-criterion PASS/FAIL).
+3. Run the full test suite — watch for regressions.
+4. Code-quality checks (full command list per stack lives in
+   [references/tdd-walkthrough.md](references/tdd-walkthrough.md)).
+5. Architecture compliance against `docs/architecture/`.
+6. Edge-case analysis.
+7. Present the QA Report (template in
+   [references/examples.md](references/examples.md)).
+8. Handle PASS / NEEDS FIXES — iteration cap is 3. At iteration 3,
+   escalate with FIX MANUALLY / ACCEPT AS-IS / ABORT (exact wording in
+   [references/examples.md](references/examples.md)). Never silently
+   continue past iteration 3.
 
-### 7.1 Start QA Task
-
-Mark the QA task as `in_progress`.
-
-### 7.2 Acceptance Criteria Verification
-
-For EACH acceptance criterion: confirm a test covers it (should be, from Phase 4),
-confirm the implementation fulfills it, mark PASS or FAIL with explanation.
-
-### 7.3 Run Full Test Suite
-
-Run all tests, not just the new ones. Check for regressions in existing tests.
-
-### 7.4 Code Quality Checks
-
-Run all applicable quality tools. Detect which are available per stack — full
-command list (TypeScript / Rust / Python / C++ / JUCE) is in
-[references/tdd-walkthrough.md](references/tdd-walkthrough.md). Zero compiler
-warnings in project-owned files is the quality bar.
-
-### 7.5 Architecture Compliance
-
-Check the implementation against `docs/architecture/`: new files in correct
-directories per `folder-structure.md`, API shapes match `api-contracts.md`,
-data flow follows `data-flow.md`, DB changes consistent with `database-schema.md`.
-
-### 7.6 Edge Case Analysis
-
-Look for scenarios tests might not cover: null/undefined/empty inputs, concurrent
-access (if applicable), resource cleanup (file handles, connections), error
-propagation through the call chain.
-
-### 7.7 Present QA Report
-
-Emit the QA Report block (template in [references/examples.md](references/examples.md)).
-It must include: per-criterion PASS/FAIL, test totals + new regressions, code
-quality results, architecture compliance, edge case coverage, an Issues Found
-table with severity, and a final `Verdict: PASS / NEEDS FIXES`.
-
-### 7.8 Handle Results
-
-**If PASS (no issues):** mark QA task as `completed`, proceed to Phase 8.
-
-**If NEEDS FIXES:**
-- Present the issues clearly
-- Track the QA iteration count (max 3)
-- **If iteration < 3:** announce `[N]/3` (see examples), fix each issue (write
-  test for it if missing, then fix code), re-run Phase 6 (refactor), then re-run
-  Phase 7 (QA) with fresh check.
-- **If iteration = 3:** escalate to user with three options — **A) FIX MANUALLY**
-  (attempt specific fixes the user suggests), **B) ACCEPT AS-IS** (proceed with
-  known issues, document them), **C) ABORT** (stop implementation, revert story
-  to TODO status). Exact wording in [references/examples.md](references/examples.md).
-  Do NOT silently continue past iteration 3.
+On NEEDS FIXES inside the loop: fix each issue → re-run Phase 6 (refactor)
+→ re-run this phase with a fresh QA check.
 
 ---
 
@@ -422,3 +327,9 @@ When writing JUCE unit tests, always:
 - Use `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions from `AudioDeviceManager` needing a MessageManager
 - Use ASCII-only strings in `beginTest()`, `expect()`, and JUCE String-constructing calls — `juce::String(const char*)` asserts bytes ≤ 127 (use `-` not `—`, `...` not `…`)
 - Use a single meaningful assertion instead of looping hundreds of `expect()` calls — e.g. find max amplitude rather than 512 individual sample checks
+
+---
+
+## NEXT
+
+After the user confirms manual testing PASS (Phase 8.7), run `/ck-code:ship <story-path>` to commit, open the PR, and update the linked GitHub Issues. If more stories remain, follow `ship` with `/ck-code:track next`.

@@ -303,3 +303,7 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
   the cross-branch overlap step is skipped.
 - **Run final QA on merged main** before cleanup — cross-branch integration issues
   only appear after all merges.
+
+## NEXT
+
+For each story branch that passed QA: run `/ck-code:ship <story-path>` to commit, open the PR, and update the linked GitHub Issues. Then `/ck-code:track next` to find the next batch.

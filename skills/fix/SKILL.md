@@ -40,19 +40,11 @@ Ask at most 1-2 follow-ups (intermittent vs. consistent, trigger input, recent r
 ## PHASE 3: SKILL DETECTION & CONTEXT LOADING
 **Goal:** Load the right expert and guide skills for the affected code.
 
-### 3.1 Detect from Story Files
-Use the story's "Files to Create/Modify" — same detection logic as `/ck-code:build`:
-- `mobile/`, `app/`, `components/` → `expert-frontend`
-- `server/`, `api/`, `backend/` → `expert-backend`
-- File extensions → matching guide skills (`.rs` → `guide-rust`, etc.)
+### 3.1 Detect & Load Skills
 
-### 3.2 Always Load QA & Analyst
-`expert-qa` is ALWAYS loaded for bug fix workflows. `expert-analyst` is also ALWAYS loaded — useful for root cause analysis.
+Follow the shared procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md). For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis).
 
-### 3.3 Load Skills
-Check `.claude/skills/experts/` and `.claude/skills/guides/` for detected skills. Load what's available; warn about missing ones.
-
-### 3.4 Prepare Systematic Debugging Approach
+### 3.2 Prepare Systematic Debugging Approach
 Before any diagnosis, form a structured investigation plan:
 1. Read the failing code path from entry point to point of failure.
 2. List all assumptions the code makes at each step.
@@ -145,24 +137,9 @@ With the test passing, ask: is the fix readable? Does it duplicate logic shareab
 ## PHASE 7: QA VALIDATION
 **Goal:** QA expert verifies the fix is complete and nothing else broke.
 
-### 7.1 Run Full Test Suite
-Run ALL tests, not just fix-related ones. Check for regressions.
+Follow the shared procedure in [`../../../references/qa-validation.md`](../../../references/qa-validation.md). Bug-fix flows include the **minimalism check** (Step 6) — the fix must be the smallest change that resolves the root cause; no unrelated refactoring.
 
-### 7.2 Verify Acceptance Criteria
-Re-check ALL acceptance criteria from the original story — not just the broken ones. The fix may have side effects on previously-passing criteria.
-
-### 7.3 Code Quality Checks
-Run linting, type checking, formatting — same as `/ck-code:build` Phase 7.4.
-
-### 7.4 Verify Minimalism
-Check that the fix is truly minimal: no unrelated changes, no unnecessary refactoring, no added features. Diff should be small and focused.
-
-### 7.5 Present QA Report
-Use the QA Report template in `references/qa-dialogue.md` (Phase 7.5). Verdict: `PASS` or `NEEDS FIXES`.
-
-### 7.6 Handle Results
-- **PASS:** proceed to Phase 8.
-- **NEEDS FIXES:** track iteration count (max 3). Loop back to Phase 6 for targeted fixes. After 3 iterations, escalate to user with `MANUAL FIX / ACCEPT / REVERT` options (see `references/qa-dialogue.md`).
+Skill-specific report and escalation templates: `references/qa-dialogue.md` (Phase 7.5 / 7.6). Iteration cap = 3; on iteration 3 escalate with `MANUAL FIX / ACCEPT / REVERT`. On NEEDS FIXES, loop back to Phase 6.
 
 ## PHASE 8: COMPLETION
 **Goal:** Update the story, commit the fix.
@@ -201,3 +178,9 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invok
 - **Skill loading is automatic.** Same detection as `/ck-code:build`. QA and analyst experts are ALWAYS loaded.
 - **Language: English** — all output in English regardless of spec/story language.
 - **Reusability.** Works with any project using the `tasks/` story format. No project-specific references.
+
+---
+
+## NEXT
+
+After QA PASS and the user confirms manual testing, run `/ck-code:ship <story-path>` to commit (`fix/` branch prefix), open the PR, and update the linked GitHub Issues.

@@ -215,6 +215,10 @@ After all files are created, present a summary tailored to the mode. For each su
 - **Feature Mode — Add Feature:** see [references/roadmap-format.md#feature-mode--add-feature-summary](references/roadmap-format.md#feature-mode--add-feature-summary).
 - **Feature Mode — Continue Existing Plan:** see [references/roadmap-format.md#feature-mode--continue-existing-plan-summary](references/roadmap-format.md#feature-mode--continue-existing-plan-summary).
 
+## NEXT
+
+Run `/ck-code:publish` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
+
 ---
 
 ## IMPORTANT GUIDELINES
