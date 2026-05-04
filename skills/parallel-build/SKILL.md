@@ -28,11 +28,15 @@ Find all stories ready to implement.
 
 ### 1.1 Read the Index
 
-Read `tasks/*/STORIES_INDEX.md` — one Read covers every story across every epic. The table already contains `ID`, `Title`, `Status`, `Size`, `Blocked by`, and `File` columns; no per-story file reads are needed at this phase.
+**FIRST ACTION — before any glob or file exploration:**
+Glob `tasks/*/STORIES_INDEX.md` then Read the matched file.
 
-**Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
+Do NOT glob `tasks/*/epics/*/stories/*.md` — individual story reads are forbidden at this phase.
+The index is the only source of truth for story selection.
 
-Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index is the source of truth for selection.
+The table contains `ID`, `Title`, `Status`, `Size`, `Blocked by`, and `File` columns; no per-story file reads are needed at this phase.
+
+**Bootstrap check (only if index is absent or header ≠ `<!-- Schema: v1 -->`):** follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
 
 ### 1.2 Resolve Ready Set
 
@@ -292,6 +296,7 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 
 ## RULES
 
+- **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
 - **Never merge** a story branch without QA passing first.
 - **Always dispatch all agents in one message** — not sequentially. True parallelism
   requires multiple Agent calls in a single turn.
