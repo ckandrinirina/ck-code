@@ -4,9 +4,11 @@ description: >
   Use after /ck-code:design to generate project-tailored expert skills (frontend,
   backend, QA, DevOps, analyst) and language/framework guides (Rust, TypeScript,
   React Native, etc.). Researches current best practices via context7 before
-  generating, so guides reflect up-to-date recommendations. Generated skills are
-  auto-loaded by /ck-code:build and /ck-code:fix. Use --regenerate after upgrades.
-argument-hint: "[--regenerate]"
+  generating, so guides reflect up-to-date recommendations. Auto-detects missing
+  skills on subsequent runs — generates only what's needed. Use --check to audit
+  without generating, --regenerate to refresh all. Auto-loaded by /ck-code:build
+  and /ck-code:fix.
+argument-hint: "[--check|--regenerate]"
 disable-model-invocation: true
 ---
 
@@ -27,8 +29,45 @@ context and research.
 ## INPUT
 
 `$ARGUMENTS` can include a path to the architecture docs folder (default:
-`docs/architecture/`) and/or `--regenerate` to overwrite previously generated
-expert skills.
+`docs/architecture/`) and/or one of these flags:
+- `--check` — audit which skills are missing/present, then stop (no generation)
+- `--regenerate` — overwrite all previously generated skills with fresh versions
+
+---
+
+## PHASE 0: DETECT EXISTING STATE
+
+**Runs first. Skip entirely if:** `--regenerate` is set OR no skills exist yet.
+
+```
+skills_exist = any .claude/skills/experts/*/SKILL.md
+             OR any .claude/skills/guides/*/SKILL.md
+
+IF NOT skills_exist OR --regenerate:
+  → Proceed to Phase 1 normally (generation mode: ALL)
+
+IF skills_exist AND NOT --regenerate:
+  1. Quick-read docs/architecture/tech-stack.md
+  2. Run Phase 2.3 auto-detection logic → build EXPECTED skills list
+  3. Scan .claude/skills/experts/ and .claude/skills/guides/ → build EXISTING list
+  4. Compute:
+       MISSING = EXPECTED − EXISTING
+       EXTRA   = EXISTING − EXPECTED  (tech no longer detected)
+  5. Show the state table (see references/examples.md#phase-0-state-table)
+  6. IF --check flag → STOP (report only, no generation)
+  7. IF MISSING is empty → inform user, suggest --regenerate if refresh needed → STOP
+  8. IF MISSING is not empty → ask:
+       A) Generate missing only
+       B) Regenerate all
+       C) Abort
+     On A → Proceed to Phase 1 in MISSING-ONLY mode (target = MISSING list)
+     On B → Proceed to Phase 1 in ALL mode
+     On C → STOP
+```
+
+**MISSING-ONLY mode** is an internal flag carried through Phases 1–3: Phase 1.6
+researches only the technologies needed for missing skills; Phase 2.4 shows only
+missing skills in its plan table; Phase 3/3b generates only the missing skills.
 
 ---
 
@@ -184,9 +223,9 @@ Language/Framework guide IF:
 
 ### 2.4 Present Plan
 
-Show the user a plan listing every expert and guide to be generated, the
-trigger reason for each, and the output paths, then ask
-**Proceed? YES / NO / ADJUST**. If ADJUST, let the user add/remove or
+Show the user a plan listing every skill to be generated (in MISSING-ONLY mode:
+only the missing skills), the trigger reason for each, and the output paths, then
+ask **Proceed? YES / NO / ADJUST**. If ADJUST, let the user add/remove or
 customize. For the exact layout, see
 [references/examples.md#plan-presentation-phase-24](references/examples.md#plan-presentation-phase-24).
 
@@ -200,14 +239,11 @@ practices.
 
 ### Check for Existing Skills
 
-Before generating, check if `.claude/skills/experts/*/SKILL.md` or
-`.claude/skills/guides/*/SKILL.md` already exists.
-
-- If `--regenerate` flag is set: overwrite all existing generated skills.
-- If not set and skills exist: ask the user to choose
-  **A) REGENERATE ALL**, **B) SKIP EXISTING**, or **C) ABORT**. See
-  [references/examples.md#existing-skills-prompt-phase-3](references/examples.md#existing-skills-prompt-phase-3)
-  for the exact wording.
+Phase 0 handles the full detection and user prompt. By the time Phase 3 runs,
+the generation mode is already set:
+- **ALL mode** (no existing skills, or user chose "Regenerate all"): generate every planned skill, overwriting any that exist.
+- **MISSING-ONLY mode** (user chose "Generate missing only"): skip any skill whose output file already exists.
+- **REGENERATE mode** (`--regenerate` flag): overwrite all existing skills unconditionally.
 
 ### 3.1 Generate: expert-frontend
 

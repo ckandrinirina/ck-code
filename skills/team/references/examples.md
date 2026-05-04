@@ -135,3 +135,43 @@ Run `/ck-code:team --regenerate` after:
 - Upgrading framework versions (to refresh best practices)
 - Adding new technologies to the project
 ```
+
+---
+
+## Phase 0 State Table
+
+Shown when existing skills are found and `--regenerate` is not set.
+
+```
+## Skill State Audit
+
+Based on tech-stack.md, expected skills vs. current state:
+
+### Expert Skills
+| Skill | Path | Status |
+|-------|------|--------|
+| expert-frontend   | .claude/skills/experts/frontend/SKILL.md   | ✓ exists  |
+| expert-backend    | .claude/skills/experts/backend/SKILL.md    | ✓ exists  |
+| expert-qa         | .claude/skills/experts/qa/SKILL.md         | ✓ exists  |
+| expert-analyst    | .claude/skills/experts/analyst/SKILL.md    | ✓ exists  |
+| expert-devops     | .claude/skills/experts/devops/SKILL.md     | ✗ missing |
+| expert-qa-project | .claude/skills/experts/qa-project/SKILL.md | ✓ exists  |
+
+### Language & Framework Guides
+| Guide              | Path                                         | Status                    |
+|--------------------|----------------------------------------------|---------------------------|
+| guide-typescript   | .claude/skills/guides/typescript/SKILL.md    | ✓ exists                  |
+| guide-rust         | .claude/skills/guides/rust/SKILL.md          | ✓ exists                  |
+| guide-react-native | .claude/skills/guides/react-native/SKILL.md  | ✗ missing                 |
+| guide-grpc         | .claude/skills/guides/grpc/SKILL.md          | ? extra (tech not detected) |
+
+**Summary:** 2 missing, 1 extra, 6 existing.
+
+**Missing skills detected. Choose:**
+A) Generate missing only (expert-devops, guide-react-native)
+B) Regenerate all (overwrite all 8 skills with fresh research)
+C) Abort
+```
+
+Note on `? extra`: skills for technologies no longer found in tech-stack.md.
+Never deleted automatically — the user decides.
