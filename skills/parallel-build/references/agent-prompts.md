@@ -18,10 +18,9 @@ prompt: |
   Branch: story/XX-YY
 
   Your task:
-  1. Read the story file at the path above
-  2. Invoke the /ck-code:build skill using the Skill tool:
+  1. Invoke the /ck-code:build skill using the Skill tool:
      Skill({ skill: "ck-code:build", args: "[full path to story markdown file]" })
-  3. Follow the /ck-code:build skill completely — it handles TDD, SOLID principles, QA, and commit
+  2. Follow the /ck-code:build skill completely — it handles TDD, SOLID principles, QA, and commit
 
   Important:
   - Work only on files relevant to this story

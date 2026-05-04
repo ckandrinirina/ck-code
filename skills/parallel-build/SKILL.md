@@ -128,11 +128,13 @@ summary (format in `references/conflict-format.md`).
 
 After all agents finish, verify each completed story is properly recorded and no implementation was silently lost. Run this before conflict analysis so that integrity issues are surfaced early.
 
-### 3.5.1 Story Status Check (index + spot-check)
+### 3.5.1 Story Status Check (worktree-based)
 
-Re-read the project's `STORIES_INDEX.md` once. For each **successfully completed** story, confirm its row in the index now reads `Status: DONE`. The `/ck-code:build` skill is responsible for updating BOTH the story file and the index in the same phase — disagreement here points to a build-skill bug.
+For each **successfully completed** story, read its story file directly from the agent's worktree path — `<worktree-path>/<relative-story-path>` — and confirm the `Status:` field reads `DONE`.
 
-If a row is still `TODO` or `IN PROGRESS` → flag as ⚠️ **Story file not updated** and read just that one story file to confirm whether the build skill updated the file but missed the index, or missed both. Do NOT re-read every completed story file by default — only read the ones flagged by the index check.
+Do NOT read `STORIES_INDEX.md` from the main checkout — it reflects pre-implementation state because the build skill updates the index inside the worktree, and those changes land on main only after merge.
+
+If the story file in the worktree still shows `TODO` or `IN PROGRESS` → flag as ⚠️ **Story file not updated** — the build skill failed to complete Phase 8. Also check `<worktree-path>/tasks/<slug>/STORIES_INDEX.md` to confirm whether the index and story file are in sync (they must never disagree — see mutation protocol in `../../../references/stories-index.md`).
 
 Acceptance-criteria checkboxes are validated by the build skill's QA phase, not here.
 

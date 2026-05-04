@@ -251,15 +251,7 @@ On NEEDS FIXES inside the loop: fix each issue → re-run Phase 6 (refactor)
 
 ## PHASE 8: COMPLETION
 
-### 8.1 Update Story File — Status (story file + index, same phase)
-
-Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
-
-Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../../references/stories-index.md`](../../../references/stories-index.md).
-
-**Note:** Per 8.7, this transition only happens after the user confirms manual testing PASS.
-
-### 8.2 Update Story File — Implementation Summary
+### 8.1 Update Story File — Implementation Summary
 
 Append the Implementation Summary block (template in
 [references/story-template.md](references/story-template.md)) to the story file.
@@ -273,23 +265,19 @@ SOLID compliance summary, and notes.
 - Use `git diff --stat` and `git diff` to collect precise lines
 - No descriptions — paths + line numbers only
 
-### 8.3 Update Story Checklist in Story File
+### 8.2 Update Story Checklist in Story File
 
 Mark all acceptance criteria as `[x]` checked in the story file.
 
-### 8.4 Update Parent Epic
-
-Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
-
-### 8.5 Update Implementation Plan Subtasks
+### 8.3 Update Implementation Plan Subtasks
 
 Mark all subtasks in the story's Implementation Plan section as `[x]` done.
 
-### 8.6 Mark All Claude Tasks Completed
+### 8.4 Mark All Claude Tasks Completed
 
 Use TaskUpdate to mark all remaining tasks as `completed`. Use TaskList to show final summary.
 
-### 8.7 User Manual Testing — REQUIRED before marking story DONE
+### 8.5 User Manual Testing — REQUIRED GATE
 
 **Do NOT mark the story as DONE or update the EPIC until the user explicitly
 confirms PASS here.** The story status must stay IN PROGRESS until manual
@@ -299,7 +287,17 @@ Present the manual-testing prompt (see examples) listing specific scenarios from
 the acceptance criteria plus an edge case to try. Ask `Result? PASS / ISSUES`.
 
 - **If ISSUES:** Ask what's wrong, loop back to Phase 5 for targeted fixes.
-- **If PASS:** Proceed to update story to DONE, update EPIC, then move to 8.8.
+- **If PASS:** Proceed to 8.6.
+
+### 8.6 Update Story File — Status DONE (story file + index, same phase)
+
+Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
+
+Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../../references/stories-index.md`](../../../references/stories-index.md).
+
+### 8.7 Update Parent Epic
+
+Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
 
 ### 8.8 Ship (Commit + PR + Issue Updates)
 
