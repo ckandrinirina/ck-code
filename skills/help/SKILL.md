@@ -73,12 +73,12 @@ Generate epics, stories, roadmap from a specification. Creates structured `tasks
 
 ---
 
-### /ck-code:publish [tasks-folder]
+### /ck-code:to-issues [tasks-folder]
 Publish epics and stories to GitHub Issues with labels and cross-references.
 
 ```
-/ck-code:publish tasks/YYYY-MM-DD_<your-project>   # Publish specific plan
-/ck-code:publish                             # Auto-detect if only one plan exists
+/ck-code:to-issues tasks/YYYY-MM-DD_<your-project>   # Publish specific plan
+/ck-code:to-issues                             # Auto-detect if only one plan exists
 ```
 
 **Output:** GitHub Issues with `epic`, `story`, `size/*` labels
@@ -158,7 +158,7 @@ Examples: `guide-rust`, `guide-cpp`, `guide-react-native`, `guide-axum`
 /ck-code:design docs/specifications.md       # 1. Generate architecture docs
 /ck-code:team                                # 2. Create expert + guide skills
 /ck-code:plan docs/specifications.md         # 3. Generate epics and stories
-/ck-code:publish                             # 4. (Optional) Push to GitHub Issues
+/ck-code:to-issues                             # 4. (Optional) Push to GitHub Issues
 /ck-code:track next                          # 5. Find first story to implement
 /ck-code:build                               # 6. Start building!
 ```
@@ -191,16 +191,16 @@ Examples: `guide-rust`, `guide-cpp`, `guide-react-native`, `guide-axum`
 
 ## When to Use Which
 
-**`publish` vs `ship`** — these are **sequential, not alternatives**:
+**`to-issues` vs `ship`** — these are **sequential, not alternatives**:
 
-- **`/ck-code:publish`** mirrors the *plan* (epics + stories) into GitHub
+- **`/ck-code:to-issues`** mirrors the *plan* (epics + stories) into GitHub
   Issues so anyone can see what's coming. Run once, after `/ck-code:plan`.
   Artefact: GitHub Issues.
 - **`/ck-code:ship`** mirrors the *implementation* — commit, open PR,
   close the linked story issue, update the epic checklist. Run once per
   story/fix after `/ck-code:build` or `/ck-code:fix`. Artefact: code.
 
-Most projects run both. Skip `publish` only if you don't track work in
+Most projects run both. Skip `to-issues` only if you don't track work in
 GitHub Issues.
 
 **`build` vs `parallel-build`** — pick by scope, not by preference:

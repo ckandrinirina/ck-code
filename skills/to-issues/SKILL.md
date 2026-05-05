@@ -1,12 +1,12 @@
 ---
-name: publish
-description: Use to push epics and stories from `tasks/` into GitHub Issues. Argument is an optional `tasks/<slug>/` folder path. Requires `gh` CLI authenticated.
+name: to-issues
+description: Use when the user wants to push epics and stories from `tasks/` into GitHub Issues as a batch. Argument is an optional `tasks/<slug>/` folder path. Requires `gh` CLI authenticated.
 argument-hint: "[tasks-folder-path]"
 disable-model-invocation: true
 allowed-tools: Bash(gh *) Bash(sleep *)
 ---
 
-# Publish Epics to GitHub Issues
+# To-Issues — Publish Epics & Stories to GitHub Issues
 
 Reads a generated tasks/ folder structure and creates corresponding GitHub Issues
 with labels, hierarchy links, and full story detail.

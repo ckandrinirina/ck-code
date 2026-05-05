@@ -99,7 +99,7 @@ stop.
 | `has_architecture && !has_team_skills` | **`/ck-code:team`** — generate project-tailored expert + guide skills from the architecture. |
 | `has_architecture && has_team_skills && !has_tasks_folder` | **`/ck-code:plan <spec-file>`** — break the architecture into epics, stories, and a roadmap. |
 | `has_tasks_folder && !has_stories_index` | **`/ck-code:track`** — bootstrap `STORIES_INDEX.md` from existing story files (track auto-bootstraps, then re-run `/ck-code:start`). |
-| `has_tasks_folder && !has_published_issues` *(optional)* | **`/ck-code:publish`** — mirror epics/stories to GitHub Issues, **or** skip this and go straight to the next row. |
+| `has_tasks_folder && !has_published_issues` *(optional)* | **`/ck-code:to-issues`** — mirror epics/stories to GitHub Issues, **or** skip this and go straight to the next row. |
 | `n_todo > 0` | **`/ck-code:track next`** — find the next ready story, then **`/ck-code:build [path]`**. |
 | `n_in_progress > 0 && n_todo == 0` | **`/ck-code:ship <story-path>`** — ship the in-progress story (commit + PR + issue updates), or **`/ck-code:build`** to keep going on it. |
 | `n_done > 0 && n_todo == 0 && n_in_progress == 0` | **`/ck-code:track progress`** — review the milestone tracker, **or** plan the next feature with **`/ck-code:plan`** / **`/ck-code:pre-spec`**. |

@@ -15,7 +15,7 @@ with epics, stories, dependencies, and a recommended roadmap.
 
 **Hand-off rules:**
 - Requires `/ck-code:design` to have run first (architecture docs in `docs/architecture/`).
-- Hands off to `/ck-code:build` (or `/ck-code:publish` then `/ck-code:build`) once the plan is generated.
+- Hands off to `/ck-code:build` (or `/ck-code:to-issues` then `/ck-code:build`) once the plan is generated.
 
 ## INPUT
 
@@ -217,7 +217,7 @@ After all files are created, present a summary tailored to the mode. For each su
 
 ## NEXT
 
-Run `/ck-code:publish` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
+Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
 
 ---
 

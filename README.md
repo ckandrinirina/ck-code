@@ -73,7 +73,7 @@ Without this entry the plugin stays dormant in that project — no slash command
 /ck-code:design   docs/specifications.md   # 1. Generate architecture docs
 /ck-code:team                              # 2. Create project-tailored experts + guides
 /ck-code:plan     docs/specifications.md   # 3. Generate epics and stories
-/ck-code:publish                           # 4. (Optional) push to GitHub Issues
+/ck-code:to-issues                           # 4. (Optional) push to GitHub Issues
 /ck-code:track    next                     # 5. Find the first story to implement
 /ck-code:build                             # 6. Start building (TDD + QA)
 /ck-code:ship                              # 7. Commit, PR, close Issue
@@ -89,7 +89,7 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 ## The full workflow
 
 ```
-/ck-code:pre-spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:publish  →  /ck-code:track
+/ck-code:pre-spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:to-issues  →  /ck-code:track
    (optional)                                                                                          ↓
                                                                                             /ck-code:build  →  /ck-code:ship
                                                                                                        ↑
@@ -102,7 +102,7 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 | `/ck-code:design` | Refine a spec into architecture docs | spec file | `docs/architecture/` |
 | `/ck-code:team` | Generate per-project expert + guide skills | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
 | `/ck-code:plan` | Create epics, stories, roadmap | spec file | `tasks/YYYY-MM-DD_<project>/` |
-| `/ck-code:publish` | Push epics/stories to GitHub Issues | tasks folder | GitHub Issues |
+| `/ck-code:to-issues` | Push epics/stories to GitHub Issues (batch) | tasks folder | GitHub Issues |
 | `/ck-code:track` | Progress dashboard | — | status, next story, completion % |
 | `/ck-code:build` | Implement a story (TDD + QA) | story file | source code + tests |
 | `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees | — / story IDs | parallel results + conflict report |
@@ -141,7 +141,7 @@ ck-code/
 │   ├── design/                    # spec → architecture docs
 │   ├── plan/                      # architecture → epics/stories
 │   ├── team/                      # generate per-project experts + guides
-│   ├── publish/                   # push tasks/ → GitHub Issues
+│   ├── to-issues/                 # push tasks/ → GitHub Issues (batch)
 │   ├── track/                     # progress dashboard
 │   ├── build/                     # TDD story implementation
 │   ├── parallel-build/            # parallel worktree builds
@@ -173,7 +173,7 @@ Each skill folder is self-contained: the main `SKILL.md` is the entry point, and
 ## Compatibility
 
 - **Claude Code** — required (CLI, IDE extension, or desktop app)
-- **gh CLI** — required for `/ck-code:publish` and `/ck-code:ship` GitHub Issue features
+- **gh CLI** — required for `/ck-code:to-issues` and `/ck-code:ship` GitHub Issue features
 - **git** — required for `/ck-code:parallel-build` (uses worktrees)
 - **[context7](https://context7.com)** — recommended for `/ck-code:team`, `/ck-code:design`, `/ck-code:plan`, and `/ck-code:build` to fetch up-to-date framework documentation. Either form works:
   - **MCP server** — install once into Claude Code; tools auto-discovered

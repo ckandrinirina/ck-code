@@ -2,7 +2,7 @@
 
 Applies to every commit, PR, issue comment, branch name, and any other
 git or GitHub artefact produced by ck-code skills (`ship`, `build`, `fix`,
-`publish`, and any future skill that touches git/gh).
+`to-issues`, and any future skill that touches git/gh).
 
 ## The rule
 

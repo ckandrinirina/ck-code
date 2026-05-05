@@ -12,7 +12,7 @@ instead of duplicating the workflow graph.
 2. /ck-code:design       Spec → architecture docs (docs/architecture/)
 3. /ck-code:team         Architecture → expert + guide skills (.claude/skills/)
 4. /ck-code:plan         Architecture → epics, stories, roadmap (tasks/)
-5. /ck-code:publish      (Optional) Push tasks/ → GitHub Issues
+5. /ck-code:to-issues      (Optional) Push tasks/ → GitHub Issues
 6. /ck-code:track        Show progress / find next ready story
 
 7. /ck-code:build        TDD-implement one story (story → DONE)
@@ -32,8 +32,8 @@ instead of duplicating the workflow graph.
 | `pre-spec` | `/ck-code:design` |
 | `design` | `/ck-code:team` |
 | `team` | `/ck-code:plan` |
-| `plan` | `/ck-code:publish` *(optional)* or `/ck-code:track next` |
-| `publish` | `/ck-code:track next` |
+| `plan` | `/ck-code:to-issues` *(optional)* or `/ck-code:track next` |
+| `to-issues` | `/ck-code:track next` |
 | `track next` | `/ck-code:build [path]` |
 | `build` | `/ck-code:ship` |
 | `parallel-build` | `/ck-code:ship` (per branch) |
@@ -47,10 +47,10 @@ instead of duplicating the workflow graph.
 | Single story, sequential, deepest-quality TDD | `build` | `parallel-build` |
 | Multiple unrelated stories, independent files | `parallel-build` | `build` |
 | Bug in already-implemented code | `fix` | `build` |
-| Push tasks to GitHub for tracking | `publish` (creates issues) | `ship` |
-| Deliver code (commit + PR + close issues) | `ship` (artefact: code) | `publish` |
+| Push tasks to GitHub for tracking | `to-issues` (creates issues) | `ship` |
+| Deliver code (commit + PR + close issues) | `ship` (artefact: code) | `to-issues` |
 
-`publish` and `ship` are **sequential, not alternatives**: `publish`
+`to-issues` and `ship` are **sequential, not alternatives**: `to-issues`
 mirrors the *plan* to GitHub Issues so anyone can see what's coming;
 `ship` mirrors the *implementation* (commit, PR, issue close) once a
 story is done. Most projects run both.
@@ -63,7 +63,7 @@ story is done. Most projects run both.
 | `design` | `docs/architecture/*.md` |
 | `team` | `.claude/skills/experts/*/SKILL.md`, `.claude/skills/guides/*/SKILL.md` |
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/, stories/, STORIES_INDEX.md, ROADMAP.md) |
-| `publish` | GitHub Issues only (no local writes) |
+| `to-issues` | GitHub Issues only (no local writes) |
 | `build` | Source + tests in repo, story file (status, plan, summary), `STORIES_INDEX.md` (status cell) |
 | `parallel-build` | Per-story branches in `.claude/worktrees/agent-*`, each with the same outputs as `build` |
 | `fix` | Source + tests, story file (Bug Report section), regression test |

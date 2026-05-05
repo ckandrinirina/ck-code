@@ -104,7 +104,7 @@ The longest sequential chain is:
 ### Next Steps
 1. Review the generated plan in tasks/
 2. Adjust stories or sizing as needed
-3. Use `/ck-code:publish` to publish to GitHub Issues (optional)
+3. Use `/ck-code:to-issues` to publish to GitHub Issues (optional)
 4. Start implementation with the first story in the roadmap
 ```
 
@@ -132,7 +132,7 @@ The longest sequential chain is:
 
 ### Next Steps
 1. Review the feature plan in tasks/
-2. Use `/ck-code:publish tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
+2. Use `/ck-code:to-issues tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
 3. Start with the first story in the feature roadmap
 ```
 
@@ -154,5 +154,5 @@ The longest sequential chain is:
 ### Next Steps
 1. Review the new epics in tasks/[existing-folder]/epics/
 2. ROADMAP.md has been updated with the new epics
-3. Use `/ck-code:publish` to publish new epics to GitHub Issues
+3. Use `/ck-code:to-issues` to publish new epics to GitHub Issues
 ```
