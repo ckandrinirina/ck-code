@@ -65,10 +65,11 @@ Store `story_issue` and `epic_issue`.
 Run `git status`. **Auto-stage** modified/new source files for the story, test files, and story file updates. **Never stage** `.env`, credentials, secrets, `.DS_Store`, IDE configs. Present grouped lists (Source / Tests / Documentation / Excluded) and ask: "Stage these files? YES / ADJUST".
 
 ### 2.2 Craft Commit Message
-Follow **conventional commits**. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`.
-- **Story (`/ck-code:build`):** `feat([epic-slug]): [story title]` + body listing key changes, AC count, test count, and `Closes #[story_issue_number]` if linked.
-- **Bug fix (`/ck-code:fix`):** `fix([epic-slug]): [bug description]` + root cause, regression test, and `Closes #[story_issue_number]` if linked.
-- **Standalone:** `[type]([scope]): [description]` + body explaining what/why and any issue refs.
+Subject line stays in **conventional commits** format (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`). Body is plain language readable by non-engineers.
+
+- **Subject:** `<type>(<scope>): <imperative summary, ≤70 chars>`
+- **Body:** describe what users can now do, see, or notice. No story IDs, no epic names, no acceptance-criteria counts, no test-count tallies. No class names, function names, or file paths.
+- **Footer:** `Closes #<issue_number>` if linked.
 
 Full message templates: [references/examples.md](references/examples.md).
 
@@ -105,7 +106,7 @@ git push -u origin [branch-name]
 ```
 
 ### 4.4 Craft PR
-PR title = commit first line (under 70 chars). PR body templates (story / bug fix): [references/pr-templates.md](references/pr-templates.md).
+PR title = commit first line (under 70 chars). PR body is read by PMs, designers, and stakeholders — write it in plain language with no story IDs, no AC checkboxes, and no test-count tallies. Body templates (feature / bug fix): [references/pr-templates.md](references/pr-templates.md).
 
 ### 4.5 Create PR
 Use `gh pr create --title ... --base ... --body "$(cat <<'EOF' ... EOF)"`. Exact command and post-create output block: [references/pr-templates.md](references/pr-templates.md).
@@ -113,8 +114,8 @@ Use `gh pr create --title ... --base ... --body "$(cat <<'EOF' ... EOF)"`. Exact
 ## PHASE 5: UPDATE GITHUB ISSUES
 
 ### 5.1 Update Story Issue
-- **PR was created:** add a comment to the story issue with PR number, key changes, AC/test counts.
-- **Commit only on protected branch:** close the issue with the commit hash and summary.
+- **PR was created:** comment on the linked issue with the PR number and a 1–2 sentence plain-language summary of what users can now do or notice. No AC lists, no test counts.
+- **Commit only on protected branch:** close the issue with the commit hash and the same plain-language summary.
 
 Exact `gh issue comment` / `gh issue close` templates: [references/issue-templates.md](references/issue-templates.md).
 
@@ -153,8 +154,10 @@ Present a final block covering: Commit (hash/branch/message), PR (url/status), G
 See [`../../../references/no-ai-references.md`](../../../references/no-ai-references.md) for the full rule. It applies to commits, PRs, issue comments, branch names, and any GitHub artefact this skill produces.
 
 ### Commit Messages Must Be Clean
-- Conventional commits format; first line under 70 characters
-- Body explains WHAT and WHY, not HOW; include `Closes #123` when applicable
+- Conventional commits format on the subject line; under 70 characters
+- Body is plain-language and readable by non-engineers — what users can now do, see, or notice
+- Body never mentions story IDs, epic names, AC checklists, test counts, file paths, class/function names
+- `Closes #123` footer when applicable
 - No emoji unless the repo convention uses them
 
 ### Stage Selectively
@@ -163,7 +166,8 @@ See [`../../../references/no-ai-references.md`](../../../references/no-ai-refere
 
 ### Issue Updates Are Careful
 - Only close issues when work is complete; use `Closes #X` so GitHub auto-closes on merge
-- Comment for progress updates; update epic checklists on completion
+- Comments are plain-language outcome summaries — no AC lists, no test counts
+- Update parent checklists on completion
 
 ### Branch Naming
 - Story: `story/[EE]-[SS]-[slug]`; Bug fix: `fix/[EE]-[SS]-[slug]`; Standalone: `[type]/[slug]`

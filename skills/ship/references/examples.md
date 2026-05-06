@@ -1,20 +1,22 @@
 # Worked Examples
 
-## Example: Full Story Ship (Commit + PR + Issue Updates)
+Both commit body and PR body are written in plain language. Subject lines
+stay in conventional-commit format for changelog and CI tooling.
+
+## Example: Full Feature Ship (Commit + PR + Issue Updates)
 
 ### Phase 2.2 — Commit Message
 
 ```
-feat(foundation): setup WebSocket server
+feat(realtime): live updates without refresh
 
-Implements story 01-03: WebSocket gateway with MessagePack serialization
+The app now receives live updates from the server. Logged-in users see
+new messages, notifications, and shared state appear instantly without
+needing to refresh the page.
 
-- Created ws handler with connection management
-- Added MessagePack serialization/deserialization
-- Integrated with existing gRPC client
-
-5 acceptance criteria met
-12 tests passing
+- New realtime channel for live updates
+- Compact message format reduces bandwidth on slow connections
+- Connects through the existing service layer, no extra setup needed
 
 Closes #42
 ```
@@ -23,16 +25,15 @@ Closes #42
 
 ```bash
 git commit -m "$(cat <<'EOF'
-feat(foundation): setup WebSocket server
+feat(realtime): live updates without refresh
 
-Implements story 01-03: WebSocket gateway with MessagePack serialization
+The app now receives live updates from the server. Logged-in users see
+new messages, notifications, and shared state appear instantly without
+needing to refresh the page.
 
-- Created ws handler with connection management
-- Added MessagePack serialization/deserialization
-- Integrated with existing gRPC client
-
-5 acceptance criteria met
-12 tests passing
+- New realtime channel for live updates
+- Compact message format reduces bandwidth on slow connections
+- Connects through the existing service layer, no extra setup needed
 
 Closes #42
 EOF
@@ -53,7 +54,7 @@ Output:
 **Hash:** a1b2c3d
 **Branch:** story/01-03-server-setup
 **Files:** 8
-**Message:** feat(foundation): setup WebSocket server
+**Message:** feat(realtime): live updates without refresh
 ```
 
 ### Phase 4 — Push & Create PR
@@ -62,29 +63,22 @@ Output:
 git push -u origin story/01-03-server-setup
 
 gh pr create \
-  --title "feat(foundation): setup WebSocket server" \
+  --title "feat(realtime): live updates without refresh" \
   --base main \
   --body "$(cat <<'EOF'
-## Summary
-- Implements story 01-03: WebSocket gateway with MessagePack serialization
-- Epic: Foundation
+## What's new
+The app now receives live updates from the server without users needing
+to refresh. Logged-in users see new messages, notifications, and shared
+state appear instantly.
 
 ## Changes
-- Created ws handler with connection management
-- Added MessagePack serialization/deserialization
-- Integrated with existing gRPC client
+- New realtime channel for live updates
+- Compact message format reduces bandwidth on slow connections
+- Connects through the existing service layer, no extra setup needed
 
-## Acceptance Criteria
-- [x] WebSocket server accepts connections
-- [x] MessagePack encode/decode round-trip
-- [x] gRPC integration verified
-- [x] Connection lifecycle handled
-- [x] Errors logged
-
-## Testing
-- 12 automated tests added
-- All tests passing
-- Manual testing completed
+## Notes
+- Initial rollout covers logged-in users only; guests fall back to the
+  existing refresh-based flow.
 
 Closes #42
 EOF
@@ -93,25 +87,23 @@ EOF
 
 ### Phase 5 — Update Issues
 
-Comment on story issue:
+Comment on the linked issue:
 ```bash
 gh issue comment 42 --body "$(cat <<'EOF'
-Implementation complete. PR: #57
+Implementation is complete and merged via PR #57.
 
-Changes:
-- WebSocket gateway with connection management
-- MessagePack serialization
-
-All acceptance criteria met. 12 tests passing.
+Logged-in users now receive live updates without needing to refresh —
+new messages and notifications appear instantly. Guests still fall
+back to the existing refresh-based flow.
 EOF
 )"
 ```
 
-Update epic checklist (epic issue #10):
+Update parent checklist (parent issue #10):
 ```bash
 gh issue view 10 --json body -q .body
 # Replace "- [ ] #42" with "- [x] #42" then:
-gh issue edit 10 --body "[updated body]"
+gh issue edit 10 --body "<updated body>"
 ```
 
 Add label:
@@ -127,34 +119,48 @@ gh issue edit 42 --add-label "status/done"
 ### Commit
 - **Hash:** a1b2c3d
 - **Branch:** story/01-03-server-setup
-- **Message:** feat(foundation): setup WebSocket server
+- **Message:** feat(realtime): live updates without refresh
 
 ### PR
 - **URL:** https://github.com/org/repo/pull/57
 - **Status:** Open
 
 ### GitHub Issues Updated
-- Story #42: commented
-- Epic #10: checklist updated
+- Issue #42: commented
+- Parent #10: checklist updated
 
 ### Story File
 - **Status:** DONE
 - **Path:** tasks/01-foundation/01-03-server-setup.md
 
 ### Next Steps
-- Run /ck-code:track next to find the next story
+- Run /ck-code:track next to find the next item
 - Run /ck-code:build to implement it
 ```
 
 ## Example: Bug Fix Commit
 
 ```
-fix(api): handle null user in profile lookup
+fix(profile): no more crash on empty profile
 
-Fixes bug in story 02-01: NullPointerException when user has no profile
+Profile pages crashed for users who hadn't filled in their profile yet.
+Visiting the page now shows the empty profile placeholder instead of an
+error.
 
-- Added null guard in ProfileService.lookup()
-- Added regression test: testLookupWithNullUser
+Closes #88
+```
+
+## Example: Bug Fix PR Body
+
+```markdown
+## What's fixed
+Profile pages crashed for users who hadn't filled in their profile yet.
+Visiting the page now shows the empty profile placeholder instead of an
+error.
+
+## Impact
+- Affected newly registered users who hadn't completed onboarding.
+- They can now reach their profile page without seeing an error screen.
 
 Closes #88
 ```
