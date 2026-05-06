@@ -35,16 +35,21 @@ criteria match, (c) component/epic match.
 ## Scope Analysis
 
 **Bug summary:** [1-line]
-**Candidate match:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED]
+**Candidate match:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED | PLANNED-IN-FUTURE]
 
-### Best matches
+### Best matches (DONE / IN PROGRESS)
 | Score | Story | Why |
 |-------|-------|-----|
 | 0.92 | [01-03] WebSocket gateway | bug area overlaps `src/ws/handler.rs` (acceptance criteria #2) |
 | 0.41 | [02-01] Login form | shares 1 file but unrelated symptom |
 
+### Future coverage (TODO — only shown when any score ≥ 0.5)
+| Score | Story | Why |
+|-------|-------|-----|
+| 0.91 | [04-02] Validate profile fields | criterion "validate all profile fields before submit" + file `profile_form.tsx` |
+
 ### Verdict
-[One of the four verdicts below — pick exactly one]
+[One of the five verdicts below — pick exactly one]
 
 A) SINGLE-STORY — bug belongs to [EE-SS]. Proceed with the standard fix flow.
 B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. A Bug Report will be appended
@@ -56,6 +61,11 @@ D) MIXED — real bug in [EE-SS] AND missing piece in [other epic(s)]. I will
    fix the bug here and create stub stories in the missing epics with TODO
    acceptance criteria, marked `Created by fix flow on YYYY-MM-DD`. Enrich
    them later via `/ck-code:plan` Continue mode.
+E) PLANNED-IN-FUTURE — a future TODO story ([EE-SS] [Title]) already plans
+   this fix in its acceptance criteria. Default: STOP and recommend
+   `/ck-code:build <future-story-path>` so the planned work absorbs the fix.
+   Override with `PROCEED ANYWAY` to force the fix now (falls through to
+   verdict A / B / D).
 
 Confirm verdict? YES / ADJUST (specify) / ABORT
 ```
@@ -84,6 +94,36 @@ Proceed anyway? NO (recommended — stop here) / YES (force fix flow with stub s
 ```
 
 Default to NO. If the user picks YES, fall through to verdict D handling.
+
+---
+
+## Phase 2.5e — Future-Story Coverage Deferral (verdict E only)
+
+```
+## Stop — A Future Story Already Plans This Fix
+
+The bug you described is already covered by acceptance criteria in a planned
+TODO story (or stories). Fixing now would either duplicate the planned work
+or conflict with it when that story is built.
+
+**Future stories covering this fix:**
+- [EE-SS] [Title] (score: 0.XX) — matched on: [files / criteria / component]
+- [EE-SS] [Title] (score: 0.XX) — matched on: …
+
+Suggested next step:
+  /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md
+
+That run will implement the fix as part of the planned story (with full
+acceptance criteria), and you'll get one cohesive commit instead of a
+scattered fix + later overlap.
+
+Proceed anyway? NO (recommended — defer to the planned story) / PROCEED ANYWAY (force fix now)
+```
+
+Default to NO. If the user picks PROCEED ANYWAY, fall through to the original
+A / B / D verdict computed from `done_in_progress_scores` in Phase 2.5.1 and
+continue the normal flow. Do NOT create stub stories under verdict E — the
+planned story already exists.
 
 ---
 

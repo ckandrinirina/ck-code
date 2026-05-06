@@ -107,6 +107,41 @@ follow-up bug notes, never into this fix's diff.
 
 ---
 
+## Example 3: Bug already planned in TODO story 04-02 (verdict E)
+
+### Phase 1–2 — Setup
+- User runs `/ck-code:fix` (no args).
+- Bug description: profile form lets users submit blank `email` and `phone`,
+  causing a 500 server error. File involved: `src/profile/profile_form.tsx`.
+
+### Phase 2.5.1 — Scoring (both passes)
+
+**Pass 1 (DONE / IN PROGRESS):**
+| Score | Story | Why |
+|---|---|---|
+| 0.62 | [01-03] Profile screen scaffold | shares `profile_form.tsx`; no criterion mentions validation |
+
+**Pass 2 (TODO — `future_coverage_matches`):**
+| Score | Story | Why |
+|---|---|---|
+| 0.91 | [04-02] Validate profile fields before submit | criterion "validate email and phone before submit" + same file |
+
+`future_coverage_matches = [04-02]` → verdict E (PLANNED-IN-FUTURE) takes
+precedence over what would otherwise be a single-story (A) verdict on 01-03.
+
+### Phase 2.5.4 — Verdict E deferral
+Skill prints the Phase 2.5e prompt listing 04-02 as the planned coverage and
+suggests `/ck-code:build tasks/<slug>/epics/04_profile/stories/02_validate-profile.md`.
+
+User answers `NO` → fix flow STOPS. No code change, no story write.
+
+### Key takeaway
+Without verdict E the fix would have created a one-line patch in 01-03 that
+04-02 would later have to merge or duplicate. Deferring keeps the planned
+story authoritative and the bug log clean.
+
+---
+
 ## Anti-pattern: opportunistic refactor (DO NOT DO THIS)
 
 > "While I'm in `handler.rs` fixing the off-by-one, I'll also rename

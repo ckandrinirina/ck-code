@@ -1,6 +1,6 @@
 ---
 name: fix
-description: Use to diagnose and minimally fix a bug tied to one or more existing stories. Auto-matches the best story (or stories) for the bug, can create stub stories in the right epic if functionality is missing, and keeps STORIES_INDEX.md and EPIC.md in sync. Argument is an optional story file path.
+description: Use to diagnose and minimally fix a bug tied to one or more existing stories. Auto-matches the best story (or stories) for the bug, can create stub stories in the right epic if functionality is missing, defers the fix when a future TODO story already plans it, and keeps STORIES_INDEX.md and EPIC.md in sync. Argument is an optional story file path.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 ---
@@ -45,18 +45,22 @@ Ask at most 1-2 follow-ups (intermittent vs. consistent, trigger input, recent r
 **Goal:** Determine whether the bug is single-story, multi-story, a missing feature, or mixed — and confirm with the user before any code change or story file write.
 
 ### 2.5.1 Score Candidate Stories
-Read `tasks/<slug>/STORIES_INDEX.md`. For each `DONE` / `IN PROGRESS` row, compute a relevance score from:
-- **File overlap** — does the bug area (paths inferred from the description, error messages, or stack trace) intersect the story's `Files Touched` block?
+Read `tasks/<slug>/STORIES_INDEX.md`. Compute relevance scores in **two passes** using the same three signals:
+- **File overlap** — does the bug area (paths inferred from the description, error messages, or stack trace) intersect the story's `Files Touched` (DONE / IN PROGRESS) or technical-notes file list (TODO)?
 - **Criterion match** — does any acceptance criterion mention the broken behavior?
 - **Component / epic match** — does the bug component match the parent epic's scope?
+
+**Pass 1 — `done_in_progress_scores`:** every `DONE` / `IN PROGRESS` row.
+**Pass 2 — `todo_scores`:** every `TODO` row. Collect rows scoring ≥ 0.7 into `future_coverage_matches` — these mean the fix is already planned in a future story.
 
 Pick the verdict:
 | Verdict | Trigger |
 |---|---|
-| **A) SINGLE-STORY** | One story scores ≥ 0.7 and no other ≥ 0.5 |
-| **B) MULTI-STORY** | Two or more existing stories score ≥ 0.5 |
+| **A) SINGLE-STORY** | One story scores ≥ 0.7 and no other ≥ 0.5 (in `done_in_progress_scores`) |
+| **B) MULTI-STORY** | Two or more existing stories score ≥ 0.5 (in `done_in_progress_scores`) |
 | **C) NEW-FEATURE** | No story scores ≥ 0.5 AND symptom describes behavior never built (no matching code path exists) |
 | **D) MIXED** | At least one existing story scores ≥ 0.5 AND the bug also requires functionality in epics where no story covers it |
+| **E) PLANNED-IN-FUTURE** | `future_coverage_matches` is non-empty. **Takes precedence** over A / B / D when a TODO story matches — present E first; the user may `PROCEED ANYWAY` to fall through to the underlying A / B / D verdict. |
 
 ### 2.5.2 Present Scope Report
 Use the report in `references/qa-dialogue.md` (Phase 2.5). Wait for explicit `YES` (or `ADJUST` to override the verdict / story set). On `ADJUST`, re-score with the user's overrides and re-present.
@@ -64,7 +68,10 @@ Use the report in `references/qa-dialogue.md` (Phase 2.5). Wait for explicit `YE
 ### 2.5.3 Verdict C (NEW-FEATURE) — Defer to /ck-code:plan
 Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5b) and **STOP** unless the user explicitly forces the fix flow (which falls through to verdict D handling). Do NOT create stub stories under verdict C — the planner handles that with full architecture context.
 
-### 2.5.4 Verdicts B / D — Confirm Story Set
+### 2.5.4 Verdict E (PLANNED-IN-FUTURE) — Defer to /ck-code:build
+Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5e). Default action is to **STOP** and recommend `/ck-code:build <future-story-path>` for the highest-scoring TODO story in `future_coverage_matches`. The user may type `PROCEED ANYWAY` to force the fix flow — in that case fall through to the original verdict (A / B / D) computed from `done_in_progress_scores` and continue. Do NOT create stub stories under verdict E — the planned story already exists.
+
+### 2.5.5 Verdicts B / D — Confirm Story Set
 Present the story-set confirmation from `references/qa-dialogue.md` (Phase 2.5c) listing every story to UPDATE, every stub to CREATE, and every index/epic file to SYNC. Wait for `YES`.
 
 ## PHASE 2.6: CREATE STUB STORIES (verdict D only)
@@ -223,8 +230,10 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invok
 ## RULES
 
 - **Never skip the Phase 2.5 scope analysis.** Every fix flow runs scope analysis after the bug description, even when a story path was passed via `$ARGUMENTS`. The analyzer can promote a "single-story fix" to multi-story or to a deferred plan call.
+- **Always score `TODO` stories during scope analysis.** Phase 2.5.1 evaluates `DONE`, `IN PROGRESS`, AND `TODO` rows. A high-scoring `TODO` row triggers verdict E (PLANNED-IN-FUTURE) and defers the fix unless the user explicitly overrides — preventing redundant work that the planned story will absorb.
 - **Never create stub stories under verdict C (NEW-FEATURE).** Always defer to `/ck-code:plan` — it has the architecture context the fix flow lacks.
-- **Always confirm before writing.** Three mandatory confirmation gates: scope verdict (Phase 2.5.2), story-set list (Phase 2.5.4), fix plan (Phase 5.4). Never write story files, code, or sync the index past one of these without an explicit `YES`.
+- **Never create stub stories or modify code under verdict E (PLANNED-IN-FUTURE).** The fix is already planned; recommend `/ck-code:build <future-story-path>`. `PROCEED ANYWAY` falls through to the original A/B/D verdict — it does not bypass any other gate.
+- **Always confirm before writing.** Three mandatory confirmation gates: scope verdict (Phase 2.5.2), story-set list (Phase 2.5.5), fix plan (Phase 5.4). Never write story files, code, or sync the index past one of these without an explicit `YES`.
 - **Always sync `STORIES_INDEX.md` and the parent `EPIC.md` in the same phase that creates a stub story** (Phase 2.6.3 / 2.6.4). If a sync write fails, surface `Run /ck-code:sync to reconcile.` — never silently ignore drift.
 - **Never mutate `STORIES_INDEX.md` for bug sub-states.** The index tracks `TODO` / `IN PROGRESS` / `DONE` / `SKIP` only. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the story's Bug Report section.
 - **Minimal fix only.** No refactoring, no improvements, no features. The diff is the smallest change that resolves the root cause; other issues are documented, not fixed.
