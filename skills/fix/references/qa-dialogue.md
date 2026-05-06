@@ -16,12 +16,102 @@ these verbatim (or adapt minor wording) so the workflow stays predictable.
 | 2 | [01-02] gRPC service definition | Foundation | DONE |
 | 3 | [01-03] WebSocket gateway | Foundation | IN PROGRESS |
 
-Which story has the bug? (enter number, path, or NONE if not story-related)
+Which story has the bug? (enter number, path, AUTO to let me pick the best
+match after you describe the bug, or NONE if not story-related)
 ```
 
-If user answers `NONE`, ask for a free-form bug description and which component
-it affects, then try to map to a story by file path. If no story matches,
-create a standalone bug report (no story linkage) and proceed to Phase 2.
+- `AUTO` → skip manual pick, go to Phase 2 first, then run Phase 2.5 scope analysis to score candidate stories.
+- `NONE` → ask for a free-form bug description and which component it affects, try to map to a story by file path. If no story matches, create a standalone bug report (no story linkage) and proceed to Phase 2.
+
+---
+
+## Phase 2.5 — Scope Analysis Report
+
+Present after the bug description (Phase 2) is captured. Computed by scoring
+each candidate story on (a) file overlap with the bug area, (b) acceptance
+criteria match, (c) component/epic match.
+
+```
+## Scope Analysis
+
+**Bug summary:** [1-line]
+**Candidate match:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED]
+
+### Best matches
+| Score | Story | Why |
+|-------|-------|-----|
+| 0.92 | [01-03] WebSocket gateway | bug area overlaps `src/ws/handler.rs` (acceptance criteria #2) |
+| 0.41 | [02-01] Login form | shares 1 file but unrelated symptom |
+
+### Verdict
+[One of the four verdicts below — pick exactly one]
+
+A) SINGLE-STORY — bug belongs to [EE-SS]. Proceed with the standard fix flow.
+B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. A Bug Report will be appended
+   to each story (shared bug ID `BUG-YYYYMMDD-NN`).
+C) NEW-FEATURE — bug is actually a missing feature in [N] epic(s). Recommend
+   running `/ck-code:plan` (Add Feature or Continue mode) instead. Fix flow
+   will STOP after your confirmation.
+D) MIXED — real bug in [EE-SS] AND missing piece in [other epic(s)]. I will
+   fix the bug here and create stub stories in the missing epics with TODO
+   acceptance criteria, marked `Created by fix flow on YYYY-MM-DD`. Enrich
+   them later via `/ck-code:plan` Continue mode.
+
+Confirm verdict? YES / ADJUST (specify) / ABORT
+```
+
+Wait for explicit `YES` before proceeding. On `ADJUST`, ask which verdict
+the user prefers and which stories belong in scope, then re-present.
+
+---
+
+## Phase 2.5b — New-Feature Deferral (verdict C only)
+
+```
+## Stop — This Looks Like a New Feature, Not a Bug
+
+What you described isn't a regression in existing implemented code; it's
+behavior that was never built. The right tool for this is `/ck-code:plan`,
+not `/ck-code:fix`.
+
+Suggested next step:
+  /ck-code:plan <path-to-spec-or-feature-description>
+
+Pick mode A (ADD FEATURE) or C (CONTINUE) when prompted, then come back to
+`/ck-code:fix` only if a real bug surfaces.
+
+Proceed anyway? NO (recommended — stop here) / YES (force fix flow with stub stories)
+```
+
+Default to NO. If the user picks YES, fall through to verdict D handling.
+
+---
+
+## Phase 2.5c — Multi-Story / Stub-Story Confirmation
+
+For verdicts B and D, after the user confirms the verdict, list every story
+file that will be touched or created and request a final go-ahead:
+
+```
+## Story Set for This Fix
+
+**Bug ID:** BUG-YYYYMMDD-NN
+
+### Will UPDATE (append Bug Report to existing story)
+- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]
+- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]
+
+### Will CREATE (new stub story — TODO acceptance criteria)
+- tasks/<slug>/epics/03_mobile/stories/04_show-ip.md  [03-04]  (size: S)
+- tasks/<slug>/epics/04_desktop/stories/02_write-ip.md [04-02]  (size: S)
+
+### Will SYNC (after writes)
+- tasks/<slug>/STORIES_INDEX.md  (insert 2 new rows)
+- tasks/<slug>/epics/03_mobile/EPIC.md  (add story 03-04 to story list)
+- tasks/<slug>/epics/04_desktop/EPIC.md  (add story 04-02 to story list)
+
+Proceed? YES / ADJUST / ABORT
+```
 
 ---
 

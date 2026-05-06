@@ -1,32 +1,36 @@
 ---
 name: fix
-description: Use to diagnose and minimally fix a bug tied to an existing story (DONE or IN PROGRESS). Argument is an optional story file path; if omitted, picks interactively.
+description: Use to diagnose and minimally fix a bug tied to one or more existing stories. Auto-matches the best story (or stories) for the bug, can create stub stories in the right epic if functionality is missing, and keeps STORIES_INDEX.md and EPIC.md in sync. Argument is an optional story file path.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 ---
 
 # Fix — Story-Linked Bug Fix Orchestrator
 
-Diagnose and fix a bug tied to an existing story. Workflow: identify story → describe bug → QA reproduces with failing test → plan minimal fix → TDD fix → QA validates → update story.
+Diagnose and fix a bug tied to one or more stories. Auto-matches the best story by file/criteria overlap, supports multi-story scope, and creates stub stories in the correct epic when a "bug" turns out to need missing functionality. Always confirms scope before writing.
 
 For a worked bug-fix example, see [references/examples.md](references/examples.md).
 For user-facing prompt scripts, see [references/qa-dialogue.md](references/qa-dialogue.md).
 For story-file bug section templates, see [references/bug-section-template.md](references/bug-section-template.md).
+For the index/epic sync contract, see [`../../references/stories-index.md`](../../references/stories-index.md).
 
 ## INPUT
-`$ARGUMENTS` is an optional path to the story file. If provided, read it as context. If empty, enter interactive story selection (Phase 1.2).
+`$ARGUMENTS` is an optional path to the story file. If provided, read it as a starting candidate (Phase 2.5 may still expand scope). If empty, enter interactive story selection (Phase 1.2) with `AUTO` as a supported answer.
 
-## PHASE 1: STORY SELECTION
-**Goal:** Identify which story the bug belongs to.
+## PHASE 1: CANDIDATE STORY SELECTION
+**Goal:** Pick the initial candidate story (the scope analyzer in Phase 2.5 may add more).
 
 ### 1.1 If Story Path Provided
-Read `$ARGUMENTS`, validate it exists and has the expected format, then confirm: "Bug is in story [EE-SS]: [Title]. Correct?"
+Read `$ARGUMENTS`, validate it exists and has the expected format, then confirm: "Starting candidate is story [EE-SS]: [Title]. Scope analysis after bug description may expand this — correct?"
 
 ### 1.2 If No Story Path (Interactive)
-Glob `tasks/*/epics/*/stories/*.md`, read each header for title/status/epic, filter to `Status: DONE` or `IN PROGRESS` (bugs happen in implemented stories), then present the selection table from `references/qa-dialogue.md` (Phase 1.2). If user answers `NONE`: ask for a free-form bug description and component, try to map to a story by file paths/components. If no match, create a standalone bug report without story linkage and proceed to Phase 2.
+Read `tasks/<slug>/STORIES_INDEX.md` (bootstrap if missing — see [`../../references/stories-index.md`](../../references/stories-index.md) Read Protocol). Filter to `Status: DONE` or `IN PROGRESS`, then present the selection table from `references/qa-dialogue.md` (Phase 1.2). Supported answers:
+- A row number / story path → use as candidate.
+- `AUTO` → skip manual pick; Phase 2.5 will score every candidate after the bug description.
+- `NONE` → ask for a free-form bug description and component; map to a story by file path. If no match, create a standalone bug report (no story linkage) and proceed.
 
 ### 1.3 Load Story Context
-Once selected: read the full story file (including any Implementation Summary from `/ck-code:build`), extract acceptance criteria + files created/modified + technical notes, read parent EPIC.md, and read relevant `docs/architecture/` files for the affected component. This anchors what the code is SUPPOSED to do vs. what it's doing.
+Once a candidate is selected (or `AUTO`): read the candidate's full story file (including any Implementation Summary from `/ck-code:build`), extract acceptance criteria + files created/modified + technical notes, read parent EPIC.md, and read relevant `docs/architecture/` files for the affected component. For `AUTO`, defer reading until Phase 2.5 narrows the candidate set.
 
 ## PHASE 2: BUG DESCRIPTION
 **Goal:** Get a clear bug description from the user.
@@ -36,6 +40,50 @@ Present the questionnaire from `references/qa-dialogue.md` (Phase 2.1).
 
 ### 2.2 Targeted Follow-ups
 Ask at most 1-2 follow-ups (intermittent vs. consistent, trigger input, recent regression). See `references/qa-dialogue.md`.
+
+## PHASE 2.5: SCOPE ANALYSIS (mandatory)
+**Goal:** Determine whether the bug is single-story, multi-story, a missing feature, or mixed — and confirm with the user before any code change or story file write.
+
+### 2.5.1 Score Candidate Stories
+Read `tasks/<slug>/STORIES_INDEX.md`. For each `DONE` / `IN PROGRESS` row, compute a relevance score from:
+- **File overlap** — does the bug area (paths inferred from the description, error messages, or stack trace) intersect the story's `Files Touched` block?
+- **Criterion match** — does any acceptance criterion mention the broken behavior?
+- **Component / epic match** — does the bug component match the parent epic's scope?
+
+Pick the verdict:
+| Verdict | Trigger |
+|---|---|
+| **A) SINGLE-STORY** | One story scores ≥ 0.7 and no other ≥ 0.5 |
+| **B) MULTI-STORY** | Two or more existing stories score ≥ 0.5 |
+| **C) NEW-FEATURE** | No story scores ≥ 0.5 AND symptom describes behavior never built (no matching code path exists) |
+| **D) MIXED** | At least one existing story scores ≥ 0.5 AND the bug also requires functionality in epics where no story covers it |
+
+### 2.5.2 Present Scope Report
+Use the report in `references/qa-dialogue.md` (Phase 2.5). Wait for explicit `YES` (or `ADJUST` to override the verdict / story set). On `ADJUST`, re-score with the user's overrides and re-present.
+
+### 2.5.3 Verdict C (NEW-FEATURE) — Defer to /ck-code:plan
+Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5b) and **STOP** unless the user explicitly forces the fix flow (which falls through to verdict D handling). Do NOT create stub stories under verdict C — the planner handles that with full architecture context.
+
+### 2.5.4 Verdicts B / D — Confirm Story Set
+Present the story-set confirmation from `references/qa-dialogue.md` (Phase 2.5c) listing every story to UPDATE, every stub to CREATE, and every index/epic file to SYNC. Wait for `YES`.
+
+## PHASE 2.6: CREATE STUB STORIES (verdict D only)
+**Goal:** Write stub story files in the right epics, then sync the index and parent EPIC.md files in the same phase.
+
+### 2.6.1 Pick Stub IDs
+For each missing-functionality slot identified in 2.5.1, pick the next available `EE-SS` ID inside the target epic by reading the epic's existing story numbers in the index (`max(SS) + 1`).
+
+### 2.6.2 Write Stub Story Files
+Use the **stub story template** in `references/bug-section-template.md` (Phase 4.5b). Fill `Bug ID`, best-guess `Size`, parent epic name, and 1-3 best-guess acceptance criteria distilled from the bug description (marked `TODO`).
+
+### 2.6.3 Insert Index Rows
+For each stub, append a new row to `tasks/<slug>/STORIES_INDEX.md` in `ID` order. Status `TODO`, Size as guessed, `Blocked by: -`, File path relative to the tasks slug folder. Follow the cell-only Edit pattern in [`../../references/stories-index.md`](../../references/stories-index.md).
+
+### 2.6.4 Update Parent EPIC.md
+For each stub, append the new story to its parent `EPIC.md` story list (preserve existing ordering, insert by `SS` number). If the EPIC.md format has a story table, add a row there too.
+
+### 2.6.5 Verify Sync
+After writes, re-read the index and each modified EPIC.md to confirm the new rows / list entries are present. If any write failed (e.g., file lock, malformed table): tell the user `Sync failed — run /ck-code:sync to reconcile.` and continue with the fix flow on the **existing** stories only.
 
 ## PHASE 3: SKILL DETECTION & CONTEXT LOADING
 **Goal:** Load the right expert and guide skills for the affected code.
@@ -78,8 +126,8 @@ Produce a diagnosis block with: Symptom, Reproduction (test), Root cause, Locati
 ### 4.4 Check for Related Issues
 Grep for similar patterns that might share the bug; check whether the root cause affects other acceptance criteria; list related issues by `file:line` flagged as "same pattern" or "similar but not identical". **Do NOT fix related bugs in OTHER stories here** — document them and tell the user to run `/ck-code:fix` on those separately.
 
-### 4.5 Update Story with Bug Details
-Immediately after diagnosis (BEFORE planning the fix), append the Bug Report section to the story file using `references/bug-section-template.md` (Phase 4.5). Status: `DIAGNOSING`. This creates a permanent record of the bug and its diagnosis even before the fix begins.
+### 4.5 Update Story Files with Bug Details
+Immediately after diagnosis (BEFORE planning the fix), append the Bug Report section to **every story file in scope** (single story for verdict A; all stories in the confirmed set for B / D). Use the same `Bug ID` (`BUG-YYYYMMDD-NN`) across all of them. Status: `DIAGNOSING`. Templates: `references/bug-section-template.md` (Phase 4.5 single-story / Phase 4.5b multi-story). This creates a permanent record of the bug and its diagnosis even before the fix begins.
 
 ### 4.6 Present Diagnosis to User
 Use the diagnosis report script in `references/qa-dialogue.md` (Phase 4.6). Wait for `YES` or `INVESTIGATE MORE`. If `INVESTIGATE MORE`: ask which aspect to investigate, run more analysis, re-present.
@@ -113,8 +161,8 @@ If any SOLID principle is violated by the minimal fix, note it explicitly and de
 3. QA validation of fix.
 4. Update story and commit.
 
-### 5.3 Update Story with Fix Plan
-Append the Fix Plan subsection (status `FIXING`) to the Bug Report section created in Phase 4.5. Template: `references/bug-section-template.md` (Phase 5.3).
+### 5.3 Update Story Files with Fix Plan
+Append the Fix Plan subsection (status `FIXING`) to the Bug Report section created in Phase 4.5 — in **every** story file in scope. Template: `references/bug-section-template.md` (Phase 5.3).
 
 ### 5.4 Confirm Fix Plan
 Use the proposed-fix prompt in `references/qa-dialogue.md` (Phase 5.4). Wait for `YES`, `ADJUST`, or `ABORT`.
@@ -142,41 +190,46 @@ Follow the shared procedure in [`../../../references/qa-validation.md`](../../..
 Skill-specific report and escalation templates: `references/qa-dialogue.md` (Phase 7.5 / 7.6). Iteration cap = 3; on iteration 3 escalate with `MANUAL FIX / ACCEPT / REVERT`. On NEEDS FIXES, loop back to Phase 6.
 
 ## PHASE 8: COMPLETION
-**Goal:** Update the story, commit the fix.
+**Goal:** Update story files, sync index/epic, commit the fix.
 
-### 8.1 Update Story File — Resolution
-Fill the Resolution + Files Touched subsections under the Bug Report. Status: `FIXED`. Template: `references/bug-section-template.md` (Phase 8.1).
+### 8.1 Update Story Files — Resolution
+Fill the Resolution + Files Touched subsections under the Bug Report in **every** story file in scope. Status: `FIXED`. Template: `references/bug-section-template.md` (Phase 8.1).
 
 **Files Touched precision rules:** for CREATED files use just the path (e.g., `CREATED tests/regression_test.rs`); for MODIFIED files use path + exact line numbers (e.g., `MODIFIED src/handler.rs:34,67-69`); use `git diff --stat` and `git diff` to collect precise lines; no descriptions — just paths and line numbers for quick reference.
 
 ### 8.2 Update Story Status
-If the story was `DONE`, it stays `DONE` (bug fixed, story still complete). If `IN PROGRESS`, it stays `IN PROGRESS`.
+Existing stories: a `DONE` story stays `DONE`, an `IN PROGRESS` story stays `IN PROGRESS` — bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the Bug Report only and never touch `STORIES_INDEX.md`. Stub stories created in Phase 2.6 stay `TODO`.
 
-### 8.3 Update Parent Epic
-No change in EPIC.md unless the story status changed.
+### 8.3 Update Parent Epic + Index
+No change in EPIC.md or `STORIES_INDEX.md` unless a story status changed (it shouldn't here — the bug-fix protocol leaves status alone). The index/epic mutations from Phase 2.6 (stub creation) are already persisted.
 
-### 8.4 Mark All Tasks Completed
+### 8.4 Sync Verification
+Re-read `STORIES_INDEX.md` and confirm: every stub story file from Phase 2.6 has a matching row, and every existing story in scope still has its row unchanged. If a mismatch appears, tell the user `Index drift detected — run /ck-code:sync to reconcile.` and continue (do not silently rewrite).
+
+### 8.5 Mark All Tasks Completed
 Use TaskUpdate to mark all fix-related tasks as `completed`.
 
-### 8.5 User Manual Testing
+### 8.6 User Manual Testing
 Use the manual-testing prompt in `references/qa-dialogue.md` (Phase 8.5).
 - `PASS` → proceed to commit.
 - `STILL BROKEN` → loop back to Phase 4 (re-diagnose).
 - `NEW ISSUE` → document as a new bug; decide whether to fix now or separately.
 
-### 8.6 Ship (Commit + PR + Issue Updates)
-Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invoke `/ck-code:ship` with the story file path; it handles branch (`fix/` prefix), staging, commit message, PR, and GitHub Issue updates. `SKIP` → remind the user they can run `/ck-code:ship [story-path]` later.
+### 8.7 Ship (Commit + PR + Issue Updates)
+Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invoke `/ck-code:ship` with the **primary** story file path (the highest-scored story from Phase 2.5 for multi-story bugs); it handles branch (`fix/` prefix), staging, commit message, PR, and GitHub Issue updates. The commit body should list every story ID in scope (`Stories: 01-03, 02-01`) plus the `Bug ID`. `SKIP` → remind the user they can run `/ck-code:ship [story-path]` later.
 
-## IMPORTANT GUIDELINES
+## RULES
 
-- **Minimal fix only.** Fix the bug, nothing else. No refactoring, no improvements, no features. The diff must be as small as possible while correctly fixing the root cause. Other issues found during diagnosis are documented, not fixed.
-- **Reproduce before fixing.** NEVER attempt a fix without a failing reproduction test first. If you can't reproduce, investigate more before guessing. The reproduction test is proof the bug exists AND proof it's fixed.
-- **QA loop safety valve.** Max 3 fix↔QA iterations; then escalate with options including revert.
-- **Story file tracks everything.** The bug report is appended to the original story file (original implementation + bug reports + fixes). Future developers can see what went wrong and why.
-- **Files Touched must be precise.** See Phase 8.1 rules.
-- **Related bugs.** If diagnosis reveals bugs in OTHER stories, document them but don't fix them here. Tell the user: "Found related bugs in [stories]. Run `/ck-code:fix` on those separately."
-- **Skill loading is automatic.** Same detection as `/ck-code:build`. QA and analyst experts are ALWAYS loaded.
-- **Language: English** — all output in English regardless of spec/story language.
+- **Never skip the Phase 2.5 scope analysis.** Every fix flow runs scope analysis after the bug description, even when a story path was passed via `$ARGUMENTS`. The analyzer can promote a "single-story fix" to multi-story or to a deferred plan call.
+- **Never create stub stories under verdict C (NEW-FEATURE).** Always defer to `/ck-code:plan` — it has the architecture context the fix flow lacks.
+- **Always confirm before writing.** Three mandatory confirmation gates: scope verdict (Phase 2.5.2), story-set list (Phase 2.5.4), fix plan (Phase 5.4). Never write story files, code, or sync the index past one of these without an explicit `YES`.
+- **Always sync `STORIES_INDEX.md` and the parent `EPIC.md` in the same phase that creates a stub story** (Phase 2.6.3 / 2.6.4). If a sync write fails, surface `Run /ck-code:sync to reconcile.` — never silently ignore drift.
+- **Never mutate `STORIES_INDEX.md` for bug sub-states.** The index tracks `TODO` / `IN PROGRESS` / `DONE` / `SKIP` only. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the story's Bug Report section.
+- **Minimal fix only.** No refactoring, no improvements, no features. The diff is the smallest change that resolves the root cause; other issues are documented, not fixed.
+- **Reproduce before fixing.** No code change without a failing reproduction test (Phase 4.2 + Phase 5.0 gate).
+- **QA loop cap = 3.** Then escalate with `MANUAL FIX / ACCEPT / REVERT`.
+- **Same `Bug ID` across all in-scope stories.** Format: `BUG-YYYYMMDD-NN`.
+- **Language: English** for all output.
 - **Reusability.** Works with any project using the `tasks/` story format. No project-specific references.
 
 ---

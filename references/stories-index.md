@@ -78,8 +78,12 @@ Mutator responsibilities:
 | `build` (Phase 1.4) | `TODO → IN PROGRESS` | Status cell |
 | `build` (Phase 8.1) | `IN PROGRESS → DONE` | Status cell |
 | `plan` (Continue mode) | New stories appended | Insert new rows in `ID` order |
+| `fix` (Phase 2.6) | Stub stories created (verdicts B/D) | Insert new rows in `ID` order |
+| `sync` (any phase) | Index drifted from story files | Rewrite mismatched rows / add orphan rows / remove rows for deleted files |
 
-`fix` does NOT mutate the index. Per fix Phase 8.2, the story's main `Status:` is unchanged by a bug fix (a `DONE` story stays `DONE`); the bug sub-states are recorded inside the story's Bug Report section only. Selection skills don't need to know about in-flight bug fixes.
+`fix` does NOT mutate the index for **status changes** on existing stories — per fix Phase 8.2, a story's main `Status:` is unchanged by a bug fix (a `DONE` story stays `DONE`), and the bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) are recorded inside the story's Bug Report section only. Selection skills don't need to know about in-flight bug fixes.
+
+`fix` DOES mutate the index when it creates new stub stories (multi-story or mixed-scope bugs that surface missing functionality) — it inserts one row per stub in `ID` order with `Status: TODO`, the best-guess `Size`, and `Blocked by: -`. The matching `EPIC.md` story list is also updated in the same phase.
 
 ## Rules
 

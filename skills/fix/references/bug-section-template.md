@@ -15,6 +15,7 @@ is added in Phase 5.3, and the Resolution section is filled in at completion
 
 ## Bug Report: [date]
 
+**Bug ID:** BUG-YYYYMMDD-NN
 **Reported:** [date]
 **Status:** DIAGNOSING
 
@@ -32,6 +33,53 @@ is added in Phase 5.3, and the Resolution section is filled in at completion
 
 This creates a permanent record of the bug and its diagnosis even before the
 fix begins.
+
+### Bug ID format
+`BUG-YYYYMMDD-NN` where `NN` is a zero-padded counter starting at `01` for the
+first bug filed on that date in this `tasks/<slug>/` folder. The same ID is
+reused across every story touched by a multi-story bug so they can be
+cross-referenced.
+
+---
+
+## Phase 4.5b — Multi-Story Bug Report (verdict B / D)
+
+When a bug spans multiple existing stories, append the same Bug Report block
+above to each story file with these additions:
+
+```markdown
+**Scope:** MULTI-STORY (also appears in: [02-01], [03-04])
+```
+
+For stub stories created from a fix-flow scope (verdict D), use the **stub
+story template** below instead of the full epic-derived template — the
+acceptance criteria and tech notes will be filled in later by the user (or by
+`/ck-code:plan` Continue mode).
+
+### Stub story template
+```markdown
+# Story EE-SS: [Title]
+
+**Status:** TODO
+**Size:** [S | M | L | XL — best guess from scope analysis]
+**Created by:** /ck-code:fix on YYYY-MM-DD (bug BUG-YYYYMMDD-NN)
+**Parent epic:** [epic display name]
+
+## Context
+This story was created as part of fixing BUG-YYYYMMDD-NN, which surfaced
+missing functionality in this epic. See the linked stories for the full bug
+context: [01-03], [02-01].
+
+## Acceptance Criteria (TODO — enrich via `/ck-code:plan` continue)
+- [ ] [Best-guess criterion 1 from bug description]
+- [ ] [Best-guess criterion 2]
+
+## Technical Notes
+TODO — enrich during planning.
+
+## Dependencies
+[List of story IDs that must complete first, or `-`]
+```
 
 ---
 
