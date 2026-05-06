@@ -106,7 +106,7 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 | `/ck-code:track` | Progress dashboard | — | status, next story, completion % |
 | `/ck-code:build` | Implement a story (TDD + QA) | story file | source code + tests |
 | `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees | — / story IDs | parallel results + conflict report |
-| `/ck-code:fix` | Diagnose and fix a bug across one or more stories — auto-matches the best story, can create stub stories in the right epic when functionality is missing, keeps index/epic in sync | story file (optional) | minimal fix + regression test + (optional) new stub stories |
+| `/ck-code:fix` | Diagnose and fix a bug across one or more stories — auto-matches the best story, defers the fix when a future TODO story already plans it, can create stub stories in the right epic when functionality is missing, keeps index/epic in sync | story file (optional) | minimal fix + regression test + (optional) new stub stories |
 | `/ck-code:sync` | Reconcile `STORIES_INDEX.md`, `EPIC.md` story lists, and story files when they drift apart | tasks plan path or `--all` | repaired index + epic lists |
 | `/ck-code:ship` | Commit, PR, update GitHub Issues | story file (optional) | commit + PR + issue updates |
 | `/ck-code:explain` | Explain what was just implemented | — | walkthrough + verification steps |
