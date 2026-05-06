@@ -183,6 +183,7 @@ change; (4) stop as soon as all tests pass — don't over-engineer.
 - Reuse existing code — check `docs/architecture/` and scan existing files
 - Write the simplest code that passes the tests
 - Add inline comments only where logic isn't self-evident
+- **Log unplanned changes incrementally.** If you modify a file not in the story's "Files to Create/Modify" table, fix a bug noticed in passing, or add a helper/test file that wasn't in the Phase 3 plan, append one line to a `## Unplanned Changes` section in the story file in the same Edit pass. Format: `- <path> — <what> — <why>`. Record at the moment of the change, not at the end. Empty section = omit the heading.
 
 ### 5.3 Run Tests — Confirm GREEN
 
@@ -211,6 +212,10 @@ For each issue: (1) apply the refactoring, (2) run tests — must still pass,
 (3) if tests break, revert and reconsider. Common refactorings: extract function,
 rename, introduce interface/trait for dependency inversion, split large functions,
 move code to the correct module per `folder-structure.md`.
+
+Refactors that touch files outside the Phase 3 "Files to Create/Modify" list
+also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format
+used in Phase 5.2).
 
 ### 6.3 Final Green Check
 
@@ -256,7 +261,8 @@ On NEEDS FIXES inside the loop: fix each issue → re-run Phase 6 (refactor)
 Append the Implementation Summary block (template in
 [references/story-template.md](references/story-template.md)) to the story file.
 It must record: TDD iteration count, QA iteration count, tests written, files
-created/modified counts, what was implemented, a precise Files Touched list,
+created/modified counts, **unplanned changes count** (from `## Unplanned Changes`
+if present, else "none"), what was implemented, a precise Files Touched list,
 SOLID compliance summary, and notes.
 
 **Files Touched precision (mandatory):**
@@ -318,6 +324,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 - **SOLID enforced twice:** Phase 3 (design) AND Phase 6 (verify in actual code). Both passes are mandatory.
 - **QA loop cap = 3.** After 3 dev↔QA iterations, escalate to the user with FIX MANUALLY / ACCEPT AS-IS / ABORT. Never silently continue past 3.
 - **Story file is source of truth.** Status, plan, summary all live in the story file and are updated as work progresses.
+- **Unplanned-changes log.** Any file touched outside the story's "Files to Create/Modify", any drive-by fix, and any unscoped helper gets one line in `## Unplanned Changes` (`- <path> — <what> — <why>`) at the moment it happens. Empty section = omit the heading.
 - **Language: English** for all output, comments, commit messages, and docs — regardless of spec/story language.
 
 ### JUCE Test Runner Rules

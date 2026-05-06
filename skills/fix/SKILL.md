@@ -176,6 +176,8 @@ Re-run the reproduction test from Phase 4. Expected: FAIL. Also write any additi
 ### 6.2 Apply Minimal Fix
 Apply the fix as planned in Phase 5; change ONLY what's necessary (minimal diff); follow SOLID (don't violate SRP by cramming logic); follow loaded guide skill best practices.
 
+If applying the fix forces a change outside the Phase 5 Fix Plan's "Files to modify" list (e.g., a helper file the fix depends on, or a related test that broke), record it in a `## Unplanned Changes` block under the Bug Report section, format `- <path> — <what> — <why minimal fix required it>`. This does NOT authorize widening the fix — it documents minimal expansions that were unavoidable. Drive-by fixes for OTHER bugs remain forbidden (existing rule); those still go in the Phase 4.4 related-issues note for separate `/ck-code:fix` runs. Empty section = omit the heading.
+
 ### 6.3 Verify GREEN
 Run the reproduction test + all related tests. Expected: ALL pass (including the previously-failing reproduction test).
 
@@ -193,7 +195,7 @@ Skill-specific report and escalation templates: `references/qa-dialogue.md` (Pha
 **Goal:** Update story files, sync index/epic, commit the fix.
 
 ### 8.1 Update Story Files — Resolution
-Fill the Resolution + Files Touched subsections under the Bug Report in **every** story file in scope. Status: `FIXED`. Template: `references/bug-section-template.md` (Phase 8.1).
+Fill the Resolution + Files Touched subsections under the Bug Report in **every** story file in scope. Status: `FIXED`. Template: `references/bug-section-template.md` (Phase 8.1). The Resolution block records an **Unplanned changes count** (from `## Unplanned Changes` under the Bug Report if present, else "none").
 
 **Files Touched precision rules:** for CREATED files use just the path (e.g., `CREATED tests/regression_test.rs`); for MODIFIED files use path + exact line numbers (e.g., `MODIFIED src/handler.rs:34,67-69`); use `git diff --stat` and `git diff` to collect precise lines; no descriptions — just paths and line numbers for quick reference.
 
@@ -226,6 +228,7 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invok
 - **Always sync `STORIES_INDEX.md` and the parent `EPIC.md` in the same phase that creates a stub story** (Phase 2.6.3 / 2.6.4). If a sync write fails, surface `Run /ck-code:sync to reconcile.` — never silently ignore drift.
 - **Never mutate `STORIES_INDEX.md` for bug sub-states.** The index tracks `TODO` / `IN PROGRESS` / `DONE` / `SKIP` only. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the story's Bug Report section.
 - **Minimal fix only.** No refactoring, no improvements, no features. The diff is the smallest change that resolves the root cause; other issues are documented, not fixed.
+- **Document unplanned expansions.** When the minimal fix unavoidably touches a file outside the Fix Plan's "Files to modify", log one line in `## Unplanned Changes` under the Bug Report (`- <path> — <what> — <why>`). Drive-by fixes for OTHER bugs remain forbidden — those stay in the Phase 4.4 related-issues note. Empty section = omit the heading.
 - **Reproduce before fixing.** No code change without a failing reproduction test (Phase 4.2 + Phase 5.0 gate).
 - **QA loop cap = 3.** Then escalate with `MANUAL FIX / ACCEPT / REVERT`.
 - **Same `Bug ID` across all in-scope stories.** Format: `BUG-YYYYMMDD-NN`.

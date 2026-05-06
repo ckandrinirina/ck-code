@@ -94,6 +94,32 @@ TODO — enrich during planning.
 
 ---
 
+## Phase 6.2 — Unplanned Changes (append under Bug Report on first deviation)
+
+Appended via Edit. Skip entirely on a clean run (no heading written when
+empty). Add one bullet per unplanned expansion at the moment it happens.
+
+```markdown
+## Unplanned Changes
+- <path> — <one-line what> — <why minimal fix required it>
+```
+
+**Format rules:**
+- One bullet per change. Three slash-separated fields: path, what, why.
+- "Why" must justify the expansion as unavoidable for the minimal fix
+  (e.g., "shared helper required by the patched function", "test broke
+  because mocked dependency changed signature").
+- This does NOT authorize widening the fix. Drive-by fixes for OTHER bugs
+  remain forbidden — those go in the Phase 4.4 related-issues note for
+  separate `/ck-code:fix` runs.
+- If the same file is touched again later, update its existing line in place
+  rather than adding a duplicate.
+
+Example:
+- `- src/server/ws/types.rs — added optional field to Frame struct — patched handler in handler.rs requires it to round-trip the new error code`
+
+---
+
 ## Phase 8.1 — Resolution + Files Touched (fill in at completion)
 
 ```markdown
@@ -102,6 +128,7 @@ TODO — enrich during planning.
 - **Fix:** [1-line description]
 - **Regression tests added:** [count]
 - **QA iterations:** [count]
+- **Unplanned changes:** [count, or "none"]
 - **Status:** FIXED
 
 ### Files Touched

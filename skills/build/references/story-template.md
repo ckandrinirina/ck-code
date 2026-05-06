@@ -33,6 +33,35 @@ in it before work begins, not after the fact.
 
 ---
 
+## Phase 5 — Unplanned Changes (append on first deviation, then per-change)
+
+Appended via Edit. Skip entirely on a clean run (no heading written when
+empty). Add one bullet per unplanned change at the moment it happens.
+
+```markdown
+
+## Unplanned Changes
+- <path> — <one-line what> — <why it was needed during the planned work>
+```
+
+**Format rules:**
+- One bullet per change. Three slash-separated fields: path, what, why.
+- "Why" must explain what triggered the change during the planned work
+  (e.g., "broke test for AC-2 without it", "needed twice by planned handler",
+  "REFACTOR mode — adjacent code").
+- If the same file is touched again later, update its existing line in place
+  rather than adding a duplicate.
+- This section coexists with `Files Touched` — `Files Touched` records every
+  file with line numbers; `Unplanned Changes` records only those outside the
+  Phase 3 "Files to Create/Modify" plan, with reasoning.
+
+Examples:
+- `- src/api/user.ts — added null check in getUser() — broke test for AC-2 without it`
+- `- src/queue/retry.go — extracted retryWithBackoff() — needed twice by planned handler, would have duplicated`
+- `- tests/helpers/mock_clock.ts — new file — planned tests required time-mocking, not anticipated in Files to Create/Modify`
+
+---
+
 ## Phase 8.2 — Implementation Summary (append after QA pass)
 
 ```markdown
@@ -47,6 +76,7 @@ in it before work begins, not after the fact.
 **Tests written:** [count]
 **Files created:** [count]
 **Files modified:** [count]
+**Unplanned changes:** [count, or "none"]
 
 ### What Was Implemented
 - [Key implementation point 1]
