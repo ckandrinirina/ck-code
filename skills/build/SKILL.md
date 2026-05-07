@@ -285,15 +285,25 @@ Use TaskUpdate to mark all remaining tasks as `completed`. Use TaskList to show 
 
 ### 8.5 User Manual Testing — REQUIRED GATE
 
-**Do NOT mark the story as DONE or update the EPIC until the user explicitly
-confirms PASS here.** The story status must stay IN PROGRESS until manual
-verification is complete.
+Story stays IN PROGRESS until the user confirms PASS here. Never mark DONE or
+update the EPIC before that.
 
-Present the manual-testing prompt (see examples) listing specific scenarios from
-the acceptance criteria plus an edge case to try. Ask `Result? PASS / ISSUES`.
+**8.5.1** Present the prompt (template in [references/examples.md](references/examples.md)) — scenarios from acceptance criteria + edge case. Ask `Result? PASS / ISSUES`.
 
-- **If ISSUES:** Ask what's wrong, loop back to Phase 5 for targeted fixes.
-- **If PASS:** Proceed to 8.6.
+**8.5.2** On `PASS` → proceed to 8.6.
+
+**8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop. Every cycle MUST run all eight steps in order before returning to 8.5.1:
+
+1. Capture the bug from the user (what, repro, expected vs actual).
+2. Append an `## Manual-Test Bugs` entry to the story file (template in [references/story-template.md](references/story-template.md)). Status: `OPEN`.
+3. Write a failing regression test that reproduces the bug (TDD red).
+4. Apply the minimum fix; full suite green (TDD green).
+5. **MANDATORY:** Re-run **Phase 6 (Refactor)** on touched code — SOLID review, tests stay green.
+6. **MANDATORY:** Re-run **Phase 7 (QA)** with the full procedure in [`../../../references/qa-validation.md`](../../../references/qa-validation.md). QA's own 3-iteration cap applies inside each bug-fix cycle.
+7. Update the bug entry: `OPEN` → `FIXED` + fix summary + `path:line[,line]` Files Touched.
+8. Return to 8.5.1 against the new build.
+
+**Bug-Fix iteration cap = 3.** On the 3rd cycle, escalate with `FIX MANUALLY / ACCEPT AS-IS / ABORT` (template in [references/examples.md](references/examples.md)). Never silently continue past 3.
 
 ### 8.6 Update Story File — Status DONE (story file + index, same phase)
 
@@ -323,6 +333,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 - **TDD:** Tests are ALWAYS written before implementation. Strict Red→Green→Refactor. No implementation code without a failing test first. Exception: trivial boilerplate (config, type exports) that can't meaningfully fail.
 - **SOLID enforced twice:** Phase 3 (design) AND Phase 6 (verify in actual code). Both passes are mandatory.
 - **QA loop cap = 3.** After 3 dev↔QA iterations, escalate to the user with FIX MANUALLY / ACCEPT AS-IS / ABORT. Never silently continue past 3.
+- **Manual-test bug-fix loop cap = 3.** Every cycle must re-run Phase 6 (Refactor) AND Phase 7 (QA) before re-prompting; never mark DONE while any `## Manual-Test Bugs` entry is `OPEN`.
 - **Story file is source of truth.** Status, plan, summary all live in the story file and are updated as work progresses.
 - **Unplanned-changes log.** Any file touched outside the story's "Files to Create/Modify", any drive-by fix, and any unscoped helper gets one line in `## Unplanned Changes` (`- <path> — <what> — <why>`) at the moment it happens. Empty section = omit the heading.
 - **Language: English** for all output, comments, commit messages, and docs — regardless of spec/story language.

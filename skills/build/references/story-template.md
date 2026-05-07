@@ -73,6 +73,7 @@ Examples:
 **Completed:** [date]
 **TDD Iterations:** [count] (red→green→refactor cycles)
 **QA Iterations:** [count]
+**Manual-test bugs:** [count, or "none"]
 **Tests written:** [count]
 **Files created:** [count]
 **Files modified:** [count]
@@ -160,3 +161,30 @@ IN PROGRESS → DONE (Phase 8.1, only after manual testing PASS in 8.7):
 ```
 > **Status:** DONE
 ```
+
+---
+
+## Phase 8.5 — Manual-Test Bugs (append on first bug, then per-bug)
+
+Appended via Edit. Skip entirely on a clean run (no heading written when
+empty). Add one entry per bug at the moment it is reported, then update the
+same entry once `FIXED`.
+
+```markdown
+
+## Manual-Test Bugs
+- **#1** [OPEN | FIXED] — <reported date>: <one-line bug description>
+  - Repro: <steps>
+  - Expected: <expected behaviour>
+  - Actual: <actual behaviour>
+  - Regression test: <test file>:<test name>
+  - Fix: <one-line summary> (only present once status = FIXED)
+  - Files: <path:line[,line]> (only present once status = FIXED)
+  - Refactor + QA re-run: PASS (<date>)
+```
+
+**Format rules:**
+- Status starts at `OPEN` and flips to `FIXED` only after Phase 8.5.3 steps 5–7 (Refactor + QA + entry update) complete.
+- "Files" follows the same `path:line[,line]` precision as Implementation Summary's Files Touched.
+- One entry per bug; if the same code is touched again later, update the existing entry rather than appending a duplicate.
+- Empty section = omit the heading (consistent with `## Unplanned Changes`).
