@@ -120,6 +120,51 @@ Example:
 
 ---
 
+## Phase 6.4 — SOLID Verification (append under Bug Report after Refactor pass)
+
+Appended once per code-touch cycle (initial fix and every Phase 8.6 manual-test
+loop). Bounded to the diff produced by Phase 6.2 — does not authorize widening
+the fix.
+
+```markdown
+### SOLID Verification (cycle [N])
+- **S** Single responsibility — PASS / FAIL [: 1-line note if FAIL]
+- **O** Open/closed             — PASS / FAIL [: note]
+- **L** Liskov substitution     — PASS / FAIL [: note]
+- **I** Interface segregation   — PASS / FAIL [: note]
+- **D** Dependency inversion    — PASS / FAIL [: note]
+- **Refactor applied:** [1-line summary, or "none — all PASS"]
+```
+
+If any principle was FAIL on first check, the entry records the post-refactor
+state (must be all PASS to leave Phase 6.4). Cycle 1 = initial fix; later
+cycles correspond to Phase 8.6 manual-test loops.
+
+---
+
+## Phase 8.6 — Manual-Test Reports (append on STILL BROKEN, then per-cycle)
+
+Appended via Edit. Skip entirely on a clean run (no heading written when
+empty). Add one entry per manual-test cycle that returned `STILL BROKEN`,
+then update the same entry once `RESOLVED`.
+
+```markdown
+### Manual-Test Reports
+- **Cycle 1** [OPEN | RESOLVED] — <reported date>: <residual symptom>
+  - Repro: <steps>
+  - Fix: <one-line summary> (only present once status = RESOLVED)
+  - Files: <path:line[,line]> (only present once status = RESOLVED)
+  - Refactor + QA re-run: PASS (<date>)
+```
+
+**Format rules:**
+- Status starts at `OPEN` and flips to `RESOLVED` only after Phase 8.6.3 steps 3–5 (Phase 4.2 → Phase 6 → Phase 6.4 → Phase 7) all complete.
+- "Files" follows the same `path:line[,line]` precision as the Resolution block's Files Touched.
+- One entry per cycle; the same Bug ID accumulates entries across cycles.
+- Empty section = omit the heading (consistent with `## Unplanned Changes`).
+
+---
+
 ## Phase 8.1 — Resolution + Files Touched (fill in at completion)
 
 ```markdown
@@ -128,6 +173,7 @@ Example:
 - **Fix:** [1-line description]
 - **Regression tests added:** [count]
 - **QA iterations:** [count]
+- **Manual-test cycles:** [count, or "none"] (count of `## Manual-Test Reports` entries; "none" if heading absent)
 - **Unplanned changes:** [count, or "none"]
 - **Status:** FIXED
 

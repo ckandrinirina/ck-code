@@ -280,7 +280,7 @@ C) REVERT — Undo all changes, keep the bug documented
 
 ---
 
-## Phase 8.5 — User Manual Testing
+## Phase 8.5 — User Manual Testing Prompt
 
 ```
 Bug fix complete!
@@ -293,13 +293,47 @@ Please verify:
 Result? PASS / STILL BROKEN / NEW ISSUE
 ```
 
-- `PASS` → proceed to commit
-- `STILL BROKEN` → loop back to Phase 4 (re-diagnose)
-- `NEW ISSUE` → document as a new bug, decide whether to fix now or separately
+Branching (per SKILL.md Phase 8.6):
+- `PASS` → proceed to Phase 8.7 (Ship).
+- `STILL BROKEN` → enter the 8.6.3 mandatory revalidation loop: append a
+  `Manual-Test Reports` cycle entry → loop back to Phase 4.2 → run Phase 5 →
+  Phase 6 → **Phase 6.4 (Refactor & SOLID Verification — REQUIRED)** →
+  Phase 7 (QA full procedure) → mark cycle `RESOLVED` → re-prompt.
+- `NEW ISSUE` → ask whether it's the same root cause:
+  - same root cause → treat as STILL BROKEN, same Bug ID, same loop
+  - separate bug → document under Phase 4.4 related-issues; recommend a
+    separate `/ck-code:fix` run; do NOT fix it inline.
+
+Loop cap = 3 cycles per Bug ID. On the third `STILL BROKEN`, present the
+escalation prompt below.
 
 ---
 
-## Phase 8.6 — Ship Prompt
+## Phase 8.6 — Manual-Test Bug-Fix Escalation (after 3 cycles)
+
+```
+The manual-test bug-fix loop has run 3 times for BUG-YYYYMMDD-NN and issues
+remain:
+
+Cycles:
+  #1  <residual symptom>  → RESOLVED (cycle 1)
+  #2  <residual symptom>  → RESOLVED (cycle 2)
+  #3  <residual symptom>  → still STILL BROKEN
+
+Options:
+
+A) MANUAL FIX  — You apply the specific fix; I'll re-run Refactor + QA against it
+B) ACCEPT      — Mark the fix DONE with cycle #3 documented as a known limitation
+C) REVERT      — Undo all changes; the bug stays documented but unfixed
+
+Reply A / B / C.
+```
+
+Never silently continue past 3 cycles.
+
+---
+
+## Phase 8.7 — Ship Prompt
 
 ```
 Ready to ship the fix! Options:

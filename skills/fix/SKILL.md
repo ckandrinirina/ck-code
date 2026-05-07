@@ -188,8 +188,24 @@ If applying the fix forces a change outside the Phase 5 Fix Plan's "Files to mod
 ### 6.3 Verify GREEN
 Run the reproduction test + all related tests. Expected: ALL pass (including the previously-failing reproduction test).
 
-### 6.4 Refactor (optional, deliberate)
-With the test passing, ask: is the fix readable? Does it duplicate logic shareable with existing code? Can naming/structure improve **without changing behavior**? Only refactor if it makes the fix clearer; re-run tests after any refactor. **Do NOT refactor unrelated code** — stay focused on the fix area. Then present the "Fix Applied" status from `references/qa-dialogue.md` (Phase 6.4).
+### 6.4 Refactor & SOLID Verification (REQUIRED)
+With tests green, run a SOLID compliance check **bounded to the lines the fix
+changed** (the diff produced by Phase 6.2 plus any unplanned-changes additions):
+
+- **S** Single responsibility — does the changed function still have one job?
+- **O** Open/closed — was a stable interface modified instead of extended?
+- **L** Liskov — does the changed type still honor its contract for callers?
+- **I** Interface segregation — was a fat interface widened?
+- **D** Dependency inversion — does the fix depend on abstractions, not concretes?
+
+For any principle that fails, apply the **smallest** refactor that resolves it.
+Re-run tests after each refactor — must stay green. **Do NOT refactor unrelated
+code** — the minimal-fix rule still binds; this check is bounded to the diff.
+
+Record the per-principle PASS/FAIL line under the Bug Report's Resolution
+section using the SOLID Verification template in
+`references/bug-section-template.md` (Phase 6.4). Then present the
+"Fix Applied" status from `references/qa-dialogue.md` (Phase 6.4).
 
 ## PHASE 7: QA VALIDATION
 **Goal:** QA expert verifies the fix is complete and nothing else broke.
@@ -218,14 +234,45 @@ Re-read `STORIES_INDEX.md` and confirm: every stub story file from Phase 2.6 has
 ### 8.5 Mark All Tasks Completed
 Use TaskUpdate to mark all fix-related tasks as `completed`.
 
-### 8.6 User Manual Testing
+### 8.6 User Manual Testing — Strict Revalidation Loop
+
+#### 8.6.1 Present the Manual-Test Prompt
+
 Use the manual-testing prompt in `references/qa-dialogue.md` (Phase 8.5).
-- `PASS` → proceed to commit.
-- `STILL BROKEN` → loop back to Phase 4 (re-diagnose).
-- `NEW ISSUE` → document as a new bug; decide whether to fix now or separately.
+Ask `Result? PASS / STILL BROKEN / NEW ISSUE`.
+
+#### 8.6.2 If PASS
+
+Proceed to 8.7 (Ship).
+
+#### 8.6.3 If STILL BROKEN — Mandatory Refactor + QA Loop
+
+The root bug is not fully resolved. Every cycle must re-touch the test, the
+code, the SOLID check, AND the QA pass before re-prompting the user.
+
+1. Capture the residual symptom from the user (what still fails, repro).
+2. Append an entry to `## Manual-Test Reports` under the Bug Report section in **every** in-scope story file. Status: `OPEN`. Template: `references/bug-section-template.md` (Phase 8.6).
+3. Loop back to **Phase 4.2** — write/update the failing reproduction test for the residual symptom (TDD red).
+4. Run **Phase 5** (re-plan minimal fix) → **Phase 6 (TDD fix)** → **Phase 6.4 (Refactor & SOLID Verification — MANDATORY)** → **Phase 7 (QA — full procedure)**. The QA 3-iteration cap still applies inside this single cycle.
+5. Update the Manual-Test Report entry: status `OPEN` → `RESOLVED`. Append fix summary + Files Touched (`path:line[,line]`).
+6. Return to 8.6.1.
+
+#### 8.6.4 If NEW ISSUE
+
+A different bug surfaced during manual test. Decide with the user:
+*"Is this related to the same root cause, or a separate bug?"*
+
+- **Related (same root cause)** → treat as 8.6.3 STILL BROKEN; same Bug ID, same loop.
+- **Separate bug** → append to Phase 4.4 related-issues note and recommend a separate `/ck-code:fix` run; **do NOT** fix it inside the current flow (the minimal-fix rule still binds).
+
+#### 8.6.5 Iteration Cap
+
+Cap = 3 manual-test loops on the same Bug ID. On the third consecutive
+`STILL BROKEN`, escalate with `MANUAL FIX / ACCEPT / REVERT` (template in
+`references/qa-dialogue.md` Phase 8.6 escalation). Never silently continue past 3.
 
 ### 8.7 Ship (Commit + PR + Issue Updates)
-Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invoke `/ck-code:ship` with the **primary** story file path (the highest-scored story from Phase 2.5 for multi-story bugs); it handles branch (`fix/` prefix), staging, commit message, PR, and GitHub Issue updates. The commit body should list every story ID in scope (`Stories: 01-03, 02-01`) plus the `Bug ID`. `SKIP` → remind the user they can run `/ck-code:ship [story-path]` later.
+Use the ship prompt in `references/qa-dialogue.md` (Phase 8.7). `SHIP` → invoke `/ck-code:ship` with the **primary** story file path (the highest-scored story from Phase 2.5 for multi-story bugs); it handles branch (`fix/` prefix), staging, commit message, PR, and GitHub Issue updates. The commit body should list every story ID in scope (`Stories: 01-03, 02-01`) plus the `Bug ID`. `SKIP` → remind the user they can run `/ck-code:ship [story-path]` later.
 
 ## RULES
 
@@ -239,7 +286,9 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.6). `SHIP` → invok
 - **Minimal fix only.** No refactoring, no improvements, no features. The diff is the smallest change that resolves the root cause; other issues are documented, not fixed.
 - **Document unplanned expansions.** When the minimal fix unavoidably touches a file outside the Fix Plan's "Files to modify", log one line in `## Unplanned Changes` under the Bug Report (`- <path> — <what> — <why>`). Drive-by fixes for OTHER bugs remain forbidden — those stay in the Phase 4.4 related-issues note. Empty section = omit the heading.
 - **Reproduce before fixing.** No code change without a failing reproduction test (Phase 4.2 + Phase 5.0 gate).
+- **Refactor + QA mandatory after every code change.** Phase 6.4 (Refactor & SOLID Verification — bounded to changed lines, never widens scope) and Phase 7 (QA) always run after Phase 6.2 and after every manual-test bug-fix cycle. Never claim a fix complete without both passing on the latest diff.
 - **QA loop cap = 3.** Then escalate with `MANUAL FIX / ACCEPT / REVERT`.
+- **Manual-test loop cap = 3** on the same Bug ID. On the third `STILL BROKEN`, escalate with `MANUAL FIX / ACCEPT / REVERT` — never silently continue.
 - **Same `Bug ID` across all in-scope stories.** Format: `BUG-YYYYMMDD-NN`.
 - **Language: English** for all output.
 - **Reusability.** Works with any project using the `tasks/` story format. No project-specific references.
