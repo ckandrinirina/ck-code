@@ -248,6 +248,31 @@ Use the worktree path the agent returned.
 Print per-story QA results (format in `references/conflict-format.md`). Mark any
 story with QA failures as **BLOCKED from merge** — keep its worktree.
 
+## PHASE 5.5: PER-STORY MANUAL TESTING GATE (orchestrator-level, sequential)
+
+Sub-agents in Phase 3 cannot interact with the user, so manual testing runs at
+the orchestrator level after Phase 5 QA passes. One gate per story, capped at
+3 cycles.
+
+For each story in the QA-passing set:
+
+**5.5.1** Present the manual-test prompt (template in `references/conflict-format.md`)
+with scenarios from the story's acceptance criteria + one edge case.
+Ask `Result? PASS / ISSUES`.
+
+**5.5.2** On `PASS` → mark the story `MANUAL-TEST PASS` (merge-eligible in Phase 6).
+
+**5.5.3** On `ISSUES` → capture the bug from the user, then dispatch ONE Agent
+into that story's existing worktree (prompt template in
+`references/agent-prompts.md` — Phase 5.5.3 Bug-Fix Sub-Agent). The agent invokes
+`/ck-code:build`, which re-enters at Phase 8.5.3 (regression test → fix →
+Refactor → QA) and commits inside the worktree. Story stays IN PROGRESS.
+After the agent returns, loop back to 5.5.1 for the same story.
+
+**5.5.4** Cap = 3 cycles per story. On the third `ISSUES`, mark
+`BLOCKED FROM MERGE — escalation pending` (escalation template in
+`references/conflict-format.md` Phase 5.5.4). Surface in the Phase 6 summary.
+
 ## PHASE 6: CLEANUP PROMPT
 
 Print final summary with three options (format in `references/conflict-format.md`):
@@ -257,7 +282,10 @@ Print final summary with three options (format in `references/conflict-format.md
 
 Use AskUserQuestion to wait for the choice.
 
-**Option 1:** merge QA-passing, conflict-free branches in suggested order:
+Stories without `MANUAL-TEST PASS` from Phase 5.5 are **not merge-eligible**
+under Option 1, even if QA and conflict checks pass.
+
+**Option 1:** merge QA-passing, manual-test-passing, conflict-free branches in suggested order:
 
 ```bash
 git checkout main
@@ -298,6 +326,7 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 
 - **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
 - **Never merge** a story branch without QA passing first.
+- **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.
 - **Always dispatch all agents in one message** — not sequentially. True parallelism
   requires multiple Agent calls in a single turn.
 - **Always isolate** each agent in its own worktree (`isolation: worktree`).

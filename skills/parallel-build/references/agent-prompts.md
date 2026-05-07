@@ -25,7 +25,12 @@ prompt: |
   Important:
   - Work only on files relevant to this story
   - Do not modify story files in tasks/ (the /ck-code:build skill updates those)
-  - If /ck-code:build completes successfully, your job is done
+  - **Stop after Phase 8.4 (Mark All Tasks Completed) — DO NOT run Phase 8.5
+    (User Manual Testing).** The parallel-build orchestrator runs the
+    per-story manual-testing gate in its own Phase 5.5 — sub-agents cannot
+    interact with the user. Leave the story `Status: IN PROGRESS` and report
+    back; the orchestrator will flip it to `DONE` after manual-test PASS.
+  - If /ck-code:build completes through Phase 8.4 successfully, your job is done
   - If /ck-code:build fails or encounters a blocker, report the error clearly in your final response
 ```
 
@@ -52,4 +57,45 @@ Agent results:
   02-05  →  ✓ completed
   02-06  →  ✗ failed: [brief error]
   03-01  →  ✓ completed
+```
+
+## Phase 5.5.3 — Bug-Fix Sub-Agent Prompt
+
+Used when a Phase 5.5 manual-test reports `ISSUES`. Dispatch ONE Agent into
+the story's existing worktree (do NOT create a new worktree — reuse the one
+the original story agent left behind).
+
+```
+subagent_type: general-purpose
+model: [tier resolved per story Size — see SKILL.md 3.1]
+isolation: none   # reuse the existing worktree path
+cwd: <existing worktree path for this story>
+description: "Fix manual-test bug for story XX-YY: [bug summary]"
+prompt: |
+  You are running inside the existing worktree for story XX-YY.
+
+  Story file: [full path inside this worktree]
+  Reported bug: <verbatim bug description from user>
+  Repro:    <steps>
+  Expected: <expected>
+  Actual:   <actual>
+
+  Your task:
+  1. Invoke the /ck-code:build skill via the Skill tool:
+     Skill({ skill: "ck-code:build", args: "<story path>" })
+  2. The build skill re-enters at Phase 8.5.3 (Bug-Fix Sub-Loop) because the
+     story is IN PROGRESS with the manual-test bug above to address. It will:
+       - write a failing regression test (TDD red)
+       - apply the minimum fix (TDD green)
+       - re-run Phase 6 (Refactor) and Phase 7 (QA) — both MANDATORY
+       - update the `## Manual-Test Bugs` section: status OPEN → FIXED
+       - commit inside this worktree
+  3. Stop after the bug entry is FIXED and Phase 7 QA reports PASS.
+     DO NOT run Phase 8.5.1 (manual-test prompt) — the parallel-build
+     orchestrator will re-prompt the user once you return.
+
+  Constraints:
+  - Story status stays IN PROGRESS — do NOT flip to DONE.
+  - Modify only files relevant to this fix and to the story.
+  - Report back the bug entry's fix summary and Files Touched list.
 ```

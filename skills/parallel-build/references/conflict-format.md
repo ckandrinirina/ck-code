@@ -67,12 +67,64 @@ QA Report:
 ─────────────────────────────────────────────────────
 ```
 
+## Phase 5.5 — Per-Story Manual-Test Prompt
+
+Run sequentially per story in the QA-passing set.
+
+```
+Manual test for story XX-YY: [story title]
+
+Please manually verify:
+- [Specific test scenario 1 from acceptance criteria]
+- [Specific test scenario 2]
+- [Edge case to try]
+
+Worktree:  <path>
+Branch:    story/XX-YY
+
+Result? PASS / ISSUES
+```
+
+## Phase 5.5 — Manual-Test Result Table
+
+Print after each story's gate is settled (PASS, BLOCKED, or escalation).
+
+```
+Manual-Test Gate:
+─────────────────────────────────────────────────────
+  02-05  →  ✓ MANUAL-TEST PASS  (cycle 1)
+  03-01  →  ✓ MANUAL-TEST PASS  (cycle 2 — 1 bug fixed: BUG-1 timezone offset)
+  02-06  →  🚫 BLOCKED — 3 cycles, escalation pending
+─────────────────────────────────────────────────────
+```
+
+## Phase 5.5.4 — Escalation Prompt (after 3 cycles)
+
+```
+Story XX-YY has run 3 manual-test bug-fix cycles and issues remain:
+
+Cycles:
+  #1  <bug summary>  → FIXED
+  #2  <bug summary>  → FIXED
+  #3  <bug summary>  → still ISSUES
+
+Options:
+
+A) FIX MANUALLY  — You apply the specific fix in the worktree;
+                   Refactor + QA will re-run against your changes
+B) ACCEPT AS-IS  — Mark story MANUAL-TEST PASS with #3 as a known issue
+C) ABORT         — Mark story BLOCKED FROM MERGE; keep worktree for review
+
+Reply A / B / C.
+```
+
 ## Phase 6 — Final Summary & Choices
 
 ```
 Summary:
-  ✓ Ready to merge:   story/02-05  (QA passed, no conflicts)
+  ✓ Ready to merge:   story/02-05  (QA + manual-test passed, no conflicts)
   ⚠ Review needed:   story/03-01  (QA failed: clippy errors)
+  ⚠ Manual-test blocked: story/04-02  (3 cycles exhausted — escalation pending)
   ✗ Build failed:    story/02-06  (agent error during /ck-code:build)
 
 What would you like to do?
