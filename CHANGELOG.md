@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-05-08
+
+### Added
+- **quick-story**: new `/ck-code:quick-story` skill — scaffolds a single small story inside an existing tasks plan when a full `/ck-code:plan` cycle is overkill (e.g., adding a database column or tweaking a config). Generates the story file plus matching `STORIES_INDEX.md` row and `EPIC.md` story-table row in `TODO` state, ready for `/ck-code:build`. Requires an existing epic — redirects to `/ck-code:plan` otherwise. AI-drafts title/description/acceptance criteria; user confirms via `CONFIRM | EDIT | ABORT` before any write. Phase 5 suggests next steps but never auto-launches `build` or `to-issues`.
+
 ## [1.7.4] — 2026-05-07
 
 ### Added
