@@ -102,6 +102,7 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 | `/ck-code:design` | Refine a spec into architecture docs | spec file | `docs/architecture/` |
 | `/ck-code:team` | Generate per-project expert + guide skills | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
 | `/ck-code:plan` | Create epics, stories, roadmap | spec file | `tasks/YYYY-MM-DD_<project>/` |
+| `/ck-code:quick-story` | Add a single small story to an existing epic without the full `plan` cycle (e.g. add a DB column, tweak a config) | one-line brief + epic | story file + `STORIES_INDEX.md` row + `EPIC.md` row |
 | `/ck-code:to-issues` | Push epics/stories to GitHub Issues (batch) | tasks folder | GitHub Issues |
 | `/ck-code:track` | Progress dashboard | — | status, next story, completion % |
 | `/ck-code:build` | Implement a story (TDD + QA) | story file | source code + tests |
@@ -141,6 +142,7 @@ ck-code/
 │   ├── pre-spec/                  # stakeholder-ready feature spec (create + adjust)
 │   ├── design/                    # spec → architecture docs
 │   ├── plan/                      # architecture → epics/stories
+│   ├── quick-story/                # add one small story to an existing epic without the full plan cycle
 │   ├── team/                      # generate per-project experts + guides
 │   ├── to-issues/                 # push tasks/ → GitHub Issues (batch)
 │   ├── track/                     # progress dashboard
