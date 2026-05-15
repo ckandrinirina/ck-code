@@ -1,6 +1,6 @@
 ---
 name: sync
-description: Use to reconcile STORIES_INDEX.md, EPIC.md story lists, and story files when they drift out of sync (after a failed `/ck-code:fix` sync, manual story edits, git merges, or to verify project state). Story files are the source of truth; index and epics are rewritten to match.
+description: Use to reconcile `STORIES_INDEX.md`, `EPIC.md`, and story files when they drift out of sync — after a failed sync, manual edits, git merges, or to verify project state. Story files are the source of truth; index and epics are rewritten to match.
 argument-hint: "[tasks/<slug> | --all]"
 disable-model-invocation: true
 ---

@@ -1,7 +1,6 @@
 # QA & User Dialogue Scripts
 
-Long-form prompts the orchestrator presents to the user across phases. Use
-these verbatim (or adapt minor wording) so the workflow stays predictable.
+User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim or with minor wording adjustments so the workflow stays predictable. Phase branching logic lives in `SKILL.md`; this file is templates only.
 
 ---
 
@@ -16,141 +15,7 @@ these verbatim (or adapt minor wording) so the workflow stays predictable.
 | 2 | [01-02] gRPC service definition | Foundation | DONE |
 | 3 | [01-03] WebSocket gateway | Foundation | IN PROGRESS |
 
-Which story has the bug? (enter number, path, AUTO to let me pick the best
-match after you describe the bug, or NONE if not story-related)
-```
-
-- `AUTO` → skip manual pick, go to Phase 2 first, then run Phase 2.5 scope analysis to score candidate stories.
-- `NONE` → ask for a free-form bug description and which component it affects, try to map to a story by file path. If no story matches, create a standalone bug report (no story linkage) and proceed to Phase 2.
-
----
-
-## Phase 2.5 — Scope Analysis Report
-
-Present after the bug description (Phase 2) is captured. Computed by scoring
-each candidate story on (a) file overlap with the bug area, (b) acceptance
-criteria match, (c) component/epic match.
-
-```
-## Scope Analysis
-
-**Bug summary:** [1-line]
-**Candidate match:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED | PLANNED-IN-FUTURE]
-
-### Best matches (DONE / IN PROGRESS)
-| Score | Story | Why |
-|-------|-------|-----|
-| 0.92 | [01-03] WebSocket gateway | bug area overlaps `src/ws/handler.rs` (acceptance criteria #2) |
-| 0.41 | [02-01] Login form | shares 1 file but unrelated symptom |
-
-### Future coverage (TODO — only shown when any score ≥ 0.5)
-| Score | Story | Why |
-|-------|-------|-----|
-| 0.91 | [04-02] Validate profile fields | criterion "validate all profile fields before submit" + file `profile_form.tsx` |
-
-### Verdict
-[One of the five verdicts below — pick exactly one]
-
-A) SINGLE-STORY — bug belongs to [EE-SS]. Proceed with the standard fix flow.
-B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. A Bug Report will be appended
-   to each story (shared bug ID `BUG-YYYYMMDD-NN`).
-C) NEW-FEATURE — bug is actually a missing feature in [N] epic(s). Recommend
-   running `/ck-code:plan` (Add Feature or Continue mode) instead. Fix flow
-   will STOP after your confirmation.
-D) MIXED — real bug in [EE-SS] AND missing piece in [other epic(s)]. I will
-   fix the bug here and create stub stories in the missing epics with TODO
-   acceptance criteria, marked `Created by fix flow on YYYY-MM-DD`. Enrich
-   them later via `/ck-code:plan` Continue mode.
-E) PLANNED-IN-FUTURE — a future TODO story ([EE-SS] [Title]) already plans
-   this fix in its acceptance criteria. Default: STOP and recommend
-   `/ck-code:build <future-story-path>` so the planned work absorbs the fix.
-   Override with `PROCEED ANYWAY` to force the fix now (falls through to
-   verdict A / B / D).
-
-Confirm verdict? YES / ADJUST (specify) / ABORT
-```
-
-Wait for explicit `YES` before proceeding. On `ADJUST`, ask which verdict
-the user prefers and which stories belong in scope, then re-present.
-
----
-
-## Phase 2.5b — New-Feature Deferral (verdict C only)
-
-```
-## Stop — This Looks Like a New Feature, Not a Bug
-
-What you described isn't a regression in existing implemented code; it's
-behavior that was never built. The right tool for this is `/ck-code:plan`,
-not `/ck-code:fix`.
-
-Suggested next step:
-  /ck-code:plan <path-to-spec-or-feature-description>
-
-Pick mode A (ADD FEATURE) or C (CONTINUE) when prompted, then come back to
-`/ck-code:fix` only if a real bug surfaces.
-
-Proceed anyway? NO (recommended — stop here) / YES (force fix flow with stub stories)
-```
-
-Default to NO. If the user picks YES, fall through to verdict D handling.
-
----
-
-## Phase 2.5e — Future-Story Coverage Deferral (verdict E only)
-
-```
-## Stop — A Future Story Already Plans This Fix
-
-The bug you described is already covered by acceptance criteria in a planned
-TODO story (or stories). Fixing now would either duplicate the planned work
-or conflict with it when that story is built.
-
-**Future stories covering this fix:**
-- [EE-SS] [Title] (score: 0.XX) — matched on: [files / criteria / component]
-- [EE-SS] [Title] (score: 0.XX) — matched on: …
-
-Suggested next step:
-  /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md
-
-That run will implement the fix as part of the planned story (with full
-acceptance criteria), and you'll get one cohesive commit instead of a
-scattered fix + later overlap.
-
-Proceed anyway? NO (recommended — defer to the planned story) / PROCEED ANYWAY (force fix now)
-```
-
-Default to NO. If the user picks PROCEED ANYWAY, fall through to the original
-A / B / D verdict computed from `done_in_progress_scores` in Phase 2.5.1 and
-continue the normal flow. Do NOT create stub stories under verdict E — the
-planned story already exists.
-
----
-
-## Phase 2.5c — Multi-Story / Stub-Story Confirmation
-
-For verdicts B and D, after the user confirms the verdict, list every story
-file that will be touched or created and request a final go-ahead:
-
-```
-## Story Set for This Fix
-
-**Bug ID:** BUG-YYYYMMDD-NN
-
-### Will UPDATE (append Bug Report to existing story)
-- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]
-- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]
-
-### Will CREATE (new stub story — TODO acceptance criteria)
-- tasks/<slug>/epics/03_mobile/stories/04_show-ip.md  [03-04]  (size: S)
-- tasks/<slug>/epics/04_desktop/stories/02_write-ip.md [04-02]  (size: S)
-
-### Will SYNC (after writes)
-- tasks/<slug>/STORIES_INDEX.md  (insert 2 new rows)
-- tasks/<slug>/epics/03_mobile/EPIC.md  (add story 03-04 to story list)
-- tasks/<slug>/epics/04_desktop/EPIC.md  (add story 04-02 to story list)
-
-Proceed? YES / ADJUST / ABORT
+Which story has the bug? (number, path, AUTO, or NONE)
 ```
 
 ---
@@ -162,21 +27,118 @@ Proceed? YES / ADJUST / ABORT
 
 Story: [EE-SS] [Title]
 
-1. What is the expected behavior?
-2. What is the actual behavior?
-3. Steps to reproduce (if known)?
-4. Any error messages or logs?
-5. When did it start? (always broken, or regression?)
+1. Expected behavior?
+2. Actual behavior?
+3. Steps to reproduce?
+4. Error messages or logs?
+5. When did it start? (always / regression?)
 ```
 
-### 2.2 Targeted Follow-ups (max 1-2)
+### Phase 2.2 — Targeted Follow-ups (max 1-2)
 - "Does this happen every time or intermittently?"
 - "Which specific input or action triggers it?"
 - "Did this work before a recent change?"
 
 ---
 
-## Phase 4.6 — Diagnosis Report to User
+## Phase 2.5 — Scope Analysis Report
+
+```
+## Scope Analysis
+
+**Bug summary:** [1-line]
+**Verdict:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED | PLANNED-IN-FUTURE]
+
+### Best matches (DONE / IN PROGRESS)
+| Score | Story | Why |
+|-------|-------|-----|
+| 0.92 | [01-03] WebSocket gateway | overlaps `src/ws/handler.rs` (criterion #2) |
+| 0.41 | [02-01] Login form | shares 1 file but unrelated symptom |
+
+### Future coverage (TODO — only when any score ≥ 0.5)
+| Score | Story | Why |
+|-------|-------|-----|
+| 0.91 | [04-02] Validate profile fields | criterion match + file overlap |
+
+### Verdict
+A) SINGLE-STORY — bug belongs to [EE-SS]. Standard fix flow.
+B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. Shared Bug ID `BUG-YYYYMMDD-NN`.
+C) NEW-FEATURE — missing functionality in [N] epic(s). Recommend `/ck-code:plan`. STOP after confirm.
+D) MIXED — real bug in [EE-SS] AND missing piece elsewhere. Fix here + create stubs marked `Created by fix flow on YYYY-MM-DD`.
+E) PLANNED-IN-FUTURE — TODO story [EE-SS] [Title] already plans this. Default STOP; recommend `/ck-code:build <future-story>`. Override `PROCEED ANYWAY` falls through to A/B/D.
+
+Confirm verdict? YES / ADJUST / ABORT
+```
+
+---
+
+## Phase 2.5b — New-Feature Deferral (verdict C)
+
+```
+## Stop — This Looks Like a New Feature, Not a Bug
+
+What you described isn't a regression — it's behavior that was never built. The right tool is `/ck-code:plan`.
+
+Suggested next step:
+  /ck-code:plan <path-to-spec-or-feature-description>
+
+Pick mode A (ADD FEATURE) or C (CONTINUE) when prompted.
+
+Proceed anyway? NO (recommended — stop) / YES (force fix flow with stub stories)
+```
+
+Default to NO. On YES: fall through to verdict D handling.
+
+---
+
+## Phase 2.5e — Future-Story Coverage Deferral (verdict E)
+
+```
+## Stop — A Future Story Already Plans This Fix
+
+The bug is already covered by acceptance criteria in a planned TODO story. Fixing now would duplicate planned work.
+
+**Future stories covering this fix:**
+- [EE-SS] [Title] (score: 0.XX) — matched on: [files / criteria / component]
+
+Suggested next step:
+  /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md
+
+That run implements the fix as part of the planned story.
+
+Proceed anyway? NO (recommended) / PROCEED ANYWAY (force fix now)
+```
+
+Default to NO. On PROCEED ANYWAY: fall through to the A/B/D verdict from `done_in_progress_scores`. Never create stub stories under verdict E.
+
+---
+
+## Phase 2.5c — Multi-Story / Stub-Story Confirmation (verdicts B / D)
+
+```
+## Story Set for This Fix
+
+**Bug ID:** BUG-YYYYMMDD-NN
+
+### Will UPDATE (append Bug Report)
+- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]
+- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]
+
+### Will CREATE (new stub story — TODO criteria)
+- tasks/<slug>/epics/03_mobile/stories/04_show-ip.md   [03-04]  (size: S)
+- tasks/<slug>/epics/04_desktop/stories/02_write-ip.md [04-02]  (size: S)
+
+### Will SYNC
+- tasks/<slug>/STORIES_INDEX.md  (+2 rows)
+- tasks/<slug>/epics/03_mobile/EPIC.md  (add 03-04 to story list)
+- tasks/<slug>/epics/04_desktop/EPIC.md  (add 04-02 to story list)
+
+Proceed? YES / ADJUST / ABORT
+```
+
+---
+
+## Phase 4.6 — Diagnosis Report
 
 ```
 ## Bug Diagnosis Report
@@ -189,17 +151,14 @@ Story: [EE-SS] [Title]
 **Story:** Updated with bug details
 
 ### Related Issues
-- [count] similar patterns found in codebase
+- [count] similar patterns found
 
 ### Affected Acceptance Criteria
 - [ ] [Criterion X] — BROKEN by this bug
 - [x] [Criterion Y] — Still working
 
-Confirm diagnosis and proceed to fix? YES / INVESTIGATE MORE
+Confirm and proceed to fix? YES / INVESTIGATE MORE
 ```
-
-If `INVESTIGATE MORE`: ask which aspect to investigate further, run more
-analysis, then re-present.
 
 ---
 
@@ -209,14 +168,12 @@ analysis, then re-present.
 ## Proposed Fix
 
 **Root cause:** [1-line]
-**Fix:** [1-line description of the change]
+**Fix:** [1-line]
 **Files to touch:** [count]
-**Risk assessment:** [LOW / MEDIUM / HIGH]
+**Risk:** [LOW / MEDIUM / HIGH]
 
-Proceed with fix? YES / ADJUST / ABORT
+Proceed? YES / ADJUST / ABORT
 ```
-
-Wait for user confirmation before any code change.
 
 ---
 
@@ -253,12 +210,9 @@ Moving to QA validation.
 ### Acceptance Criteria (full re-check)
 - [x] Criterion 1 — PASS
 - [x] Criterion 2 — PASS (was broken, now fixed)
-- [x] Criterion 3 — PASS
 
 ### Code Quality
-- Type checking: PASS / FAIL
-- Linting: PASS / FAIL
-- Formatting: PASS / FAIL
+- Type checking / Linting / Formatting: PASS / FAIL
 
 ### Fix Minimalism: PASS / FAIL
 [Notes on any unnecessary changes]
@@ -266,74 +220,54 @@ Moving to QA validation.
 ### Verdict: PASS / NEEDS FIXES
 ```
 
-### After 3 failed iterations — Escalation
+### Phase 7.6 — Escalation (after 3 failed iterations)
 
 ```
 Fix has been attempted 3 times. Remaining issues:
 [list]
 
-Options:
-A) MANUAL FIX — I'll try specific fixes you suggest
-B) ACCEPT — Proceed with known limitations
-C) REVERT — Undo all changes, keep the bug documented
+A) MANUAL FIX — apply specific fixes you suggest
+B) ACCEPT     — proceed with known limitations
+C) REVERT     — undo all changes, keep bug documented
 ```
 
 ---
 
-## Phase 8.5 — User Manual Testing Prompt
+## Phase 8.5 — User Manual Testing
 
 ```
 Bug fix complete!
 
 Please verify:
-1. The original bug is fixed: [reproduction steps]
-2. The feature still works as expected: [acceptance criteria summary]
+1. Original bug is fixed: [reproduction steps]
+2. Feature still works: [acceptance criteria summary]
 3. No new issues introduced
 
 Result? PASS / STILL BROKEN / NEW ISSUE
 ```
 
-Branching (per SKILL.md Phase 8.6):
-- `PASS` → proceed to Phase 8.7 (Ship).
-- `STILL BROKEN` → enter the 8.6.3 mandatory revalidation loop: append a
-  `Manual-Test Reports` cycle entry → loop back to Phase 4.2 → run Phase 5 →
-  Phase 6 → **Phase 6.4 (Refactor & SOLID Verification — REQUIRED)** →
-  Phase 7 (QA full procedure) → mark cycle `RESOLVED` → re-prompt.
-- `NEW ISSUE` → ask whether it's the same root cause:
-  - same root cause → treat as STILL BROKEN, same Bug ID, same loop
-  - separate bug → document under Phase 4.4 related-issues; recommend a
-    separate `/ck-code:fix` run; do NOT fix it inline.
-
-Loop cap = 3 cycles per Bug ID. On the third `STILL BROKEN`, present the
-escalation prompt below.
-
 ---
 
-## Phase 8.6 — Manual-Test Bug-Fix Escalation (after 3 cycles)
+## Phase 8.6 — Manual-Test Escalation (after 3 cycles)
 
 ```
-The manual-test bug-fix loop has run 3 times for BUG-YYYYMMDD-NN and issues
-remain:
+The manual-test bug-fix loop has run 3 times for BUG-YYYYMMDD-NN and issues remain:
 
 Cycles:
   #1  <residual symptom>  → RESOLVED (cycle 1)
   #2  <residual symptom>  → RESOLVED (cycle 2)
   #3  <residual symptom>  → still STILL BROKEN
 
-Options:
-
-A) MANUAL FIX  — You apply the specific fix; I'll re-run Refactor + QA against it
-B) ACCEPT      — Mark the fix DONE with cycle #3 documented as a known limitation
-C) REVERT      — Undo all changes; the bug stays documented but unfixed
+A) MANUAL FIX — you apply the fix; I re-run Refactor + QA against it
+B) ACCEPT     — mark fix DONE; cycle #3 documented as known limitation
+C) REVERT     — undo all changes; bug stays documented, unfixed
 
 Reply A / B / C.
 ```
 
-Never silently continue past 3 cycles.
-
 ---
 
-## Phase 8.7 — Ship Prompt
+## Phase 8.7 — Ship
 
 ```
 Ready to ship the fix! Options:
@@ -342,8 +276,5 @@ A) SHIP — Run /ck-code:ship to commit, PR, and update GitHub Issues
 B) SKIP — Don't commit yet (run /ck-code:ship later manually)
 ```
 
-If `SHIP`: invoke `/ck-code:ship` with the story file path.
-`/ck-code:ship` handles: branch creation (`fix/` prefix), staging, commit
-message, PR, and GitHub Issue updates.
-
-If `SKIP`: remind the user they can run `/ck-code:ship [story-path]` later.
+On `SHIP`: invoke `/ck-code:ship` with the story file path (handles `fix/` branch, staging, commit, PR, issue updates).
+On `SKIP`: remind the user they can run `/ck-code:ship [story-path]` later.

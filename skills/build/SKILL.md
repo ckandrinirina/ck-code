@@ -344,23 +344,23 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 
 ---
 
-## IMPORTANT GUIDELINES
+## HARD GATES (cross-phase contract)
 
-### Hard Rules (non-negotiable)
-- **TDD:** Tests are ALWAYS written before implementation. Strict Red→Green→Refactor. No implementation code without a failing test first. Exception: trivial boilerplate (config, type exports) that can't meaningfully fail.
-- **SOLID enforced twice:** Phase 3 (design) AND Phase 6 (verify in actual code). Both passes are mandatory.
-- **QA loop cap = 3.** After 3 dev↔QA iterations, escalate to the user with FIX MANUALLY / ACCEPT AS-IS / ABORT. Never silently continue past 3.
-- **Manual-test bug-fix loop cap = 3.** Every cycle must re-run Phase 6 (Refactor) AND Phase 7 (QA) before re-prompting; never mark DONE while any `## Manual-Test Bugs` entry is `OPEN`.
-- **Story file is source of truth.** Status, plan, summary all live in the story file and are updated as work progresses.
-- **Unplanned-changes log.** Any file touched outside the story's "Files to Create/Modify", any drive-by fix, and any unscoped helper gets one line in `## Unplanned Changes` (`- <path> — <what> — <why>`) at the moment it happens. Empty section = omit the heading.
-- **Branch confirmed before Phase 4.** Phase 3.7 must complete before any file is touched. Never write tests or implementation code without an explicit branch choice on record. Never implement on `main` or `develop`.
-- **Language: English** for all output, comments, commit messages, and docs — regardless of spec/story language.
+Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
+- **Phase 3.7** — Branch chosen before any code. Never implement on `main` / `develop`.
+- **Phase 4** — Failing tests written before implementation (strict Red→Green→Refactor; trivial boilerplate exempt).
+- **Phase 3.3 + Phase 6.1** — SOLID applied at design AND verified after refactor.
+- **Phase 5.2 / 6.2** — Off-plan file touches logged to `## Unplanned Changes` in the same Edit pass.
+- **Phase 7** — QA iteration cap = 3 → escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`.
+- **Phase 8.5** — Manual-test gate, bug-fix loop cap = 3 (each cycle re-runs Phase 6 + Phase 7).
+
+Story file is the source of truth. All output in English regardless of spec/story language.
 
 ### JUCE Test Runner Rules
-When writing JUCE unit tests, always:
-- Use `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions from `AudioDeviceManager` needing a MessageManager
-- Use ASCII-only strings in `beginTest()`, `expect()`, and JUCE String-constructing calls — `juce::String(const char*)` asserts bytes ≤ 127 (use `-` not `—`, `...` not `…`)
-- Use a single meaningful assertion instead of looping hundreds of `expect()` calls — e.g. find max amplitude rather than 512 individual sample checks
+When writing JUCE unit tests:
+- `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions
+- ASCII-only strings in `beginTest()` / `expect()` / `juce::String(const char*)` (use `-` not `—`, `...` not `…`)
+- One meaningful assertion instead of looping hundreds of `expect()` calls
 
 ---
 

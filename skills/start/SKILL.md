@@ -1,6 +1,6 @@
 ---
 name: start
-description: Use when starting work on a project with ck-code and unsure which step to run next. Inspects project state (specs, architecture, generated skills, tasks, story statuses) and recommends the next workflow step. Read-only — recommends, never launches.
+description: Use when starting work on a ck-code project and unsure which step to run next. Inspects project state and recommends the next workflow step. Read-only — recommends, never launches.
 argument-hint: ""
 ---
 

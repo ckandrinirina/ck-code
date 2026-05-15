@@ -1,12 +1,10 @@
 # Example Dialogues
 
-Reference for the user-facing presentation blocks the build skill emits at
-each phase. Wording can be adapted, but the data shown must match the
-checks performed in SKILL.md.
+User-facing presentation blocks the build skill emits at each phase. Wording is adaptable; the **data shown** must match the checks performed in `SKILL.md`.
 
 ---
 
-## Phase 1.2 — Interactive Story Selection Prompt
+## Phase 1.2 — Interactive Story Selection
 
 ```
 ## Stories Ready for Implementation
@@ -17,10 +15,10 @@ checks performed in SKILL.md.
 | 2 | [01-02] gRPC service definition | Foundation | S | None |
 | 3 | [02-01] Plugin scanner | VST/AU Hosting | L | Blocked by 01-01 (done) |
 
-Which story to implement? (enter number or path)
+Which story to implement? (number or path)
 ```
 
-If no stories are ready:
+If none ready:
 ```
 No unblocked TODO stories found. Check `tasks/` or run `/ck-code:plan` to generate stories.
 ```
@@ -48,8 +46,6 @@ Missing recommended skills:
 Continue without these? YES / GENERATE FIRST
 ```
 
-If GENERATE FIRST → tell the user to run `/ck-code:team` and come back.
-
 ---
 
 ## Phase 3.6 — Plan Confirmation
@@ -66,47 +62,20 @@ If GENERATE FIRST → tell the user to run `/ck-code:team` and come back.
 Proceed with TDD implementation? YES / ADJUST
 ```
 
-Wait for user confirmation.
-
 ---
 
-## Phase 4.4 — RED Phase Complete
+## Phase 4.4 / 5.3 / 6.3 — Phase Complete Status Blocks
+
+Same pattern, different phase label. Substitute `<PHASE>` with `RED` / `GREEN` / `REFACTOR`:
 
 ```
-## RED Phase Complete
+## <PHASE> Phase Complete
 
-**Tests written:** [count]
-**All failing:** YES (expected)
-**Test output:** [summary of failures]
+**Tests:** [X]/[X] (RED: all failing; GREEN/REFACTOR: all passing)
+**Files created / modified:** [list]  (omit for REFACTOR if no new files)
+**Refactorings applied:** [count]      (REFACTOR only)
 
-Moving to GREEN phase — implementing to make tests pass.
-```
-
----
-
-## Phase 5.3 — GREEN Phase Complete
-
-```
-## GREEN Phase Complete
-
-**Tests passing:** [X]/[X] (all green)
-**Files created:** [list]
-**Files modified:** [list]
-
-Moving to REFACTOR phase.
-```
-
----
-
-## Phase 6.3 — REFACTOR Phase Complete
-
-```
-## REFACTOR Phase Complete
-
-**Refactorings applied:** [count]
-**Tests still passing:** [X]/[X] (all green)
-
-Moving to QA validation.
+Moving to <next phase>.
 ```
 
 ---
@@ -118,33 +87,24 @@ Moving to QA validation.
 
 ### Acceptance Criteria
 - [x] Criterion 1 — PASS
-- [x] Criterion 2 — PASS
 - [ ] Criterion 3 — FAIL: [specific reason]
 
 ### Test Results
-- Total tests: [X]
-- Passing: [X]
-- Failing: [X]
-- New regressions: [X]
+- Total: [X]  Passing: [X]  Failing: [X]  New regressions: [X]
 
 ### Code Quality
-- Type checking: PASS / FAIL
-- Linting: PASS / FAIL ([count] warnings)
-- Formatting: PASS / FAIL
+- Type checking / Linting / Formatting: PASS / FAIL
 
 ### Architecture Compliance: PASS / FAIL
-[Notes on any deviations]
+[Notes on deviations]
 
 ### Edge Cases
-- [Edge case 1]: COVERED / MISSING
-- [Edge case 2]: COVERED / MISSING
+- [Edge case]: COVERED / MISSING
 
 ### Issues Found
 | # | Severity | Description | Location |
 |---|----------|-------------|----------|
 | 1 | HIGH | [issue] | [file:line] |
-| 2 | MEDIUM | [issue] | [file:line] |
-| 3 | LOW | [issue] | [file:line] |
 
 ### Verdict: PASS / NEEDS FIXES
 ```
@@ -153,26 +113,25 @@ Moving to QA validation.
 
 ## Phase 7.8 — QA Loop Messages
 
-When iteration < 3:
+Iteration < 3:
 ```
 QA found [X] issues. Looping back to fix.
 Iteration: [N]/3
 ```
 
-When iteration = 3 (escalation):
+Iteration = 3 (escalation):
 ```
 QA has run 3 times and issues remain:
-[list remaining issues]
+[list]
 
-Please review and advise:
-A) FIX MANUALLY — I'll attempt specific fixes you suggest
-B) ACCEPT AS-IS — Proceed with known issues (I'll document them)
-C) ABORT — Stop implementation, revert to TODO status
+A) FIX MANUALLY  — apply specific fixes you suggest
+B) ACCEPT AS-IS  — proceed with known issues (documented)
+C) ABORT         — stop, revert to TODO
 ```
 
 ---
 
-## Phase 8.7 — Manual Testing Prompt
+## Phase 8.5 — Manual Testing Prompt
 
 ```
 Story implementation complete!
@@ -187,69 +146,44 @@ Result? PASS / ISSUES
 
 ---
 
-## Phase 8.5.3 — Bug-Fix Sub-Loop Dialogue
+## Phase 8.5.3 — Bug-Fix Sub-Loop (worked example)
 
-When the user replies `ISSUES`. Each pass MUST go through Refactor + QA before
-the next manual-test prompt — the audit trail is the `## Manual-Test Bugs`
-section in the story file.
+When the user replies `ISSUES`, each cycle MUST run all 8 sub-steps before re-prompting (capture → log → red test → fix → refactor → QA → mark FIXED → re-prompt). The audit trail is the `## Manual-Test Bugs` section in the story file.
 
 ```
 You: ISSUES — when I click "Save" with an empty title, the form silently
      resets instead of showing a validation error.
 
-Claude: Captured. Recording bug #1 in the story file.
+Claude: Captured. Recording bug #1.
 
-  ── Bug captured ─────────────────────────────────────────────────────────
-  #1  Empty-title save resets the form instead of showing a validation error
-      Repro:    Open editor → leave title empty → click Save
-      Expected: Inline error "Title is required"; form values preserved
-      Actual:   Form clears; no message shown
-  ─────────────────────────────────────────────────────────────────────────
+  [TDD red]    tests/editor.test.ts → "shows validation error on empty title" → FAIL
+  [TDD green]  src/editor/save.ts:42-48 — added required-title check → 47/47 pass
+  [Refactor]   SOLID review on src/editor/save.ts → PASS
+  [QA]         full suite + lint + arch → PASS, 0 regressions
 
-  Now: writing a regression test, then fixing, then re-running Refactor + QA.
+  Bug #1 marked FIXED. Re-running manual test.
 
-  [TDD red] tests/editor.test.ts → "shows validation error on empty title save"
-            → FAIL (as expected)
-
-  [TDD green] src/editor/save.ts:42-48 — added required-title check
-              → all 47 tests pass
-
-  [Phase 6 refactor] SOLID review on src/editor/save.ts → PASS, no changes
-
-  [Phase 7 QA] full suite + lint + arch check → PASS, 0 regressions
-
-  Bug #1 marked FIXED in the story file. Re-running manual test.
-
-Story implementation complete!
-
-Please manually test the feature:
+Please manually test:
 - Save with empty title → should show validation error
 - Save with valid title → should persist normally
-- Edit existing record → no regression
 
 Result? PASS / ISSUES
 ```
 
 ---
 
-## Phase 8.5.3 — Bug-Fix Escalation (after 3 cycles)
-
-After three manual-test bug-fix iterations on the same story, stop and
-escalate. Never silently continue past 3.
+## Phase 8.5.3 — Escalation (after 3 cycles)
 
 ```
 The manual-test bug-fix loop has run 3 times and issues remain:
 
-Cycles:
   #1  Empty-title save resets the form          → FIXED (cycle 1)
   #2  Date-picker timezone offset               → FIXED (cycle 2)
   #3  Form race condition on rapid double-click → still ISSUES
 
-Options:
-
-A) FIX MANUALLY  — You apply the specific fix; I run Refactor + QA against it
-B) ACCEPT AS-IS  — Mark the story DONE with #3 documented as a known issue
-C) ABORT         — Revert the story to TODO; do not commit anything
+A) FIX MANUALLY — you apply the fix; I run Refactor + QA against it
+B) ACCEPT AS-IS — mark story DONE; #3 documented as known issue
+C) ABORT        — revert story to TODO; do not commit
 
 Reply A / B / C.
 ```

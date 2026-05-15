@@ -1,6 +1,6 @@
 ---
 name: quick-story
-description: Use to add a single small story inside an existing tasks plan when a full `/ck-code:plan` cycle is overkill — e.g. a database field tweak or a one-off epic adjustment. Argument is an optional one-line brief; `--epic NN` selects the target epic. Outputs the story file plus matching `STORIES_INDEX.md` row and `EPIC.md` row, ready for `/ck-code:build`.
+description: Use to add one small story to an existing `tasks/` plan when a full `/ck-code:plan` cycle is overkill — e.g. a database tweak or one-off epic adjustment. Argument is an optional one-line brief; `--epic NN` selects the target epic.
 argument-hint: "[brief] [--epic NN]"
 disable-model-invocation: true
 ---

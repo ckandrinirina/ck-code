@@ -1,6 +1,6 @@
 ---
 name: fix
-description: Use to diagnose and minimally fix a bug tied to one or more existing stories. Auto-matches the best story (or stories) for the bug, can create stub stories in the right epic if functionality is missing, defers the fix when a future TODO story already plans it, and keeps STORIES_INDEX.md and EPIC.md in sync. Argument is an optional story file path.
+description: Use to diagnose and minimally fix a bug tied to one or more existing stories. Auto-matches story by file/criteria overlap, supports multi-story scope, creates stub stories when functionality is missing, defers when a future TODO already plans the fix. Argument is an optional story file path.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 ---
@@ -274,24 +274,29 @@ Cap = 3 manual-test loops on the same Bug ID. On the third consecutive
 ### 8.7 Ship (Commit + PR + Issue Updates)
 Use the ship prompt in `references/qa-dialogue.md` (Phase 8.7). `SHIP` → invoke `/ck-code:ship` with the **primary** story file path (the highest-scored story from Phase 2.5 for multi-story bugs); it handles branch (`fix/` prefix), staging, commit message, PR, and GitHub Issue updates. The commit body should list every story ID in scope (`Stories: 01-03, 02-01`) plus the `Bug ID`. `SKIP` → remind the user they can run `/ck-code:ship [story-path]` later.
 
-## RULES
+## HARD GATES (cross-phase contract)
 
-- **Never skip the Phase 2.5 scope analysis.** Every fix flow runs scope analysis after the bug description, even when a story path was passed via `$ARGUMENTS`. The analyzer can promote a "single-story fix" to multi-story or to a deferred plan call.
-- **Always score `TODO` stories during scope analysis.** Phase 2.5.1 evaluates `DONE`, `IN PROGRESS`, AND `TODO` rows. A high-scoring `TODO` row triggers verdict E (PLANNED-IN-FUTURE) and defers the fix unless the user explicitly overrides — preventing redundant work that the planned story will absorb.
-- **Never create stub stories under verdict C (NEW-FEATURE).** Always defer to `/ck-code:plan` — it has the architecture context the fix flow lacks.
-- **Never create stub stories or modify code under verdict E (PLANNED-IN-FUTURE).** The fix is already planned; recommend `/ck-code:build <future-story-path>`. `PROCEED ANYWAY` falls through to the original A/B/D verdict — it does not bypass any other gate.
-- **Always confirm before writing.** Three mandatory confirmation gates: scope verdict (Phase 2.5.2), story-set list (Phase 2.5.5), fix plan (Phase 5.4). Never write story files, code, or sync the index past one of these without an explicit `YES`.
-- **Always sync `STORIES_INDEX.md` and the parent `EPIC.md` in the same phase that creates a stub story** (Phase 2.6.3 / 2.6.4). If a sync write fails, surface `Run /ck-code:sync to reconcile.` — never silently ignore drift.
-- **Never mutate `STORIES_INDEX.md` for bug sub-states.** The index tracks `TODO` / `IN PROGRESS` / `DONE` / `SKIP` only. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the story's Bug Report section.
-- **Minimal fix only.** No refactoring, no improvements, no features. The diff is the smallest change that resolves the root cause; other issues are documented, not fixed.
-- **Document unplanned expansions.** When the minimal fix unavoidably touches a file outside the Fix Plan's "Files to modify", log one line in `## Unplanned Changes` under the Bug Report (`- <path> — <what> — <why>`). Drive-by fixes for OTHER bugs remain forbidden — those stay in the Phase 4.4 related-issues note. Empty section = omit the heading.
-- **Reproduce before fixing.** No code change without a failing reproduction test (Phase 4.2 + Phase 5.0 gate).
-- **Refactor + QA mandatory after every code change.** Phase 6.4 (Refactor & SOLID Verification — bounded to changed lines, never widens scope) and Phase 7 (QA) always run after Phase 6.2 and after every manual-test bug-fix cycle. Never claim a fix complete without both passing on the latest diff.
-- **QA loop cap = 3.** Then escalate with `MANUAL FIX / ACCEPT / REVERT`.
-- **Manual-test loop cap = 3** on the same Bug ID. On the third `STILL BROKEN`, escalate with `MANUAL FIX / ACCEPT / REVERT` — never silently continue.
-- **Same `Bug ID` across all in-scope stories.** Format: `BUG-YYYYMMDD-NN`.
+Each gate is enforced inside its phase — listed here as a checklist:
+- **Phase 2.5** — Scope analysis mandatory, even when `$ARGUMENTS` provides a story path.
+- **Phase 2.5.1** — Score `DONE` / `IN PROGRESS` AND `TODO` rows; TODO matches trigger verdict E.
+- **Phase 2.5.2 / 2.5.5 / 5.4** — Three confirmation gates; no writes without explicit `YES`.
+- **Phase 2.6.3 / 2.6.4** — Stub story + `STORIES_INDEX.md` + parent `EPIC.md` synced in the same phase.
+- **Phase 4.2 + 5.0** — Failing reproduction test before any fix code.
+- **Phase 6.4 + 7** — SOLID re-check (bounded to changed lines) AND QA pass after every code change.
+- **Phase 7** — QA iteration cap = 3 → escalate `MANUAL FIX / ACCEPT / REVERT`.
+- **Phase 8.6.5** — Manual-test loop cap = 3 on the same Bug ID → escalate.
+
+### Scope discipline (cross-cutting)
+- **Verdict C (NEW-FEATURE)** → defer to `/ck-code:plan`. Never create stub stories from the fix flow.
+- **Verdict E (PLANNED-IN-FUTURE)** → defer to `/ck-code:build <future-story>`. `PROCEED ANYWAY` falls through to the underlying A/B/D verdict; it does NOT bypass other gates.
+- **Minimal fix only.** No refactor, no improvement, no feature. Drive-by fixes for OTHER bugs stay in the Phase 4.4 related-issues note, never inline.
+- **Index purity.** `STORIES_INDEX.md` tracks only `TODO` / `IN PROGRESS` / `DONE` / `SKIP`. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the Bug Report.
+- **Unplanned-change log.** Off-plan file touches → one line in `## Unplanned Changes` under the Bug Report (`- <path> — <what> — <why>`). Empty section = omit heading.
+
+### Universal
+- **Same `Bug ID` across all in-scope stories** — format `BUG-YYYYMMDD-NN`.
 - **Language: English** for all output.
-- **Reusability.** Works with any project using the `tasks/` story format. No project-specific references.
+- **Reusability.** Works with any project using the `tasks/` story format.
 
 ---
 
