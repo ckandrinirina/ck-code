@@ -9,7 +9,11 @@ the files a story or bug touches.
 Always read `docs/architecture/folder-structure.md` (small and universally
 useful). Beyond that, load architecture docs **only** for the domains the
 work actually touches, derived from the story's `## Files to Create/Modify`
-table:
+table.
+
+**Batching:** issue all matching arch-doc reads in a **single parallel
+tool-call message** — they have no inter-dependency. Sequential reads here
+are the largest avoidable latency in `build`/`fix` Phase 2.
 
 | Touched paths | Load (in addition to folder-structure.md) |
 |---|---|
@@ -69,6 +73,11 @@ not surfaced by the Skill tool's system listing.
 `Read(".claude/skills/experts/backend/SKILL.md")` and apply manually.
 `experts/qa/SKILL.md` is **always loaded unconditionally**. For bug-fix
 flows, `experts/analyst/SKILL.md` is also always loaded.
+
+**Batching:** issue all detected skill loads in a **single parallel
+tool-call message** (one `Skill` call per skill in the same message). The
+filesystem check (4a) is the only blocking step — once it returns, every
+known-existing skill loads in parallel.
 
 **4c. Warn about truly missing skills:** if a skill was expected but does
 not appear in the filesystem-check output, ask the user

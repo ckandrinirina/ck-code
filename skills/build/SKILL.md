@@ -40,11 +40,11 @@ Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index has everything you
 
 ### 1.3 Load Story Context
 
-Once a story is selected, read **only that story's full file** (the index already gave you status/size/deps for selection). Extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Then read the parent `EPIC.md` (small, always useful). Read `ROADMAP.md` ONLY if the story's technical notes reference it explicitly — otherwise skip.
+Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
 
 ### 1.4 Detect Linked GitHub Issues
 
-Search for story and epic issues, store the numbers for `/ck-code:ship`:
+Search for story and epic issues in **a single parallel Bash tool-call message** (the two queries are independent); store the numbers for `/ck-code:ship`:
 ```bash
 gh issue list --label "story" --state open --json number,title
 gh issue list --label "epic"  --state open --json number,title
@@ -61,15 +61,16 @@ Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID`
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING
 
-Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md):
+Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md). Architecture-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** — see Step 1 and Step 4b in `skill-detection.md` for the explicit parallel-batch instructions:
 
 1. **Read scoped architecture docs** — always `folder-structure.md`, plus the
    docs matching the paths in the story's "Files to Create/Modify" table.
+   Batch all matching arch-doc reads in one parallel message.
 2. **Detect required experts** by file path + Technical Notes keywords.
    `expert-qa` is **always** loaded.
 3. **Detect required guides** by file extension.
-4. **Load** each detected skill (filesystem check → `Skill` tool → fallback
-   to `Read`); warn about any truly missing skills with
+4. **Load** each detected skill (filesystem check → batched `Skill` tool /
+   `Read` calls); warn about any truly missing skills with
    `Continue without these? YES / GENERATE FIRST` (template in
    [references/examples.md](references/examples.md)).
 

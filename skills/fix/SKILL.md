@@ -30,7 +30,15 @@ Read `tasks/<slug>/STORIES_INDEX.md` (bootstrap if missing — see [`../../refer
 - `NONE` → ask for a free-form bug description and component; map to a story by file path. If no match, create a standalone bug report (no story linkage) and proceed.
 
 ### 1.3 Load Story Context
-Once a candidate is selected (or `AUTO`): read the candidate's full story file (including any Implementation Summary from `/ck-code:build`), extract acceptance criteria + files created/modified + technical notes, read parent EPIC.md, and read relevant `docs/architecture/` files for the affected component. For `AUTO`, defer reading until Phase 2.5 narrows the candidate set.
+Once a candidate is selected (or `AUTO`):
+
+**Batch 1 (parallel tool-call message):** read the candidate story file AND parent `EPIC.md` — the index row's `File` column encodes the epic folder, so EPIC.md is computable without parsing the story first.
+
+From the story file extract: acceptance criteria, Files Touched, technical notes, Implementation Summary (from `/ck-code:build`).
+
+**Batch 2 (parallel tool-call message, after parsing Batch 1):** read all `docs/architecture/` files matching the affected components — paths come from the story's Files Touched section, so this batch is sequential to Batch 1 but every file inside Batch 2 is parallel.
+
+For `AUTO`, defer both batches until Phase 2.5 narrows the candidate set.
 
 ## PHASE 2: BUG DESCRIPTION
 **Goal:** Get a clear bug description from the user.
@@ -65,13 +73,17 @@ Pick the verdict:
 ### 2.5.2 Present Scope Report
 Use the report in `references/qa-dialogue.md` (Phase 2.5). Wait for explicit `YES` (or `ADJUST` to override the verdict / story set). On `ADJUST`, re-score with the user's overrides and re-present.
 
+**Verdict A fast-path:** when the verdict is A (single-story, no stubs, no sync work), the Phase 2.5 report uses the verdict-A combined prompt — one gate covers both the verdict and the (trivial) story set. **Skip Phase 2.5.5 entirely and proceed to Phase 3 on `YES`.** Verdicts B / D still flow through Phase 2.5.5 separately because the story set adds real information (stubs, epic syncs).
+
 ### 2.5.3 Verdict C (NEW-FEATURE) — Defer to /ck-code:plan
 Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5b) and **STOP** unless the user explicitly forces the fix flow (which falls through to verdict D handling). Do NOT create stub stories under verdict C — the planner handles that with full architecture context.
 
 ### 2.5.4 Verdict E (PLANNED-IN-FUTURE) — Defer to /ck-code:build
 Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5e). Default action is to **STOP** and recommend `/ck-code:build <future-story-path>` for the highest-scoring TODO story in `future_coverage_matches`. The user may type `PROCEED ANYWAY` to force the fix flow — in that case fall through to the original verdict (A / B / D) computed from `done_in_progress_scores` and continue. Do NOT create stub stories under verdict E — the planned story already exists.
 
-### 2.5.5 Verdicts B / D — Confirm Story Set
+### 2.5.5 Verdicts B / D only — Confirm Story Set
+*(Skipped for Verdict A — the combined prompt in Phase 2.5.2 already covers it.)*
+
 Present the story-set confirmation from `references/qa-dialogue.md` (Phase 2.5c) listing every story to UPDATE, every stub to CREATE, and every index/epic file to SYNC. Wait for `YES`.
 
 ## PHASE 2.6: CREATE STUB STORIES (verdict D only)
@@ -97,7 +109,7 @@ After writes, re-read the index and each modified EPIC.md to confirm the new row
 
 ### 3.1 Detect & Load Skills
 
-Follow the shared procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md). For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis).
+Follow the shared procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md). For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis). Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
 
 ### 3.2 Prepare Systematic Debugging Approach
 Before any diagnosis, form a structured investigation plan:
