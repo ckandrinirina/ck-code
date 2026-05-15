@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.8.2] — 2026-05-15
+
+### Changed
+- **fix, quick-story, sync, start**: tightened skill descriptions to trigger-only phrasing (≤292 chars), removing workflow summaries that bloated every plugin-list context. No behaviour change.
+- **build, fix**: replaced trailing `## IMPORTANT GUIDELINES` / `## RULES` blocks with concise `## HARD GATES` pointers that reference the phase numbers where each gate is enforced — drops ~12 lines of duplicate rule text per skill while keeping cross-cutting invariants (scope discipline, minimal-fix rule, index purity, language) explicit.
+- **fix/references/qa-dialogue.md**: compressed from 349 → 280 lines (~26% character reduction) by removing prose duplications of `SKILL.md` instructions; every Phase NN template block is preserved verbatim.
+- **build/references/examples.md**: compressed from 266 → 200 lines (~27% character reduction) by consolidating the near-identical RED/GREEN/REFACTOR phase-complete blocks into one parameterised template and tightening the bug-fix sub-loop worked example.
+- **qa-validator agent**: added explicit `Never commit or push` constraint to match the safety boundary already in `story-implementer` and `conflict-analyzer`.
+
 ## [1.8.1] — 2026-05-15
 
 ### Changed
