@@ -70,6 +70,18 @@ E) PLANNED-IN-FUTURE — TODO story [EE-SS] [Title] already plans this. Default 
 Confirm verdict? YES / ADJUST / ABORT
 ```
 
+### Verdict A — Combined Prompt (fast-path, replaces Phase 2.5.5 gate)
+
+When the verdict is A (single-story), append this block to the scope report instead of the generic verdict prompt above — it folds the verdict confirmation and the (trivial) story-set confirmation into one gate:
+
+```
+**Scope:** single-story `[EE-SS] [Title]` (no stubs to create, no index/epic sync needed).
+
+Proceed with fix on this story? YES / ADJUST / ABORT
+```
+
+On `YES`: go directly to Phase 3 (no Phase 2.5.5 gate). On `ADJUST`: re-score with overrides and re-present. Verdicts B / D continue to use Phase 2.5.5 separately.
+
 ---
 
 ## Phase 2.5b — New-Feature Deferral (verdict C)
