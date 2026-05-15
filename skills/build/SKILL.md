@@ -124,6 +124,23 @@ Present the plan to the user (template in
 [references/examples.md](references/examples.md)) and **wait for user confirmation**
 (`YES / ADJUST`) before proceeding.
 
+### 3.7 Confirm Branch Strategy
+
+**Before any file is touched in Phase 4**, ask the user where the work should land:
+
+```bash
+git branch --show-current
+```
+
+Use AskUserQuestion with two options:
+- **A) Create new branch** — `story/<EE>-<SS>-<slug>` (or `fix/<EE>-<SS>-<slug>` for bug stories); slug = kebab-case from story title.
+- **B) Stay on current branch** — `<current-branch>`; ship will commit and push here.
+
+On **A**: `git checkout -b story/<EE>-<SS>-<slug>` (or `fix/...`), then verify with `git branch --show-current`.
+On **B**: if `<current-branch>` is `main` or `develop`, refuse and re-prompt — implementation on protected branches is forbidden; force option A.
+
+Record the chosen branch — the ship phase reuses it (no second branch prompt).
+
 ---
 
 ## PHASE 4: TDD — WRITE TESTS FIRST (RED PHASE)
@@ -336,6 +353,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 - **Manual-test bug-fix loop cap = 3.** Every cycle must re-run Phase 6 (Refactor) AND Phase 7 (QA) before re-prompting; never mark DONE while any `## Manual-Test Bugs` entry is `OPEN`.
 - **Story file is source of truth.** Status, plan, summary all live in the story file and are updated as work progresses.
 - **Unplanned-changes log.** Any file touched outside the story's "Files to Create/Modify", any drive-by fix, and any unscoped helper gets one line in `## Unplanned Changes` (`- <path> — <what> — <why>`) at the moment it happens. Empty section = omit the heading.
+- **Branch confirmed before Phase 4.** Phase 3.7 must complete before any file is touched. Never write tests or implementation code without an explicit branch choice on record. Never implement on `main` or `develop`.
 - **Language: English** for all output, comments, commit messages, and docs — regardless of spec/story language.
 
 ### JUCE Test Runner Rules
