@@ -17,17 +17,32 @@ Commit changes, optionally create a PR, and update linked GitHub Issues. Detects
 - **Provided:** read the story for issue links and context.
 - **Empty:** detect context from branch name or recent git activity. If none, run as standalone commit.
 
-## PHASE 0: BRANCH CHECK
-**Goal:** ensure work is on a feature branch — never commit directly to `main` or `develop`.
+## PHASE 0: BRANCH & PR CHECK
+**Goal:** ensure work is on a feature branch and detect any existing PR — never commit directly to `main` or `develop`.
+
+### 0.1 Resolve Current Branch
 
 ```bash
 git branch --show-current
 ```
 
-- **Feature branch** (`story/01-03-*`, `fix/02-01-*`, etc.): proceed to Phase 1.
+- **Feature branch** (`story/01-03-*`, `fix/02-01-*`, etc.): continue to 0.2.
 - **Protected branch (`main`, `develop`, …):** STOP before staging. Propose a name (`story/[EE]-[SS]-[slug]`, `fix/[EE]-[SS]-[slug]`, or `[type]/[slug]`) and offer A) CREATE, B) RENAME, C) SKIP (warn, not recommended). On A/B: `git checkout -b [branch-name]`.
 
 This applies to standalone commits too — always offer a feature branch on protected branches.
+
+### 0.2 Detect Existing PR for Current Branch
+
+```bash
+gh pr list --head "$(git branch --show-current)" --state open --json number,url,title,body
+```
+
+Store the result as `existing_pr`:
+- **One open PR found:** record `number`, `url`, `title`, and `body`. Phase 4 will reuse this PR (push + update description) instead of creating a new one.
+- **No open PR:** Phase 4 will run the standard create-PR flow.
+- **Multiple open PRs (rare):** show the list and ask the user which to update, or `NONE` to open a new one.
+
+If `gh` is missing or unauthenticated, treat as "no existing PR" and continue.
 
 ## PHASE 1: GATHER CONTEXT
 
@@ -92,29 +107,63 @@ git show --stat HEAD
 ```
 Present hash, branch, file count, first message line.
 
-## PHASE 4: CREATE PR (Optional)
+## PHASE 4: PR (Create or Update)
 
-### 4.1 Ask About PR
-A) YES (create now), B) NO (commit only → Phase 5), C) LATER (push branch, skip PR → Phase 5).
+### 4.1 Route by Existing-PR Detection
 
-### 4.2 Determine PR Target
-A) `main` (default), B) `develop`, C) other (specify).
+Use `existing_pr` from Phase 0.2:
 
-### 4.3 Push Branch
+- **Existing PR found** → go to **4.A** (push to current branch, update PR description).
+- **No existing PR** → go to **4.B** (ask about creating one).
+
+### 4.A Update Existing PR
+
+**4.A.1 Confirm with user.** Show the PR (number, title, URL) and ask: `Push to <branch> and update PR #<n> description with this commit? YES / SKIP / NEW PR`. On `SKIP` → Phase 5 (no push). On `NEW PR` → go to 4.B.
+
+**4.A.2 Push to current branch.**
+```bash
+git push origin "$(git branch --show-current)"
+```
+
+**4.A.3 Update PR description.** Read the existing PR body (`existing_pr.body` from 0.2). Append a new entry under a `## Updates` section (create the section if absent):
+
+```markdown
+## Updates
+
+- <YYYY-MM-DD>: <commit subject line> — <one-line plain-language summary of what users can now do or notice>
+```
+
+Then write the merged body back:
+
+```bash
+gh pr edit <pr-number> --body "$(cat <<'EOF'
+<merged body>
+EOF
+)"
+```
+
+The original body and existing `## Updates` entries are preserved. No story IDs, no AC checkboxes, no test counts — same rules as 2.2.
+
+### 4.B Create New PR
+
+**4.B.1 Ask about PR.** A) YES (create now), B) NO (commit only → Phase 5), C) LATER (push branch, skip PR → Phase 5).
+
+**4.B.2 Determine PR target.** A) `main` (default), B) `develop`, C) other (specify).
+
+**4.B.3 Push branch.**
 ```bash
 git push -u origin [branch-name]
 ```
 
-### 4.4 Craft PR
-PR title = commit first line (under 70 chars). PR body is read by PMs, designers, and stakeholders — write it in plain language with no story IDs, no AC checkboxes, and no test-count tallies. Body templates (feature / bug fix): [references/pr-templates.md](references/pr-templates.md).
+**4.B.4 Craft PR.** PR title = commit first line (under 70 chars). PR body is read by PMs, designers, and stakeholders — write it in plain language with no story IDs, no AC checkboxes, and no test-count tallies. Body templates (feature / bug fix): [references/pr-templates.md](references/pr-templates.md).
 
-### 4.5 Create PR
-Use `gh pr create --title ... --base ... --body "$(cat <<'EOF' ... EOF)"`. Exact command and post-create output block: [references/pr-templates.md](references/pr-templates.md).
+**4.B.5 Create PR.** Use `gh pr create --title ... --base ... --body "$(cat <<'EOF' ... EOF)"`. Exact command and post-create output block: [references/pr-templates.md](references/pr-templates.md).
 
 ## PHASE 5: UPDATE GITHUB ISSUES
 
 ### 5.1 Update Story Issue
-- **PR was created:** comment on the linked issue with the PR number and a 1–2 sentence plain-language summary of what users can now do or notice. No AC lists, no test counts.
+- **New PR created (4.B):** comment on the linked issue with the PR number and a 1–2 sentence plain-language summary of what users can now do or notice. No AC lists, no test counts.
+- **Existing PR updated (4.A):** comment on the linked issue noting the new commit hash and a 1–2 sentence plain-language summary. Do not duplicate the PR number if it was already posted earlier in the thread.
 - **Commit only on protected branch:** close the issue with the commit hash and the same plain-language summary.
 
 Exact `gh issue comment` / `gh issue close` templates: [references/issue-templates.md](references/issue-templates.md).
@@ -172,6 +221,11 @@ See [`../../../references/no-ai-references.md`](../../../references/no-ai-refere
 ### Branch Naming
 - Story: `story/[EE]-[SS]-[slug]`; Bug fix: `fix/[EE]-[SS]-[slug]`; Standalone: `[type]/[slug]`
 - **Never commit directly to `main` or `develop`** — Phase 0 enforces this
+
+### Existing PR Reuse
+- **Always check for an existing open PR on the current branch (Phase 0.2)** before opening a new one. Duplicate PRs for the same branch fragment review history.
+- **Always append, never overwrite.** When updating a PR description, preserve the original body and prior `## Updates` entries — add the new entry beneath them.
+- **Always push to the current branch when updating an existing PR** — `git push -u` is reserved for fresh branches (Phase 4.B.3).
 
 ### gh CLI Requirements
 - `gh` must be installed and authenticated for Phases 1.3, 4, and 5.
