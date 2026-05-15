@@ -285,15 +285,24 @@ Use AskUserQuestion to wait for the choice.
 Stories without `MANUAL-TEST PASS` from Phase 5.5 are **not merge-eligible**
 under Option 1, even if QA and conflict checks pass.
 
-**Option 1:** merge QA-passing, manual-test-passing, conflict-free branches in suggested order:
+**Option 1:** merge QA-passing, manual-test-passing, conflict-free branches in suggested order.
+
+**Determine merge target first.** The merge target is the **orchestrator's current branch** in the main checkout — not a hardcoded `main`. The operator may already be sitting on a feature branch they want all stories rolled into.
 
 ```bash
-git checkout main
-git merge --no-ff story/XX-YY -m "feat: implement story XX-YY"
+target_branch=$(git -C <main-checkout> branch --show-current)
 ```
 
-Then run a final QA on merged main (TypeScript + tests) to catch cross-branch
-integration issues. If all clean, proceed to **Phase 7**.
+Print the resolved target (e.g. `Merge target: feature/release-2026-05`) and confirm with the user before proceeding. If `target_branch` is empty (detached HEAD), stop and ask the user to check out a real branch first.
+
+Then merge each ready branch:
+
+```bash
+git -C <main-checkout> checkout "$target_branch"
+git -C <main-checkout> merge --no-ff story/XX-YY -m "feat: implement story XX-YY"
+```
+
+Run a final QA on the merged target branch (TypeScript + tests) to catch cross-branch integration issues. If all clean, proceed to **Phase 7**.
 
 **Option 2:** print worktree paths and stop. Worktrees stay intact for manual review.
 Remind user to run Phase 7 after merging.
@@ -337,8 +346,8 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 - **Never modify** story files in `tasks/` directly — `/ck-code:build` handles that.
 - **Single-story runs:** full flow still runs (worktree + QA + dry-run merge); only
   the cross-branch overlap step is skipped.
-- **Run final QA on merged main** before cleanup — cross-branch integration issues
-  only appear after all merges.
+- **Run final QA on the merged target branch** before cleanup — cross-branch integration issues only appear after all merges.
+- **Never hardcode `main` as merge target.** Phase 6 Option 1 always resolves to the orchestrator's current branch (`git branch --show-current` in the main checkout). Detached HEAD = stop and ask.
 
 ## NEXT
 
