@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.1] — 2026-05-15
+
+### Changed
+- **skill-detection (used by build, parallel-build, fix)**: skill loading is now strictly scoped to the two ck-code-generated namespaces — `.claude/skills/experts/<role>/SKILL.md` and `.claude/skills/guides/<tech>/SKILL.md`. The `Skill` tool is no longer used inside the procedure (it resolved against the global plugin registry and could load unrelated plugin-namespaced skills like `superpowers:*` on a name collision). All loads now go through `Read` against absolute project paths, batched in a single parallel tool-call message after the filesystem check. The "always-loaded" rule for `experts/qa` and `experts/analyst` is now gated on filesystem presence — a missing file is reported as missing, never silently assumed.
+
 ## [1.9.0] — 2026-05-15
 
 ### Changed
