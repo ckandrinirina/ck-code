@@ -63,6 +63,25 @@ Use AskUserQuestion. Parse:
 
 If invalid/empty, ask again once. If still invalid, stop.
 
+## PHASE 2.5: SINGLE-STORY SHORT-CIRCUIT
+
+Before any worktree or sub-agent setup, check the selected set size.
+
+**If exactly one story is in scope** (either Phase 1.2 resolved one ready story, or the user selected one in Phase 2, or `$ARGUMENTS` was a single story ID), **skip the entire parallel flow and invoke `/ck-code:build <story-path>` directly via the Skill tool.** Sub-agent dispatch with worktree isolation is pure overhead when there is nothing to run in parallel — the operator gets a faster, simpler flow, and the build skill handles TDD, SOLID, QA, and commit end-to-end.
+
+Print a short notice before delegating:
+
+```
+Only one story ready / selected: [EE-SS] [Title]
+Switching to /ck-code:build directly (no worktree, no sub-agent).
+```
+
+Then call `Skill("ck-code:build", "<story-file-path>")` and exit — do NOT continue to Phase 3, Phase 4, Phase 5, etc. The build skill owns the rest of the workflow.
+
+**If two or more stories are in scope**, continue to Phase 3 with full parallel dispatch.
+
+---
+
 ## PHASE 3: PARALLEL EXECUTION
 
 Create worktrees and dispatch all sub-agents in one parallel batch.
@@ -344,8 +363,7 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 - **Always delete** agent worktrees after merging — `git worktree remove -f -f` then
   `git worktree prune`.
 - **Never modify** story files in `tasks/` directly — `/ck-code:build` handles that.
-- **Single-story runs:** full flow still runs (worktree + QA + dry-run merge); only
-  the cross-branch overlap step is skipped.
+- **Single-story runs short-circuit to `/ck-code:build`.** Phase 2.5 detects a one-story scope (from Phase 1.2 / Phase 2 selection / `$ARGUMENTS`) and delegates to `/ck-code:build` directly — no worktree, no sub-agent dispatch, no conflict analysis. Parallel orchestration only makes sense for ≥ 2 stories.
 - **Run final QA on the merged target branch** before cleanup — cross-branch integration issues only appear after all merges.
 - **Never hardcode `main` as merge target.** Phase 6 Option 1 always resolves to the orchestrator's current branch (`git branch --show-current` in the main checkout). Detached HEAD = stop and ask.
 
