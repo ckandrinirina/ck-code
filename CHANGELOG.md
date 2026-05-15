@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-05-15
+
+### Changed
+- **build, fix**: independent reads now prescribed as parallel batched tool-call messages instead of sequential reads. Removes ~8–14s of avoidable latency per build/fix invocation. Affected sites: `build` Phase 1.3 (story + parent EPIC.md), `build` Phase 1.4 (two `gh issue list` queries), `build` Phase 2 / `fix` Phase 3.1 (architecture-doc reads and skill loads via `skill-detection.md` Step 1 and Step 4b), `fix` Phase 1.3 (two-batch sequence: story+EPIC, then arch docs after parsing). Phase ordering, gates, agent dispatch, and acceptance criteria untouched.
+- **fix**: Verdict A (single-story bug, no stubs, no sync work) now uses a single combined confirmation prompt — Phase 2.5.5 is skipped when the story set adds no information beyond the verdict itself. One fewer user gate on single-story fixes. Verdicts B and D continue to use both gates separately because the story set adds real information (stubs to create, EPIC.md files to sync).
+
+### Added
+- **parallel-build**: new Phase 2.5 short-circuit — when the selected story set has exactly one story (Phase 1.2 resolution, Phase 2 selection, or `$ARGUMENTS`), the skill now delegates directly to `/ck-code:build` via the Skill tool, skipping worktree creation, sub-agent dispatch, conflict analysis, and per-story cleanup. Parallel orchestration overhead is only paid when there are ≥ 2 stories to run concurrently.
+
 ## [1.8.2] — 2026-05-15
 
 ### Changed
