@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-05-15
+
+### Changed
+- **build**: new Phase 3.7 (Branch Strategy) — after plan confirmation and before any test or implementation file is touched, asks the user to either create a `story/<EE>-<SS>-<slug>` (or `fix/...`) branch or stay on the current branch. Protected branches (`main`, `develop`) force the new-branch path.
+- **parallel-build**: Phase 6 Option 1 merge target now resolves to the orchestrator's current branch (`git branch --show-current` in the main checkout) instead of hardcoded `main`. Detached HEAD stops the flow. Lets operators roll all parallel stories into a feature branch they're already iterating on.
+- **ship**: Phase 0.2 now detects any open PR on the current branch via `gh pr list --head`. Phase 4 routes accordingly — when a PR exists, 4.A pushes to the current branch and appends a dated entry to the PR body's `## Updates` section via `gh pr edit` (preserving the original body and prior entries); otherwise 4.B runs the original create-PR flow. Phase 5.1 distinguishes between newly-created and updated PRs when commenting on the linked issue.
+
 ## [1.8.0] — 2026-05-08
 
 ### Added
