@@ -7,7 +7,7 @@ Use these templates when dispatching parallel sub-agents in Phase 3.3.
 For each selected story, dispatch one Agent call with the following structure:
 
 ```
-subagent_type: general-purpose
+subagent_type: ck-code:story-implementer  # falls back to general-purpose if not registered
 model: [determined in 3.1 from Size]
 isolation: worktree
 description: "Implement story XX-YY: [story title]"

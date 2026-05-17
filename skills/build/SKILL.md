@@ -2,7 +2,6 @@
 name: build
 description: Use to implement a single story from `tasks/` end-to-end. Argument is an optional story file path; if omitted, picks the next ready story interactively.
 argument-hint: "[path-to-story.md]"
-disable-model-invocation: true
 ---
 
 # Implement Story — TDD Story Implementation Orchestrator
