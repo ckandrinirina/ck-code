@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.2] — 2026-05-17
+
+### Fixed
+- **build**: removed `disable-model-invocation: true` from frontmatter — the flag blocked story-implementer agents and the parallel-build Phase 2.5 short-circuit from invoking the skill via the Skill tool; no actual recursion risk exists.
+- **story-implementer**: added `Skill` to the agent tools list so it can call `Skill({ skill: "ck-code:build" })`; simplified workflow to make clear the agent's only action is to invoke the build skill; tightened constraints to forbid direct implementation.
+- **parallel-build (agent-prompts)**: updated Per-Story Agent Call template to prefer `ck-code:story-implementer` as subagent_type instead of `general-purpose`.
+
 ## [1.9.1] — 2026-05-15
 
 ### Changed
