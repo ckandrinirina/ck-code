@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.8] — 2026-05-22
+
+### Changed
+- **build**: token-efficiency refactor — offloaded Phase 8 completion mechanics into `references/completion.md`, the Phase 1.4 parallel-switch procedure into `references/parallel-switch.md`, and the JUCE test-runner rules into `references/tdd-walkthrough.md`; trimmed Phase 2 and Phase 7 to pointers. SKILL.md cut from 414 to 348 lines with all gates kept inline and no behavior change.
+
 ## [1.9.7] — 2026-05-22
 
 ### Changed
