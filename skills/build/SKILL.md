@@ -31,7 +31,12 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
 3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
 4. Sort by epic, then story number, then size (S < M < L < XL).
-5. Present as a table (see examples). If empty: tell the user nothing is ready and which deps are still missing. Suggest `/ck-code:plan` if the index is empty.
+5. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with > 1 non-DONE story is a wave candidate. (Count every non-DONE story, not just the ready ones — a partly-blocked epic is the dependency-order case wave mode exists for.)
+6. **Present the menu (see examples)** with two kinds of choices:
+   - one row per ready story (single-story build), and
+   - one row per wave-candidate epic — `Build all of Epic NN in dependency-ordered waves` — listed under the stories.
+   If no stories are ready: tell the user nothing is ready and which deps are still missing. Suggest `/ck-code:plan` if the index is empty.
+7. **On an epic choice:** leave all statuses `TODO` (do NOT run 1.3–1.6), call `Skill("ck-code:parallel-build", "--epic NN")`, and **exit** — parallel-build owns the wave loop. **On a single-story choice:** proceed to 1.3, and record that the epic-wave option was already offered here (Phase 1.4 then skips re-offering wave mode for that story's epic).
 
 Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index has everything you need.
 

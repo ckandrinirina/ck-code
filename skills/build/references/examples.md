@@ -6,16 +6,27 @@ User-facing presentation blocks the build skill emits at each phase. Wording is 
 
 ## Phase 1.2 — Interactive Story Selection
 
+The menu offers single stories AND a whole-epic wave build for any epic with > 1 non-DONE
+story. Epic options appear below the stories; picking one hands off to
+`/ck-code:parallel-build --epic NN`.
+
 ```
 ## Stories Ready for Implementation
 
 | # | Story | Epic | Size | Dependencies |
 |---|-------|------|------|-------------|
-| 1 | [01-01] Setup server scaffold | Foundation | M | None |
-| 2 | [01-02] gRPC service definition | Foundation | S | None |
-| 3 | [02-01] Plugin scanner | VST/AU Hosting | L | Blocked by 01-01 (done) |
+| 1 | [01-04] Abort on SOKA reject | 01 | M | None |
+| 2 | [01-02] Paid abandon grace   | 01 | L | None |
+| 3 | [02-01] Free-private → 0 pts | 02 | M | None |
 
-Which story to implement? (number or path)
+## Or build a whole epic in dependency-ordered waves (drives every story to DONE)
+
+| #  | Epic    | Remaining | Builds via                |
+|----|---------|-----------|---------------------------|
+| E1 | Epic 01 | 2 stories | parallel-build --epic 01  |
+| E2 | Epic 02 | 2 stories | parallel-build --epic 02  |
+
+Pick a single story (number/path), or an epic (E1/E2) to build it all in waves.
 ```
 
 If none ready:

@@ -7,6 +7,11 @@ Runs in both modes (story path given or interactive). **Skip entirely when runni
 non-interactively / as a dispatched sub-agent** — you cannot prompt the user and are
 already inside a parallel run.
 
+**If interactive selection (Phase 1.2) already presented the whole-epic options** and the
+user deliberately picked a single story, the epic-wave choice was just declined — omit the
+**B) epic-wave** option below (the parallel **A) batch** offer may still apply). When a
+story path was passed directly (`$ARGUMENTS`, no 1.2 menu), offer B normally.
+
 1. **Read the index** if not already loaded this session: `tasks/*/STORIES_INDEX.md`.
 2. **Detect the epic-build opportunity (always check first — this is independent of
    parallel-safe candidates).** From the index, count the selected story's epic (`NN`)
