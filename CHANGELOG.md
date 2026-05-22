@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.13] — 2026-05-22
+
+### Fixed
+- **build**: Phase 2 (expert/guide skill detection & loading) is now a hard blocking gate — it was a single delegating paragraph absent from the HARD GATES checklist, so it could be skipped, leaving the "follow loaded guide/expert skills" rules in Phases 5/6 as silent no-ops. It is now in HARD GATES, reframed as mandatory before any planning or code, and a Phase 5.1 guard re-runs it if the "Skills loaded" block was never shown. Ensures the necessary experts and guides are always loaded during implementation.
+
 ## [1.9.12] — 2026-05-22
 
 ### Fixed
