@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.12] — 2026-05-22
+
+### Fixed
+- **build**: skill detection no longer skips the mandatory `ls` filesystem check when a project's CLAUDE.md says `/ck-code:team` generation is "deferred" — such prose notes go stale once skills are generated, so the `ls` output is now authoritative and runs first, before any doc note is read. Fixes generated `experts/` and `guides/` skills being reported as absent when they exist on disk.
+
 ## [1.9.11] — 2026-05-22
 
 ### Changed
