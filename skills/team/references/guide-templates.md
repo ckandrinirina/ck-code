@@ -21,6 +21,9 @@ description: >
   for writing idiomatic [language/framework] code. Researched from official docs.
   Use as a reference when writing or reviewing [language/framework] code.
 user-invocable: false
+paths:
+  - "[primary source glob for this language, e.g. **/*.rs or **/*.{ts,tsx}]"
+  - "[optional extra globs, e.g. **/Cargo.toml or **/package.json]"
 ---
 
 # [Language/Framework] Best Practices Guide
@@ -150,5 +153,11 @@ user-invocable: false
    loads automatically when working with the relevant language. Users don't need
    to invoke them directly. Expert skills reference them instead.
 
-6. **Cross-reference experts.** Each guide should note: "This guide is used by
+6. **`paths` for deterministic auto-loading.** Set `paths` to the glob(s) matching
+   this language/framework's source files (e.g. `**/*.rs`, `**/*.{ts,tsx}`,
+   `**/*.py`). Derive the extensions from tech-stack.md. This makes the guide load
+   whenever Claude touches a matching file — not only when the description happens
+   to match. Omit `paths` only if the technology has no distinct file extension.
+
+7. **Cross-reference experts.** Each guide should note: "This guide is used by
    /expert-[role] for [language]-specific guidance."
