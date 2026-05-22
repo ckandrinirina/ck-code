@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.3] — 2026-05-22
+
+### Added
+- **design, plan**: effort-aware behavior via `${CLAUDE_EFFORT}` — `design` scales Q&A rounds and doc depth, `plan` scales story granularity, to the active effort level (low → minimal/coarse, high/xhigh/max → exhaustive/fine-grained).
+- **team**: generated language/framework guides now emit a `paths` frontmatter field so they auto-load deterministically whenever Claude touches a matching source file, not only on description match.
+
+### Changed
+- **marketplace**: added a top-level `description` to `marketplace.json` (clears the validation warning) and bumped the ck-tools ref to v1.0.5.
+
 ## [1.9.2] — 2026-05-17
 
 ### Fixed
