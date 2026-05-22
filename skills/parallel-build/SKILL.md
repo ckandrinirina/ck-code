@@ -69,6 +69,14 @@ This is a pre-flight heuristic from *declared* scopes — Phase 4 still runs the
 authoritative dry-run merge on *actual* diffs after implementation. A story tagged
 parallel-safe here can still surface a real conflict in Phase 4.
 
+### 1.5 Detect Whole-Epic Opportunities
+
+From the index, group the not-`DONE` stories by epic (`NN` in their `NN-SS` IDs). Any
+epic with > 1 non-DONE story is a **whole-epic candidate** — wave mode (Phase 2.7) drives
+it to completion in dependency order, whether its remaining stories are sequential or
+parallel. Carry the list of candidate epics into Phase 2 so each is surfaced as an
+explicit "implement whole epic NN in waves" choice, not left for the operator to discover.
+
 ## PHASE 2: INTERACTIVE SELECTION
 
 Show ready stories, let the user pick. Skip if `$ARGUMENTS` provided.
@@ -79,12 +87,15 @@ Print the ready-stories table (format: `references/conflict-format.md`).
 
 ### 2.2 Wait for Input
 
-Use AskUserQuestion. Parse:
-- `"recommended"` → the parallel-safe set from Phase 1.4 (default suggestion)
+Use AskUserQuestion. **For each epic flagged in Phase 1.5, include an explicit "implement
+whole epic NN in dependency-ordered waves" option — listed first, one per candidate epic —
+so the operator is asked epic-vs-batch directly and never has to know the `epic NN`
+syntax.** Then the batch options. Parse the choice:
+- the whole-epic option (or `"epic NN"`) → enter **wave mode** for that epic (jump to Phase 2.7)
+- `"recommended"` → the parallel-safe set from Phase 1.4 (default batch suggestion)
 - `"all"` → every story in the table
 - `"1 3 4"` → stories at those positions
 - `"02-05 03-01"` → match by story ID directly
-- `"epic NN"` → enter wave mode for that epic (jump to Phase 2.7)
 
 If invalid/empty, ask again once. If still invalid, stop.
 
@@ -302,6 +313,9 @@ confirmation (format in `references/conflict-format.md`).
 - **Always recommend the parallel-safe set** (Phase 1.4) from non-overlapping file
   scopes before selection — it is a pre-flight heuristic, not a substitute for the
   Phase 4 dry-run merge check.
+- **Always offer whole-epic wave mode** when an epic has > 1 non-DONE story (Phase 1.5 /
+  2.2) — surface it as an explicit AskUserQuestion option so the operator is asked
+  epic-vs-batch, never required to know the `epic NN` syntax.
 - **In wave mode, always merge a wave before dispatching the next** (Phase 2.7 /
   `references/wave-mode.md`) — a dependent story must see its blockers `DONE` on the
   target branch, so each wave's worktrees branch from the post-merge target HEAD.

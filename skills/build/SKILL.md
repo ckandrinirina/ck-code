@@ -39,15 +39,21 @@ Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index has everything you
 
 Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
 
-### 1.4 Parallel-Build Opportunity Check (before status mutation)
+### 1.4 Epic / Parallel-Build Opportunity Check (before status mutation)
 
-Before marking this story IN PROGRESS, check whether other ready stories could be built
-**in parallel** and, if so, offer to switch to `/ck-code:parallel-build` (batch, or
-`--epic NN` wave mode when the epic needs multiple dependency waves). **Skip entirely
-when running non-interactively / as a dispatched sub-agent** (you cannot prompt the user
-and are already inside a parallel run) — proceed to 1.5. Full detection + offer procedure
-(parallel-safe scoping, epic-wave detection, the A/B/C AskUserQuestion) is in
-[references/parallel-switch.md](references/parallel-switch.md).
+Before marking this story IN PROGRESS, check two opportunities and offer the matching
+switch to `/ck-code:parallel-build`:
+- **Epic build (dependency-ordered waves)** — **whenever** the selected story's epic
+  still has > 1 non-DONE story, offer `--epic NN` wave mode to drive the whole epic to
+  completion in dependency order. This is checked first and does not require any
+  parallel-safe peer — a purely sequential epic still gets the offer.
+- **Parallel batch** — when other ready stories have non-overlapping file scopes, offer
+  to build them concurrently.
+
+**Skip entirely when running non-interactively / as a dispatched sub-agent** (you cannot
+prompt the user and are already inside a parallel run) — proceed to 1.5. Full detection +
+offer procedure (epic detection first, parallel-safe scoping, the A/B/C AskUserQuestion)
+is in [references/parallel-switch.md](references/parallel-switch.md).
 
 On a switch the story stays `Status: TODO` (do NOT run 1.6) and control passes to
 parallel-build; otherwise proceed to 1.5.

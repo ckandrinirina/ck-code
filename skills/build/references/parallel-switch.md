@@ -8,24 +8,31 @@ non-interactively / as a dispatched sub-agent** — you cannot prompt the user a
 already inside a parallel run.
 
 1. **Read the index** if not already loaded this session: `tasks/*/STORIES_INDEX.md`.
-2. **Resolve the other ready set:** rows with `Status: TODO` whose every `Blocked by` ID
+2. **Detect the epic-build opportunity (always check first — this is independent of
+   parallel-safe candidates).** From the index, count the selected story's epic (`NN`)
+   rows whose `Status` ≠ `DONE`. If more than one remains (the selected story plus ≥ 1
+   other), the epic has unfinished work that wave mode can drive to completion in
+   dependency order — the **B) epic-wave** offer applies, whether the remaining stories
+   are sequential or parallel. Do NOT skip this check just because no peer is
+   parallel-safe; a purely sequential epic is exactly the dependency-order case wave mode
+   exists for.
+3. **Resolve the other ready set:** rows with `Status: TODO` whose every `Blocked by` ID
    resolves to `DONE`, **excluding the currently selected story**.
-3. **None** → skip silently, proceed to Phase 1.5.
-4. **One or more** → test file-scope independence. Read the `Files to Create/Modify` table
-   of the selected story and of each other ready story (a deliberate cross-check, not
-   Phase-1 discovery). A candidate is **parallel-safe** if its file scope does not overlap
-   the selected story's scope nor any other already-chosen candidate's scope.
-5. **No parallel-safe candidate** → note "other ready stories overlap this one's files —
-   building sequentially" and proceed to Phase 1.5.
-6. **Detect an epic-wave opportunity:** if the selected story's epic (`NN`) has other
-   not-`DONE` stories that are still *blocked* (the epic needs more than one dependency
-   wave — e.g. `01-03` blocked by `01-01` + `01-02`), a flat batch cannot finish the
-   epic; wave mode can.
-7. **Offer the switch** via AskUserQuestion, including only the options that apply:
+4. **Test file-scope independence** for the ready set: read the `Files to Create/Modify`
+   table of the selected story and of each other ready story (a deliberate cross-check,
+   not Phase-1 discovery). A candidate is **parallel-safe** if its file scope does not
+   overlap the selected story's scope nor any other already-chosen candidate's scope —
+   these enable the **A) batch** offer.
+5. **Decide which offers apply:**
+   - Neither an epic-build opportunity (step 2) nor a parallel-safe candidate (step 4)
+     exists → skip silently, proceed to Phase 1.5.
+   - Otherwise → present the offer (step 6) with only the options that apply.
+6. **Offer the switch** via AskUserQuestion, including only the applicable options:
    - **A) Switch to parallel-build (batch)** — build `[selected] + [safe candidates]`
-     concurrently in worktrees. Offered when ≥ 1 parallel-safe candidate exists.
-   - **B) Switch to parallel-build `--epic NN` (waves)** — build the whole epic in
-     dependency-ordered waves. Offered when the epic-wave opportunity (step 6) holds.
+     concurrently in worktrees. Offered when ≥ 1 parallel-safe candidate exists (step 4).
+   - **B) Switch to parallel-build `--epic NN` (waves)** — build the whole epic to
+     completion in dependency-ordered waves. Offered whenever the epic has > 1 non-DONE
+     story (step 2).
    - **C) Stay in build** — build only the selected story now.
    Show the recommended batch set and/or wave plan so the operator can choose.
 
