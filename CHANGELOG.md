@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.4] — 2026-05-22
+
+### Added
+- **build**: skill detection now reports the loaded expert/guide skills to the user before implementation begins (shared `skill-detection.md` Step 5 — also applies to `fix` and `parallel-build`), so skill loading is never silent.
+
 ## [1.9.3] — 2026-05-22
 
 ### Added
