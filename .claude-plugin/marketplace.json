@@ -4,6 +4,7 @@
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
   },
+  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides) and ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers).",
   "plugins": [
     {
       "name": "ck-code",
@@ -15,7 +16,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-tools",
-        "ref": "v1.0.4"
+        "ref": "v1.0.5"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores. Coexists with ck-code."
     }
