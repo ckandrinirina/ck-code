@@ -16,6 +16,7 @@ References:
 - `references/conflict-format.md` — output formats for table, conflict report, QA, summary, cleanup
 - `references/examples.md` — full worked example of a multi-story run
 - `references/wave-mode.md` — dependency-ordered multi-wave epic builds (`--epic NN`)
+- `references/pipeline.md` — bash mechanics for model resolution, integrity, conflict, merge, cleanup
 
 ## INPUT
 
@@ -138,35 +139,11 @@ Create worktrees and dispatch all sub-agents in one parallel batch.
 
 ### 3.1 Model Selection
 
-Pick a model **tier** by `Size:` — never hardcode versioned model IDs (they go
-stale as new Claude generations ship). Resolve the tier to a concrete model
-at dispatch time.
-
-| Size | Tier                          | Why                                                 |
-| ---- | ----------------------------- | --------------------------------------------------- |
-| S    | `fast`                        | Single-file change, quick turnaround                |
-| M    | `balanced`                    | Multi-file, moderate logic                          |
-| L    | `advanced`                    | Significant logic, integration, or design          |
-| XL   | `advanced-extended-context`   | Large story or one needing extended (1M) context    |
-
-**Resolving a tier → concrete model at dispatch:**
-
-1. **Operator override (highest priority).** Read these environment variables;
-   if set, use the exact ID:
-   - `CK_MODEL_FAST`, `CK_MODEL_BALANCED`, `CK_MODEL_ADVANCED`, `CK_MODEL_ADVANCED_EXTENDED`
-2. **Latest-by-tier (default).** Otherwise pick the latest available model for
-   the tier from the current Claude family:
-   - `fast` → the smallest/fastest model in the latest Claude family (current example: `claude-haiku-4-5`)
-   - `balanced` → the mid-tier model in the latest family (current example: `claude-sonnet-4-6`)
-   - `advanced` → the top-tier model in the latest family (current example: `claude-opus-4-7`)
-   - `advanced-extended-context` → the top-tier model with the long-context variant (current example: `claude-opus-4-7[1m]`)
-   The "current example" hints are illustrative only — when newer model IDs
-   are known to the running session, use those instead. If unsure, fall back
-   to the model the orchestrating Claude is itself running, which is at least
-   advanced-tier.
-3. **Confirm with user before launch.** Print the resolved table (Size → Tier
-   → Concrete Model) in the announce step (3.2) so the operator can override
-   if a tier resolved to an unexpected model.
+Pick a model **tier** by story `Size:` (S→`fast`, M→`balanced`, L→`advanced`,
+XL→`advanced-extended-context`) and resolve it to a concrete model at dispatch — never
+hardcode versioned IDs (they go stale). Full resolution order (operator-override env vars
+→ latest-by-tier → confirm in the announce step) is in
+[`references/pipeline.md`](references/pipeline.md).
 
 ### 3.2 Announce Launch
 
@@ -218,110 +195,31 @@ summary (format in `references/conflict-format.md`).
 
 ## PHASE 3.5: STORY FILE & CODE INTEGRITY VERIFICATION
 
-After all agents finish, verify each completed story is properly recorded and no implementation was silently lost. Run this before conflict analysis so that integrity issues are surfaced early.
+After all agents finish — before conflict analysis — verify each **successfully
+completed** story is properly recorded and no code was silently lost. For each: confirm
+its worktree story file reads `Status: DONE` (NOT the main-checkout index, which is
+pre-implementation until merge), and run the code-integrity checks (empty diff,
+unexpected deletions, pure-deletion files). Commands and flag definitions:
+[`references/pipeline.md`](references/pipeline.md).
 
-### 3.5.1 Story Status Check (worktree-based)
-
-For each **successfully completed** story, read its story file directly from the agent's worktree path — `<worktree-path>/<relative-story-path>` — and confirm the `Status:` field reads `DONE`.
-
-Do NOT read `STORIES_INDEX.md` from the main checkout — it reflects pre-implementation state because the build skill updates the index inside the worktree, and those changes land on main only after merge.
-
-If the story file in the worktree still shows `TODO` or `IN PROGRESS` → flag as ⚠️ **Story file not updated** — the build skill failed to complete Phase 8. Also check `<worktree-path>/tasks/<slug>/STORIES_INDEX.md` to confirm whether the index and story file are in sync (they must never disagree — see mutation protocol in `../../../references/stories-index.md`).
-
-Acceptance-criteria checkboxes are validated by the build skill's QA phase, not here.
-
-### 3.5.2 Code Change Integrity Check
-
-For each successfully completed story, inspect what the agent actually changed in its
-branch relative to `main`:
-
-**3.5.2a — Non-empty diff**
-
-```bash
-git diff --stat main...story/XX-YY
-```
-
-If the output is empty (no files changed), flag as ⚠️ **No implementation detected** —
-the agent may have exited without producing output.
-
-**3.5.2b — Unexpected file deletions**
-
-```bash
-git diff main...story/XX-YY --diff-filter=D --name-only
-```
-
-Any deleted file is flagged as ⚠️ **Unexpected file deletion: [file]**. Deletion of a
-file that was in scope (e.g. a file explicitly replaced by the story) is acceptable only
-if a new file clearly supersedes it; otherwise treat it as potential code loss.
-
-**3.5.2c — Pure-deletion files (code loss signal)**
-
-For each modified file, check the addition/deletion balance:
-
-```bash
-git diff main...story/XX-YY -- <file> | grep -c "^+"   # additions
-git diff main...story/XX-YY -- <file> | grep -c "^-"   # deletions
-```
-
-If a file has zero additions and one or more deletions, flag as
-⚠️ **Possible code loss in [file]** (lines were removed with nothing added back).
-
-### 3.5.3 Report & Gate
-
-Print the integrity report (format in `references/conflict-format.md`).
-
-Escalation rules:
-- ⚠️ **warning** (incomplete criteria, pure-deletion ratio) → story proceeds to QA/merge
-  but the warning must appear in the Phase 6 summary so the operator can review.
-- 🚫 **BLOCKED** (story file not updated, no implementation detected, unexpected file
-  deletion) → story is removed from the merge-eligible set. Keep its worktree. Report
-  in Phase 6 under "Review needed".
+**Gate** (print the integrity report, format in `references/conflict-format.md`):
+- ⚠️ **warning** (incomplete criteria, pure-deletion ratio) → proceeds to QA/merge but
+  must appear in the Phase 6 summary for operator review.
+- 🚫 **BLOCKED** (status not updated, no implementation, unexpected deletion) → removed
+  from the merge-eligible set; keep its worktree; report in Phase 6 under "Review needed".
 
 ## PHASE 4: CONFLICT ANALYSIS
 
-Detect file-level conflicts between completed story branches before any merge. Only
-analyse branches for **successfully completed** stories.
+Detect file-level conflicts between **successfully completed** story branches before any
+merge. **Preferred subagent_type:** delegate to `ck-code:conflict-analyzer` if available
+(defined in this plugin's `agents/` folder — runs dry-run merges, classifies risk,
+recommends merge order, aborts cleanly); else run the inline procedure in
+[`references/pipeline.md`](references/pipeline.md) — dry-run merge each branch onto main,
+then detect cross-branch file overlaps.
 
-**Preferred subagent_type:** delegate this phase to `ck-code:conflict-analyzer`
-if available (defined in this plugin's `agents/` folder — runs dry-run merges,
-classifies risk, recommends merge order, and always aborts cleanly). The
-sub-agent returns a structured report which 4.4 reads for the conflict report
-output. If the subagent_type is not registered, run the steps below inline.
-
-### 4.1 Get Branch Names
-
-Worktree branch is `story/XX-YY`. Confirm: `git branch --list "story/*"`.
-
-### 4.2 Dry-Run Merge Each Branch
-
-For each successful branch, dry-run merge onto main:
-
-```bash
-git checkout main
-git merge --no-commit --no-ff story/XX-YY 2>&1
-git merge --abort 2>/dev/null || true
-```
-
-Record files with conflicts (look for `CONFLICT` lines).
-
-### 4.3 Cross-Branch Conflict Detection
-
-Two branches may both merge cleanly onto main yet conflict with each other. Detect
-overlap:
-
-```bash
-git diff --name-only main...story/XX-YY
-```
-
-Run per branch, collect modified file sets. Any file appearing in 2+ branches is a
-potential cross-branch conflict.
-
-### 4.4 Report
-
-Print conflict report (format in `references/conflict-format.md`): per-branch
-dry-run result, cross-branch overlaps, and suggested merge order (safest first —
-branches with fewer overlaps merge first). If no conflicts at all: print
-"No conflicts detected — all branches merge cleanly."
+Print the conflict report (format in `references/conflict-format.md`): per-branch dry-run
+result, cross-branch overlaps, and suggested merge order (fewest overlaps first). No
+conflicts → "No conflicts detected — all branches merge cleanly."
 
 ## PHASE 5: QA & TESTING
 
@@ -363,61 +261,33 @@ After the agent returns, loop back to 5.5.1 for the same story.
 
 ## PHASE 6: CLEANUP PROMPT
 
-Print final summary with three options (format in `references/conflict-format.md`):
+Print the final summary with three options (format in `references/conflict-format.md`)
+and use AskUserQuestion to wait for the choice:
 1. Merge ready branches now (conflict-free order)
 2. Review worktrees first, merge manually
 3. Re-run `/ck-code:build` on failing stories
 
-Use AskUserQuestion to wait for the choice.
+Stories without `MANUAL-TEST PASS` from Phase 5.5 are **not merge-eligible** under
+Option 1, even if QA and conflict checks pass.
 
-Stories without `MANUAL-TEST PASS` from Phase 5.5 are **not merge-eligible**
-under Option 1, even if QA and conflict checks pass.
+**Option 1** — merge QA-passing, manual-test-passing, conflict-free branches in suggested
+order into the **orchestrator's current branch** (never a hardcoded `main`; detached HEAD
+→ stop and ask). Resolve and confirm the target, merge each branch, then run final QA on
+the merged target to catch cross-branch integration issues. Procedure:
+[`references/pipeline.md`](references/pipeline.md). If clean, proceed to **Phase 7**.
 
-**Option 1:** merge QA-passing, manual-test-passing, conflict-free branches in suggested order.
+**Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
+Remind the user to run Phase 7 after merging.
 
-**Determine merge target first.** The merge target is the **orchestrator's current branch** in the main checkout — not a hardcoded `main`. The operator may already be sitting on a feature branch they want all stories rolled into.
-
-```bash
-target_branch=$(git -C <main-checkout> branch --show-current)
-```
-
-Print the resolved target (e.g. `Merge target: feature/release-2026-05`) and confirm with the user before proceeding. If `target_branch` is empty (detached HEAD), stop and ask the user to check out a real branch first.
-
-Then merge each ready branch:
-
-```bash
-git -C <main-checkout> checkout "$target_branch"
-git -C <main-checkout> merge --no-ff story/XX-YY -m "feat: implement story XX-YY"
-```
-
-Run a final QA on the merged target branch (TypeScript + tests) to catch cross-branch integration issues. If all clean, proceed to **Phase 7**.
-
-**Option 2:** print worktree paths and stop. Worktrees stay intact for manual review.
-Remind user to run Phase 7 after merging.
-
-**Option 3:** re-run Phase 3 only for failed/blocked stories (dispatch new agents).
+**Option 3** — re-run Phase 3 only for failed/blocked stories (dispatch new agents).
 
 ## PHASE 7: WORKTREE CLEANUP
 
-Remove all agent worktrees after a successful merge. Always run after merging.
-
-### 7.1 List and Remove
-
-`git worktree list`. For each worktree under `.claude/worktrees/agent-*`, remove with
-double-force (agent worktrees are locked by default):
-
-```bash
-git worktree remove -f -f /path/to/.claude/worktrees/agent-XXXXXXXX
-```
-
-### 7.2 Prune Stale Refs
-
-`git worktree prune`
-
-### 7.3 Confirm
-
-Run `git worktree list` — only main should remain. Print cleanup confirmation
-(format in `references/conflict-format.md`).
+Always run after a successful merge. List worktrees, remove each
+`.claude/worktrees/agent-*` with double-force (`git worktree remove -f -f` — agent
+worktrees are locked by default), then `git worktree prune` and confirm only main
+remains. Commands: [`references/pipeline.md`](references/pipeline.md). Print cleanup
+confirmation (format in `references/conflict-format.md`).
 
 ## RULES
 
