@@ -9,9 +9,7 @@ argument-hint: "[path-to-story.md]"
 Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
 and automated QA validation. Cycle: plan → test → implement → refactor → QA → commit.
 
-For example dialogues emitted at each phase, see [references/examples.md](references/examples.md).
-For a worked TDD walkthrough (SOLID templates, test mappings, quality checks), see [references/tdd-walkthrough.md](references/tdd-walkthrough.md).
-For story-file templates appended at each phase, see [references/story-template.md](references/story-template.md).
+References: [examples.md](references/examples.md) (per-phase dialogues) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 switch-to-parallel-build procedure).
 
 ## INPUT
 
@@ -43,40 +41,16 @@ Once a story is selected, **batch the story file and parent `EPIC.md` in a singl
 
 ### 1.4 Parallel-Build Opportunity Check (before status mutation)
 
-Before marking this story IN PROGRESS, check whether other ready stories could be
-built **in parallel** — if so, offer to switch to `/ck-code:parallel-build`. Runs in
-both modes (story path given or interactive).
+Before marking this story IN PROGRESS, check whether other ready stories could be built
+**in parallel** and, if so, offer to switch to `/ck-code:parallel-build` (batch, or
+`--epic NN` wave mode when the epic needs multiple dependency waves). **Skip entirely
+when running non-interactively / as a dispatched sub-agent** (you cannot prompt the user
+and are already inside a parallel run) — proceed to 1.5. Full detection + offer procedure
+(parallel-safe scoping, epic-wave detection, the A/B/C AskUserQuestion) is in
+[references/parallel-switch.md](references/parallel-switch.md).
 
-**Skip entirely when running non-interactively / as a dispatched sub-agent** (you
-cannot prompt the user, and you are already inside a parallel run) — proceed to 1.5.
-
-1. **Read the index** if not already loaded this session: `tasks/*/STORIES_INDEX.md`.
-2. **Resolve the other ready set:** rows with `Status: TODO` whose every `Blocked by`
-   ID resolves to `DONE`, **excluding the currently selected story**.
-3. **None** → skip silently, proceed to 1.5.
-4. **One or more** → test file-scope independence. Read the `Files to Create/Modify`
-   table of the selected story and of each other ready story (a deliberate cross-check,
-   not Phase-1 discovery). A candidate is **parallel-safe** if its file scope does not
-   overlap the selected story's scope nor any other already-chosen candidate's scope.
-5. **No parallel-safe candidate** → note "other ready stories overlap this one's files —
-   building sequentially" and proceed to 1.5.
-6. **Detect an epic-wave opportunity:** if the selected story's epic (`NN`) has other
-   not-`DONE` stories that are still *blocked* (i.e. the epic needs more than one
-   dependency wave — e.g. `01-03` blocked by `01-01` + `01-02`), a flat single batch
-   cannot finish the epic. Wave mode can.
-7. **Offer the switch** via AskUserQuestion, including only the options that apply:
-   - **A) Switch to parallel-build (batch)** — build `[selected] + [safe candidates]`
-     concurrently in isolated worktrees. Offered when ≥ 1 parallel-safe candidate exists.
-   - **B) Switch to parallel-build `--epic NN` (waves)** — build the whole epic in
-     dependency-ordered waves. Offered when the epic-wave opportunity (step 6) holds.
-   - **C) Stay in build** — build only the selected story now.
-   Show the recommended batch set and/or the wave plan so the operator can choose.
-
-On **A**: leave the story `Status: TODO` (do NOT run 1.6), call
-`Skill("ck-code:parallel-build", "<selected-id> <safe-id>...")` and **exit**.
-On **B**: leave the story `Status: TODO`, call
-`Skill("ck-code:parallel-build", "--epic NN")` and **exit** — parallel-build owns the
-wave loop. On **C**: proceed to 1.5.
+On a switch the story stays `Status: TODO` (do NOT run 1.6) and control passes to
+parallel-build; otherwise proceed to 1.5.
 
 ### 1.5 Detect Linked GitHub Issues
 
@@ -97,21 +71,7 @@ Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID`
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING
 
-Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md). Architecture-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** — see Step 1 and Step 4b in `skill-detection.md` for the explicit parallel-batch instructions:
-
-1. **Read scoped architecture docs** — always `folder-structure.md`, plus the
-   docs matching the paths in the story's "Files to Create/Modify" table.
-   Batch all matching arch-doc reads in one parallel message.
-2. **Detect required experts** by file path + Technical Notes keywords.
-   `expert-qa` is **always** loaded.
-3. **Detect required guides** by file extension.
-4. **Load** each detected skill (filesystem check → batched `Skill` tool /
-   `Read` calls); warn about any truly missing skills with
-   `Continue without these? YES / GENERATE FIRST` (template in
-   [references/examples.md](references/examples.md)).
-5. **Report loaded skills to the user** — always present the experts and
-   guides loaded for this implementation (Step 5 of `skill-detection.md`)
-   before moving to Phase 3. Never load skills silently.
+Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read scoped architecture docs (always `folder-structure.md` + the docs matching the story's "Files to Create/Modify" paths), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/examples.md](references/examples.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
@@ -294,25 +254,17 @@ QA expert skills review the work — this is **not** a self-review.
 results to acceptance criteria, reports failures with file:line citations).
 If the subagent_type is not registered, run the inline procedure.
 
-Mark the QA task `in_progress`, then follow the shared procedure in
-[`../../../references/qa-validation.md`](../../../references/qa-validation.md):
+Mark the QA task `in_progress`, then follow the full procedure in
+[`../../../references/qa-validation.md`](../../../references/qa-validation.md): load
+`experts/qa` + `experts/qa-project` (mandatory), verify each acceptance criterion
+(PASS/FAIL), run the full suite for regressions, run code-quality checks (commands per
+stack in [references/tdd-walkthrough.md](references/tdd-walkthrough.md)), check
+architecture compliance against `docs/architecture/`, analyse edge cases, and present the
+QA Report (template in [references/examples.md](references/examples.md)).
 
-1. Load `experts/qa/SKILL.md` + `experts/qa-project/SKILL.md` (mandatory).
-2. Acceptance-criteria verification (per-criterion PASS/FAIL).
-3. Run the full test suite — watch for regressions.
-4. Code-quality checks (full command list per stack lives in
-   [references/tdd-walkthrough.md](references/tdd-walkthrough.md)).
-5. Architecture compliance against `docs/architecture/`.
-6. Edge-case analysis.
-7. Present the QA Report (template in
-   [references/examples.md](references/examples.md)).
-8. Handle PASS / NEEDS FIXES — iteration cap is 3. At iteration 3,
-   escalate with FIX MANUALLY / ACCEPT AS-IS / ABORT (exact wording in
-   [references/examples.md](references/examples.md)). Never silently
-   continue past iteration 3.
-
-On NEEDS FIXES inside the loop: fix each issue → re-run Phase 6 (refactor)
-→ re-run this phase with a fresh QA check.
+**Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS /
+ABORT` (wording in examples); never silently continue past 3. On NEEDS FIXES inside the
+loop: fix each issue → re-run Phase 6 (refactor) → re-run this phase with a fresh QA check.
 
 ---
 
@@ -321,17 +273,10 @@ On NEEDS FIXES inside the loop: fix each issue → re-run Phase 6 (refactor)
 ### 8.1 Update Story File — Implementation Summary
 
 Append the Implementation Summary block (template in
-[references/story-template.md](references/story-template.md)) to the story file.
-It must record: TDD iteration count, QA iteration count, tests written, files
-created/modified counts, **unplanned changes count** (from `## Unplanned Changes`
-if present, else "none"), what was implemented, a precise Files Touched list,
-SOLID compliance summary, and notes.
-
-**Files Touched precision (mandatory):**
-- CREATED files: path only (e.g., `CREATED src/ws/handler.rs`)
-- MODIFIED files: path + exact line numbers (e.g., `MODIFIED src/main.rs:12,45-48,92`)
-- Use `git diff --stat` and `git diff` to collect precise lines
-- No descriptions — paths + line numbers only
+[references/story-template.md](references/story-template.md)) to the story file. Required
+fields and the **mandatory Files Touched precision** (CREATED = path; MODIFIED =
+`path:lines` collected via `git diff`) are specified in
+[references/completion.md](references/completion.md).
 
 ### 8.2 Update Story Checklist in Story File
 
@@ -354,18 +299,12 @@ update the EPIC before that.
 
 **8.5.2** On `PASS` → proceed to 8.6.
 
-**8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop. Every cycle MUST run all eight steps in order before returning to 8.5.1:
-
-1. Capture the bug from the user (what, repro, expected vs actual).
-2. Append an `## Manual-Test Bugs` entry to the story file (template in [references/story-template.md](references/story-template.md)). Status: `OPEN`.
-3. Write a failing regression test that reproduces the bug (TDD red).
-4. Apply the minimum fix; full suite green (TDD green).
-5. **MANDATORY:** Re-run **Phase 6 (Refactor)** on touched code — SOLID review, tests stay green.
-6. **MANDATORY:** Re-run **Phase 7 (QA)** with the full procedure in [`../../../references/qa-validation.md`](../../../references/qa-validation.md). QA's own 3-iteration cap applies inside each bug-fix cycle.
-7. Update the bug entry: `OPEN` → `FIXED` + fix summary + `path:line[,line]` Files Touched.
-8. Return to 8.5.1 against the new build.
-
-**Bug-Fix iteration cap = 3.** On the 3rd cycle, escalate with `FIX MANUALLY / ACCEPT AS-IS / ABORT` (template in [references/examples.md](references/examples.md)). Never silently continue past 3.
+**8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop: regression test (red) → minimum fix
+(green) → **mandatory** re-run of Phase 6 (Refactor) + Phase 7 (QA) → update the
+`## Manual-Test Bugs` entry `OPEN` → `FIXED` → re-prompt at 8.5.1. The full eight ordered
+steps are in [references/completion.md](references/completion.md). **Cap = 3 cycles**; on
+the 3rd, escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (template in
+[references/examples.md](references/examples.md)). Never continue silently past 3.
 
 ### 8.6 Update Story File — Status DONE (story file + index, same phase)
 
@@ -399,13 +338,8 @@ Each gate is enforced inside its phase — listed here as a checklist for orches
 - **Phase 7** — QA iteration cap = 3 → escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`.
 - **Phase 8.5** — Manual-test gate, bug-fix loop cap = 3 (each cycle re-runs Phase 6 + Phase 7).
 
-Story file is the source of truth. All output in English regardless of spec/story language.
-
-### JUCE Test Runner Rules
-When writing JUCE unit tests:
-- `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions
-- ASCII-only strings in `beginTest()` / `expect()` / `juce::String(const char*)` (use `-` not `—`, `...` not `…`)
-- One meaningful assertion instead of looping hundreds of `expect()` calls
+Story file is the source of truth. All output in English regardless of spec/story
+language. JUCE test-runner rules live in [references/tdd-walkthrough.md](references/tdd-walkthrough.md).
 
 ---
 

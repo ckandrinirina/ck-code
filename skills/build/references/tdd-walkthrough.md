@@ -147,3 +147,12 @@ cmake --build build -- -v 2>&1 | grep -iE "warning:|error:" | grep -v "_deps"
 # clang-format --dry-run --Werror Source/*.cpp Source/*.h   (if .clang-format exists)
 # Zero compiler warnings in project-owned files is the quality bar
 ```
+
+---
+
+## JUCE Test Runner Rules
+
+When writing JUCE unit tests:
+- `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions
+- ASCII-only strings in `beginTest()` / `expect()` / `juce::String(const char*)` (use `-` not `—`, `...` not `…`)
+- One meaningful assertion instead of looping hundreds of `expect()` calls
