@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.5] — 2026-05-22
+
+### Changed
+- **build / parallel-build**: made the two skills switchable around Claude Tasks — `build` Phase 1.4 offers escalating to `parallel-build` when independent, non-overlapping ready stories exist, `parallel-build` recommends the conflict-free parallel-safe set (Phase 1.4) and tracks one Claude Task per dispatched story (Phase 3.2.5); both now state Task usage explicitly with graceful fallbacks.
+
 ## [1.9.4] — 2026-05-22
 
 ### Added
