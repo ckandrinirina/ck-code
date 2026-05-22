@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.9] — 2026-05-22
+
+### Changed
+- **build**: epic-build detection now runs first and unconditionally in Phase 1.4 — a purely sequential epic (no parallel-safe peer) now gets the `--epic NN` dependency-ordered wave offer, which the previous parallel-safe gate skipped.
+- **parallel-build**: whole-epic wave mode is now surfaced as an explicit "implement whole epic NN in waves" option in interactive selection (Phase 1.5 / 2.2) instead of a buried `epic NN` parse string.
+
 ## [1.9.8] — 2026-05-22
 
 ### Changed
