@@ -17,6 +17,14 @@ with epics, stories, dependencies, and a recommended roadmap.
 - Requires `/ck-code:design` to have run first (architecture docs in `docs/architecture/`).
 - Hands off to `/ck-code:build` (or `/ck-code:to-issues` then `/ck-code:build`) once the plan is generated.
 
+## EFFORT SCALING
+
+Adapt granularity to the current effort level (**${CLAUDE_EFFORT}**):
+
+- **low** — Coarse plan: epics with a few high-level stories; minimal acceptance criteria.
+- **medium** (default) — Standard breakdown: stories sized for one focused change each, with clear acceptance criteria and dependencies.
+- **high / xhigh / max** — Fine-grained: split stories to the smallest shippable unit; add detailed acceptance criteria, edge cases, test notes, and an explicit dependency graph in the roadmap.
+
 ## INPUT
 
 The user provides a path to a specification file or feature description via `$ARGUMENTS`.

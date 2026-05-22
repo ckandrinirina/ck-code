@@ -18,6 +18,16 @@ of truth and produces refined documentation in `docs/architecture/`.
 
 ---
 
+## EFFORT SCALING
+
+Adapt depth to the current effort level (**${CLAUDE_EFFORT}**):
+
+- **low** — Minimal Q&A; generate the core docs (overview, tech-stack, components) and mark the rest `[TO BE DEFINED]`.
+- **medium** (default) — Up to 3 Q&A rounds; generate all applicable docs at standard depth.
+- **high / xhigh / max** — Up to the full 5 Q&A rounds; research every named technology via context7; add deep component/data-flow detail plus cross-cutting concerns (scaling, failure modes, observability) to each doc.
+
+---
+
 ## INPUT
 
 Spec file path comes from `$ARGUMENTS`.
