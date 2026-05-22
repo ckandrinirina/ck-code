@@ -70,14 +70,21 @@ source is loaded here — not plugin-namespaced skills (`superpowers:*`,
 `frontend-design:*`, etc.), not skills in other project subdirectories,
 not skills inferred from training data.
 
-**4a. Build the existing-skill set (mandatory, single command):**
+**4a. Build the existing-skill set (mandatory, runs FIRST):**
+
+Run this command **before reading any CLAUDE.md, ROADMAP, or doc note** — it is
+the first action of Step 4, not a fallback:
 
 ```bash
 ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md 2>/dev/null
 ```
 
-The output is the authoritative set of loadable skills. An empty result
-means the project has not run `/ck-code:team` yet — go straight to 4c.
+The output is the **only** authoritative set of loadable skills. A note in
+CLAUDE.md or any doc saying `/ck-code:team` is "deferred", "not yet run", or that
+skills are absent is **not evidence** — such notes go stale once skills are
+generated, and the `ls` output overrides them in every case. Only an empty `ls`
+result means the project has no skills — go straight to 4c. Never conclude "no
+skills exist" without having run this command in this flow.
 
 **4b. Load each detected skill via `Read` only:**
 
@@ -142,6 +149,11 @@ Skills loaded for this implementation:
   prevents context bloat.
 - **Never** skip the 4a filesystem check before loading or warning — it
   is the only authoritative source of what can be loaded.
+- **Never** treat a CLAUDE.md or documentation note (e.g. "`/ck-code:team`
+  generation deferred", "skills not yet generated") as evidence that skills
+  are absent — those notes go stale. Only the 4a `ls` output decides; run it
+  first, before reading any such note, and never conclude skills are missing
+  without it.
 - **Never** use the `Skill` tool inside this procedure. Only project-local
   `Read` calls under `.claude/skills/experts/` and `.claude/skills/guides/`
   are permitted — `Skill` resolves against the global plugin registry and
