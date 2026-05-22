@@ -67,7 +67,17 @@ Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID`
 
 ---
 
-## PHASE 2: SKILL DETECTION & CONTEXT LOADING
+## PHASE 2: SKILL DETECTION & CONTEXT LOADING (BLOCKING GATE)
+
+**Mandatory — this phase blocks Phase 3. Never plan or write code until it has run
+to completion.** Phases 5 and 6 tell you to "follow loaded guide/expert skills"; if
+Phase 2 is skipped, those instructions silently apply nothing and the work ships
+without its experts and guides. The phase is done ONLY when all three are true:
+(1) the 4a `ls` has run, (2) every detected-and-present skill has been `Read`, and
+(3) the Step 5 "Skills loaded for this implementation" block has been shown to the
+user. `expert-qa` is always in the detected set (plus `expert-analyst` for bug-fix
+flows). If 4a returns skills but you loaded none, stop and re-run Step 4 — a
+non-empty project must never reach Phase 3 with zero skills loaded.
 
 Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read scoped architecture docs (always `folder-structure.md` + the docs matching the story's "Files to Create/Modify" paths), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/examples.md](references/examples.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
@@ -189,7 +199,10 @@ Write the **minimum** code necessary to make ALL tests pass.
 
 ### 5.1 Start Implementation Tasks
 
-Mark the first implementation task as `in_progress`.
+Mark the first implementation task as `in_progress`. **Guard:** before writing any
+code, confirm the Phase 2 "Skills loaded" block was shown this run. If it was not
+(Phase 2 skipped), stop and run Phase 2 now — implementation must apply the loaded
+experts/guides, not proceed without them.
 
 ### 5.2 Implement
 
@@ -330,6 +343,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 
 Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
 - **Phase 1.2** — Interactive selection prefers parallel: ≥ 2 conflict-free ready stories ⇒ the parallel set is the recommended one-confirm option, then auto-fan-out to worktree agents. An explicit story arg is always single-story — never auto-expanded.
+- **Phase 2** — Experts + guides detected, loaded via `Read`, and the "Skills loaded" block shown BEFORE any planning or code. `expert-qa` always detected (+ `expert-analyst` for fixes). A non-empty 4a `ls` must never reach Phase 3 with zero skills loaded — skipping Phase 2 turns the "follow loaded skills" rules in Phases 5/6 into no-ops.
 - **Phase 3.7** — Branch chosen before any code. Never implement on `main` / `develop`.
 - **Phase 4** — Failing tests written before implementation (strict Red→Green→Refactor; trivial boilerplate exempt).
 - **Phase 3.3 + Phase 6.1** — SOLID applied at design AND verified after refactor.
