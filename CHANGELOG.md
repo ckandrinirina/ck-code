@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.7] — 2026-05-22
+
+### Changed
+- **parallel-build**: offloaded the bash-level mechanics for Phases 3.1/3.5/4/6/7 (model resolution, integrity checks, conflict analysis, merge, cleanup) into `references/pipeline.md`, keeping the gates and decisions inline — SKILL.md trimmed from 453 to 323 lines with no behavior change.
+
 ## [1.9.6] — 2026-05-22
 
 ### Added
