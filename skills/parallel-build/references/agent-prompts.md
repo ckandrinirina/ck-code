@@ -38,18 +38,21 @@ prompt: |
 
 ## Launch Announcement Template
 
-Print before dispatching. Show **Tier (resolved model)** so the operator can
-catch a mis-resolution. Replace `<…>` placeholders with the concrete model ID
-the tier resolved to at runtime.
+Print as agents are dispatched — **informational, not a blocking gate**. The decision to
+go parallel already happened (build's Phase 1.2 selection, parallel-build's own Phase 2
+selection, or an explicit `$ARGUMENTS` ID list); do NOT add a second "press enter to
+start" confirmation. Show **Tier (resolved model)** so the operator can catch a
+mis-resolution mid-run, and dispatch immediately in the same turn. Replace `<…>`
+placeholders with the concrete model ID the tier resolved to at runtime.
 
 ```
-Launching N agents in parallel:
+⚡ Dispatching N agents in parallel — each runs /ck-code:build in its own worktree:
 
-  Story 02-05  (M)   →  balanced (<resolved-model>)                 →  branch story/02-05
-  Story 02-06  (L)   →  advanced (<resolved-model>)                 →  branch story/02-06
-  Story 03-01  (XL)  →  advanced-extended-context (<resolved-model>) →  branch story/03-01
+  🤖 Story 02-05  (M)   →  balanced (<resolved-model>)                 →  branch story/02-05
+  🤖 Story 02-06  (L)   →  advanced (<resolved-model>)                 →  branch story/02-06
+  🤖 Story 03-01  (XL)  →  advanced-extended-context (<resolved-model>) →  branch story/03-01
 
-Override any line? Reply with "override 02-06=<model-id>", or press enter to start.
+Live progress on the task board below. (To pin a model, set the tier env var and re-run — see pipeline.md.)
 ```
 
 ## Result Collection Template

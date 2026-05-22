@@ -6,9 +6,10 @@ User-facing presentation blocks the build skill emits at each phase. Wording is 
 
 ## Phase 1.2 — Interactive Story Selection
 
-The menu offers single stories AND a whole-epic wave build for any epic with > 1 non-DONE
-story. Epic options appear below the stories; picking one hands off to
-`/ck-code:parallel-build --epic NN`.
+The menu leads with the **parallel** option whenever ≥ 2 ready stories are conflict-free,
+then whole-epic wave builds, then single stories. Picking parallel hands off to
+`/ck-code:parallel-build "<ids>"` (which dispatches one worktree agent per story, no
+re-prompt); picking an epic hands off to `/ck-code:parallel-build --epic NN`.
 
 ```
 ## Stories Ready for Implementation
@@ -19,6 +20,12 @@ story. Epic options appear below the stories; picking one hands off to
 | 2 | [01-02] Paid abandon grace   | 01 | L | None |
 | 3 | [02-01] Free-private → 0 pts | 02 | M | None |
 
+## ⚡ Recommended — build in parallel (isolated worktrees, one agent each)
+
+| #  | Set                      | Builds via                          |
+|----|--------------------------|-------------------------------------|
+| P  | 01-04, 01-02, 02-01 (3)  | parallel-build "01-04 01-02 02-01"  |
+
 ## Or build a whole epic in dependency-ordered waves (drives every story to DONE)
 
 | #  | Epic    | Remaining | Builds via                |
@@ -26,8 +33,16 @@ story. Epic options appear below the stories; picking one hands off to
 | E1 | Epic 01 | 2 stories | parallel-build --epic 01  |
 | E2 | Epic 02 | 2 stories | parallel-build --epic 02  |
 
-Pick a single story (number/path), or an epic (E1/E2) to build it all in waves.
+Pick P to build the parallel set, an epic (E1/E2) for waves, or a single story (number/path).
 ```
+
+**Routing (the selection is the single confirm — the downstream skill does not re-prompt):**
+- **Parallel set (P)** → statuses stay `TODO` (skip SKILL.md 1.3–1.6); call `Skill("ck-code:parallel-build", "<id1> <id2> ...")` and exit. parallel-build receives explicit IDs, skips its own selection, and dispatches one worktree agent per story.
+- **Epic (E1/E2)** → statuses stay `TODO`; call `Skill("ck-code:parallel-build", "--epic NN")` and exit — parallel-build owns the wave loop.
+- **Single story** → proceed to SKILL.md 1.3; Phase 1.4 does NOT re-offer parallel/epic.
+
+Do NOT glob `tasks/*/epics/*/stories/*.md` — read only the ready stories' `Files to
+Create/Modify` tables, located via the index `File` column.
 
 If none ready:
 ```

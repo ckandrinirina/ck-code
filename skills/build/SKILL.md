@@ -9,7 +9,7 @@ argument-hint: "[path-to-story.md]"
 Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
 and automated QA validation. Cycle: plan → test → implement → refactor → QA → commit.
 
-References: [examples.md](references/examples.md) (per-phase dialogues) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 switch-to-parallel-build procedure).
+References: [examples.md](references/examples.md) (per-phase dialogues) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer).
 
 ## INPUT
 
@@ -31,37 +31,24 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
 3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
 4. Sort by epic, then story number, then size (S < M < L < XL).
-5. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with > 1 non-DONE story is a wave candidate. (Count every non-DONE story, not just the ready ones — a partly-blocked epic is the dependency-order case wave mode exists for.)
-6. **Present the menu (see examples)** with two kinds of choices:
-   - one row per ready story (single-story build), and
-   - one row per wave-candidate epic — `Build all of Epic NN in dependency-ordered waves` — listed under the stories.
-   If no stories are ready: tell the user nothing is ready and which deps are still missing. Suggest `/ck-code:plan` if the index is empty.
-7. **On an epic choice:** leave all statuses `TODO` (do NOT run 1.3–1.6), call `Skill("ck-code:parallel-build", "--epic NN")`, and **exit** — parallel-build owns the wave loop. **On a single-story choice:** proceed to 1.3, and record that the epic-wave option was already offered here (Phase 1.4 then skips re-offering wave mode for that story's epic).
-
-Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index has everything you need.
+5. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with > 1 non-DONE story is a wave candidate (a partly-blocked epic is the dependency-order case wave mode exists for).
+6. **Detect the parallel-safe set:** if ≥ 2 stories are ready, read each ready story's `Files to Create/Modify` table (deliberate cross-check via the index `File` column — NOT a glob of all stories) and group so no two share a file path. The largest conflict-free group of ≥ 2 is the **recommended parallel set** — the preferred default.
+7. **Present the menu and route the choice** per [references/examples.md](references/examples.md): recommended parallel set (⚡, when ≥ 2) → epics → single stories. The selection is the one confirmation — the parallel/epic routes hand off to `parallel-build` (which does not re-prompt); a single story proceeds to 1.3 (Phase 1.4 then skips its offer). If none ready, say so + which deps are missing (suggest `/ck-code:plan` if the index is empty).
 
 ### 1.3 Load Story Context
 
 Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
 
-### 1.4 Epic / Parallel-Build Opportunity Check (before status mutation)
+### 1.4 Epic-Wave Offer (explicit-path only, before status mutation)
 
-Before marking this story IN PROGRESS, check two opportunities and offer the matching
-switch to `/ck-code:parallel-build`:
-- **Epic build (dependency-ordered waves)** — **whenever** the selected story's epic
-  still has > 1 non-DONE story, offer `--epic NN` wave mode to drive the whole epic to
-  completion in dependency order. This is checked first and does not require any
-  parallel-safe peer — a purely sequential epic still gets the offer.
-- **Parallel batch** — when other ready stories have non-overlapping file scopes, offer
-  to build them concurrently.
-
-**Skip entirely when running non-interactively / as a dispatched sub-agent** (you cannot
-prompt the user and are already inside a parallel run) — proceed to 1.5. Full detection +
-offer procedure (epic detection first, parallel-safe scoping, the A/B/C AskUserQuestion)
-is in [references/parallel-switch.md](references/parallel-switch.md).
-
-On a switch the story stays `Status: TODO` (do NOT run 1.6) and control passes to
-parallel-build; otherwise proceed to 1.5.
+Interactive parallel/epic routing lives in Phase 1.2, so **skip this phase** when the 1.2
+menu ran or when running non-interactively / as a dispatched sub-agent — it runs ONLY for
+a story PATH passed via `$ARGUMENTS`. An explicit single-story request is respected:
+**never auto-pull parallel-safe peers**. Offer only the whole-epic build — if the story's
+epic still has > 1 non-DONE story, ask (AskUserQuestion) build-whole-epic-in-waves
+(`B → Skill("ck-code:parallel-build", "--epic NN")`, status stays `TODO`, exit) vs stay on
+this story (`C → 1.5`); if only this story remains, skip silently. Detail:
+[references/parallel-switch.md](references/parallel-switch.md).
 
 ### 1.5 Detect Linked GitHub Issues
 
@@ -342,6 +329,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 ## HARD GATES (cross-phase contract)
 
 Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
+- **Phase 1.2** — Interactive selection prefers parallel: ≥ 2 conflict-free ready stories ⇒ the parallel set is the recommended one-confirm option, then auto-fan-out to worktree agents. An explicit story arg is always single-story — never auto-expanded.
 - **Phase 3.7** — Branch chosen before any code. Never implement on `main` / `develop`.
 - **Phase 4** — Failing tests written before implementation (strict Red→Green→Refactor; trivial boilerplate exempt).
 - **Phase 3.3 + Phase 6.1** — SOLID applied at design AND verified after refactor.
