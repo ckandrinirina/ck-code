@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.10] — 2026-05-22
+
+### Changed
+- **build**: the Phase 1.2 interactive story-selection menu now lists whole-epic wave options ("Build all of Epic NN in dependency-ordered waves") alongside the single stories, so the operator is offered the epic build at selection time — not only after a single story is already chosen. Picking an epic hands off to `parallel-build --epic NN`; the Phase 1.4 offer no longer re-asks the same epic.
+
 ## [1.9.9] — 2026-05-22
 
 ### Changed
