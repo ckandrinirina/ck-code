@@ -72,6 +72,9 @@ Follow the full procedure in [`../../../references/skill-detection.md`](../../..
    `Read` calls); warn about any truly missing skills with
    `Continue without these? YES / GENERATE FIRST` (template in
    [references/examples.md](references/examples.md)).
+5. **Report loaded skills to the user** — always present the experts and
+   guides loaded for this implementation (Step 5 of `skill-detection.md`)
+   before moving to Phase 3. Never load skills silently.
 
 ---
 

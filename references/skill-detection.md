@@ -114,6 +114,28 @@ Compute `missing = (detected_in_steps_2_3 ∪ qa-always-set) − present_in_4a`.
   current flow. On `YES`, continue without the missing skills — the
   loaded subset is still applied.
 
+## Step 5 — Report loaded skills to the user (mandatory)
+
+Before returning to the caller's next phase, **always** present the skills
+actually loaded for this implementation. The user must see which expert and
+guide skills are shaping the work — never load silently.
+
+Print one block:
+
+```
+Skills loaded for this implementation:
+  Experts: expert-backend, expert-qa
+  Guides:  guide-rust, guide-axum
+  Missing (skipped): expert-frontend
+```
+
+- List only skills confirmed present in 4a and read in 4b — group by
+  experts / guides.
+- If 4c found missing skills the user chose to skip, append a
+  `Missing (skipped)` line; omit the line when nothing was skipped.
+- If no project skills exist (4a empty), state:
+  `No project skills loaded — run /ck-code:team to generate them.`
+
 ## Rules
 
 - **Never** load architecture docs the work doesn't touch — narrow scope
@@ -135,3 +157,5 @@ Compute `missing = (detected_in_steps_2_3 ∪ qa-always-set) − present_in_4a`.
   assumed.
 - **Never** infer skill names from training data — only load skills that
   appear in the 4a filesystem-check output.
+- **Always** report the loaded skills to the user (Step 5) before returning
+  to the caller — skill loading is never silent.
