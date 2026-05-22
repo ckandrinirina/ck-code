@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.6] — 2026-05-22
+
+### Added
+- **parallel-build**: `--epic NN` wave mode — implements a whole epic in dependency-ordered waves (e.g. `[01-01, 01-02]` → `[01-03]` → `[01-04]`), running the dispatch→QA→manual-test→merge pipeline once per wave and merging each wave before the next so dependents see their blockers `DONE`; confirms each wave, tracks one Claude Task per story grouped by wave, and holds stories whose blocker ends up blocked-from-merge (see `references/wave-mode.md`).
+
+### Changed
+- **build**: Phase 1.4 escalation now also offers `parallel-build --epic NN` when the selected story's epic needs more than one dependency wave.
+
 ## [1.9.5] — 2026-05-22
 
 ### Changed
