@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [1.9.11] — 2026-05-22
+
+### Changed
+- **build**: interactive selection (no story arg) now prefers parallel by default — when ≥ 2 ready stories are conflict-free, the parallel set is the recommended option and choosing it is a single confirm that auto-fans-out one worktree agent per story via `parallel-build` (no second prompt). An explicit story arg is always built as a single story, never auto-expanded. Phase 1.4 is reduced to an explicit-path-only epic-wave offer.
+- **parallel-build**: the launch announcement is now informational and dispatches immediately (no "press enter to start" gate) and prints a per-agent → story → worktree mapping, so the main session shows which agent is implementing each story.
+
 ## [1.9.10] — 2026-05-22
 
 ### Changed
