@@ -60,16 +60,23 @@ cannot prompt the user, and you are already inside a parallel run) — proceed t
    overlap the selected story's scope nor any other already-chosen candidate's scope.
 5. **No parallel-safe candidate** → note "other ready stories overlap this one's files —
    building sequentially" and proceed to 1.5.
-6. **One or more parallel-safe candidates** → use AskUserQuestion:
-   - **A) Switch to parallel-build** — build `[selected] + [safe candidates]` concurrently
-     in isolated worktrees.
-   - **B) Stay in build** — build only the selected story now.
-   Show the recommended set (IDs + titles + the non-overlapping file scopes that make
-   them safe).
+6. **Detect an epic-wave opportunity:** if the selected story's epic (`NN`) has other
+   not-`DONE` stories that are still *blocked* (i.e. the epic needs more than one
+   dependency wave — e.g. `01-03` blocked by `01-01` + `01-02`), a flat single batch
+   cannot finish the epic. Wave mode can.
+7. **Offer the switch** via AskUserQuestion, including only the options that apply:
+   - **A) Switch to parallel-build (batch)** — build `[selected] + [safe candidates]`
+     concurrently in isolated worktrees. Offered when ≥ 1 parallel-safe candidate exists.
+   - **B) Switch to parallel-build `--epic NN` (waves)** — build the whole epic in
+     dependency-ordered waves. Offered when the epic-wave opportunity (step 6) holds.
+   - **C) Stay in build** — build only the selected story now.
+   Show the recommended batch set and/or the wave plan so the operator can choose.
 
-On **A**: leave the selected story `Status: TODO` (do NOT run 1.6), then call
-`Skill("ck-code:parallel-build", "<selected-id> <safe-id>...")` and **exit** —
-parallel-build owns the rest. On **B**: proceed to 1.5.
+On **A**: leave the story `Status: TODO` (do NOT run 1.6), call
+`Skill("ck-code:parallel-build", "<selected-id> <safe-id>...")` and **exit**.
+On **B**: leave the story `Status: TODO`, call
+`Skill("ck-code:parallel-build", "--epic NN")` and **exit** — parallel-build owns the
+wave loop. On **C**: proceed to 1.5.
 
 ### 1.5 Detect Linked GitHub Issues
 

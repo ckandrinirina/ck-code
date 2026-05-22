@@ -1,7 +1,7 @@
 ---
 name: parallel-build
 description: Use to implement multiple ready stories concurrently in isolated git worktrees. Argument is optional space-separated story IDs (e.g. `02-05 03-01`); if omitted, picks interactively.
-argument-hint: "[story-ids...]  # optional: pre-select stories e.g. 02-05 03-01"
+argument-hint: "[story-ids...] | --epic NN  # stories e.g. 02-05 03-01, or a whole epic in waves"
 user-invocable: true
 ---
 
@@ -15,12 +15,17 @@ References:
 - `references/agent-prompts.md` — sub-agent dispatch prompt template + announce/result formats
 - `references/conflict-format.md` — output formats for table, conflict report, QA, summary, cleanup
 - `references/examples.md` — full worked example of a multi-story run
+- `references/wave-mode.md` — dependency-ordered multi-wave epic builds (`--epic NN`)
 
 ## INPUT
 
-`$ARGUMENTS` is an optional space-separated list of story IDs (e.g. `02-05 03-01`).
-- If provided: skip Phase 2, go directly to Phase 3 with those stories.
-- If empty: run interactive selection (Phase 2).
+`$ARGUMENTS` is optional:
+- **Story IDs** (e.g. `02-05 03-01`) → skip Phase 2, go directly to Phase 3 with those
+  stories (single batch).
+- **`--epic NN`** → **wave mode**: implement the whole epic in dependency-ordered waves.
+  Go to Phase 2.7 and follow [`references/wave-mode.md`](references/wave-mode.md).
+- **Empty** → run interactive selection (Phase 2), which may also offer "whole epic in
+  waves".
 
 ## PHASE 1: DISCOVERY (index-driven)
 
@@ -78,6 +83,7 @@ Use AskUserQuestion. Parse:
 - `"all"` → every story in the table
 - `"1 3 4"` → stories at those positions
 - `"02-05 03-01"` → match by story ID directly
+- `"epic NN"` → enter wave mode for that epic (jump to Phase 2.7)
 
 If invalid/empty, ask again once. If still invalid, stop.
 
@@ -97,6 +103,32 @@ Switching to /ck-code:build directly (no worktree, no sub-agent).
 Then call `Skill("ck-code:build", "<story-file-path>")` and exit — do NOT continue to Phase 3, Phase 4, Phase 5, etc. The build skill owns the rest of the workflow.
 
 **If two or more stories are in scope**, continue to Phase 3 with full parallel dispatch.
+
+---
+
+## PHASE 2.7: WAVE MODE (epic-scoped, dependency-ordered)
+
+Entered only when `$ARGUMENTS` is `--epic NN` (or interactive selection chose "whole
+epic in waves"). Skip this phase entirely for an explicit story-ID batch.
+
+Wave mode drives an **entire epic to completion in dependency-ordered waves** — e.g.
+`[01-01, 01-02]` first, then `[01-03]` (which needs both), then `[01-04]`. It runs the
+Phase 3–7 pipeline **once per wave**, merging each wave into the target branch before the
+next so dependents see their dependencies `DONE`.
+
+Follow [`references/wave-mode.md`](references/wave-mode.md) in full. Key contract:
+
+1. **Plan** the waves from the index (topological levels by `Blocked by`), print the wave
+   plan table, and create one Claude Task per scheduled story prefixed by wave (`W1 · …`).
+2. **Per wave:** confirm (`YES / SKIP STORY / ABORT`) → branch worktrees from the **target
+   branch's current HEAD** (carries prior waves' merged code) → run Phase 3 → 3.5 → 4 → 5
+   → 5.5 → **merge this wave** (Phase 6 Option 1) → **cleanup this wave's worktrees**
+   (Phase 7) → mark its Tasks `completed`.
+3. **Re-resolve** the next wave's ready set from the freshly-merged index and loop until
+   the epic is done. A story whose blocker ended up BLOCKED-from-merge is **held** and
+   reported, not dispatched.
+
+A single-story wave short-circuits to `/ck-code:build` (Phase 2.5 rule).
 
 ---
 
@@ -400,6 +432,12 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 - **Always recommend the parallel-safe set** (Phase 1.4) from non-overlapping file
   scopes before selection — it is a pre-flight heuristic, not a substitute for the
   Phase 4 dry-run merge check.
+- **In wave mode, always merge a wave before dispatching the next** (Phase 2.7 /
+  `references/wave-mode.md`) — a dependent story must see its blockers `DONE` on the
+  target branch, so each wave's worktrees branch from the post-merge target HEAD.
+- **In wave mode, always confirm each wave** (`YES / SKIP STORY / ABORT`) before
+  dispatch, and **hold** any story whose blocker ended up BLOCKED-from-merge — never
+  dispatch a story with an unresolved dependency.
 - **Always isolate** each agent in its own worktree (`isolation: worktree`).
 - **Always run story file & code integrity verification** (Phase 3.5) after agents complete — catch missing status updates and code loss before conflict analysis.
 - **Always run dry-run merge conflict detection** (Phase 4) before any merge.
