@@ -46,6 +46,23 @@ A story is **ready** if its `Status` is `TODO` AND every ID in its `Blocked by` 
 
 If no stories are ready: list the still-blocked `TODO` stories and which of their `Blocked by` IDs are not yet `DONE` (the index has both). Stop.
 
+### 1.4 Recommend Parallel-Safe Set
+
+From the ready set, recommend which stories are safe to build **at the same time** —
+i.e. their declared file scopes don't overlap, so they won't collide at merge.
+
+1. For each ready story, read only its `Files to Create/Modify` table (the index lacks
+   file scopes; this targeted read is allowed here, unlike Phase-1 discovery).
+2. Group stories so that no two stories in a group share a file path. The largest
+   conflict-free group is the **recommended parallel set**; any story that overlaps
+   another is tagged "run in a separate batch".
+3. Carry this into the Phase 2 table — annotate each row ✓ parallel-safe or ⚠ overlaps
+   [ID] (column in `references/conflict-format.md` Phase 2.1).
+
+This is a pre-flight heuristic from *declared* scopes — Phase 4 still runs the
+authoritative dry-run merge on *actual* diffs after implementation. A story tagged
+parallel-safe here can still surface a real conflict in Phase 4.
+
 ## PHASE 2: INTERACTIVE SELECTION
 
 Show ready stories, let the user pick. Skip if `$ARGUMENTS` provided.
@@ -57,6 +74,7 @@ Print the ready-stories table (format: `references/conflict-format.md`).
 ### 2.2 Wait for Input
 
 Use AskUserQuestion. Parse:
+- `"recommended"` → the parallel-safe set from Phase 1.4 (default suggestion)
 - `"all"` → every story in the table
 - `"1 3 4"` → stories at those positions
 - `"02-05 03-01"` → match by story ID directly
@@ -121,6 +139,25 @@ at dispatch time.
 ### 3.2 Announce Launch
 
 Print dispatch summary (template in `references/agent-prompts.md`).
+
+### 3.2.5 Create Per-Story Tracking Tasks
+
+Create one Claude Task per selected story with TaskCreate (`Implement story XX-YY:
+[title]`) so the operator gets a live progress board across the whole parallel run.
+Lifecycle:
+
+- **3.3 dispatch** → mark each task `in_progress`.
+- **3.4 results** → agent failed: keep `in_progress`, note the error; agent succeeded:
+  leave `in_progress` (work continues through integrity, conflict, QA, manual-test).
+- **3.5 / 4 / 5 / 5.5** → a 🚫 BLOCKED or QA-failed story stays `in_progress` with the
+  blocker recorded in its task.
+- **6 merge** → mark `completed` once the story's branch is merged (or the operator
+  accepts/aborts it).
+
+Run TaskList at the 3.4, 5, and 6 checkpoints to print the board.
+
+**Use Claude Tasks when the Task tools are available.** If they are not, skip the board
+and rely on the per-story status tables already printed in Phases 3.4 / 5 / 6.
 
 ### 3.3 Dispatch All Agents — SINGLE MESSAGE, TRULY PARALLEL
 
@@ -357,6 +394,12 @@ Run `git worktree list` — only main should remain. Print cleanup confirmation
 - **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.
 - **Always dispatch all agents in one message** — not sequentially. True parallelism
   requires multiple Agent calls in a single turn.
+- **Always track each story as a Claude Task** (Phase 3.2.5) — create at dispatch, keep
+  `in_progress` through QA/manual-test, mark `completed` at merge — so the parallel run
+  has a live, visible progress board.
+- **Always recommend the parallel-safe set** (Phase 1.4) from non-overlapping file
+  scopes before selection — it is a pre-flight heuristic, not a substitute for the
+  Phase 4 dry-run merge check.
 - **Always isolate** each agent in its own worktree (`isolation: worktree`).
 - **Always run story file & code integrity verification** (Phase 3.5) after agents complete — catch missing status updates and code loss before conflict analysis.
 - **Always run dry-run merge conflict detection** (Phase 4) before any merge.

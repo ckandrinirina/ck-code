@@ -25,6 +25,8 @@ prompt: |
   Important:
   - Work only on files relevant to this story
   - Do not modify story files in tasks/ (the /ck-code:build skill updates those)
+  - Do NOT run build's Phase 1.4 Parallel-Build Opportunity Check — you are already
+    inside a parallel run and cannot prompt the user. Proceed straight to Phase 1.5.
   - **Stop after Phase 8.4 (Mark All Tasks Completed) — DO NOT run Phase 8.5
     (User Manual Testing).** The parallel-build orchestrator runs the
     per-story manual-testing gate in its own Phase 5.5 — sub-agents cannot

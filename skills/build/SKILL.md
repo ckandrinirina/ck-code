@@ -41,7 +41,37 @@ Do NOT glob `tasks/*/epics/*/stories/*.md` here — the index has everything you
 
 Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
 
-### 1.4 Detect Linked GitHub Issues
+### 1.4 Parallel-Build Opportunity Check (before status mutation)
+
+Before marking this story IN PROGRESS, check whether other ready stories could be
+built **in parallel** — if so, offer to switch to `/ck-code:parallel-build`. Runs in
+both modes (story path given or interactive).
+
+**Skip entirely when running non-interactively / as a dispatched sub-agent** (you
+cannot prompt the user, and you are already inside a parallel run) — proceed to 1.5.
+
+1. **Read the index** if not already loaded this session: `tasks/*/STORIES_INDEX.md`.
+2. **Resolve the other ready set:** rows with `Status: TODO` whose every `Blocked by`
+   ID resolves to `DONE`, **excluding the currently selected story**.
+3. **None** → skip silently, proceed to 1.5.
+4. **One or more** → test file-scope independence. Read the `Files to Create/Modify`
+   table of the selected story and of each other ready story (a deliberate cross-check,
+   not Phase-1 discovery). A candidate is **parallel-safe** if its file scope does not
+   overlap the selected story's scope nor any other already-chosen candidate's scope.
+5. **No parallel-safe candidate** → note "other ready stories overlap this one's files —
+   building sequentially" and proceed to 1.5.
+6. **One or more parallel-safe candidates** → use AskUserQuestion:
+   - **A) Switch to parallel-build** — build `[selected] + [safe candidates]` concurrently
+     in isolated worktrees.
+   - **B) Stay in build** — build only the selected story now.
+   Show the recommended set (IDs + titles + the non-overlapping file scopes that make
+   them safe).
+
+On **A**: leave the selected story `Status: TODO` (do NOT run 1.6), then call
+`Skill("ck-code:parallel-build", "<selected-id> <safe-id>...")` and **exit** —
+parallel-build owns the rest. On **B**: proceed to 1.5.
+
+### 1.5 Detect Linked GitHub Issues
 
 Search for story and epic issues in **a single parallel Bash tool-call message** (the two queries are independent); store the numbers for `/ck-code:ship`:
 ```bash
@@ -50,7 +80,7 @@ gh issue list --label "epic"  --state open --json number,title
 ```
 Present the linked issue (or "No linked issue found").
 
-### 1.4 Update Story Status (story file + index, same phase)
+### 1.6 Update Story Status (story file + index, same phase)
 
 Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See [references/story-template.md](references/story-template.md) for the exact transition.
 
@@ -105,13 +135,18 @@ principle must be addressed before moving on.
 
 ### 3.4 Create Subtasks
 
-Break the work into ordered subtasks using TaskCreate (template in
-[references/tdd-walkthrough.md](references/tdd-walkthrough.md)). The fixed
-ordering and dependencies are mandatory:
+Break the work into ordered subtasks using **Claude Tasks** (TaskCreate; template in
+[references/tdd-walkthrough.md](references/tdd-walkthrough.md)) so the story's progress
+is tracked on a live board and updated as each phase runs (4.1 / 5.1 / 6 / 7 / 8.4).
+The fixed ordering and dependencies are mandatory:
 
 - tests → implementation → refactor → QA → completion
 - Implementation is blocked by tests; refactor is blocked by implementation;
   QA is blocked by refactor; completion is blocked by QA.
+
+**Always use Claude Tasks when the Task tools are available.** If they are not (e.g. a
+host without TaskCreate), fall back to tracking the same ordered subtasks as a checklist
+in the story file's Implementation Plan section — never skip the breakdown.
 
 ### 3.5 Update Story File
 

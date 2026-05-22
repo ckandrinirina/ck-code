@@ -4,19 +4,23 @@ Reference output templates for Phases 4, 5, and 6.
 
 ## Phase 2.1 — Ready Stories Table
 
+The `Parallel` column comes from Phase 1.4 (declared file-scope overlap):
+✓ parallel-safe, or ⚠ overlaps [ID] (build in a separate batch).
+
 ```
 Ready stories (N available):
 
- #  Story  Epic                        Size  Deps met
-─────────────────────────────────────────────────────
- 1  02-05  02 · JUCE Engine            M     02-01 ✓  02-02 ✓
- 2  02-06  02 · JUCE Engine            L     02-03 ✓  02-04 ✓
- 3  03-01  03 · Rust Server            S     01-01 ✓
- 4  03-02  03 · Rust Server            M     01-01 ✓
- 5  04-01  04 · Mobile                 S     (no deps)
+ #  Story  Epic                        Size  Deps met            Parallel
+──────────────────────────────────────────────────────────────────────────
+ 1  02-05  02 · JUCE Engine            M     02-01 ✓  02-02 ✓    ✓
+ 2  02-06  02 · JUCE Engine            L     02-03 ✓  02-04 ✓    ⚠ overlaps 02-05
+ 3  03-01  03 · Rust Server            S     01-01 ✓             ✓
+ 4  03-02  03 · Rust Server            M     01-01 ✓             ✓
+ 5  04-01  04 · Mobile                 S     (no deps)           ✓
 ...
 
-Pick stories to implement (e.g. "1 3 4" or "all"):
+Recommended parallel-safe set: 02-05  03-01  03-02  04-01
+Pick stories to build ("recommended", "all", "1 3 4", or IDs like "02-05 03-01"):
 ```
 
 ## Phase 3.5 — Story File & Code Integrity Report
