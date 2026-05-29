@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.0.5] — 2026-05-29
+
+### Fixed
+
+- **plugin**: removed the redundant `"hooks": "./hooks/hooks.json"` key from the manifest — the standard `hooks/hooks.json` is loaded automatically, so declaring it again triggered a "Duplicate hooks file detected" load error at startup. Also bumped the `ck-tools` marketplace ref to `v2.0.1` (same fix).
+
 ## [2.0.4] — 2026-05-29
 
 ### Fixed
