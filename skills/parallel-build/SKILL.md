@@ -76,8 +76,14 @@ parallel-safe here can still surface a real conflict in Phase 4.
 From the index, group the not-`DONE` stories by epic (`NN` in their `NN-SS` IDs). Any
 epic with > 1 non-DONE story is a **whole-epic candidate** — wave mode (Phase 2.7) drives
 it to completion in dependency order, whether its remaining stories are sequential or
-parallel. Carry the list of candidate epics into Phase 2 so each is surfaced as an
-explicit "implement whole epic NN in waves" choice, not left for the operator to discover.
+parallel. Carry the list of candidate epics into Phase 2 so **each epic is surfaced as
+its own explicit "implement whole epic NN in waves" choice** — one option per epic.
+
+**Wave mode is scoped to a single epic — never a whole feature.** A feature with several
+epics (e.g. `01_foundation`, `02_shell`, `03_surfaces`, `04_integration`) produces one
+candidate per epic; do NOT offer a "whole feature in waves" option and never merge stories
+from different epics into one wave plan. Feature-wide waves create long dependency chains
+with many sequential merge+dispatch cycles and heavy token use. Build one epic per run.
 
 ## PHASE 2: INTERACTIVE SELECTION
 
@@ -126,14 +132,17 @@ Then call `Skill("ck-code:build", "<story-file-path>")` and exit — do NOT cont
 Entered only when `$ARGUMENTS` is `--epic NN` (or interactive selection chose "whole
 epic in waves"). Skip this phase entirely for an explicit story-ID batch.
 
-Wave mode drives an **entire epic to completion in dependency-ordered waves** — e.g.
+Wave mode drives **one epic to completion in dependency-ordered waves** — e.g.
 `[01-01, 01-02]` first, then `[01-03]` (which needs both), then `[01-04]`. It runs the
 Phase 3–7 pipeline **once per wave**, merging each wave into the target branch before the
-next so dependents see their dependencies `DONE`.
+next so dependents see their dependencies `DONE`. Scope is a single epic — never a whole
+feature; after the epic completes, the operator picks the next epic (no auto-chaining).
 
 Follow [`references/wave-mode.md`](references/wave-mode.md) in full. Key contract:
 
-1. **Plan** the waves from the index (topological levels by `Blocked by`), print the wave
+1. **Plan** the waves from the index (topological levels by `Blocked by`, restricted to
+   this one epic), apply the **dynamic Wave Depth Guard** (recommended ceiling from story
+   count; WARN + confirm `PROCEED / SPLIT` if natural depth exceeds it), print the wave
    plan table, and create one Claude Task per scheduled story prefixed by wave (`W1 · …`).
 2. **Per wave:** confirm (`YES / SKIP STORY / ABORT`) → branch worktrees from the **target
    branch's current HEAD** (carries prior waves' merged code) → run Phase 3 → 3.5 → 4 → 5
@@ -329,6 +338,13 @@ confirmation (format in `references/conflict-format.md`).
 - **Always offer whole-epic wave mode** when an epic has > 1 non-DONE story (Phase 1.5 /
   2.2) — surface it as an explicit AskUserQuestion option so the operator is asked
   epic-vs-batch, never required to know the `epic NN` syntax.
+- **Wave mode is single-epic, never feature-wide** (Phase 1.5 / 2.7) — never merge stories
+  from different epics into one wave plan; a multi-epic feature is built one epic per run
+  and never auto-chains into the next epic.
+- **Always apply the dynamic Wave Depth Guard** (Phase 2.7 / `references/wave-mode.md`) —
+  derive a recommended wave ceiling from the epic's story count, and if the natural depth
+  exceeds it, WARN and require `PROCEED / SPLIT` confirmation before running; never silently
+  run a deep, token-heavy wave chain.
 - **In wave mode, always merge a wave before dispatching the next** (Phase 2.7 /
   `references/wave-mode.md`) — a dependent story must see its blockers `DONE` on the
   target branch, so each wave's worktrees branch from the post-merge target HEAD.
