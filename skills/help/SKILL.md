@@ -2,6 +2,8 @@
 name: help
 description: Use when unsure which ck-code skill to run, or to look up command syntax, expected outputs, and the full workflow order. Static reference — for an active state-aware recommendation, use `/ck-code:start` instead.
 argument-hint: "[command-name]"
+effort: low
+disallowed-tools: Write, Edit, NotebookEdit
 ---
 
 # Project Skills — Quick Reference

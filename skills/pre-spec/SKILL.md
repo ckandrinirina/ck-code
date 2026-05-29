@@ -2,6 +2,7 @@
 name: pre-spec
 description: Use before `/ck-code:design` to draft a stakeholder-friendly specification (locally and/or as a GitHub issue). Re-invoke on an existing slug or issue URL to apply edits.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
+effort: high
 ---
 
 # Feature Pre-Spec

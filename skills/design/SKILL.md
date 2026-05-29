@@ -2,6 +2,7 @@
 name: design
 description: Use to generate architecture documentation (`docs/architecture/`) from a project specification or feature description. Argument is the path to the spec file.
 argument-hint: "[path-to-spec-file]"
+effort: high
 ---
 
 # Spec Designer — Specification Refiner & Architecture Documenter

@@ -240,3 +240,5 @@ Works with any project using the `tasks/` story format, and standalone without o
 ## NEXT
 
 If more stories are ready, run `/ck-code:track next`. To explain what was just built (verification commands + walkthrough), run `/ck-code:explain`.
+
+For a deeper pre-PR pass, the native `/code-review` (or `/code-review --fix`) reviews the diff before this skill opens the PR. See [native-commands.md](../../references/native-commands.md).

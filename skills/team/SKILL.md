@@ -3,6 +3,7 @@ name: team
 description: Use to generate project-tailored expert skills and language guides from architecture docs. Argument is `--check` to audit only or `--regenerate` to refresh all; default generates missing.
 argument-hint: "[--check|--regenerate]"
 disable-model-invocation: true
+effort: high
 ---
 
 # Generate Experts — Project-Tailored Expert Skill Factory

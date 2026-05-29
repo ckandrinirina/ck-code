@@ -9,7 +9,7 @@ argument-hint: "[path-to-story.md]"
 Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
 and automated QA validation. Cycle: plan → test → implement → refactor → QA → commit.
 
-References: [examples.md](references/examples.md) (per-phase dialogues) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer).
+References: [examples.md](references/examples.md) (per-phase dialogues) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
 
 ## INPUT
 
@@ -359,3 +359,8 @@ language. JUCE test-runner rules live in [references/tdd-walkthrough.md](referen
 ## NEXT
 
 After the user confirms manual testing PASS (Phase 8.7), run `/ck-code:ship <story-path>` to commit, open the PR, and update the linked GitHub Issues. If more stories remain, follow `ship` with `/ck-code:track next`.
+
+**Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
+- To run the QA/manual-test loops (Phase 7–8) autonomously, the user can set `/goal "all acceptance criteria in <story> pass and the full test suite is green"` — a cheap verifier model checks each turn until met.
+- `/fast` is worth toggling for **small** stories (size `S`); keep it **off** for `L`/`XL` or SOLID-heavy work that needs full reasoning.
+- Before `/ck-code:ship`, a deeper `/code-review --fix` pass is available on the diff.

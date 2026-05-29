@@ -315,3 +315,5 @@ Each gate is enforced inside its phase — listed here as a checklist:
 ## NEXT
 
 After QA PASS and the user confirms manual testing, run `/ck-code:ship <story-path>` to commit (`fix/` branch prefix), open the PR, and update the linked GitHub Issues.
+
+To drive the regression loop autonomously, the user can set `/goal "the new regression test passes and the full suite stays green"` (cheap verifier model). See [native-commands.md](../../references/native-commands.md).

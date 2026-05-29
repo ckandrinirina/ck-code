@@ -2,6 +2,7 @@
 name: plan
 description: Use to break a project specification or feature description into epics, stories, and a roadmap under `tasks/`. Argument is the path to the spec file.
 argument-hint: "<path-to-spec-file>"
+effort: high
 ---
 
 # Project Architect — Specification to Epic/Story Planner

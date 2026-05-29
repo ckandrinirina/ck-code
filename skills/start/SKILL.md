@@ -2,6 +2,8 @@
 name: start
 description: Use when starting work on a ck-code project and unsure which step to run next. Inspects project state and recommends the next workflow step. Read-only — recommends, never launches.
 argument-hint: ""
+effort: low
+disallowed-tools: Write, Edit, NotebookEdit
 ---
 
 # Start — ck-code Workflow Orchestrator (Read-Only)
@@ -24,41 +26,24 @@ For the full workflow graph and output locations, see
 
 ## PHASE 1: INSPECT PROJECT STATE
 
-Run these read-only checks in parallel; each is independent.
+The read-only project-state probes are **pre-loaded** at skill start via dynamic
+context injection — read the snapshot below and do **not** re-run these `ls`/`find`/`gh`
+calls as separate tool calls (saves ~5 round-trips per invocation):
 
-### 1.1 Specs
+!`echo "== specs =="; ls -d docs/specs/*/ 2>/dev/null | head -5; echo "== architecture =="; ls docs/architecture/*.md 2>/dev/null | head -3; echo "== generated skills =="; find .claude/skills -type f -name SKILL.md 2>/dev/null | grep -E "(experts|guides)/" | head -3; echo "== tasks =="; ls -d tasks/*/ 2>/dev/null | head -3; echo "== stories index =="; ls tasks/*/STORIES_INDEX.md 2>/dev/null | head -3; echo "== open story issues =="; gh issue list --label story --state open --json number 2>/dev/null | head -1`
 
-```bash
-ls -d docs/specs/*/ 2>/dev/null | head -5
-```
+From the pre-loaded snapshot above, record:
 
-Record: `has_pre_specs` (true if any `docs/specs/*/pre-spec.md` exists).
+- `has_pre_specs` — any line under `== specs ==`
+- `has_architecture` — any `.md` line under `== architecture ==`
+- `has_team_skills` — any `experts/` or `guides/` SKILL.md line under `== generated skills ==`
+- `has_tasks_folder` — any line under `== tasks ==`
+- `has_stories_index` — any `STORIES_INDEX.md` line under `== stories index ==`
+- `has_published_issues` — the `== open story issues ==` block is non-empty (treat a
+  missing/unauthenticated `gh` — i.e. an empty block — as `false`; never block on it)
 
-### 1.2 Architecture
-
-```bash
-ls docs/architecture/*.md 2>/dev/null | head -3
-```
-
-Record: `has_architecture` (true if `docs/architecture/` has any `.md`).
-
-### 1.3 Generated skills
-
-```bash
-find .claude/skills -type f -name "SKILL.md" 2>/dev/null | grep -E "(experts|guides)/" | head -3
-```
-
-Record: `has_team_skills` (true if any `.claude/skills/experts/` or
-`.claude/skills/guides/` SKILL.md exists).
-
-### 1.4 Tasks plan
-
-```bash
-ls -d tasks/*/ 2>/dev/null | head -3
-ls tasks/*/STORIES_INDEX.md 2>/dev/null | head -1
-```
-
-Record: `has_tasks_folder`, `has_stories_index`.
+If the snapshot is empty (no injection support on this host), fall back to running the
+same probes as parallel read-only Bash calls.
 
 ### 1.5 Story status snapshot (if index exists)
 
@@ -73,16 +58,6 @@ Use the same dependency-resolution rule as `track`: a TODO is "ready" iff
 every ID in its `Blocked by` cell resolves to `Status: DONE` in the
 table. If the index header is not `<!-- Schema: v1 -->`, treat it as
 absent (the bootstrap is `track`'s job, not `start`'s).
-
-### 1.6 GitHub Issues mirror (optional, fast)
-
-```bash
-gh issue list --label story --state open --json number 2>/dev/null | head -1
-```
-
-Record: `has_published_issues` (true if at least one open `story` issue
-exists). If `gh` is missing or unauthenticated, treat as `false` and
-move on — do not block.
 
 ---
 

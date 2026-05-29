@@ -2,6 +2,8 @@
 name: track
 description: Use to view project progress, list ready stories, or pick the next one to implement. Argument is `status` (default), `next`, or `progress`.
 argument-hint: "[status|next|progress]"
+effort: low
+disallowed-tools: Write, Edit, NotebookEdit
 ---
 
 # Story Tracker — Project Progress Dashboard
