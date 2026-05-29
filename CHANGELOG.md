@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-05-29
+
+### Changed
+
+- **parallel-build**: Select each sub-agent's model by reasoning complexity instead of story `Size`. After the plan consolidation made L the default size, the old Size→model mapping sent nearly every story to Opus; now stories default to Sonnet (`balanced`) and escalate to Opus (`advanced`) only on a clear high-reasoning signal, cutting cost without losing quality on hard work.
+
 ## [2.0.1] — 2026-05-29
 
 ### Changed
