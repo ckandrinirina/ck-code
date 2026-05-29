@@ -63,8 +63,14 @@ Live progress on the task board below. (To pin a model, set the tier env var and
 Agent results:
   02-05  →  ✓ completed
   02-06  →  ✗ failed: [brief error]
-  03-01  →  ✓ completed
+  03-01  →  ◐ incomplete: stopped at ~41 tool-calls, story still IN PROGRESS (partial work in worktree)
+  03-04  →  ◐ incomplete: stopped at ~99 tool-calls, story still IN PROGRESS (partial work in worktree)
 ```
+
+`◐ incomplete` = agent returned with no error but did not finish (typically an XL story
+that exhausted its dispatch budget). It is recovered via Phase 6 **Continue in place**
+(prompt below), never by reattaching to the agent (no `SendMessage`) and never by fresh
+re-dispatch into a new worktree (that discards the partial work).
 
 ## Phase 5.5.3 — Bug-Fix Sub-Agent Prompt
 
@@ -105,4 +111,42 @@ prompt: |
   - Story status stays IN PROGRESS — do NOT flip to DONE.
   - Modify only files relevant to this fix and to the story.
   - Report back the bug entry's fix summary and Files Touched list.
+```
+
+## Phase 6 Option 3 — Continue-Incomplete Sub-Agent Prompt
+
+Used when a story came back ◐ **incomplete** (agent stopped early, partial work left in its
+worktree). Dispatch ONE fresh agent INTO that existing worktree — do NOT create a new
+worktree, and do NOT try to resume the original agent (impossible: no `SendMessage`).
+
+```
+subagent_type: ck-code:story-implementer  # falls back to general-purpose
+model: [tier resolved by reasoning complexity — see SKILL.md 3.1; usually the story's original tier]
+isolation: none   # reuse the existing worktree path — its partial progress is the carry-over
+cwd: <existing worktree path for this story>
+description: "Continue incomplete story XX-YY: [story title]"
+prompt: |
+  You are resuming story XX-YY inside its EXISTING worktree. A previous agent ran out of
+  budget and stopped before finishing — its partial work is already here (committed and/or
+  in the working tree). You are NOT starting over.
+
+  Story file: [full path inside this worktree]
+  Branch:     story/XX-YY
+
+  Your task:
+  1. First, inspect current progress — `git log --oneline`, `git status`, and the story
+     file's acceptance-criteria checkboxes — to see what is already done.
+  2. Invoke /ck-code:build via the Skill tool to finish the REMAINING work only:
+     Skill({ skill: "ck-code:build", args: "[story path]" })
+     Build re-enters on the IN PROGRESS story and continues from where it left off — do
+     NOT redo completed criteria or rewrite passing code.
+  3. Follow build through Phase 8.4 (TDD, SOLID, QA, commit). Commit incrementally so any
+     further early stop still preserves progress.
+
+  Important:
+  - Do NOT run build's Phase 1.4 Parallel-Build Opportunity Check — proceed to Phase 1.5.
+  - Stop after Phase 8.4 — DO NOT run Phase 8.5 (manual testing); the orchestrator owns it.
+  - Leave Status: IN PROGRESS and report back what you finished and what (if anything)
+    still remains. If you again stop before finishing, say so explicitly.
+  - Modify only files relevant to this story; do not touch story files in tasks/.
 ```

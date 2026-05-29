@@ -215,11 +215,27 @@ Worktree isolation rules:
 - Each agent runs in its own `.claude/worktrees/agent-XXXXXXXX`.
 - Agents must only modify files relevant to their story.
 - Agents must NOT modify story files in `tasks/` (the build skill updates those).
+- **XL stories may exceed a single dispatch's budget and stop early** (◐ incomplete in
+  Phase 3.4). The worktree is the only durable carry-over — a returned agent cannot be
+  resumed — so `/ck-code:build` commits per phase inside the worktree, and an incomplete
+  story is finished via Phase 6 **Continue in place**, not re-dispatched from scratch.
 
 ### 3.4 Collect Results
 
-Record success/failure per story (capture error message on failure). Print status
-summary (format in `references/conflict-format.md`).
+Record one of **three** outcomes per story (not two) — print the status summary
+(format in `references/conflict-format.md`):
+
+- **✓ completed** — agent ran `/ck-code:build` through Phase 8.4 and returned done.
+- **✗ failed** — agent returned an explicit error/blocker (capture the message).
+- **◐ incomplete** — agent stopped **without an error and without finishing** (e.g. ran
+  out of its tool-call/token budget mid-implementation). Common on **XL stories**: one
+  dispatch can't hold the whole scope. This is NOT a failure — partial work exists.
+
+**Dispatched agents cannot be resumed** (no `SendMessage` in this harness) — a returned
+agent is gone and its **only durable state is its worktree**. So an ◐ incomplete story is
+recovered by continuing the work in its existing worktree (Phase 6 Option 3), never by
+reattaching to the dead agent or re-dispatching fresh (which discards the partial work and
+re-hits the same budget wall). See the RULES block for the absolute form.
 
 ## PHASE 3.5: STORY FILE & CODE INTEGRITY VERIFICATION
 
@@ -230,12 +246,21 @@ pre-implementation until merge), and run the code-integrity checks (empty diff,
 unexpected deletions, pure-deletion files). Commands and flag definitions:
 [`references/pipeline.md`](references/pipeline.md).
 
+For any ◐ **incomplete** story from Phase 3.4, also run the status + diff check here: it
+is the signal that separates resumable progress from a dead end.
+
 **Gate** (print the integrity report, format in `references/conflict-format.md`):
 
 - ⚠️ **warning** (incomplete criteria, pure-deletion ratio) → proceeds to QA/merge but
   must appear in the Phase 6 summary for operator review.
-- 🚫 **BLOCKED** (status not updated, no implementation, unexpected deletion) → removed
-  from the merge-eligible set; keep its worktree; report in Phase 6 under "Review needed".
+- ◐ **INCOMPLETE (resumable)** — story file still TODO/IN PROGRESS **but the diff carries
+  real partial work** (non-empty, not a pure deletion). Not merge-eligible and not failed:
+  keep its worktree and route it to Phase 6 **Continue in place**. This is the expected
+  state for an XL story whose agent ran out of budget mid-build.
+- 🚫 **BLOCKED** (status not updated **with an empty diff** = no implementation, or
+  unexpected deletion) → removed from the merge-eligible set; keep its worktree; report in
+  Phase 6 under "Review needed". An empty diff means there is nothing to continue —
+  re-dispatch fresh, do not "continue in place".
 
 ## PHASE 4: CONFLICT ANALYSIS
 
@@ -290,12 +315,13 @@ After the agent returns, loop back to 5.5.1 for the same story.
 
 ## PHASE 6: CLEANUP PROMPT
 
-Print the final summary with three options (format in `references/conflict-format.md`)
+Print the final summary with four options (format in `references/conflict-format.md`)
 and use AskUserQuestion to wait for the choice:
 
 1. Merge ready branches now (conflict-free order)
 2. Review worktrees first, merge manually
-3. Re-run `/ck-code:build` on failing stories
+3. Continue ◐ incomplete stories in place (resume the work in their existing worktrees)
+4. Re-dispatch ✗ failed / empty stories from scratch (new worktrees)
 
 Stories without `MANUAL-TEST PASS` from Phase 5.5 are **not merge-eligible** under
 Option 1, even if QA and conflict checks pass.
@@ -309,7 +335,19 @@ the merged target to catch cross-branch integration issues. Procedure:
 **Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
 Remind the user to run Phase 7 after merging.
 
-**Option 3** — re-run Phase 3 only for failed/blocked stories (dispatch new agents).
+**Option 3 — Continue in place (◐ incomplete stories).** For each ◐ incomplete story,
+dispatch ONE fresh agent **into its existing worktree** (`isolation: none`,
+`cwd: <worktree path>`) using the **Continue-Incomplete Sub-Agent Prompt** in
+`references/agent-prompts.md`. The agent reads what is already committed/changed and
+finishes the _remaining_ acceptance criteria via `/ck-code:build` — it does not redo
+done work, so it is far less likely to hit the same budget wall. After it returns, re-run
+Phase 3.5 → 4 → 5 → 5.5 for that story, then loop back to this Phase 6 prompt. If a story
+stops incomplete **twice**, treat it as too large for one dispatch: stop and recommend
+splitting it into smaller stories before retrying.
+
+**Option 4 — Re-dispatch from scratch (✗ failed / empty stories).** Re-run Phase 3 with
+**new** worktrees only for stories that failed with an error or have an empty diff (no
+salvageable progress). Do NOT use this for ◐ incomplete stories — it discards their work.
 
 ## PHASE 7: WORKTREE CLEANUP
 
@@ -353,6 +391,8 @@ confirmation (format in `references/conflict-format.md`).
   dispatch a story with an unresolved dependency.
 - **Always isolate** each agent in its own worktree (`isolation: worktree`).
 - **Always run story file & code integrity verification** (Phase 3.5) after agents complete — catch missing status updates and code loss before conflict analysis.
+- **Never reattach to a returned sub-agent** — `SendMessage` is unavailable in this harness, so a dispatched agent cannot be resumed. The worktree is the only durable state.
+- **Always continue ◐ incomplete stories in place, never from scratch** (Phase 3.4 / 3.5 / 6) — an agent that stopped without an error but left real partial work in its worktree is resumed by dispatching a fresh agent INTO that worktree (`isolation: none`, `cwd: <worktree>`) to finish the remaining criteria. Fresh re-dispatch into a new worktree is only for ✗ failed / empty-diff stories; it discards partial work and re-hits the same budget wall. A story incomplete twice is too large — recommend splitting it.
 - **Always run dry-run merge conflict detection** (Phase 4) before any merge.
 - **Always delete** agent worktrees after merging — `git worktree remove -f -f` then
   `git worktree prune`.

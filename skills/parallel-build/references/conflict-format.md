@@ -31,13 +31,16 @@ Story File & Code Integrity:
   02-05  →  ✓ Status: DONE   ✓ All acceptance criteria checked   ✓ 12 files changed (+347 / -12)
   03-01  →  ✓ Status: DONE   ⚠ Incomplete criteria: "API rate limiting" unchecked
              ⚠ Possible code loss in server/src/handlers.rs  (0 additions, 8 deletions)
+  03-04  →  ◐ Status: IN PROGRESS  — agent stopped early (~99 tool-calls)
+             ◐ Real partial work present (+412 / -7, non-empty)  →  INCOMPLETE (resumable)
   02-06  →  🚫 Status: IN PROGRESS  — story file not updated  →  BLOCKED from merge
              🚫 No implementation detected (empty diff)        →  BLOCKED from merge
 ─────────────────────────────────────────────────────
 Integrity summary:
-  ✓ Clean:    02-05
-  ⚠ Warnings: 03-01  (proceeds to QA — operator review required at merge)
-  🚫 Blocked:  02-06  (worktree kept — fix before merging)
+  ✓ Clean:      02-05
+  ⚠ Warnings:   03-01  (proceeds to QA — operator review required at merge)
+  ◐ Incomplete: 03-04  (worktree kept — Phase 6 "Continue in place" to finish)
+  🚫 Blocked:    02-06  (worktree kept — empty diff, re-dispatch fresh before merging)
 ─────────────────────────────────────────────────────
 ```
 
@@ -127,14 +130,16 @@ Reply A / B / C.
 ```
 Summary:
   ✓ Ready to merge:   story/02-05  (QA + manual-test passed, no conflicts)
+  ◐ Incomplete:       story/03-04  (agent stopped early — partial work in worktree)
   ⚠ Review needed:   story/03-01  (QA failed: clippy errors)
   ⚠ Manual-test blocked: story/04-02  (3 cycles exhausted — escalation pending)
-  ✗ Build failed:    story/02-06  (agent error during /ck-code:build)
+  ✗ Build failed:    story/02-06  (agent error / empty diff during /ck-code:build)
 
 What would you like to do?
   [1] Merge ready branches now (conflict-free order)
   [2] Review worktrees first, merge manually
-  [3] Re-run /ck-code:build on failing stories
+  [3] Continue ◐ incomplete stories in place (resume in existing worktrees)
+  [4] Re-dispatch ✗ failed / empty stories from scratch (new worktrees)
 ```
 
 ## Phase 7 — Worktree Cleanup Confirmation
