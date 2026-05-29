@@ -24,6 +24,8 @@ Whether you're building a new project from scratch or adding a feature to an exi
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees with conflict analysis before merge
 - **Automatic story-to-PR linking** — branches, commits, PRs, and Issues stay connected end-to-end
 - **Capability-tier model selection** — agents pick the right Claude tier (fast / balanced / advanced) per story size, no hardcoded model IDs
+- **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status, auto-format edits), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, and `/fast` pairings documented in `references/native-commands.md`
+- **Token-lean by default** — per-skill `effort` tuning, read-only tool hardening, and dynamic context injection cut tokens and round-trips. `/fast` (`/fast` or `"fastMode": true`) is recommended for small stories and kept off for `L`/`XL` work — toggled by you, since a plugin cannot set it
 
 ## Install
 
