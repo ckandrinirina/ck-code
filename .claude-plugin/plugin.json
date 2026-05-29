@@ -3,7 +3,7 @@
   "name": "ck-code",
   "displayName": "CK Code",
   "description": "Spec-driven workflow plugin: design -> plan -> build -> ship. Transforms specs into architecture docs, epics/stories, and auto-generated expert and language-guide skills tailored to your tech stack.",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "hooks": "./hooks/hooks.json",
   "author": {
     "name": "ckandrinirina",

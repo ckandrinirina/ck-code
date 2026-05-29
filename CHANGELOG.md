@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.0.3] — 2026-05-29
+
+### Changed
+
+- **parallel-build**: Scope wave mode to a single epic instead of a whole feature, and add a dynamic Wave Depth Guard. A feature with several epics is now built one epic per run (no feature-wide wave chains, no auto-chaining into the next epic), and the recommended wave ceiling scales with the epic's story count — when the natural dependency depth exceeds it, the operator gets a WARN + `PROCEED / SPLIT` confirmation, preventing long, token-heavy wave runs.
+
 ## [2.0.2] — 2026-05-29
 
 ### Changed
