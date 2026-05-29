@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.0.4] — 2026-05-29
+
+### Fixed
+
+- **parallel-build**: Recover sub-agents that stop early (e.g. XL stories exhausting their dispatch budget) by continuing the work in their existing worktree, since dispatched agents cannot be resumed in this harness (no `SendMessage`). Adds a third ◐ incomplete outcome distinct from failed (Phase 3.4 / 3.5), a Phase 6 "Continue in place" option separate from fresh re-dispatch, and a Continue-Incomplete sub-agent prompt that finishes only the remaining criteria instead of restarting and re-hitting the same budget wall.
+
 ## [2.0.3] — 2026-05-29
 
 ### Changed
