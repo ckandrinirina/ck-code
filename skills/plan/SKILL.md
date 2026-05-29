@@ -11,26 +11,33 @@ Transform a project specification document into a fully structured implementatio
 with epics, stories, dependencies, and a recommended roadmap.
 
 **Supports two modes:**
+
 - **New Project Mode:** Generate a full project plan from a specification
 - **Feature Mode:** Generate scoped epics/stories for a new feature, aware of existing architecture
 
 **Hand-off rules:**
+
 - Requires `/ck-code:design` to have run first (architecture docs in `docs/architecture/`).
 - Hands off to `/ck-code:build` (or `/ck-code:to-issues` then `/ck-code:build`) once the plan is generated.
 
 ## EFFORT SCALING
 
-Adapt granularity to the current effort level (**${CLAUDE_EFFORT}**):
+Higher effort adds **depth per story** — never more epics or stories. Fewer,
+larger stories is the goal at every level: each story is one downstream `build`
+session, so fewer stories means fewer tool invocations and lower token cost.
 
-- **low** — Coarse plan: epics with a few high-level stories; minimal acceptance criteria.
-- **medium** (default) — Standard breakdown: stories sized for one focused change each, with clear acceptance criteria and dependencies.
-- **high / xhigh / max** — Fine-grained: split stories to the smallest shippable unit; add detailed acceptance criteria, edge cases, test notes, and an explicit dependency graph in the roadmap.
+Adapt to the current effort level (**${CLAUDE_EFFORT}**):
+
+- **low** — One epic; a handful of large, vertically-complete stories; minimal acceptance criteria.
+- **medium** (default) — A few epics; each story is a complete feature slice with clear acceptance criteria and dependencies.
+- **high / xhigh / max** — Same lean epic/story count; add detailed acceptance criteria, edge cases, test notes, and an explicit dependency graph in the roadmap. Do **not** split stories finer to spend the effort.
 
 ## INPUT
 
 The user provides a path to a specification file or feature description via `$ARGUMENTS`.
 
 **If `$ARGUMENTS` is empty or the file does not exist:**
+
 - Ask the user: "Please provide the path to your project specification file (e.g., `docs/specifications.md`)."
 - Validate the file exists using Read before proceeding.
 - If the file is empty or trivially short (< 50 words), warn the user and ask if they want to continue.
@@ -42,11 +49,13 @@ The user provides a path to a specification file or feature description via `$AR
 **Goal:** Determine whether this is a new project or a feature addition.
 
 ### Detection Steps
+
 1. Check if `docs/architecture/` exists with architecture docs
 2. Check if `tasks/` directory exists with prior generated plans
 3. Check the codebase for existing source files
 
 ### Decision Logic
+
 ```
 IF docs/architecture/ exists OR tasks/ has prior plans:
   → FEATURE MODE (adding to an existing project)
@@ -63,6 +72,7 @@ In Feature Mode, present three options to the user (A / B / C):
 - **C) CONTINUE EXISTING PLAN** — Add more epics/stories to a prior plan (user picks which `tasks/` folder to extend).
 
 **If A (ADD FEATURE):**
+
 1. Read ALL `docs/architecture/*.md` files for architectural context.
 2. Read `$ARGUMENTS` spec/feature file.
 3. Scan existing `tasks/` folders to understand what's already planned (avoid duplicating stories).
@@ -70,9 +80,11 @@ In Feature Mode, present three options to the user (A / B / C):
 5. Proceed to Phase 1 with feature-scoped analysis.
 
 **If B (FULL PROJECT PLAN):**
+
 1. Proceed as New Project Mode (new dated folder, no conflict).
 
 **If C (CONTINUE EXISTING PLAN):**
+
 1. List existing `tasks/*/` folders, ask user to pick one.
 2. Read that plan's existing epics and stories.
 3. Ask: "What additional scope do you want to add?"
@@ -88,11 +100,13 @@ In Feature Mode, present three options to the user (A / B / C):
 **Goal:** Build a comprehensive mental model of the project before generating any output.
 
 ### 1.1 Read the Specification
+
 Read the entire specification file provided in `$ARGUMENTS` using the Read tool.
 
 ### 1.1b (Feature/Continue Mode) Read Existing Context
 
 Before extracting dimensions:
+
 1. **Read all architecture docs** in `docs/architecture/` — current system architecture, components, tech stack, APIs, folder structure.
 2. **Scan existing plans** in `tasks/` — read `ROADMAP.md` and `EPIC.md` files to understand what's already planned and what numbering to continue from.
 3. **Scan the actual codebase** — use Glob to check which planned components already exist as source files. This tells you what's built vs. what's only planned.
@@ -116,6 +130,7 @@ If the spec references frameworks/libraries/protocols that would benefit from cu
 ### 1.4 Identify Dependencies & Complexity
 
 Map out:
+
 - Which components depend on which (build order)
 - Shared artifacts (proto files, shared types, config schemas)
 - Integration points requiring multiple components working together
@@ -129,20 +144,29 @@ Map out:
 
 ### 2.1 Define Epics
 
-Group related functionality into epics. Each epic should:
+**Minimize epics.** Create the fewest epics that still separate genuinely
+distinct deliverables. Group related functionality under one epic instead of
+spawning many small ones. Only open a new epic when the work ships as a separate
+milestone or has a hard dependency boundary; aim for 1–4 epics on a typical plan.
+
+Each epic should:
+
 - Represent a coherent, deliverable chunk of work
 - Be numbered sequentially (`01`, `02`, `03`, ...)
 - Have a short, descriptive slug (e.g., `foundation-server`, `midi-arranger`, `mobile-ui`)
 - Map roughly to a milestone or phase
 
 **(Feature Mode) Numbering:**
+
 - **Continue Mode:** continue numbering from the last epic in the existing plan (e.g., last was 04 → new ones start at 05).
 - **Add Feature Mode:** start at `01` within the new dated folder. Prefix the folder slug with `feature-` (e.g., `tasks/YYYY-MM-DD_feature-<feature-name>/`).
 
 **(Feature Mode) Cross-references:**
+
 - When stories depend on components from the existing plan or codebase, reference them explicitly — e.g., `Depends on: existing server/src/ws/handlers.rs (already implemented)` or `Depends on: Epic 02 Story 03 from tasks/2026-04-01_project-name/`.
 
 **Epic ordering principles:**
+
 - Infrastructure and foundation epics come first
 - Epics with no dependencies on other epics come before those that depend on them
 - If the spec defines phases, respect that ordering
@@ -150,17 +174,45 @@ Group related functionality into epics. Each epic should:
 
 ### 2.2 Define Stories Within Each Epic
 
-Each story should be a single, implementable unit of work (completable in one focused session), numbered sequentially within its epic (`01`, `02`, ...), have a short descriptive slug, and not mix unrelated concerns.
+**Favor fewer, larger stories.** A story should deliver a complete, coherent
+slice of functionality — a full feature or component, not a single file edit.
+One story = one downstream `build` session, so combining related work into one
+story directly cuts tool calls and token cost. Size up and combine by default.
 
-**Story sizing rubric (decision logic — keep inline):**
-- **S (Small):** Single file change, straightforward, < 1 hour. Example: add a config file, create a type definition.
-- **M (Medium):** 2-5 files, some logic, 1-4 hours. Example: implement a REST endpoint with validation.
-- **L (Large):** 5-10 files, significant logic or integration, 4-8 hours. Example: build a WebSocket gateway with serialization.
-- **XL (Extra Large):** 10+ files or high complexity, 1-2 days. Example: implement a real-time engine. Consider splitting XL stories.
+Each story must still:
+
+- Cover one cohesive concern (a feature, a component, a vertical slice) — never mix unrelated concerns into one story.
+- Be numbered sequentially within its epic (`01`, `02`, ...) with a short descriptive slug.
+- Carry clear, testable acceptance criteria and an explicit files-to-touch list so `build` can execute it in one focused session.
+
+**Story sizing rubric:**
+
+- **L (default target):** A full feature or component — multiple files, real logic or integration. Aim for this size.
+- **XL:** A large but tightly-coupled deliverable (e.g., a complete subsystem). Keep it as one story when splitting would gain nothing.
+- **M:** Only when a piece of work is genuinely small, self-contained, and cannot be folded into a related L story.
+- **S:** Avoid as a standalone story. Fold small changes (a config file, a type definition) into the story that consumes them.
+
+**Split a story ONLY when** one of these holds — otherwise keep it as a single story:
+
+- The pieces are independent and can be implemented in parallel by different agents/people, or
+- There is a hard dependency boundary (one part must merge and stabilize before the next can start), or
+- The concerns are genuinely unrelated.
+
+### 2.2b Consolidation Pass
+
+Before presenting the plan, review the draft story list and merge wherever the split is not justified by the rule above:
+
+- Stories that touch the same files or the same component/layer → merge into one.
+- A chain of stories that can only run sequentially with no parallelization or dependency-boundary benefit → merge into one.
+- Standalone S stories → fold into the related story that consumes them.
+- An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone.
+
+Target the smallest epic/story count that still yields clear, independently-verifiable deliverables.
 
 ### 2.3 Map Story Dependencies
 
 For each story, identify:
+
 - Which other stories must be completed first (blockers)
 - Which stories can run in parallel
 - Cross-epic dependencies
@@ -220,6 +272,7 @@ For the roadmap template, see [references/roadmap-format.md#roadmapmd-template](
 ## PHASE 5: SUMMARY
 
 After all files are created, present a summary tailored to the mode. For each summary template:
+
 - **New Project Mode:** see [references/roadmap-format.md#new-project-mode-summary](references/roadmap-format.md#new-project-mode-summary).
 - **Feature Mode — Add Feature:** see [references/roadmap-format.md#feature-mode--add-feature-summary](references/roadmap-format.md#feature-mode--add-feature-summary).
 - **Feature Mode — Continue Existing Plan:** see [references/roadmap-format.md#feature-mode--continue-existing-plan-summary](references/roadmap-format.md#feature-mode--continue-existing-plan-summary).
@@ -234,9 +287,9 @@ Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** 
 
 - **Language:** All output must be in English, regardless of the specification language.
 - **No hardcoding:** Never reference specific project names, technologies, or paths in the skill logic. Derive everything from the spec.
-- **Thoroughness:** Every functional requirement in the spec should map to at least one story. If a requirement is vague, create a story for it with a note about needed clarification.
+- **Thoroughness:** Every functional requirement in the spec must be covered by at least one story; related requirements may share a single story. If a requirement is vague, cover it with a note about needed clarification.
 - **Scanning readability:** Use tables, bullet points, and headers. Avoid walls of text.
-- **Conservative sizing:** When in doubt, size up. An L is better than a surprise XL.
+- **Consolidation-first sizing:** When in doubt, combine. Fewer, larger stories beat many small ones — each story is one `build` session, so fewer stories means fewer tool calls and lower token cost. Never split for the sake of granularity.
 - **Preserve spec language:** When the spec uses specific technical terms, preserve them in story titles and descriptions.
 - **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
 - **Reusability:** This skill must work with any project specification, not just the current project.
