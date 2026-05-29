@@ -1,10 +1,24 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "ck-code",
+  "displayName": "CK Code",
   "description": "Spec-driven workflow plugin: design -> plan -> build -> ship. Transforms specs into architecture docs, epics/stories, and auto-generated expert and language-guide skills tailored to your tech stack.",
-  "version": "1.9.13",
+  "version": "1.9.14",
   "author": {
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
   },
+  "homepage": "https://github.com/ckandrinirina/ck-code",
+  "repository": "https://github.com/ckandrinirina/ck-code.git",
+  "keywords": [
+    "spec-driven",
+    "workflow",
+    "design",
+    "plan",
+    "build",
+    "ship",
+    "epics",
+    "stories"
+  ],
   "license": "MIT"
 }
