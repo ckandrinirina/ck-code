@@ -8,7 +8,7 @@ For each selected story, dispatch one Agent call with the following structure:
 
 ```
 subagent_type: ck-code:story-implementer  # falls back to general-purpose if not registered
-model: [determined in 3.1 from Size]
+model: [determined in 3.1 by reasoning complexity — balanced/Sonnet default, advanced/Opus only when the story needs deep reasoning]
 isolation: worktree
 description: "Implement story XX-YY: [story title]"
 prompt: |
@@ -41,16 +41,18 @@ prompt: |
 Print as agents are dispatched — **informational, not a blocking gate**. The decision to
 go parallel already happened (build's Phase 1.2 selection, parallel-build's own Phase 2
 selection, or an explicit `$ARGUMENTS` ID list); do NOT add a second "press enter to
-start" confirmation. Show **Tier (resolved model)** so the operator can catch a
-mis-resolution mid-run, and dispatch immediately in the same turn. Replace `<…>`
-placeholders with the concrete model ID the tier resolved to at runtime.
+start" confirmation. Show **Complexity → Tier (resolved model)** so the operator can
+catch a mis-resolution mid-run, and dispatch immediately in the same turn. Replace `<…>`
+placeholders with the concrete model ID the tier resolved to at runtime. Note how two
+same-Size stories can resolve differently — the driver is complexity, not Size.
 
 ```
 ⚡ Dispatching N agents in parallel — each runs /ck-code:build in its own worktree:
 
-  🤖 Story 02-05  (M)   →  balanced (<resolved-model>)                 →  branch story/02-05
-  🤖 Story 02-06  (L)   →  advanced (<resolved-model>)                 →  branch story/02-06
-  🤖 Story 03-01  (XL)  →  advanced-extended-context (<resolved-model>) →  branch story/03-01
+  🤖 Story 02-05  (M · routine)         →  balanced (<resolved-model>)                  →  branch story/02-05
+  🤖 Story 02-06  (L · routine)         →  balanced (<resolved-model>)                  →  branch story/02-06
+  🤖 Story 03-01  (L · high-reasoning)  →  advanced (<resolved-model>)                  →  branch story/03-01
+  🤖 Story 03-02  (XL · high-reasoning) →  advanced-extended-context (<resolved-model>) →  branch story/03-02
 
 Live progress on the task board below. (To pin a model, set the tier env var and re-run — see pipeline.md.)
 ```
@@ -72,7 +74,7 @@ the original story agent left behind).
 
 ```
 subagent_type: general-purpose
-model: [tier resolved per story Size — see SKILL.md 3.1]
+model: [tier resolved by reasoning complexity — see SKILL.md 3.1; a bug-fix typically matches the story's original tier]
 isolation: none   # reuse the existing worktree path
 cwd: <existing worktree path for this story>
 description: "Fix manual-test bug for story XX-YY: [bug summary]"

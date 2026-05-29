@@ -12,6 +12,7 @@ Each sub-agent invokes `/ck-code:build` on its story in isolation. Ends with QA
 validation and conflict analysis before any merge.
 
 References:
+
 - `references/agent-prompts.md` — sub-agent dispatch prompt template + announce/result formats
 - `references/conflict-format.md` — output formats for table, conflict report, QA, summary, cleanup
 - `references/examples.md` — full worked example of a multi-story run
@@ -21,6 +22,7 @@ References:
 ## INPUT
 
 `$ARGUMENTS` is optional:
+
 - **Story IDs** (e.g. `02-05 03-01`) → skip Phase 2, go directly to Phase 3 with those
   stories (single batch).
 - **`--epic NN`** → **wave mode**: implement the whole epic in dependency-ordered waves.
@@ -65,8 +67,8 @@ i.e. their declared file scopes don't overlap, so they won't collide at merge.
 3. Carry this into the Phase 2 table — annotate each row ✓ parallel-safe or ⚠ overlaps
    [ID] (column in `references/conflict-format.md` Phase 2.1).
 
-This is a pre-flight heuristic from *declared* scopes — Phase 4 still runs the
-authoritative dry-run merge on *actual* diffs after implementation. A story tagged
+This is a pre-flight heuristic from _declared_ scopes — Phase 4 still runs the
+authoritative dry-run merge on _actual_ diffs after implementation. A story tagged
 parallel-safe here can still surface a real conflict in Phase 4.
 
 ### 1.5 Detect Whole-Epic Opportunities
@@ -91,6 +93,7 @@ Use AskUserQuestion. **For each epic flagged in Phase 1.5, include an explicit "
 whole epic NN in dependency-ordered waves" option — listed first, one per candidate epic —
 so the operator is asked epic-vs-batch directly and never has to know the `epic NN`
 syntax.** Then the batch options. Parse the choice:
+
 - the whole-epic option (or `"epic NN"`) → enter **wave mode** for that epic (jump to Phase 2.7)
 - `"recommended"` → the parallel-safe set from Phase 1.4 (default batch suggestion)
 - `"all"` → every story in the table
@@ -150,11 +153,15 @@ Create worktrees and dispatch all sub-agents in one parallel batch.
 
 ### 3.1 Model Selection
 
-Pick a model **tier** by story `Size:` (S→`fast`, M→`balanced`, L→`advanced`,
-XL→`advanced-extended-context`) and resolve it to a concrete model at dispatch — never
-hardcode versioned IDs (they go stale). Full resolution order (operator-override env vars
-→ latest-by-tier → confirm in the announce step) is in
-[`references/pipeline.md`](references/pipeline.md).
+Pick a model **tier by reasoning complexity, not by story `Size:`**. After plan
+consolidation, Size reflects scope (file count), not difficulty — a large story is
+usually broad-but-routine. **Default every story to `balanced` (Sonnet)**; escalate to
+`advanced` (Opus) only on a clear high-reasoning signal, reserve
+`advanced-extended-context` for such a story that also needs 1M context, and use `fast`
+(Haiku) only for trivial mechanical changes — Size alone never escalates. Resolve the
+tier to a concrete model at dispatch (never hardcode versioned IDs). The complexity
+rubric and resolution order (operator env overrides → latest-by-tier → confirm at
+announce) live in [`references/pipeline.md`](references/pipeline.md).
 
 ### 3.2 Announce Launch
 
@@ -195,6 +202,7 @@ guarantees). If that subagent_type is not registered, fall back to a
 `general-purpose` agent with the same prompt.
 
 Worktree isolation rules:
+
 - Each agent runs in its own `.claude/worktrees/agent-XXXXXXXX`.
 - Agents must only modify files relevant to their story.
 - Agents must NOT modify story files in `tasks/` (the build skill updates those).
@@ -214,6 +222,7 @@ unexpected deletions, pure-deletion files). Commands and flag definitions:
 [`references/pipeline.md`](references/pipeline.md).
 
 **Gate** (print the integrity report, format in `references/conflict-format.md`):
+
 - ⚠️ **warning** (incomplete criteria, pure-deletion ratio) → proceeds to QA/merge but
   must appear in the Phase 6 summary for operator review.
 - 🚫 **BLOCKED** (status not updated, no implementation, unexpected deletion) → removed
@@ -274,6 +283,7 @@ After the agent returns, loop back to 5.5.1 for the same story.
 
 Print the final summary with three options (format in `references/conflict-format.md`)
 and use AskUserQuestion to wait for the choice:
+
 1. Merge ready branches now (conflict-free order)
 2. Review worktrees first, merge manually
 3. Re-run `/ck-code:build` on failing stories
@@ -307,6 +317,9 @@ confirmation (format in `references/conflict-format.md`).
 - **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.
 - **Always dispatch all agents in one message** — not sequentially. True parallelism
   requires multiple Agent calls in a single turn.
+- **Pick the sub-agent model by reasoning complexity, never by Size** (Phase 3.1) —
+  default `balanced` (Sonnet), escalate to `advanced` (Opus) only on a clear
+  high-reasoning signal. A large consolidated story is not automatically an Opus story.
 - **Always track each story as a Claude Task** (Phase 3.2.5) — create at dispatch, keep
   `in_progress` through QA/manual-test, mark `completed` at merge — so the parallel run
   has a live, visible progress board.

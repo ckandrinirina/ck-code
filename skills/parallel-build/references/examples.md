@@ -19,11 +19,14 @@ User answers `all` → selects 02-05, 02-06, 03-01.
 
 ## Phase 3 — Parallel Dispatch
 
-Tier picked from Size, then resolved to a concrete model at dispatch time
-(latest in the tier, or operator override via `CK_MODEL_*` env vars):
-- 02-05 (M) → `balanced` tier
-- 02-06 (L) → `advanced` tier
-- 03-01 (S) → `fast` tier
+Tier picked from each story's **reasoning complexity** (not Size), then resolved to a
+concrete model at dispatch time (latest in the tier, or operator override via
+`CK_MODEL_*` env vars). Note 02-05 and 02-06 are both large yet routine, so both stay on
+Sonnet; only the algorithm-heavy story escalates to Opus:
+
+- 02-05 (L · routine CRUD/wiring) → `balanced` tier (Sonnet)
+- 02-06 (L · routine UI) → `balanced` tier (Sonnet)
+- 03-01 (L · novel scheduling algorithm) → `advanced` tier (Opus)
 
 Three Agent calls dispatched in **a single response message** with `isolation: worktree`.
 Each agent works in `.claude/worktrees/agent-XXXXXXXX` on branch `story/XX-YY`.
