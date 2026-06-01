@@ -279,6 +279,12 @@ This index is the single source of truth that downstream skills (`build`, `paral
 
 **Continue Mode:** read the existing `STORIES_INDEX.md`, insert new rows for the appended stories in `ID` order, then write the merged file. Do not regenerate from scratch — preserve any current `Status` values for unchanged rows.
 
+### 4.5b FEATURE_INDEX.md Content (top-level, one row per epic)
+
+After the story index is written, update the project-wide `tasks/FEATURE_INDEX.md` — the top-level rollup that `build`/`parallel-build` read FIRST to pick a feature before opening any story index. Format and mutation protocol: see [`ck-code/references/feature-index.md`](../../../references/feature-index.md).
+
+Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v1 header). Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched.
+
 ### 4.6 ROADMAP.md Content
 
 For the roadmap template, see [references/roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).

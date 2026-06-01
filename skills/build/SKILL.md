@@ -27,7 +27,9 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 
 ### 1.2 If No Story Path (Interactive — index-driven)
 
-1. Read `tasks/*/STORIES_INDEX.md` (the project-level index — one Read covers every story).
+**1.2.0 Feature gate (read the top-level feature index FIRST).** Before any story index, Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in [`../../../references/feature-index.md`](../../../references/feature-index.md): bootstrap it if missing; compute the unfinished set (`Status` ≠ `DONE`); **0** → all features done, suggest `/ck-code:plan`, stop; **1** → auto-select and announce it; **2** → fall through (no prompt); **> 2** → AskUserQuestion "Which feature do you want to build?" (single-select, one option per unfinished feature). The chosen feature's `Plan` + `NN` scope the story index read below to that one epic. Backfill a blank `Description` from `EPIC.md` in this pass. This phase runs ONLY in interactive mode — an explicit `$ARGUMENTS` story path skips it.
+
+1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN` (the project-level index — one Read covers every story).
 2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
 3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
 4. Sort by epic, then story number, then size (S < M < L < XL).
@@ -66,6 +68,8 @@ Present the linked issue (or "No linked issue found").
 Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See [references/story-template.md](references/story-template.md) for the exact transition.
 
 Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `TODO` to `IN PROGRESS`. The story file and the index must never disagree — see the mutation protocol in [`../../../references/stories-index.md`](../../../references/stories-index.md).
+
+If this is the first story of its feature to start (the feature was `TODO`), also Edit `tasks/FEATURE_INDEX.md`: set that feature's `Status` cell `TODO` → `IN PROGRESS` (per [`../../../references/feature-index.md`](../../../references/feature-index.md)).
 
 ---
 
@@ -337,6 +341,8 @@ Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
 
 Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../../references/stories-index.md`](../../../references/stories-index.md).
 
+Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../../references/feature-index.md`](../../../references/feature-index.md).
+
 ### 8.7 Update Parent Epic
 
 Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
@@ -357,6 +363,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 
 Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
 
+- **Phase 1.2.0** — Interactive runs read `tasks/FEATURE_INDEX.md` FIRST (bootstrap if missing); > 2 unfinished features ⇒ ask which feature, then scope story selection to its epic. Story rollup (`Stories`/`Status`) is updated on the feature when a story completes (Phase 8.6) — never leave it stale.
 - **Phase 1.2** — Interactive selection prefers parallel: ≥ 2 conflict-free ready stories ⇒ the parallel set is the recommended one-confirm option, then auto-fan-out to worktree agents. An explicit story arg is always single-story — never auto-expanded.
 - **Phase 2** — Experts + guides detected, loaded via `Read`, and the "Skills loaded" block shown BEFORE any planning or code. `expert-qa` always detected (+ `expert-analyst` for fixes). A non-empty 4a `ls` must never reach Phase 3 with zero skills loaded — skipping Phase 2 turns the "follow loaded skills" rules in Phases 5/6 into no-ops.
 - **Phase 3.7** — Branch chosen before any code. Never implement on `main` / `develop`.

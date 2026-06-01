@@ -34,10 +34,14 @@ References:
 
 Find all stories ready to implement.
 
+### 1.0 Feature Gate (top-level feature index — read FIRST)
+
+**Before the story index**, Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in [`../../../references/feature-index.md`](../../../references/feature-index.md): bootstrap it if missing; compute the unfinished set (`Status` ≠ `DONE`); **0** → all done, suggest `/ck-code:plan`, stop; **1** → auto-select; **2** → fall through; **> 2** → AskUserQuestion "Which feature do you want to build?" (single-select). The chosen feature's `Plan` + epic `NN` scope every step below to that one epic. Skip this phase entirely when `$ARGUMENTS` carries explicit story IDs or `--epic NN` — an explicit scope is always respected.
+
 ### 1.1 Read the Index
 
-**FIRST ACTION — before any glob or file exploration:**
-Glob `tasks/*/STORIES_INDEX.md` then Read the matched file.
+**FIRST ACTION after the feature gate — before any glob or file exploration:**
+Glob the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` then Read it and filter to its epic `NN`.
 
 Do NOT glob `tasks/*/epics/*/stories/*.md` — individual story reads are forbidden at this phase.
 The index is the only source of truth for story selection.
@@ -330,7 +334,11 @@ Option 1, even if QA and conflict checks pass.
 order into the **orchestrator's current branch** (never a hardcoded `main`; detached HEAD
 → stop and ask). Resolve and confirm the target, merge each branch, then run final QA on
 the merged target to catch cross-branch integration issues. Procedure:
-[`references/pipeline.md`](references/pipeline.md). If clean, proceed to **Phase 7**.
+[`references/pipeline.md`](references/pipeline.md). **After the merges land**, Edit
+`tasks/FEATURE_INDEX.md` once: recompute the built feature's `Stories` count and roll up its
+`Status` — mark the feature `DONE` if its last story is now merged, else `IN PROGRESS`. Never
+leave the rollup stale after a completed parallel build (per
+[`../../../references/feature-index.md`](../../../references/feature-index.md)). If clean, proceed to **Phase 7**.
 
 **Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
 Remind the user to run Phase 7 after merging.
@@ -359,6 +367,7 @@ confirmation (format in `references/conflict-format.md`).
 
 ## RULES
 
+- **Always read `tasks/FEATURE_INDEX.md` before the story index** (Phase 1.0) — bootstrap it if missing; when > 2 features are unfinished, ask which feature and scope the run to its epic; an explicit story-ID / `--epic` argument bypasses the gate. After merging (Phase 6 Option 1), recompute the built feature's `Stories`/`Status` rollup and mark it `DONE` when its last story merges — never leave it stale.
 - **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
 - **Never merge** a story branch without QA passing first.
 - **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.
