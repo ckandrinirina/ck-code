@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.0.6] — 2026-06-01
+
+### Added
+
+- **plan**: each story now carries an ordered `## Implementation Tasks` checklist (Phase 2.2c) so large, consolidated stories stay precise without splitting them into more, smaller stories.
+
+### Changed
+
+- **build**: Phase 3.4 seeds its subtask board from the story's `## Implementation Tasks` when present, and falls back to the default breakdown unchanged when the section is absent.
+
 ## [2.0.5] — 2026-05-29
 
 ### Fixed
