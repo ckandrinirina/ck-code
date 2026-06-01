@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.2.1] — 2026-06-01
+
+### Added
+
+- **to-issues**: granularity modes via `--mode feature|epics|stories` — publish one issue for the whole feature, one issue per epic, or the full epic+story hierarchy; falls back to an interactive prompt when the flag is omitted.
+
 ## [2.2.0] — 2026-06-01
 
 ### Added
