@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.0.2] — 2026-06-01
+
+### Fixed
+
+- **plan, fix, ship, parallel-build**: corrected shared-reference links that pointed one directory level too high (`../../../references/` → `../../references/`) — the same bug fixed for `build` in 3.0.1, which had silently broken every "follow the full procedure in …" link and forced a runtime filesystem search.
+
 ## [3.0.1] — 2026-06-01
 
 ### Changed
