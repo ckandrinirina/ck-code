@@ -4,6 +4,12 @@ Reference templates for the files generated in Phase 3 of the design skill.
 Use exactly as shown, filling placeholders with project-specific content derived
 from the spec and user answers.
 
+The architecture is **feature-scoped**: global docs describe the whole system, and
+each feature owns a self-contained slice (`features/<slug>.md`) holding its own
+components, APIs, data, and flows. Cross-cutting infra lives once in `_shared.md`.
+The retired layer docs (`components.md`, `api-contracts.md`, `database-schema.md`,
+`data-flow.md`) are no longer generated — their content lives in feature docs.
+
 ---
 
 ## README.md (Index)
@@ -16,24 +22,40 @@ from the spec and user answers.
 > Auto-generated from [original spec path] on [date]
 > Original specification is the source of truth and was not modified.
 
-## Documents
+## Global Documents
 
-| Document | Description |
-|----------|-------------|
-| [overview.md](overview.md) | Project vision, goals, and target users |
-| [folder-structure.md](folder-structure.md) | Complete project directory tree |
-| [tech-stack.md](tech-stack.md) | Languages, frameworks, and versions |
-| [components.md](components.md) | Component descriptions and responsibilities |
-| [data-flow.md](data-flow.md) | How data moves between components |
-| [api-contracts.md](api-contracts.md) | API definitions (REST, WebSocket, gRPC, etc.) |
-| [database-schema.md](database-schema.md) | Database tables, relations, and models |
-| [configuration.md](configuration.md) | Config files, environment variables |
-| [dev-guide.md](dev-guide.md) | Prerequisites, setup, build, and run instructions |
+These describe the whole system and are read on demand, not per story.
+
+| Document                                   | Description                                                |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| [overview.md](overview.md)                 | Project vision, goals, and target users                    |
+| [folder-structure.md](folder-structure.md) | Complete project directory tree                            |
+| [tech-stack.md](tech-stack.md)             | Languages, frameworks, and versions                        |
+| [\_shared.md](_shared.md)                  | Cross-cutting infra: auth, base entities, shared utilities |
+| [configuration.md](configuration.md)       | Config files, environment variables                        |
+| [dev-guide.md](dev-guide.md)               | Prerequisites, setup, build, and run instructions          |
+
+## Feature Documents
+
+Each feature owns a self-contained slice (its components, APIs, data, and flows).
+A `build`/`fix` story reads only its feature doc (+ `folder-structure.md`, + `_shared.md`
+when noted) — never the whole architecture. The `tasks/FEATURE_INDEX.md` `Docs` column
+routes a story to the right one.
+
+| Feature          | Document                                                 |
+| ---------------- | -------------------------------------------------------- |
+| [Feature 1 Name] | [features/feature-1-slug.md](features/feature-1-slug.md) |
+| [Feature 2 Name] | [features/feature-2-slug.md](features/feature-2-slug.md) |
 
 ## Source
+
 - **Original spec:** [path]
 - **Generated:** [date]
 - **Gaps remaining:** [count or "None"]
+
+## Changelog
+
+- [date] — [what feature doc was added/extended]
 ```
 
 ---
@@ -44,26 +66,33 @@ from the spec and user answers.
 # Project Overview
 
 ## Vision
+
 [What the project does and the problem it solves - 1-2 paragraphs]
 
 ## Goals
+
 - [Goal 1]
 - [Goal 2]
 - [Goal 3]
 
 ## Target Users
+
 - [User type 1]: [what they do with the system]
 - [User type 2]: [what they do with the system]
 
 ## Key Constraints
+
 - [Constraint 1]
 - [Constraint 2]
 
 ## Scope
+
 ### In Scope
+
 - [Item]
 
 ### Out of Scope / Future
+
 - [Item]
 ```
 
@@ -75,6 +104,7 @@ from the spec and user answers.
 # Project Folder Structure
 
 ## Overview
+
 [Brief explanation of how the project is organized]
 
 ## Directory Tree
@@ -83,17 +113,17 @@ from the spec and user answers.
 
 Example:
 project-name/
-├── component-a/             # [Purpose of this component]
-│   ├── src/
-│   │   ├── main.ext         # [Entry point description]
-│   │   ├── module1/         # [Module purpose]
-│   │   └── module2/         # [Module purpose]
-│   ├── tests/
-│   └── config.ext
-├── component-b/             # [Purpose]
-│   └── ...
-├── shared/                  # [Shared code/types/protos]
-│   └── ...
+├── component-a/ # [Purpose of this component]
+│ ├── src/
+│ │ ├── main.ext # [Entry point description]
+│ │ ├── module1/ # [Module purpose]
+│ │ └── module2/ # [Module purpose]
+│ ├── tests/
+│ └── config.ext
+├── component-b/ # [Purpose]
+│ └── ...
+├── shared/ # [Shared code/types/protos]
+│ └── ...
 ├── docs/
 ├── scripts/
 └── README.md
@@ -101,12 +131,15 @@ project-name/
 ## Key Directories Explained
 
 ### component-a/
+
 [2-3 sentences about what this contains and why]
 
 ### component-b/
+
 [2-3 sentences]
 
 ## Conventions
+
 - [Naming convention for files]
 - [Where tests live relative to source]
 - [Where configuration goes]
@@ -125,208 +158,154 @@ best practices (research via context7/WebSearch if needed).
 
 ## Overview
 
-| Layer | Technology | Version | Purpose |
-|-------|-----------|---------|---------|
-| [Layer] | [Tech] | [Version] | [Why this choice] |
-| ... | ... | ... | ... |
+| Layer   | Technology | Version   | Purpose           |
+| ------- | ---------- | --------- | ----------------- |
+| [Layer] | [Tech]     | [Version] | [Why this choice] |
+| ...     | ...        | ...       | ...               |
 
 ## [Component/Layer Name]
 
 ### Language & Runtime
+
 - **Language:** [language] [version]
 - **Runtime:** [runtime if applicable]
 
 ### Frameworks
+
 - **[Framework]** [version]: [purpose]
 
 ### Build Tools
+
 - **[Tool]** [version]: [purpose]
 
 ### Key Libraries
-| Library | Version | Purpose |
-|---------|---------|---------|
-| [lib] | [ver] | [purpose] |
+
+| Library | Version | Purpose   |
+| ------- | ------- | --------- |
+| [lib]   | [ver]   | [purpose] |
 
 ## Shared / Cross-Cutting
 
 ### Communication
+
 - **[Protocol]:** [where used, e.g., "between server and engine"]
 
 ### Serialization
+
 - **[Format]:** [where used]
 
 ### Development Tools
+
 - [Tool]: [purpose]
 ```
 
 ---
 
-## components.md
+## features/&lt;slug&gt;.md (Feature Doc)
+
+**File:** `docs/architecture/features/<slug>.md` — one per feature (= one epic).
+Self-contained: holds everything a `build`/`fix` story for this feature needs, so the
+story never opens another feature's doc. `<slug>` matches the epic folder slug so
+`FEATURE_INDEX.Docs` can route to it.
 
 ```markdown
-# System Components
+# [Feature Name]
 
-## Architecture Diagram
+> Feature doc — self-contained. A story for this feature reads THIS file
+> (+ folder-structure.md, + \_shared.md when noted), not the other feature docs.
 
-[ASCII diagram showing all components and their connections]
+## Summary
+
+[One paragraph: what this feature does and its boundary — where it ends and a
+neighbouring feature or shared infra begins.]
 
 ## Components
 
-### [Component 1 Name]
-- **Type:** [service, library, app, engine, etc.]
-- **Technology:** [language/framework]
-- **Purpose:** [what it does - 1-2 sentences]
+[Components / services / modules OWNED by this feature, with responsibilities.
+Omit shared infra — link to _shared.md under "Shared dependencies" instead.]
+
+### [Component Name]
+
+- **Type:** [service, module, UI, worker, etc.]
+- **Purpose:** [1-2 sentences]
 - **Responsibilities:**
-  - [Responsibility 1]
-  - [Responsibility 2]
-- **Exposes:** [APIs, ports, interfaces]
-- **Depends on:** [other components or external services]
+  - [Responsibility]
+- **Depends on:** [other components in this feature, or shared infra]
 
-### [Component 2 Name]
-...
+## API
 
-## Component Interaction Matrix
+[Endpoints / contracts this feature exposes or consumes. Feature-owned only.]
 
-| From \ To | Component A | Component B | Component C |
-|-----------|-------------|-------------|-------------|
-| Component A | - | [protocol] | - |
-| Component B | [protocol] | - | [protocol] |
-| Component C | - | [protocol] | - |
+### [Endpoint / Action]
+
+- **Direction / Method:** [GET /roles, Client → Server, etc.]
+- **Description:** [what it does]
+- **Request / Response:** [shape or schema]
+
+## Data
+
+[Tables / entities / migrations OWNED by this feature. Shared/base tables go in
+_shared.md; reference them here.]
+
+### [Table / Entity]
+
+| Column | Type   | Constraints      | Description   |
+| ------ | ------ | ---------------- | ------------- |
+| [col]  | [type] | [PK/FK/NOT NULL] | [description] |
+
+## Flows
+
+[Key data/control flows internal to this feature.]
+
+### [Flow Name]
 ```
 
----
-
-## data-flow.md
-
-```markdown
-# Data Flow
-
-## High-Level Flow
-
-[ASCII diagram showing the main data flow through the system]
-
-## Detailed Flows
-
-### [Flow 1 Name] (e.g., "User sends command from mobile")
-```
 Step 1: [Actor] → [Action] → [Component]
-Step 2: [Component] → [Transform/Process] → [Component]
-Step 3: [Component] → [Action] → [Output/Result]
-```
-**Payload:** [What data is sent at each step]
-**Latency target:** [if specified]
+Step 2: [Component] → [Transform] → [Output]
 
-### [Flow 2 Name]
-...
-
-## Message Formats
-
-### [Message Type 1]
-```json
-{
-  "field": "type and description",
-  "field": "type and description"
-}
 ```
 
-### [Message Type 2]
-...
+## Shared dependencies
+[Bullet links into _shared.md for cross-cutting pieces this feature relies on —
+do not duplicate their content here.]
+- [Auth middleware](../_shared.md#auth--middleware)
+- [Base User entity](../_shared.md#base-entities--core-schema)
 
-## State Management
-[How state is managed across components - databases, caches, in-memory, etc.]
+## Changelog
+[Append-only write-back deltas from build/fix — newest last.]
+- [date] · [story id] — [one-line: component/endpoint/table/flow added or changed]
 ```
 
 ---
 
-## api-contracts.md
+## \_shared.md
+
+**File:** `docs/architecture/_shared.md` — cross-cutting infrastructure used by more
+than one feature. Feature docs link here instead of duplicating it. `doc-optimizer
+optimize` hoists content that appears in multiple feature docs into this file.
 
 ```markdown
-# API Contracts
+# Shared / Cross-Cutting
 
-## [API Layer 1] (e.g., WebSocket API)
+> Infra used by multiple features. Feature docs link here instead of duplicating.
+> A story reads this only when its feature doc's "Shared dependencies" points to a
+> section here.
 
-### Connection
-- **Protocol:** [WebSocket/REST/gRPC]
-- **Port:** [port]
-- **Serialization:** [JSON/Protobuf/MessagePack]
+## Auth & middleware
 
-### Endpoints / Actions
+[Authentication, authorization, guards, request middleware shared across features.]
 
-#### [Action/Endpoint 1]
-- **Direction:** [Client → Server / Server → Client / Bidirectional]
-- **Description:** [What it does]
-- **Request:**
-```
-[Request format/schema]
-```
-- **Response:**
-```
-[Response format/schema]
-```
+## Base entities / core schema
 
-#### [Action/Endpoint 2]
-...
+[Tables/entities multiple features build on — User, Account, audit columns, etc.]
 
-## [API Layer 2] (e.g., gRPC Internal API)
+## Shared utilities & libraries
 
-### Service Definition
-```protobuf
-[Proto definition or equivalent contract]
-```
+[Cross-cutting helpers, clients, error types, logging.]
 
-### Methods
+## Conventions
 
-#### [Method 1]
-- **Description:** [What it does]
-- **Request:** [Message type and fields]
-- **Response:** [Message type and fields]
-
-## Error Handling
-- [Error code/type]: [When it occurs, how to handle]
-```
-
----
-
-## database-schema.md
-
-```markdown
-# Database Schema
-
-## Overview
-- **Database:** [Engine, e.g., SQLite, PostgreSQL]
-- **ORM/Driver:** [e.g., sqlx, Prisma, TypeORM]
-- **Location:** [Where DB is stored/hosted]
-
-## Entity Relationship Diagram
-
-[ASCII diagram showing table relationships]
-
-## Tables
-
-### [Table 1 Name]
-**Purpose:** [What this table stores]
-
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| id | TEXT/INT | PK | [description] |
-| name | TEXT | NOT NULL | [description] |
-| ... | ... | ... | ... |
-
-**Indexes:**
-- [index description]
-
-**Relations:**
-- [FK relationship description]
-
-### [Table 2 Name]
-...
-
-## Migrations
-- **Strategy:** [How migrations are managed]
-- **Location:** [Where migration files live]
-
-## Seed Data
-[If applicable, what initial data is needed]
+[Project-wide patterns every feature follows — error handling, pagination, naming.]
 ```
 
 ---
@@ -339,11 +318,13 @@ Step 3: [Component] → [Action] → [Output/Result]
 ## Configuration Files
 
 ### [Config File 1] (e.g., server/config.toml)
+
 **Purpose:** [What this configures]
 **Format:** [TOML/JSON/YAML/ENV]
-
 ```
+
 [Full example configuration with comments explaining each field]
+
 ```
 
 | Field | Type | Default | Description |
@@ -376,24 +357,28 @@ Step 3: [Component] → [Action] → [Output/Result]
 
 ## dev-guide.md
 
-```markdown
+````markdown
 # Developer Guide
 
 ## Prerequisites
 
 ### Required Software
-| Software | Version | Install Command |
-|----------|---------|-----------------|
+
+| Software   | Version    | Install Command   |
+| ---------- | ---------- | ----------------- |
 | [Software] | [version]+ | [install command] |
 
 ### Platform-Specific Prerequisites
 
 #### [Platform 1]
+
 ```bash
 [Installation commands]
 ```
+````
 
 #### [Platform 2]
+
 ```bash
 [Installation commands]
 ```
@@ -401,17 +386,20 @@ Step 3: [Component] → [Action] → [Output/Result]
 ## Setup
 
 ### 1. Clone the Repository
+
 ```bash
 git clone [repo-url]
 cd [project-name]
 ```
 
 ### 2. [Build/Install Step]
+
 ```bash
 [commands]
 ```
 
 ### 3. [Next Step]
+
 ```bash
 [commands]
 ```
@@ -419,6 +407,7 @@ cd [project-name]
 ## Running the Application
 
 ### Startup Order
+
 [If order matters, explain why and list the order]
 
 ```bash
@@ -430,6 +419,7 @@ cd [project-name]
 ```
 
 ### Quick Start Script
+
 ```bash
 [If applicable, a one-command start]
 ```
@@ -437,24 +427,32 @@ cd [project-name]
 ## Development Workflow
 
 ### Running Tests
+
 ```bash
 [test commands per component]
 ```
 
 ### Debugging
+
 - [How to enable debug mode]
 - [Useful debug commands or tools]
 
 ### Code Style
+
 - [Linting tools and commands]
 - [Formatting tools and commands]
 
 ## Troubleshooting
 
 ### [Common Issue 1]
+
 **Symptom:** [what you see]
 **Fix:** [how to fix]
 
 ### [Common Issue 2]
+
 ...
+
+```
+
 ```

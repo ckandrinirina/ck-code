@@ -8,11 +8,19 @@ effort: high
 # Spec Designer — Specification Refiner & Architecture Documenter
 
 Read a project specification, identify gaps through conversational questioning,
-and generate a complete set of split architecture documentation ready for development.
+and generate **feature-scoped** architecture documentation ready for development.
+
+The architecture is split into a few **global** docs (overview, folder-structure,
+tech-stack, `_shared.md`, configuration, dev-guide) plus one **self-contained feature
+doc** per feature in `docs/architecture/features/<slug>.md`. There are no
+`components.md` / `api-contracts.md` / `database-schema.md` / `data-flow.md` files —
+that content lives inside each feature's doc so a later `build`/`fix` story reads only
+the one feature doc it needs.
 
 **Supports two modes:**
-- **New Project Mode:** Generate full architecture docs from a project spec
-- **Feature Mode:** Extend existing architecture docs with new feature documentation
+
+- **New Project Mode:** Generate global docs + one feature doc per feature from a project spec
+- **Feature Mode:** Add or extend a single feature doc, keeping the global docs consistent
 
 This skill never modifies the original specification file. It reads it as the source
 of truth and produces refined documentation in `docs/architecture/`.
@@ -23,7 +31,7 @@ of truth and produces refined documentation in `docs/architecture/`.
 
 Adapt depth to the current effort level (**${CLAUDE_EFFORT}**):
 
-- **low** — Minimal Q&A; generate the core docs (overview, tech-stack, components) and mark the rest `[TO BE DEFINED]`.
+- **low** — Minimal Q&A; generate the core globals (overview, tech-stack, folder-structure) plus a thin feature doc per identified feature, marking the rest `[TO BE DEFINED]`.
 - **medium** (default) — Up to 3 Q&A rounds; generate all applicable docs at standard depth.
 - **high / xhigh / max** — Up to the full 5 Q&A rounds; research every named technology via context7; add deep component/data-flow detail plus cross-cutting concerns (scaling, failure modes, observability) to each doc.
 
@@ -65,9 +73,11 @@ options) and follow its branching logic. For the exact wording, options, and
 branch handling see [references/qna-examples.md](references/qna-examples.md).
 
 Branch summary:
-- **A (ADD FEATURE):** read all existing `docs/architecture/*.md`, read spec,
-  ask "What new feature or capability do you want to add?", proceed to Phase 1
-  with feature-scoped analysis.
+
+- **A (ADD FEATURE):** read the global docs (`overview.md`, `tech-stack.md`,
+  `folder-structure.md`, `_shared.md`) and any directly-related existing feature doc —
+  NOT every feature doc. Read spec, ask "What new feature or capability do you want to
+  add?", proceed to Phase 1 with feature-scoped analysis.
 - **B (FULL REFRESH):** back up existing docs to
   `docs/architecture/backup_YYYY-MM-DD/`, proceed as New Project Mode.
 - **C:** proceed as New Project Mode.
@@ -86,7 +96,10 @@ process it in its original language but produce all output in English.
 ### 1.1b (Feature Mode) Read Existing Architecture Context
 
 If in Feature Mode, BEFORE assessing coverage:
-1. Read ALL files in `docs/architecture/` to understand the current state
+
+1. Read the global docs (`overview.md`, `tech-stack.md`, `folder-structure.md`,
+   `_shared.md`) and the `README.md` index — NOT every feature doc. From the index,
+   read only the feature doc(s) the new feature will integrate with.
 2. Read existing source code structure using Glob
 3. Build a mental model of: what exists, what the new feature needs to integrate with
 
@@ -123,8 +136,10 @@ available, marking gaps with `[TO BE DEFINED]`.
 ### Question Sets
 
 - **Feature Mode:** use the feature-scoped question set (Scope & Integration,
-  Architecture, Boundaries). After answers, map impact to docs (new endpoints →
-  api-contracts.md, new tables → database-schema.md, etc.).
+  Architecture, Boundaries). After answers, map impact into the **single feature doc**
+  `features/<slug>.md` — new endpoints → its `## API`, new tables → its `## Data`, new
+  components → its `## Components`, new flows → its `## Flows`. Truly cross-cutting infra
+  (shared auth, base tables) goes in `_shared.md` and is linked from the feature doc.
 - **New Project Mode:** use the priority-ordered question bank covering
   Architecture & Components → Tech Stack → Data Flow & APIs → Database & State →
   Configuration → Build & Run → Non-Functional Requirements.
@@ -136,6 +151,7 @@ and PARTIAL dimensions, see [references/qna-examples.md](references/qna-examples
 
 When the user mentions specific technologies, use context7 (MCP tools if
 available, else the `ctx7` CLI via `npx -y @upstash/context7`) or WebSearch to:
+
 - Look up current best practices for project structure
 - Verify standard folder conventions for the frameworks mentioned
 - Check for recommended configuration patterns
@@ -143,6 +159,7 @@ available, else the `ctx7` CLI via `npx -y @upstash/context7`) or WebSearch to:
 ### Refinement Loop
 
 After each round of questions:
+
 1. Summarize what was learned
 2. Check if remaining gaps exist
 3. If yes, ask the next round
@@ -171,23 +188,25 @@ mkdir -p docs/architecture
 
 ### (Feature Mode) Update Strategy
 
-When updating existing architecture docs:
+When adding or extending a feature in an existing project:
 
 1. **Never delete or overwrite existing content.** Only add or extend.
-2. **Files needing new sections** (e.g., new component in components.md): Read
-   the existing file, append the new section at the appropriate location, use
-   the Edit tool (not Write) to insert content.
-3. **Files needing extended sections** (e.g., new endpoint in api-contracts.md):
-   Read the file, find the relevant section, add new content under the existing
-   structure.
-4. **README.md index:** if new files were created, add them to the index table
-   and append a `## Changelog` entry. For the changelog format see
+2. **One feature = one doc.** Write/extend `docs/architecture/features/<slug>.md`
+   using the Feature Doc template. New feature → Write the file; existing feature →
+   Read it and Edit the relevant section (`## Components` / `## API` / `## Data` /
+   `## Flows`). The `<slug>` should match the planned epic slug so `FEATURE_INDEX.Docs`
+   routes to it.
+3. **Cross-cutting only** goes in `_shared.md`: if the feature introduces infra that
+   other features will reuse (shared middleware, base entities), add it to `_shared.md`
+   and link it from the feature doc's `## Shared dependencies` — never duplicate it into
+   the feature doc.
+4. **README.md index:** add the new feature doc to the Feature Documents table and
+   append a `## Changelog` entry. For the changelog format see
    [references/qna-examples.md](references/qna-examples.md).
-5. **Feature-specific file** when the feature is large enough:
-   `docs/architecture/features/YYYY-MM-DD_<feature-slug>.md`. Cross-reference
-   it from the updated main docs.
+5. **Append a feature-doc `## Changelog` line** noting what was added (date · source ·
+   one line), mirroring the write-back format `build`/`fix` use.
 
-### 3.3 – 3.12 Generate Each Architecture Document
+### 3.3 – 3.10 Generate Each Architecture Document
 
 Generate the following files in `docs/architecture/`. The exact template for
 each file (markdown structure, tables, sections, placeholders) lives in
@@ -195,18 +214,24 @@ each file (markdown structure, tables, sections, placeholders) lives in
 Use those templates verbatim, filling placeholders with project-specific
 content derived from the spec and user answers.
 
-| Step | File | Template section |
-|------|------|------------------|
-| 3.3 | `README.md` (index) | README.md (Index) |
-| 3.4 | `overview.md` | overview.md |
-| 3.5 | `folder-structure.md` | folder-structure.md |
-| 3.6 | `tech-stack.md` | tech-stack.md |
-| 3.7 | `components.md` | components.md |
-| 3.8 | `data-flow.md` | data-flow.md |
-| 3.9 | `api-contracts.md` | api-contracts.md |
-| 3.10 | `database-schema.md` | database-schema.md |
-| 3.11 | `configuration.md` | configuration.md |
-| 3.12 | `dev-guide.md` | dev-guide.md |
+First identify the **feature list** from the spec (the same features `plan` will turn
+into epics). Each becomes one `features/<slug>.md`. Then generate:
+
+| Step | File                                                                   | Template section                       |
+| ---- | ---------------------------------------------------------------------- | -------------------------------------- |
+| 3.3  | `README.md` (index)                                                    | README.md (Index)                      |
+| 3.4  | `overview.md`                                                          | overview.md                            |
+| 3.5  | `folder-structure.md`                                                  | folder-structure.md                    |
+| 3.6  | `tech-stack.md`                                                        | tech-stack.md                          |
+| 3.7  | `_shared.md` (cross-cutting infra)                                     | \_shared.md                            |
+| 3.8  | `features/<slug>.md` — **one per feature** (components/API/data/flows) | features/&lt;slug&gt;.md (Feature Doc) |
+| 3.9  | `configuration.md`                                                     | configuration.md                       |
+| 3.10 | `dev-guide.md`                                                         | dev-guide.md                           |
+
+**Feature list note:** derive features from the spec's capability breakdown. Pick a
+short `<slug>` per feature (e.g. `roles`, `customer`, `billing`) and reuse it as the
+epic slug so the `FEATURE_INDEX.Docs` column lines up. Put a component/table/endpoint in
+`_shared.md` (not a feature doc) only when **two or more** features rely on it.
 
 **folder-structure.md note:** if the original spec already defines a folder
 structure, use it as the base and refine/expand. Otherwise, propose one based
@@ -229,15 +254,23 @@ and stories.
 
 ---
 
-## CONDITIONAL FILE GENERATION
+## CONDITIONAL CONTENT
 
-Not all files are relevant to every project. Skip files that don't apply:
+Not every section applies to every project. Within a feature doc, **omit** sections that
+don't apply rather than leaving empty placeholders:
 
-- **database-schema.md** — Skip if the project has no database
-- **api-contracts.md** — Skip if there are no APIs (e.g., a CLI tool)
-- **configuration.md** — Skip if the project has no configuration files
+- **`## Data`** — omit if the feature touches no tables/entities.
+- **`## API`** — omit if the feature exposes no endpoints (e.g., a pure CLI feature).
+- **`## Flows`** — omit if there is no non-trivial flow to document.
 
-When skipping a file, still list it in `README.md` with a note: "Not applicable for this project."
+For global docs:
+
+- **`configuration.md`** — Skip if the project has no configuration files.
+- **`_shared.md`** — Always create it (even if thin); it is the link target for feature
+  docs and the destination for `doc-optimizer`'s dedup pass.
+
+When skipping a **global** file, still list it in `README.md` with a note: "Not
+applicable for this project."
 
 ---
 
