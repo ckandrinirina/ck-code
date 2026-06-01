@@ -11,20 +11,24 @@ Scaffold one small story directly inside an existing `tasks/` plan, without runn
 
 ## When to use vs. when not
 
-| Use `quick-story` when… | Use a different skill when… |
-|---|---|
-| Adding one small adjustment to an existing epic (DB field, config flag, one helper) | Starting a brand-new project or feature → `/ck-code:plan` |
-| The work fits in one or two sentences | The change spans multiple stories or new components → `/ck-code:plan` |
-| The target epic already exists in `tasks/<slug>/epics/` | No `tasks/` plan exists yet → `/ck-code:plan` first |
-| You want a TODO story ready for `/ck-code:build` | Reporting a bug → `/ck-code:fix` (it can create stub stories too) |
+| Use `quick-story` when…                                                             | Use a different skill when…                                           |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Adding one small adjustment to an existing epic (DB field, config flag, one helper) | Starting a brand-new project or feature → `/ck-code:plan`             |
+| The work fits in one or two sentences                                               | The change spans multiple stories or new components → `/ck-code:plan` |
+| The target epic already exists in `tasks/<slug>/epics/`                             | No `tasks/` plan exists yet → `/ck-code:plan` first                   |
+| You want a TODO story ready for `/ck-code:build`                                    | Reporting a bug → `/ck-code:fix` (it can create stub stories too)     |
+
+## PHASE 0 — Version gate (hard gate)
+
+Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
 
 ## PHASE 1 — Locate active plan & target epic
 
 ### 1.1 Discover the tasks plan
 
 - Run `Glob "tasks/*/PROJECT_OVERVIEW.md"` and `Glob "tasks/*/FEATURE_OVERVIEW.md"`. Take the most recent.
-- If none exists, abort with: *"No `tasks/` plan found. Run `/ck-code:plan <spec>` first to create one."*
-- If multiple plans exist, list them and ask: *"Which plan? (1–N)"*. Wait for the user to pick.
+- If none exists, abort with: _"No `tasks/` plan found. Run `/ck-code:plan <spec>` first to create one."_
+- If multiple plans exist, list them and ask: _"Which plan? (1–N)"_. Wait for the user to pick.
 
 ### 1.2 Read or bootstrap the index
 
@@ -43,18 +47,18 @@ Scaffold one small story directly inside an existing `tasks/` plan, without runn
   ```
 
 - If `--epic NN` was provided, validate that the folder exists. On mismatch, show the list and re-prompt.
-- Else ask: *"Which epic should this story go into? (1–N)"*. Wait for the user to pick.
+- Else ask: _"Which epic should this story go into? (1–N)"_. Wait for the user to pick.
 
 ## PHASE 2 — Capture story intent
 
 ### 2.1 Brief
 
 - If a non-flag positional argument was given, treat it as the brief seed (e.g. `/ck-code:quick-story "Add audit_log column to Order table"`).
-- Else prompt: *"What should this story do? (one or two sentences)"*. Wait for input. Reject empty input.
+- Else prompt: _"What should this story do? (one or two sentences)"_. Wait for input. Reject empty input.
 
 ### 2.2 Size
 
-- Ask: *"Size? S / M / L / XL — default S"*. Treat empty input as **S**.
+- Ask: _"Size? S / M / L / XL — default S"_. Treat empty input as **S**.
 - If the user picks **L** or **XL**, suggest `/ck-code:plan` instead and confirm before continuing — quick stories are by definition small.
 
 ## PHASE 3 — Draft story
@@ -71,8 +75,8 @@ Draft the story using the template in `references/templates.md`. Fill each secti
 
 - **Title** — Title-case one-liner derived from the brief.
 - **Description** — 1–2 sentences expanding the brief: what it implements and why.
-- **Acceptance Criteria** — 1–3 concrete, testable bullets (`[ ]` checkboxes). Each bullet must be verifiable by a test or a manual check, not a goal like *"works correctly"*.
-- **Technical Notes** — 1–3 implementation hints. Pull keywords from the brief — *database / migration / schema / API / endpoint / config / type* — and propose the matching pattern.
+- **Acceptance Criteria** — 1–3 concrete, testable bullets (`[ ]` checkboxes). Each bullet must be verifiable by a test or a manual check, not a goal like _"works correctly"_.
+- **Technical Notes** — 1–3 implementation hints. Pull keywords from the brief — _database / migration / schema / API / endpoint / config / type_ — and propose the matching pattern.
 - **Files to Create/Modify** — best-guess `Action | File Path | Purpose` table. If unknown, leave a single `TBD` row so `/ck-code:build` Phase 3 can fill it in.
 - **Dependencies** — `Blocked by: None`, `Blocks: None` by default.
 - **Related** — Epic slug; spec ref optional.
@@ -190,6 +194,7 @@ PHASE 5 — Hand-off
 
 ## Rules
 
+- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **Never** create a new epic. If no epic fits, the user must run `/ck-code:plan` instead — tell them so and abort.
 - **Never** write any file before the user types `CONFIRM` in Phase 3.
 - **Never** auto-launch `/ck-code:build` or `/ck-code:to-issues`. Phase 5 is suggestion-only.

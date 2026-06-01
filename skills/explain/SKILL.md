@@ -10,8 +10,11 @@ disallowed-tools: Write, Edit, NotebookEdit
 # Explain — Implementation Details & Manual Verification
 
 Produces two sections for the most recently implemented story or feature:
+
 1. **Manual verification** — exact commands to confirm it works
 2. **What was built** — learner-friendly explanation of every technology and pattern used
+
+> **Note:** Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
 
 ---
 
@@ -20,6 +23,7 @@ Produces two sections for the most recently implemented story or feature:
 Invoke with `/ck-code:explain` after a story completes, or any time the user asks to understand what was built.
 
 Optional argument: a specific file, class, or concept to focus on.
+
 - `/ck-code:explain` → explains the last implemented story
 - `/ck-code:explain CMakeLists.txt` → explains just that file
 - `/ck-code:explain FetchContent` → explains just that CMake concept
@@ -31,6 +35,7 @@ Optional argument: a specific file, class, or concept to focus on.
 ### Section 1 — Manual Verification
 
 List the exact shell commands the user can run right now to confirm everything works. Rules:
+
 - One command per check, with a comment explaining what it verifies
 - Show expected output (or "should show X") after each command
 - Cover: file existence, build/compile, binary run, key integration points
@@ -54,6 +59,7 @@ cd component && build-command
 ### Section 2 — What Was Built (Learning Explanation)
 
 Explain every file, technology, and pattern that was introduced. Rules:
+
 - Assume the user is **new to this technology** — never assume prior knowledge
 - Use analogies to things the user already knows (e.g. "like package.json", "like index.js")
 - For each concept: what is it, why does it exist here, what problem does it solve
@@ -63,6 +69,7 @@ Explain every file, technology, and pattern that was introduced. Rules:
 - End with: "What comes next" — what will be added in future stories
 
 **Structure:**
+
 ```
 ### [Theme — e.g. "The Build System"]
 [Plain-language explanation + analogy]
@@ -80,6 +87,7 @@ Explain every file, technology, and pattern that was introduced. Rules:
 ## Reading Context
 
 Before generating output, read:
+
 1. **The most recently DONE story file** — for acceptance criteria and files touched
 2. **The files themselves** (use Read on each created/modified file)
 3. **git diff HEAD~1** — to see exactly what changed

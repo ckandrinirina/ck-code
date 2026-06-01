@@ -50,6 +50,17 @@ Spec file path comes from `$ARGUMENTS`.
 
 ---
 
+## PHASE 0: VERSION GATE (hard gate)
+
+Before reading or writing any `docs/architecture/` doc, run the shared
+[version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout), print its
+message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes —
+stop if the user declines. On a greenfield project (nothing to migrate) the gate stamps
+`tasks/VERSION.md` and passes. Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes
+this one cheap read in the common case.
+
+---
+
 ## MODE DETECTION
 
 **Goal:** Determine whether this is a new project or a feature addition.
@@ -198,9 +209,7 @@ When adding or extending a feature in an existing project:
    using the Feature Doc template (`mkdir -p` the `<slug>/` folder first). New feature →
    Write the file; existing feature → Read it and Edit the relevant section
    (`## Components` / `## API` / `## Data` / `## Flows`). The `<slug>` should match the
-   planned epic slug so `FEATURE_INDEX.Docs` routes to it. (A pre-existing legacy flat
-   `features/<slug>.md` — extend it in place; `/ck-code:doc-optimizer` relocates it into
-   the subfolder.)
+   planned epic slug so `FEATURE_INDEX.Docs` routes to it.
 3. **Cross-cutting only** goes in `_shared.md`: if the feature introduces infra that
    other features will reuse (shared middleware, base entities), add it to `_shared.md`
    and link it from the feature doc's `## Shared dependencies` — never duplicate it into
@@ -210,6 +219,8 @@ When adding or extending a feature in an existing project:
    [references/qna-examples.md](references/qna-examples.md).
 5. **Append a feature-doc `## Changelog` line** noting what was added (date · source ·
    one line), mirroring the write-back format `build`/`fix` use.
+6. **Design record + ledger row** — also run step 3.11 for this feature: write the dated
+   design record and append a `pending` row to `DESIGN_LEDGER.md`.
 
 ### 3.3 – 3.10 Generate Each Architecture Document
 
@@ -242,6 +253,23 @@ epic slug so the `FEATURE_INDEX.Docs` column lines up. Put a component/table/end
 structure, use it as the base and refine/expand. Otherwise, propose one based
 on the tech stack and best practices (research via context7/WebSearch if needed).
 
+### 3.11 Design records + DESIGN_LEDGER (both modes)
+
+For **each feature this run added or changed**, record the design pass so `plan` can
+later find unplanned work as a table lookup. Use today's date (`date +%Y-%m-%d`):
+
+1. **Design record** — Write `docs/architecture/features/<slug>/YYYY-MM-DD_design_<short>.md`
+   from the **Design Record** template in
+   [references/architecture-templates.md](references/architecture-templates.md), where
+   `<short>` is a 2–4 word kebab slug of what was designed. Append-only history beside
+   `index.md` (not auto-read by later skills).
+2. **Ledger row** — Append one row to `docs/architecture/DESIGN_LEDGER.md` (create it from
+   the **DESIGN_LEDGER** template in the same reference if missing): `Date` = today,
+   `Feature`/`Slug`, `Type` = `new` for a new feature else `update`, `Summary` = one line,
+   `Planned?` = `pending`, `Plan ref` = `—`. Never set `planned` here — that is `plan`'s job.
+
+These are journaled in addition to the feature doc; they never replace `index.md`.
+
 ---
 
 ## PHASE 4: SUMMARY
@@ -255,7 +283,8 @@ For the exact summary blocks, see
 [references/qna-examples.md](references/qna-examples.md).
 
 In both modes, the final next step is: run `/ck-code:plan` to generate epics
-and stories.
+and stories — it reads `DESIGN_LEDGER.md` to pick up the `pending` rows this run
+added and flips them to `planned`.
 
 ---
 
@@ -289,3 +318,5 @@ applicable for this project."
 - **Mark gaps:** Use `[TO BE DEFINED]` for anything that couldn't be determined. Never invent information.
 - **Scanning readability:** Use tables, code blocks, ASCII diagrams, and bullet points. Avoid walls of text.
 - **File independence:** Each file should be self-contained, with cross-references where relevant.
+- **Always record the design pass (Phase 3.11):** every added/changed feature gets a dated design record and a `pending` row in `DESIGN_LEDGER.md` — this is how `plan` knows what still needs planning. Never mark a ledger row `planned` from `design`.
+- **Never read or write an architecture doc before the version gate (Phase 0) passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.

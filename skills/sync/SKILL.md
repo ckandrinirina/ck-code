@@ -16,22 +16,31 @@ For diff and report templates, see [references/sync-report.md](references/sync-r
 For the index format and mutation contract, see [`../../references/stories-index.md`](../../references/stories-index.md).
 
 ## INPUT
+
 `$ARGUMENTS` is either a `tasks/<slug>` path (sync that one plan), `--all` (sync every plan folder), or empty (interactive plan picker).
+
+## PHASE 0: VERSION GATE (hard gate)
+
+Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
 
 ## PHASE 1: SELECT PLAN(S)
 
 ### 1.1 Resolve Argument
+
 - Path provided → validate it exists, contains `PROJECT_OVERVIEW.md` or `FEATURE_OVERVIEW.md`, then sync that plan only.
 - `--all` → Glob `tasks/*/PROJECT_OVERVIEW.md` and `tasks/*/FEATURE_OVERVIEW.md`; sync each in turn.
 - Empty → list every plan folder with last-modified date, ask the user to pick one (or `ALL`).
 
 ### 1.2 Per-Plan Sync
+
 For each selected plan, run Phases 2–5. Report per-plan results separately.
 
 ## PHASE 2: SCAN
 
 ### 2.1 Read the Story Files
+
 Glob `tasks/<slug>/epics/*/stories/*.md`. For each story, extract:
+
 - ID (from `# Story EE-SS:` header)
 - Title
 - Status (`TODO` / `IN PROGRESS` / `DONE` / `SKIP`)
@@ -41,31 +50,34 @@ Glob `tasks/<slug>/epics/*/stories/*.md`. For each story, extract:
 - File path relative to `tasks/<slug>/`
 
 ### 2.2 Read the Index
+
 Read `tasks/<slug>/STORIES_INDEX.md`. Parse the table into rows keyed by ID.
 
 If the file is missing or the schema header is not `<!-- Schema: v1 -->`, fall through to **bootstrap** (write a fresh index from the scanned story files) — see the Bootstrap procedure in [`../../references/stories-index.md`](../../references/stories-index.md). Skip Phase 3 in that case and report `Bootstrapped index from N stories.`
 
 ### 2.3 Read Each EPIC.md Story List
+
 For each `tasks/<slug>/epics/*/EPIC.md`, parse the story list (table or bullet list — preserve whichever format the file uses).
 
 ## PHASE 3: DIFF
 
 Compute three diff sets:
 
-| Set | Definition | Repair |
-|---|---|---|
-| **Index drift** | Index row's `Status` / `Size` / `Blocked by` / `Title` differs from the story file | Rewrite cell(s) in the index to match the story file |
-| **Index orphan** | Story file exists with no matching index row | Insert row into index in `ID` order |
-| **Index stale** | Index row exists with no matching story file | Remove row from index |
-| **Epic drift** | Story listed in `EPIC.md` differs from the actual story file (title / status / missing) | Rewrite the entry |
-| **Epic orphan** | Story file exists in epic folder but is not in `EPIC.md`'s list | Append entry in `SS` order |
-| **Epic stale** | `EPIC.md` lists a story that has no file | Remove entry |
+| Set              | Definition                                                                              | Repair                                               |
+| ---------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Index drift**  | Index row's `Status` / `Size` / `Blocked by` / `Title` differs from the story file      | Rewrite cell(s) in the index to match the story file |
+| **Index orphan** | Story file exists with no matching index row                                            | Insert row into index in `ID` order                  |
+| **Index stale**  | Index row exists with no matching story file                                            | Remove row from index                                |
+| **Epic drift**   | Story listed in `EPIC.md` differs from the actual story file (title / status / missing) | Rewrite the entry                                    |
+| **Epic orphan**  | Story file exists in epic folder but is not in `EPIC.md`'s list                         | Append entry in `SS` order                           |
+| **Epic stale**   | `EPIC.md` lists a story that has no file                                                | Remove entry                                         |
 
 The story file is the **source of truth** for content (status, size, dependencies). The index and EPIC lists are derived views — `sync` rewrites them to match the files, never the other way around.
 
 ## PHASE 4: PRESENT REPORT & CONFIRM
 
 Show the diff using the report template in `references/sync-report.md`. Three possible outcomes:
+
 - `IN SYNC` — no diffs found. Report and stop.
 - `DRIFT FOUND` — present the per-row diff and the proposed writes; wait for `YES` / `ABORT` / `SELECT` (apply only specific repairs).
 - `ERRORS` — malformed story files or unparseable EPIC entries: report each problem with the file path and stop without writing.
@@ -84,6 +96,7 @@ After each write, re-read the file and verify the change landed. If a write fail
 ## PHASE 6: REPORT
 
 Print a final per-plan summary:
+
 - Repairs applied: [count]
 - Repairs skipped (user `SELECT`): [count]
 - Repairs failed (write errors): [count]
@@ -93,6 +106,7 @@ If any repair failed, instruct the user to fix the file by hand and re-run `/ck-
 
 ## RULES
 
+- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **Story files are the source of truth** — `sync` never rewrites a story file based on the index. Edit the story file directly first, then re-run `sync`.
 - **Always confirm before writing.** No diff is applied without explicit `YES` (or a `SELECT` subset).
 - **Never edit the index header** — the `<!-- AUTO-GENERATED ... -->` and `<!-- Schema: v1 -->` lines are the contract.
@@ -106,6 +120,7 @@ If any repair failed, instruct the user to fix the file by hand and re-run `/ck-
 ## NEXT
 
 After `sync` reports `IN SYNC` (or applies repairs successfully), continue with whatever skill you were running:
+
 - `/ck-code:fix` if the drift was caused by a failed stub-story sync.
 - `/ck-code:track` to see the corrected dashboard.
 - `/ck-code:build` to pick up the next ready story.

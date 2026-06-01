@@ -42,7 +42,7 @@ Column rules:
 - **Plan** — the `tasks/<slug>` folder name (without the `tasks/` prefix) the epic lives in. Locates that feature's `STORIES_INDEX.md` and `EPIC.md`.
 - **Status** — rolled up from the epic's stories (see Status Rollup below): `TODO`, `IN PROGRESS`, or `DONE`.
 - **Stories** — `<done>/<total>` story count for the epic (SKIP stories excluded from both numerator and denominator).
-- **Docs** — path to this feature's canonical architecture doc (`docs/architecture/features/<slug>/index.md`). This is the **doc-routing key**: `build`/`fix` read this one doc (+ `folder-structure.md`, + `_shared.md` when noted) instead of every layer doc. Per-increment / per-fix delta docs live beside it as `features/<slug>/YYYY-MM-DD_<id>_<short>.md` (an append-only journal — NOT auto-read; `index.md` always carries current truth). **Legacy flat layout** (`docs/architecture/features/<slug>.md`, no subfolder) is still read as-is — `/ck-code:doc-optimizer` migrates it to `features/<slug>/index.md`. `—` means no feature doc exists yet → run `/ck-code:doc-optimizer sync` to scaffold it; readers fall back to `folder-structure.md` + `_shared.md` meanwhile.
+- **Docs** — path to this feature's canonical architecture doc (`docs/architecture/features/<slug>/index.md`). This is the **doc-routing key**: `build`/`fix` read this one doc (+ `folder-structure.md`, + `_shared.md` when noted). Per-increment / per-fix delta docs live beside it as `features/<slug>/YYYY-MM-DD_<id>_<short>.md` (an append-only journal — NOT auto-read; `index.md` always carries current truth). `—` means no feature doc exists yet → run `/ck-code:doc-optimizer sync` to scaffold it; readers fall back to `folder-structure.md` + `_shared.md` meanwhile.
 - **Description** — one-line epic summary; the `EPIC.md` "Goal"/first description line. Helps `fix` understand a feature without reading its stories.
 
 Rows are sorted by `Plan` (oldest plan first), then by `Feature` number. Because
@@ -50,14 +50,13 @@ Rows are sorted by `Plan` (oldest plan first), then by `Feature` number. Because
 share a number. The two HTML comments are mandatory — schema validation keys on
 `Schema: v2`.
 
-### v1 → v2 compatibility
+### Schema is v2-only (v3)
 
-A pre-existing index marked `<!-- Schema: v1 -->` has no `Docs` column. Treat it as
-"docs not yet mapped": parse the other columns normally, and route doc reads to the
-fallback (`folder-structure.md` + `_shared.md`) while suggesting
-`/ck-code:doc-optimizer sync`. The next `plan`, `build`, or `doc-optimizer sync` run
-rewrites the header to `v2` and adds the `Docs` column (cell `—` for any feature whose
-doc does not exist yet). Never fail on a v1 index — upgrade it in place.
+ck-code v3 reads **only** a `<!-- Schema: v2 -->` index. A legacy `v1` index (no
+`Docs` column) is a **pre-v3 marker**: the [version gate](version-gate.md) detects
+it and blocks the skill until `/ck-code:doc-optimizer upgrade` rewrites the header
+to `v2` and adds the `Docs` column. No skill reads or upgrades a `v1` index inline
+anymore — that rewrite happens **only** inside `doc-optimizer`.
 
 ## Status Rollup
 
@@ -73,8 +72,9 @@ An epic whose every story is `SKIP` is `DONE` (nothing left to build).
 
 Before any phase that selects work (`build` / `parallel-build` Phase 1):
 
+0. The [version gate](version-gate.md) has already run (it precedes work selection in every change-producing skill), so the project is guaranteed v3 — a `v1` index never reaches this protocol.
 1. Read `tasks/FEATURE_INDEX.md`.
-2. If it exists AND contains `<!-- Schema: v2 -->` (or legacy `v1`) → parse the table as the authoritative feature list. Do NOT open any `STORIES_INDEX.md` yet. A `v1` index has no `Docs` column — see "v1 → v2 compatibility" above.
+2. If it exists AND contains `<!-- Schema: v2 -->` → parse the table as the authoritative feature list. Do NOT open any `STORIES_INDEX.md` yet.
 3. If missing → run **Bootstrap** (below), then re-read.
 4. Compute the **unfinished set** = rows whose `Status` ≠ `DONE`.
 5. **Feature-selection gate** (see below) decides whether to ask the user which feature to build.
@@ -98,7 +98,7 @@ not exist** — the index must exist before work is selected.
 1. `Glob "tasks/*/STORIES_INDEX.md"` — one row source per plan (bootstrap the story index first per [`stories-index.md`](stories-index.md) if any is itself missing).
 2. For each plan, group its story rows by epic `NN`; for each epic compute `Status` (rollup) and `Stories` (`done/total`).
 3. For each epic read its `EPIC.md` once to extract the one-line **Description** (Goal / first description line). This is the only multi-file read allowed here, mirroring the story-index bootstrap.
-4. For each epic set the **Docs** cell to `docs/architecture/features/<slug>/index.md` if that file exists, else the legacy `docs/architecture/features/<slug>.md` if that exists, else `—`. Do NOT create the doc here (that is `doc-optimizer sync`'s job) — only record the path when it already exists.
+4. For each epic set the **Docs** cell to `docs/architecture/features/<slug>/index.md` if that file exists, else `—`. Do NOT create the doc here (that is `doc-optimizer sync`'s job) — only record the path when it already exists.
 5. Sort rows by `Plan` then `Feature` number; write `FEATURE_INDEX.md` with the schema-v2 header and the table.
 6. Tell the user: `Bootstrapped FEATURE_INDEX.md from N features across M plans.`
 
@@ -107,15 +107,15 @@ not exist** — the index must exist before work is selected.
 Keep the feature index in sync whenever epics or story statuses change. Update
 the index in the SAME phase as the underlying change — never leave it stale.
 
-| Skill                                                | When                                           | What changes in the index                                                                                                                                                                                                                                                                                           |
-| ---------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `plan` (Phase 4)                                     | After writing epics + `STORIES_INDEX.md`       | Add one row per NEW epic (Status `TODO`, `0/N`, description from `EPIC.md`, `Docs` = the feature-doc path if it exists else `—`). Create the file first if absent. Continue/Add-Feature mode: insert the new rows, leave existing rows untouched. Upgrade a v1 header to v2 and add the `Docs` column when present. |
-| `doc-optimizer` (`sync`/`migrate`)                   | A feature doc is created or relocated          | Set that feature's `Docs` cell to the new `docs/architecture/features/<slug>/index.md` path (was `—`, or a legacy flat `features/<slug>.md` being migrated). Upgrade a v1 header to v2. This is the only skill that fills `Docs` cells that were `—`.                                                               |
-| `build` (Phase 1)                                    | After bootstrap/selection, before implementing | Backfill a blank/missing `Description` from the epic's `EPIC.md`; create the file if absent.                                                                                                                                                                                                                        |
-| `build` (Phase 8, on story DONE)                     | A story flips to `DONE`                        | Recompute the feature's `Stories` count and `Status` (→ `IN PROGRESS`, or → `DONE` when its last story completes).                                                                                                                                                                                                  |
-| `build` (Phase 1.6, first story of a feature starts) | `TODO → IN PROGRESS` on the feature            | Status cell `TODO` → `IN PROGRESS`.                                                                                                                                                                                                                                                                                 |
-| `parallel-build` (Phase 6, after each merge)         | Each merged story flips to `DONE`              | Recompute that feature's `Stories` count and `Status`; mark the feature `DONE` once its last story is merged.                                                                                                                                                                                                       |
-| `fix` (stub story created)                           | A new stub story is added to an epic           | Recompute that feature's `Stories` total (and `Status` if it was `DONE`).                                                                                                                                                                                                                                           |
+| Skill                                                | When                                           | What changes in the index                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plan` (Phase 4)                                     | After writing epics + `STORIES_INDEX.md`       | Add one row per NEW epic (Status `TODO`, `0/N`, description from `EPIC.md`, `Docs` = the feature-doc path if it exists else `—`). Create the file first (schema-v2 header) if absent. Continue/Add-Feature mode: insert the new rows, leave existing rows untouched. The index is always v2 here — the version gate guarantees it. |
+| `doc-optimizer` (`upgrade`/`sync`/`migrate`)         | A feature doc is created or relocated          | Set that feature's `Docs` cell to the new `docs/architecture/features/<slug>/index.md` path (was `—`). `upgrade` also rewrites a legacy `v1` header to `v2` and adds the `Docs` column — the **only** place that conversion happens. This is the only skill that fills `Docs` cells that were `—`.                                 |
+| `build` (Phase 1)                                    | After bootstrap/selection, before implementing | Backfill a blank/missing `Description` from the epic's `EPIC.md`; create the file if absent.                                                                                                                                                                                                                                       |
+| `build` (Phase 8, on story DONE)                     | A story flips to `DONE`                        | Recompute the feature's `Stories` count and `Status` (→ `IN PROGRESS`, or → `DONE` when its last story completes).                                                                                                                                                                                                                 |
+| `build` (Phase 1.6, first story of a feature starts) | `TODO → IN PROGRESS` on the feature            | Status cell `TODO` → `IN PROGRESS`.                                                                                                                                                                                                                                                                                                |
+| `parallel-build` (Phase 6, after each merge)         | Each merged story flips to `DONE`              | Recompute that feature's `Stories` count and `Status`; mark the feature `DONE` once its last story is merged.                                                                                                                                                                                                                      |
+| `fix` (stub story created)                           | A new stub story is added to an epic           | Recompute that feature's `Stories` total (and `Status` if it was `DONE`).                                                                                                                                                                                                                                                          |
 
 Edit pattern (cell-only replacement — preserves table layout), e.g. on the last
 story of a feature completing:
@@ -134,4 +134,5 @@ new: | 02 · Auth | 2026-06-01_myapp | DONE        | 3/3 | docs/architecture/fea
 - **Always** recompute a feature's `Status`/`Stories` rollup in the same phase a story under it changes status — after `build` and after each `parallel-build` merge, mark the feature `DONE` once its last story completes. Never leave the rollup stale after a completed build.
 - **Never** edit the index by hand — the comment header is the contract; an explicit story-ID / `--epic` argument bypasses the feature-selection gate.
 - A feature's `Description` is authored by `plan` and backfilled by `build`/`parallel-build` from `EPIC.md` when blank — it exists so `fix` has feature context without reading stories.
-- **The `Docs` column is the doc-routing key** — `build`/`fix` read the canonical feature doc it points to (`features/<slug>/index.md`, or a legacy flat `features/<slug>.md`) + `folder-structure.md`, + `_shared.md` when noted, instead of every layer doc. Per-increment / per-fix delta docs (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) are an append-only journal and are NOT part of the routed read — `index.md` always holds current truth. A `—` cell means fall back to `folder-structure.md` + `_shared.md` and suggest `/ck-code:doc-optimizer sync`. Only `doc-optimizer` fills a `—` cell — `plan`/`build` only record a path that already exists.
+- **The `Docs` column is the doc-routing key** — `build`/`fix` read the canonical feature doc it points to (`features/<slug>/index.md`) + `folder-structure.md`, + `_shared.md` when noted. Per-increment / per-fix delta docs (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) are an append-only journal and are NOT part of the routed read — `index.md` always holds current truth. A `—` cell means fall back to `folder-structure.md` + `_shared.md` and suggest `/ck-code:doc-optimizer sync`. Only `doc-optimizer` fills a `—` cell — `plan`/`build` only record a path that already exists.
+- **The schema is v2-only** — the [version gate](version-gate.md) guarantees a v2 index before this protocol runs; a `v1` index is converted only by `doc-optimizer upgrade`, never inline.

@@ -359,9 +359,6 @@ in Phase 2 (the `Docs` path for this story's feature, `features/<slug>/index.md`
   template (see `design`'s [architecture-templates.md](../design/references/architecture-templates.md)) —
   the change narrative (what changed · why · surface touched). `index.md` stays the
   routed source of truth; this dated doc is an append-only journal entry.
-- **Legacy/fallback:** if the feature is still on a flat `features/<slug>.md` (no
-  subfolder), update it in place and skip the dated doc; suggest `/ck-code:doc-optimizer
-sync` to migrate it to the subfolder layout.
 - If the change is cross-cutting (reused by other features), put it in `_shared.md`
   instead and link it from the feature doc's `## Shared dependencies`.
 
@@ -389,6 +386,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 
 Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
 
+- **Version gate** — before any architecture-doc read or write, run the shared [version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes (or stop if the user declines). Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
 - **Phase 1.2.0** — Interactive runs read `tasks/FEATURE_INDEX.md` FIRST (bootstrap if missing); > 2 unfinished features ⇒ ask which feature, then scope story selection to its epic. Story rollup (`Stories`/`Status`) is updated on the feature when a story completes (Phase 8.6) — never leave it stale.
 - **Phase 1.2** — Interactive selection prefers parallel: ≥ 2 conflict-free ready stories ⇒ the parallel set is the recommended one-confirm option, then auto-fan-out to worktree agents. An explicit story arg is always single-story — never auto-expanded.
 - **Phase 2** — Experts + guides detected, loaded via `Read`, and the "Skills loaded" block shown BEFORE any planning or code. `expert-qa` always detected (+ `expert-analyst` for fixes). A non-empty 4a `ls` must never reach Phase 3 with zero skills loaded — skipping Phase 2 turns the "follow loaded skills" rules in Phases 5/6 into no-ops.

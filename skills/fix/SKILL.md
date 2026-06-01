@@ -309,9 +309,8 @@ component, or flow — not a pure internal fix):
    routed source of truth; this dated doc is an append-only journal entry.
 
 **Skip both** when the fix has no architectural surface (the common case). **Fallback:**
-`Docs` cell `—`/missing, or a legacy flat `features/<slug>.md` with no subfolder → update
-the flat doc in place if present, else suggest `/ck-code:doc-optimizer sync`; do not
-create the canonical doc from scratch here.
+`Docs` cell `—`/missing → suggest `/ck-code:doc-optimizer sync`; do not create the
+canonical doc from scratch here.
 
 ### 8.4 Sync Verification
 
@@ -366,6 +365,7 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.7). `SHIP` → invok
 
 Each gate is enforced inside its phase — listed here as a checklist:
 
+- **Version gate** — before any architecture-doc read or write, run the shared [version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes (or stop if the user declines). Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
 - **Phase 2.5** — Scope analysis mandatory, even when `$ARGUMENTS` provides a story path.
 - **Phase 2.5.1** — Score `DONE` / `IN PROGRESS` AND `TODO` rows; TODO matches trigger verdict E.
 - **Phase 2.5.2 / 2.5.5 / 5.4** — Three confirmation gates; no writes without explicit `YES`.

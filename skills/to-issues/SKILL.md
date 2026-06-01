@@ -50,6 +50,12 @@ hierarchy.
 
 ---
 
+## PHASE 0: VERSION GATE (hard gate)
+
+Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+
+---
+
 ## PHASE 1: VALIDATE ENVIRONMENT
 
 ```bash
@@ -324,6 +330,7 @@ anyway / **ABORT**.
 
 ## RULES
 
+- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **Never create issues outside the chosen mode** — `feature` makes exactly 1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
 - **Order matters in `stories` mode** — create all epics first so their issue numbers exist for story cross-references and the linking step.
 - **Always pause between API calls** — `sleep 1` between every `gh` call; GitHub rate-limits issue creation strictly.

@@ -44,6 +44,16 @@ The user provides a path to a specification file or feature description via `$AR
 
 ---
 
+## PHASE 0: VERSION GATE (hard gate)
+
+Before reading or writing any `docs/architecture/` doc or `tasks/FEATURE_INDEX.md`, run
+the shared [version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout),
+print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it
+PASSes — stop if the user declines. Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`)
+makes this one cheap read in the common case.
+
+---
+
 ## MODE DETECTION
 
 **Goal:** Determine whether this is a new project or a feature addition.
@@ -116,6 +126,15 @@ Before extracting dimensions:
 3. **Scan the actual codebase** — use Glob to check which planned components already exist as source files. This tells you what's built vs. what's only planned.
 
 This context prevents: duplicating existing stories, planning already-implemented work, creating epics that conflict with the existing architecture, or proposing folder structures that contradict what's already in place.
+
+### 1.1c Read the Design Ledger (both modes)
+
+Read `docs/architecture/DESIGN_LEDGER.md` (format: [`architecture-templates.md`](../design/references/architecture-templates.md#design_ledgermd-design--plan-bridge)).
+Its **`pending` rows are the design additions that have been designed but not yet planned** —
+the authoritative work-to-plan list, so you don't diff feature docs to find what's new.
+Each `pending` row's `Slug` points to the feature doc to plan from. Plan those features in
+this run; in Phase 4.5c you will flip their rows to `planned`. If the ledger is missing
+(older v3 project, or design hasn't run), fall back to the feature index / spec as before.
 
 ### 1.2 Extract Core Dimensions
 
@@ -287,7 +306,16 @@ This index is the single source of truth that downstream skills (`build`, `paral
 
 After the story index is written, update the project-wide `tasks/FEATURE_INDEX.md` — the top-level rollup that `build`/`parallel-build` read FIRST to pick a feature before opening any story index. Format and mutation protocol: see [`ck-code/references/feature-index.md`](../../../references/feature-index.md).
 
-Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Docs` = `docs/architecture/features/<slug>/index.md` if that feature doc exists (it usually does when `design` ran first, matching the epic slug; a legacy flat `features/<slug>.md` is also accepted) else `—`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v2 header with the `Docs` column). Upgrade a legacy `v1` header to `v2`, adding the `Docs` column. Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched. Any feature left `—` should be scaffolded with `/ck-code:doc-optimizer sync`.
+Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Docs` = `docs/architecture/features/<slug>/index.md` if that feature doc exists (it usually does when `design` ran first, matching the epic slug) else `—`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v2 header with the `Docs` column). The index is always schema v2 here — the version gate (Phase 0) guarantees it. Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched. Any feature left `—` should be scaffolded with `/ck-code:doc-optimizer sync`.
+
+### 4.5c DESIGN_LEDGER.md Update (flip pending → planned)
+
+For each feature this plan now covers, update its row in `docs/architecture/DESIGN_LEDGER.md`
+(format: [`architecture-templates.md`](../design/references/architecture-templates.md#design_ledgermd-design--plan-bridge)):
+set `Planned?` from `pending` to `planned` and fill `Plan ref` with this plan's
+`tasks/<slug>` folder (or the specific `NN_slug` epic). Match rows by `Slug`. Leave rows
+for features not planned in this run untouched. Skip silently if the ledger does not exist.
+This is what makes "what still needs planning?" a cheap ledger lookup for the next run.
 
 ### 4.6 ROADMAP.md Content
 
@@ -320,3 +348,5 @@ Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** 
 - **Preserve spec language:** When the spec uses specific technical terms, preserve them in story titles and descriptions.
 - **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
 - **Reusability:** This skill must work with any project specification, not just the current project.
+- **Design ledger drives planning:** the `pending` rows of `DESIGN_LEDGER.md` are the work-to-plan list (Phase 1.1c); flip each planned feature's row to `planned` with its `Plan ref` in Phase 4.5c. Never leave a planned feature `pending`.
+- **Never read or write an architecture doc or `FEATURE_INDEX.md` before the version gate (Phase 0) passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.

@@ -44,8 +44,8 @@ compiler warnings in project-owned files is the bar.
 ## Step 4 — Architecture compliance
 
 Check the implementation against the story's **feature doc**
-(`docs/architecture/features/<slug>/index.md`, or a legacy flat
-`docs/architecture/features/<slug>.md`, routed via `FEATURE_INDEX`) + `folder-structure.md`:
+(`docs/architecture/features/<slug>/index.md`, routed via `FEATURE_INDEX`) +
+`folder-structure.md`:
 
 - New files in correct directories per `folder-structure.md`.
 - API shapes match the feature doc's `## API`.

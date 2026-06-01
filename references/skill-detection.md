@@ -8,8 +8,7 @@ the files a story or bug touches.
 
 Architecture docs are **feature-scoped**: each feature owns a self-contained
 `docs/architecture/features/<slug>/index.md` with its components, APIs, data, and
-flows (legacy flat layout: `docs/architecture/features/<slug>.md` — read as-is).
-A story reads its **own feature's doc**, not the whole architecture. The dated
+flows. A story reads its **own feature's doc**, not the whole architecture. The dated
 per-increment / per-fix delta docs beside `index.md`
 (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) are a history journal — do NOT read
 them; `index.md` always carries current truth.
@@ -20,8 +19,7 @@ reads here are the largest avoidable latency in `build`/`fix` Phase 2):
 1. **`docs/architecture/folder-structure.md`** — always (small, universally useful).
 2. **The story's feature doc.** The caller already read `tasks/FEATURE_INDEX.md` during
    selection; the story's epic `NN` maps to one feature row. Read the path in that row's
-   **`Docs`** column (`docs/architecture/features/<slug>/index.md`, or a legacy flat
-   `docs/architecture/features/<slug>.md`).
+   **`Docs`** column (`docs/architecture/features/<slug>/index.md`).
 3. **`docs/architecture/_shared.md`** — only when the work touches cross-cutting infra:
    the feature doc's `## Shared dependencies` section links into it, OR the story's
    Technical Notes / touched paths involve shared concerns (auth, base entities,
@@ -31,12 +29,12 @@ reads here are the largest avoidable latency in `build`/`fix` Phase 2):
 `dev-guide.md` for setup/build/run changes; `tech-stack.md` for `docker/`, `.github/`,
 `ci/`, `deploy/`; `configuration.md` for config-file changes.
 
-**Fallback when the feature doc is unavailable** — the `Docs` cell is `—`, the
-`FEATURE_INDEX` is schema `v1`, or the file is missing: read `folder-structure.md` +
-`_shared.md` only, and tell the user to run `/ck-code:doc-optimizer sync` to scaffold the
-missing feature doc. Never read the retired layer docs (`components.md`,
-`api-contracts.md`, `database-schema.md`, `data-flow.md`) — on a legacy project they live
-under `docs/architecture/archive/` and are not part of the read path.
+**Fallback when the feature doc is unavailable** — the `Docs` cell is `—` or the file
+is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run
+`/ck-code:doc-optimizer sync` to scaffold the missing feature doc. The retired layer
+docs (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) do not
+exist in a v3 project — the version gate migrates any pre-v3 project before this runs,
+and migrated originals live under `docs/architecture/archive/`. Never read them.
 
 Skip files absent on disk. Do NOT read `ROADMAP.md` here — it is loaded
 only when the story's technical notes reference it.

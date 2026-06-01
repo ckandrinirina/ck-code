@@ -26,6 +26,8 @@ For the full workflow graph and output locations, see
 
 ## PHASE 1: INSPECT PROJECT STATE
 
+Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+
 The read-only project-state probes are **pre-loaded** at skill start via dynamic
 context injection — read the snapshot below and do **not** re-run these `ls`/`find`/`gh`
 calls as separate tool calls (saves ~5 round-trips per invocation):
@@ -67,18 +69,18 @@ Apply this decision table top-to-bottom; the **first** matching row is
 the recommendation. Print only the matching row's recommendation and
 stop.
 
-| State | Recommend |
-|---|---|
-| `!has_architecture && !has_pre_specs` | **`/ck-code:pre-spec "<feature description>"`** — start with a stakeholder-friendly spec; or skip directly to `/ck-code:design <spec.md>` if you already have a written spec. |
-| `!has_architecture` | **`/ck-code:design <spec-file>`** — refine the spec into architecture docs. |
-| `has_architecture && !has_team_skills` | **`/ck-code:team`** — generate project-tailored expert + guide skills from the architecture. |
-| `has_architecture && has_team_skills && !has_tasks_folder` | **`/ck-code:plan <spec-file>`** — break the architecture into epics, stories, and a roadmap. |
-| `has_tasks_folder && !has_stories_index` | **`/ck-code:track`** — bootstrap `STORIES_INDEX.md` from existing story files (track auto-bootstraps, then re-run `/ck-code:start`). |
-| `has_tasks_folder && !has_published_issues` *(optional)* | **`/ck-code:to-issues`** — mirror epics/stories to GitHub Issues, **or** skip this and go straight to the next row. |
-| `n_todo > 0` | **`/ck-code:track next`** — find the next ready story, then **`/ck-code:build [path]`**. |
-| `n_in_progress > 0 && n_todo == 0` | **`/ck-code:ship <story-path>`** — ship the in-progress story (commit + PR + issue updates), or **`/ck-code:build`** to keep going on it. |
-| `n_done > 0 && n_todo == 0 && n_in_progress == 0` | **`/ck-code:track progress`** — review the milestone tracker, **or** plan the next feature with **`/ck-code:plan`** / **`/ck-code:pre-spec`**. |
-| `has_tasks_folder && n_todo == 0 && n_in_progress == 0 && n_done == 0` | **`/ck-code:plan`** appears not to have produced stories yet — re-check `tasks/<slug>/`. |
+| State                                                                  | Recommend                                                                                                                                                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `!has_architecture && !has_pre_specs`                                  | **`/ck-code:pre-spec "<feature description>"`** — start with a stakeholder-friendly spec; or skip directly to `/ck-code:design <spec.md>` if you already have a written spec. |
+| `!has_architecture`                                                    | **`/ck-code:design <spec-file>`** — refine the spec into architecture docs.                                                                                                   |
+| `has_architecture && !has_team_skills`                                 | **`/ck-code:team`** — generate project-tailored expert + guide skills from the architecture.                                                                                  |
+| `has_architecture && has_team_skills && !has_tasks_folder`             | **`/ck-code:plan <spec-file>`** — break the architecture into epics, stories, and a roadmap.                                                                                  |
+| `has_tasks_folder && !has_stories_index`                               | **`/ck-code:track`** — bootstrap `STORIES_INDEX.md` from existing story files (track auto-bootstraps, then re-run `/ck-code:start`).                                          |
+| `has_tasks_folder && !has_published_issues` _(optional)_               | **`/ck-code:to-issues`** — mirror epics/stories to GitHub Issues, **or** skip this and go straight to the next row.                                                           |
+| `n_todo > 0`                                                           | **`/ck-code:track next`** — find the next ready story, then **`/ck-code:build [path]`**.                                                                                      |
+| `n_in_progress > 0 && n_todo == 0`                                     | **`/ck-code:ship <story-path>`** — ship the in-progress story (commit + PR + issue updates), or **`/ck-code:build`** to keep going on it.                                     |
+| `n_done > 0 && n_todo == 0 && n_in_progress == 0`                      | **`/ck-code:track progress`** — review the milestone tracker, **or** plan the next feature with **`/ck-code:plan`** / **`/ck-code:pre-spec`**.                                |
+| `has_tasks_folder && n_todo == 0 && n_in_progress == 0 && n_done == 0` | **`/ck-code:plan`** appears not to have produced stories yet — re-check `tasks/<slug>/`.                                                                                      |
 
 ### Output format
 

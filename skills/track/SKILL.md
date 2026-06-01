@@ -17,11 +17,11 @@ story statuses, and recommendations for what to implement next.
 
 `$ARGUMENTS` determines the command:
 
-| Command | What It Does |
-|---------|-------------|
-| (empty) or `status` | Full status dashboard with all stories |
-| `next` | Suggest the next story ready for implementation |
-| `progress` | Epic completion percentages and overall progress |
+| Command             | What It Does                                     |
+| ------------------- | ------------------------------------------------ |
+| (empty) or `status` | Full status dashboard with all stories           |
+| `next`              | Suggest the next story ready for implementation  |
+| `progress`          | Epic completion percentages and overall progress |
 
 ---
 
@@ -29,15 +29,19 @@ story statuses, and recommendations for what to implement next.
 
 **This phase runs for ALL commands.**
 
+Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+
 ### 1.1 Find All Task Plans
 
 Use Glob to find all task plan folders: `tasks/*/PROJECT_OVERVIEW.md` and `tasks/*/FEATURE_OVERVIEW.md`.
 
 If no task plans found:
+
 ```
 No task plans found in tasks/.
 Run /ck-code:plan to generate epics and stories first.
 ```
+
 → STOP
 
 ### 1.2 Read the Index per Plan
@@ -99,6 +103,7 @@ Present the full dashboard:
 ```
 
 **Status icons:**
+
 - `[x]` = DONE
 - `[>]` = IN PROGRESS
 - `[ ]` = TODO (ready — all dependencies met)
@@ -148,6 +153,7 @@ Run: /ck-code:build [full path to story file]
 ```
 
 If no stories are ready:
+
 ```
 ## No Stories Ready
 
@@ -212,6 +218,7 @@ Show high-level epic completion with metrics.
 ## MULTIPLE TASK PLANS
 
 If multiple task plan folders exist in `tasks/` (e.g., full project + feature plans):
+
 - Show each plan separately
 - Prefix with the plan folder name
 - Feature plans show as: `[Feature] YYYY-MM-DD_feature-xxx`

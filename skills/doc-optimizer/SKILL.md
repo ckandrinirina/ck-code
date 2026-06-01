@@ -1,7 +1,7 @@
 ---
 name: doc-optimizer
-description: Use when architecture docs under docs/architecture/ are bloated or slow to read for implementation, when a project still uses the legacy layer docs (components.md, api-contracts.md, database-schema.md, data-flow.md), or when features in FEATURE_INDEX lack a per-feature doc. Argument is `migrate`, `sync`, or `optimize` (default).
-argument-hint: "[migrate|sync|optimize]"
+description: Use when architecture docs under docs/architecture/ are bloated or slow to read for implementation, when a project is on a pre-v3 doc layout (the version gate sends it here), when a project still uses the legacy layer docs (components.md, api-contracts.md, database-schema.md, data-flow.md), or when features in FEATURE_INDEX lack a per-feature doc. Argument is `upgrade`, `migrate`, `sync`, or `optimize` (default).
+argument-hint: "[upgrade|migrate|sync|optimize]"
 disable-model-invocation: true
 effort: medium
 ---
@@ -13,6 +13,10 @@ doc per feature plus a single `_shared.md` for cross-cutting infra, routed by th
 `Docs` column of `tasks/FEATURE_INDEX.md`. This skill migrates legacy layer docs into
 that layout, scaffolds missing feature docs, and prunes duplication.
 
+This is also the **v3 migrator**: the [version gate](../../references/version-gate.md)
+in every change-producing skill sends pre-v3 projects here via `upgrade`. This skill
+itself never gates — it is the fix.
+
 The feature-doc and `_shared.md` templates are owned by `design` —
 [../design/references/architecture-templates.md](../design/references/architecture-templates.md).
 Use those verbatim; do not redefine them here. Migration heuristics, the dedup rules,
@@ -23,8 +27,10 @@ and the report format live in
 
 ## INPUT
 
-Mode comes from `$ARGUMENTS`: `migrate`, `sync`, or `optimize`. **Default `optimize`**
-when empty. A mode is a hard scope — never run a mode the user did not ask for.
+Mode comes from `$ARGUMENTS`: `upgrade`, `migrate`, `sync`, or `optimize`. **Default
+`optimize`** when empty. A mode is a hard scope — never run a mode the user did not ask
+for. `upgrade` is the one-shot pre-v3 → v3 converter the version gate invokes; it chains
+`migrate` + `sync` + the index rewrite + the ledger scaffold + the version stamp.
 
 ---
 
@@ -42,6 +48,34 @@ Run once, regardless of mode, to ground the run (read-only):
 
 Then branch to the requested mode. If `migrate` is requested but no legacy layer docs
 exist, say so and suggest `sync` instead.
+
+---
+
+## PHASE U: UPGRADE (`upgrade`) — one-shot pre-v3 → v3
+
+The converter the [version gate](../../references/version-gate.md) calls. Idempotent and
+safe (originals archived, never deleted). Run the existing phases in order, then stamp:
+
+1. **Migrate layer docs** — if any retired layer doc (`components.md`, `api-contracts.md`,
+   `database-schema.md`, `data-flow.md`) exists outside `archive/`, run **PHASE 1: MIGRATE**.
+   Skip if none exist.
+2. **Migrate flat → subfolder** — run **PHASE 2: SYNC** to move any flat
+   `features/<slug>.md` to `features/<slug>/index.md`, sweep loose dated deltas, scaffold
+   missing docs, and rewrite the `FEATURE_INDEX` header `v1 → v2` with the `Docs` column.
+3. **Scaffold the design ledger** — if `docs/architecture/DESIGN_LEDGER.md` is missing,
+   create it from the **DESIGN_LEDGER template** in
+   [../design/references/architecture-templates.md](../design/references/architecture-templates.md),
+   backfilling one `planned` row per feature that already has a built/`DONE` epic in
+   `FEATURE_INDEX` (Date = today, Type = `new`, Plan ref = the epic's `Plan`). Leave an
+   empty table (header only) when no features qualify. Never invent `pending` rows.
+4. **Stamp the version** — write `tasks/VERSION.md` per the
+   [version gate](../../references/version-gate.md) (`layout: v3`, `ck-code:` = the running
+   plugin version). This is the **final** step — only after migration succeeded.
+5. **Report** — features created/moved, archived files, index upgraded, ledger rows
+   added, `VERSION.md` stamped, before/after token totals.
+
+Already-v3 input is a no-op: phases 1–2 find nothing to move, the ledger may already
+exist, and step 4 (re)writes the stamp. Report "already v3 — stamped clean".
 
 ---
 
@@ -142,8 +176,13 @@ Whenever a feature doc is created, relocated, or renamed, update
   and measures. Component/API/data detail is authored by `design`/`build`, not here.
 - **Never duplicate the feature-doc or `_shared.md` template** — reference
   `design`'s `architecture-templates.md` as the single source.
-- **Respect the requested mode** — run only `migrate`, `sync`, or `optimize` as asked;
-  default to `optimize` only when no argument is given.
+- **Respect the requested mode** — run only `upgrade`, `migrate`, `sync`, or `optimize`
+  as asked; default to `optimize` only when no argument is given.
+- **`upgrade` stamps `tasks/VERSION.md` only as its final step** — never before the
+  layout migration has succeeded; this is the one place the v3 stamp is written by a
+  full migration. It is also the only place a `v1` `FEATURE_INDEX` header is rewritten.
+- **Never invent `pending` ledger rows** — `upgrade` backfills only `planned` rows for
+  already-built features; new design work is recorded by `design`, not here.
 - **Never validate docs against source code** — drift auditing is out of scope; do not
   read the codebase to verify documented components exist.
 - **Always update `FEATURE_INDEX.Docs` and the `README.md` index** in the same run that
