@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-06-01
+
+### Added
+
+- **doc-optimizer**: new skill to keep `docs/architecture/` cheap to read — `migrate` decomposes legacy layer docs into per-feature docs + `_shared.md`, `sync` scaffolds docs for features missing one, and `optimize` (default) prunes/dedupes and reports per-feature token counts.
+
+### Changed
+
+- **design**: architecture docs are now **feature-scoped** — one self-contained `docs/architecture/features/<slug>.md` per feature (its components, API, data, flows) plus a single `_shared.md` for cross-cutting infra. The `components.md`, `api-contracts.md`, `database-schema.md`, and `data-flow.md` layer docs are no longer generated.
+- **feature-index**: schema v2 adds a `Docs` column routing each feature to its doc; v1 indexes are upgraded in place with a graceful fallback.
+- **build, fix**: read only the story's feature doc (+ `folder-structure.md`, + `_shared.md` when cross-cutting) instead of every layer doc, and append a lightweight write-back delta to the feature doc on completion.
+- **plan, team, pre-spec**: read the global docs + feature index/summaries rather than the full architecture, opening a single feature doc only when directly relevant.
+
 ## [2.1.0] — 2026-06-01
 
 ### Added
