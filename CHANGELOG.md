@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-06-01
+
+### Removed
+
+- **BREAKING — pre-v3 layout support**: every skill now reads only the v3 architecture-doc layout. Dropped all backward-compat for the legacy flat `features/<slug>.md`, the retired layer docs (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`), and the `v1` `FEATURE_INDEX` — across `build`, `fix`, `plan`, `pre-spec`, `team`, `design` (+ templates), and the `feature-index`, `skill-detection`, `qa-validation` references. Inline `v1 → v2` index upgrades are gone; that conversion now happens only in `doc-optimizer upgrade`.
+
+### Added
+
+- **version gate** (`references/version-gate.md`): a hard, blocking pre-flight check in every change-producing skill (`design`, `plan`, `pre-spec`, `quick-story`, `build`, `parallel-build`, `fix`, `sync`, `ship`, `to-issues`, `team`); read-only skills (`explain`, `help`, `start`, `track`) hint only. It keys on a new `tasks/VERSION.md` stamp (`layout: v3`) for a one-read fast path, falling back to a filesystem scan only when the stamp is missing/stale. On a pre-v3 project it blocks and offers `/ck-code:doc-optimizer upgrade`.
+- **doc-optimizer `upgrade` mode**: one-shot, idempotent pre-v3 → v3 converter — chains `migrate` + `sync` + the `FEATURE_INDEX` `v1 → v2` rewrite, scaffolds `DESIGN_LEDGER.md`, and stamps `tasks/VERSION.md` as its final step.
+- **`DESIGN_LEDGER.md`** (`docs/architecture/`): a design → plan bridge. `design` appends a `pending` row + a dated design record (`features/<slug>/YYYY-MM-DD_design_<short>.md`) per added/changed feature; `plan` reads the `pending` rows as its work-to-plan list and flips them to `planned` with a plan ref. Build status stays in `FEATURE_INDEX`.
+
+### Changed
+
+- **design**: writes per-feature design records and `DESIGN_LEDGER.md` rows (Phase 3.11); runs the version gate first.
+- **plan**: reads `DESIGN_LEDGER.md` to find unplanned design work (Phase 1.1c) and flips planned rows to `planned` (Phase 4.5c); the `FEATURE_INDEX` is always schema v2 (the gate guarantees it).
+
 ## [2.3.0] — 2026-06-01
 
 ### Changed
