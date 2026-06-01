@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-06-01
+
+### Changed
+
+- **design, doc-optimizer**: architecture feature docs move to a subfolder-per-feature layout — the canonical doc is now `docs/architecture/features/<slug>/index.md`, and each `build` increment or `fix` is journaled as a dated sibling `features/<slug>/YYYY-MM-DD_<id>_<short>.md`. `index.md` stays the routed source of truth; the dated docs are an append-only history and are not auto-read.
+- **build, fix**: on a change that touches the documented surface, update `index.md` and also write the dated delta doc (change narrative); legacy flat docs are updated in place.
+- **feature-index, skill-detection, qa-validation, plan, pre-spec, team**: route to `features/<slug>/index.md` while still reading the legacy flat `features/<slug>.md` as-is — no project breaks.
+
+### Added
+
+- **doc-optimizer** (`sync`): migrates legacy flat `features/<slug>.md` into `features/<slug>/index.md`, fixes relative links, and sweeps loose dated delta docs into their parent feature folder.
+
 ## [2.2.1] — 2026-06-01
 
 ### Added
