@@ -30,7 +30,7 @@ Adapt to the current effort level (**${CLAUDE_EFFORT}**):
 
 - **low** — One epic; a handful of large, vertically-complete stories; minimal acceptance criteria.
 - **medium** (default) — A few epics; each story is a complete feature slice with clear acceptance criteria and dependencies.
-- **high / xhigh / max** — Same lean epic/story count; add detailed acceptance criteria, edge cases, test notes, and an explicit dependency graph in the roadmap. Do **not** split stories finer to spend the effort.
+- **high / xhigh / max** — Same lean epic/story count; add detailed acceptance criteria, edge cases, test notes, a finer-grained `## Implementation Tasks` breakdown per story, and an explicit dependency graph in the roadmap. Do **not** split stories finer to spend the effort — add task and criteria depth instead.
 
 ## INPUT
 
@@ -209,6 +209,22 @@ Before presenting the plan, review the draft story list and merge wherever the s
 
 Target the smallest epic/story count that still yields clear, independently-verifiable deliverables.
 
+### 2.2c Break Each Story into Tasks
+
+Fewer, larger stories stay precise only when each one carries an explicit,
+ordered task list. For every story, decompose the work into concrete
+step-by-step **implementation tasks** — each task is one verifiable action that
+moves the story toward its acceptance criteria (e.g. "define the `X` interface",
+"implement `Y` against it", "wire `Y` into the handler"). These tasks populate
+the story file's `## Implementation Tasks` section.
+
+Rules:
+
+- Tasks are **story-specific**, not generic TDD phases — never write "write tests / implement / refactor / QA" as the task list; that is build's runtime concern.
+- Order tasks so each one builds on the previous; the final task completes the last acceptance criterion.
+- Keep tasks at the right altitude: a handful of meaningful steps, not one line per file edit. If a story needs more than ~8 tasks, it is probably two stories.
+- Every acceptance criterion must be reachable by following the task list end to end.
+
 ### 2.3 Map Story Dependencies
 
 For each story, identify:
@@ -290,6 +306,7 @@ Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** 
 - **Thoroughness:** Every functional requirement in the spec must be covered by at least one story; related requirements may share a single story. If a requirement is vague, cover it with a note about needed clarification.
 - **Scanning readability:** Use tables, bullet points, and headers. Avoid walls of text.
 - **Consolidation-first sizing:** When in doubt, combine. Fewer, larger stories beat many small ones — each story is one `build` session, so fewer stories means fewer tool calls and lower token cost. Never split for the sake of granularity.
+- **Precision via tasks, not splitting:** Recover the precision a large story might lose by giving it an ordered `## Implementation Tasks` list (Phase 2.2c) — never by breaking it into more, smaller stories.
 - **Preserve spec language:** When the spec uses specific technical terms, preserve them in story titles and descriptions.
 - **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
 - **Reusability:** This skill must work with any project specification, not just the current project.

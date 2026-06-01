@@ -37,7 +37,7 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 
 ### 1.3 Load Story Context
 
-Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
+Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify**, **Implementation Tasks** (if present), **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
 
 ### 1.4 Epic-Wave Offer (explicit-path only, before status mutation)
 
@@ -53,10 +53,12 @@ this story (`C → 1.5`); if only this story remains, skip silently. Detail:
 ### 1.5 Detect Linked GitHub Issues
 
 Search for story and epic issues in **a single parallel Bash tool-call message** (the two queries are independent); store the numbers for `/ck-code:ship`:
+
 ```bash
 gh issue list --label "story" --state open --json number,title
 gh issue list --label "epic"  --state open --json number,title
 ```
+
 Present the linked issue (or "No linked issue found").
 
 ### 1.6 Update Story Status (story file + index, same phase)
@@ -90,6 +92,7 @@ Create a SOLID-compliant plan **before writing any code.**
 ### 3.1 Research (if needed)
 
 If the story involves patterns or technologies that could benefit from current docs:
+
 - Use context7 (MCP tools if available, else `npx -y @upstash/context7`) to look up relevant framework documentation
 - Use WebSearch for uncommon patterns referenced in technical notes
 - Only research what's actually needed — don't research well-known basics
@@ -97,6 +100,7 @@ If the story involves patterns or technologies that could benefit from current d
 ### 3.2 Clarify Ambiguities
 
 Review the acceptance criteria. If any are vague or incomplete:
+
 - Ask the user 1-2 targeted questions
 - Do NOT ask about things already clear in the story or architecture docs
 
@@ -109,6 +113,13 @@ new types, focused interfaces, and dependency inversion via injection. Every
 principle must be addressed before moving on.
 
 ### 3.4 Create Subtasks
+
+**Seed from the story's task list when present.** If the story file has an
+`## Implementation Tasks` section (authored by `plan`), use those ordered tasks
+as the concrete implementation steps — fold them into the implementation phase
+of the subtask board rather than inventing generic steps. If the section is
+absent or empty (older stories, or a story created without `plan`), proceed with
+the default breakdown below exactly as before — never block on a missing task list.
 
 Break the work into ordered subtasks using **Claude Tasks** (TaskCreate; template in
 [references/tdd-walkthrough.md](references/tdd-walkthrough.md)) so the story's progress
@@ -146,6 +157,7 @@ git branch --show-current
 ```
 
 Use AskUserQuestion with two options:
+
 - **A) Create new branch** — `story/<EE>-<SS>-<slug>` (or `fix/<EE>-<SS>-<slug>` for bug stories); slug = kebab-case from story title.
 - **B) Stay on current branch** — `<current-branch>`; ship will commit and push here.
 
@@ -178,6 +190,7 @@ example mapping criteria → test names is in
 [references/tdd-walkthrough.md](references/tdd-walkthrough.md).
 
 Also add tests for:
+
 - **Edge cases** — empty input, boundary values, max limits
 - **Error scenarios** — invalid input, connection failures, timeouts
 - **Integration points** — if the story connects two components
@@ -211,6 +224,7 @@ Order: (1) create new files from the story's "Files to Create/Modify";
 change; (4) stop as soon as all tests pass — don't over-engineer.
 
 **Implementation rules:**
+
 - Follow SOLID principles from the Phase 3 plan
 - Follow loaded guide skills' best practices and expert skills' coding standards
 - Reuse existing code — check `docs/architecture/` and scan existing files
@@ -342,6 +356,7 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 ## HARD GATES (cross-phase contract)
 
 Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
+
 - **Phase 1.2** — Interactive selection prefers parallel: ≥ 2 conflict-free ready stories ⇒ the parallel set is the recommended one-confirm option, then auto-fan-out to worktree agents. An explicit story arg is always single-story — never auto-expanded.
 - **Phase 2** — Experts + guides detected, loaded via `Read`, and the "Skills loaded" block shown BEFORE any planning or code. `expert-qa` always detected (+ `expert-analyst` for fixes). A non-empty 4a `ls` must never reach Phase 3 with zero skills loaded — skipping Phase 2 turns the "follow loaded skills" rules in Phases 5/6 into no-ops.
 - **Phase 3.7** — Branch chosen before any code. Never implement on `main` / `develop`.
@@ -361,6 +376,7 @@ language. JUCE test-runner rules live in [references/tdd-walkthrough.md](referen
 After the user confirms manual testing PASS (Phase 8.7), run `/ck-code:ship <story-path>` to commit, open the PR, and update the linked GitHub Issues. If more stories remain, follow `ship` with `/ck-code:track next`.
 
 **Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
+
 - To run the QA/manual-test loops (Phase 7–8) autonomously, the user can set `/goal "all acceptance criteria in <story> pass and the full test suite is green"` — a cheap verifier model checks each turn until met.
 - `/fast` is worth toggling for **small** stories (size `S`); keep it **off** for `L`/`XL` or SOLID-heavy work that needs full reasoning.
 - Before `/ck-code:ship`, a deeper `/code-review --fix` pass is available on the diff.
