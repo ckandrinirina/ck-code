@@ -50,6 +50,7 @@ To update the plugin to the latest version:
 Then restart your Claude Code session for the updated commands to take effect.
 
 > **Note:** If the update command is not available in your Claude Code version, you can reinstall manually:
+>
 > ```bash
 > /plugin uninstall ck-code@ck-marketplace
 > /plugin install ck-code@ck-marketplace
@@ -98,22 +99,22 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
                                                                                             /ck-code:fix  ──┘
 ```
 
-| Skill | Purpose | Input | Output |
-|-------|---------|-------|--------|
-| `/ck-code:pre-spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon) | feature description or notes file | `docs/pre-specs/` and/or GitHub issue |
-| `/ck-code:design` | Refine a spec into architecture docs | spec file | `docs/architecture/` |
-| `/ck-code:team` | Generate per-project expert + guide skills | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
-| `/ck-code:plan` | Create epics, stories, roadmap | spec file | `tasks/YYYY-MM-DD_<project>/` |
-| `/ck-code:quick-story` | Add a single small story to an existing epic without the full `plan` cycle (e.g. add a DB column, tweak a config) | one-line brief + epic | story file + `STORIES_INDEX.md` row + `EPIC.md` row |
-| `/ck-code:to-issues` | Push epics/stories to GitHub Issues (batch) | tasks folder | GitHub Issues |
-| `/ck-code:track` | Progress dashboard | — | status, next story, completion % |
-| `/ck-code:build` | Implement a story (TDD + QA) | story file | source code + tests |
-| `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees, or a whole epic in dependency-ordered waves (`--epic NN`) | — / story IDs / `--epic NN` | parallel results + conflict report |
-| `/ck-code:fix` | Diagnose and fix a bug across one or more stories — auto-matches the best story, defers the fix when a future TODO story already plans it, can create stub stories in the right epic when functionality is missing, keeps index/epic in sync | story file (optional) | minimal fix + regression test + (optional) new stub stories |
-| `/ck-code:sync` | Reconcile `STORIES_INDEX.md`, `EPIC.md` story lists, and story files when they drift apart | tasks plan path or `--all` | repaired index + epic lists |
-| `/ck-code:ship` | Commit, PR, update GitHub Issues | story file (optional) | commit + PR + issue updates |
-| `/ck-code:explain` | Explain what was just implemented | — | walkthrough + verification steps |
-| `/ck-code:help` | Quick reference for all commands | — | this table |
+| Skill                     | Purpose                                                                                                                                                                                                                                      | Input                             | Output                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------- |
+| `/ck-code:pre-spec`       | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon)                                                                                                                                                           | feature description or notes file | `docs/pre-specs/` and/or GitHub issue                         |
+| `/ck-code:design`         | Refine a spec into architecture docs                                                                                                                                                                                                         | spec file                         | `docs/architecture/`                                          |
+| `/ck-code:team`           | Generate per-project expert + guide skills                                                                                                                                                                                                   | `docs/architecture/`              | `.claude/skills/experts/`, `.claude/skills/guides/`           |
+| `/ck-code:plan`           | Create epics, stories, roadmap                                                                                                                                                                                                               | spec file                         | `tasks/YYYY-MM-DD_<project>/` + `tasks/FEATURE_INDEX.md` rows |
+| `/ck-code:quick-story`    | Add a single small story to an existing epic without the full `plan` cycle (e.g. add a DB column, tweak a config)                                                                                                                            | one-line brief + epic             | story file + `STORIES_INDEX.md` row + `EPIC.md` row           |
+| `/ck-code:to-issues`      | Push epics/stories to GitHub Issues (batch)                                                                                                                                                                                                  | tasks folder                      | GitHub Issues                                                 |
+| `/ck-code:track`          | Progress dashboard                                                                                                                                                                                                                           | —                                 | status, next story, completion %                              |
+| `/ck-code:build`          | Implement a story (TDD + QA); interactive runs read `tasks/FEATURE_INDEX.md` first and ask which feature to build when more than two are unfinished                                                                                          | story file                        | source code + tests                                           |
+| `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees, or a whole epic in dependency-ordered waves (`--epic NN`); picks a feature from `tasks/FEATURE_INDEX.md` first when more than two are unfinished                                     | — / story IDs / `--epic NN`       | parallel results + conflict report                            |
+| `/ck-code:fix`            | Diagnose and fix a bug across one or more stories — auto-matches the best story, defers the fix when a future TODO story already plans it, can create stub stories in the right epic when functionality is missing, keeps index/epic in sync | story file (optional)             | minimal fix + regression test + (optional) new stub stories   |
+| `/ck-code:sync`           | Reconcile `STORIES_INDEX.md`, `EPIC.md` story lists, and story files when they drift apart                                                                                                                                                   | tasks plan path or `--all`        | repaired index + epic lists                                   |
+| `/ck-code:ship`           | Commit, PR, update GitHub Issues                                                                                                                                                                                                             | story file (optional)             | commit + PR + issue updates                                   |
+| `/ck-code:explain`        | Explain what was just implemented                                                                                                                                                                                                            | —                                 | walkthrough + verification steps                              |
+| `/ck-code:help`           | Quick reference for all commands                                                                                                                                                                                                             | —                                 | this table                                                    |
 
 ## Why ck-code?
 
