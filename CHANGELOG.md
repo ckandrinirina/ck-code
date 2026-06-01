@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.0.1] — 2026-06-01
+
+### Changed
+
+- **build**: cut per-run token cost — added a read-once rule for multiply-cited references, split `examples.md` into a compact `output-blocks.md` (happy-path templates) plus conditional worked dialogues, moved Phase 8.6b detail into `completion.md`, and de-duplicated phase prose (SKILL.md 413 → 363 lines, examples.md 226 → 98).
+
+### Fixed
+
+- **build**: corrected 8 shared-reference links that pointed one directory level too high (`../../../references/` → `../../references/`), which had silently broken every "follow the full procedure in …" link.
+
 ## [3.0.0] — 2026-06-01
 
 ### Removed
