@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-06-01
+
+### Added
+
+- **feature-index**: New top-level `tasks/FEATURE_INDEX.md` (one row per epic, with description and rolled-up status) that `build` and `parallel-build` read before any story index — when more than two features are unfinished the user picks which feature to build, scoping the run to that epic. `plan` creates/extends the index, `build`/`parallel-build` roll a feature up to `DONE` when its last story completes, and `fix` bumps the rollup when adding stub stories. Shared spec in `references/feature-index.md`.
+
 ## [2.0.6] — 2026-06-01
 
 ### Added
