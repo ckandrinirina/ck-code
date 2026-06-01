@@ -68,7 +68,9 @@ Resolve `$ARGUMENTS` against on-disk state:
      conventions, default branches — these take priority over inference)
    - `README.md`, `docs/SPEC.md`, `docs/specifications.md`,
      `docs/product/*`, `docs/functional-spec.md` if present
-   - Glob `docs/architecture/*.md` and `docs/specs/*/pre-spec.md`
+   - Glob `docs/architecture/*.md` (the global docs + `README.md` index) and
+     `docs/specs/*/pre-spec.md`. Do NOT read every `docs/architecture/features/*.md`;
+     open a single feature doc only when this pre-spec extends that existing feature.
 5. Slugify the feature name to kebab-case ASCII; confirm if non-obvious.
 
 ### ADJUST branch
@@ -128,6 +130,7 @@ Loop until the user is satisfied:
 5. Ask "Anything else, or should I sync the issue?"
 
 Editing rules:
+
 - Keep section anchors stable.
 - Maintain the chosen language end-to-end (full re-translation if the
   user changes language).
@@ -154,6 +157,7 @@ lookup, preview confirmation, create-or-edit, project assignment) is in
 publishing".
 
 Two key rules:
+
 - **Always re-fetch** the issue body before editing
   (`gh issue view --json body --jq .body`) — UI edits may have happened.
 - **Never recreate** an existing issue; always edit in place
@@ -171,6 +175,7 @@ Two key rules:
 ## PHASE 5 — Summary
 
 Brief block reporting:
+
 - Slug, language, status
 - Local file path
 - Issue URL (if any), project URL (if any)

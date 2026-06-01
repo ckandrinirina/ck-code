@@ -13,6 +13,7 @@ expert skills, each deeply aware of the project's tech stack, patterns, folder
 structure, and conventions.
 
 **What it produces:**
+
 - `.claude/skills/experts/<role>/SKILL.md` — expert persona skills (invoked as `/expert-<role>`)
 - `.claude/skills/guides/<tech>/SKILL.md` — language/framework guide skills (auto-loaded by Claude)
 
@@ -24,6 +25,7 @@ context and research.
 
 `$ARGUMENTS` can include a path to the architecture docs folder (default:
 `docs/architecture/`) and/or one of these flags:
+
 - `--check` — audit which skills are missing/present, then stop (no generation)
 - `--regenerate` — overwrite all previously generated skills with fresh versions
 
@@ -77,26 +79,33 @@ IF docs/architecture/ does NOT exist or is empty:
   → STOP
 ```
 
-### 1.2 Read All Architecture Docs
+### 1.2 Read the Global Architecture Docs
 
-Read every file in `docs/architecture/`:
+Expert/guide generation is driven by the project's tech stack and structure, which live
+in the **global** docs — not in per-feature slices. Read these:
+
 - `overview.md` — project vision, goals, users
-- `folder-structure.md` — directory layout
+- `folder-structure.md` — directory layout (the strongest signal for which experts apply)
 - `tech-stack.md` — languages, frameworks, versions
-- `components.md` — system components and interactions
-- `data-flow.md` — data movement patterns
-- `api-contracts.md` — API definitions
-- `database-schema.md` — DB schema
+- `_shared.md` — cross-cutting infra (auth, base entities, shared utils)
 - `configuration.md` — config and env vars
 - `dev-guide.md` — build, run, test instructions
 
+Plus the `README.md` index to enumerate features. Do **not** read every
+`features/<slug>.md` in full — skim a feature doc's `## Summary` only if `folder-structure.md`
+
+- `tech-stack.md` leave a component type ambiguous. The retired layer docs
+  (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) no longer
+  exist; their content is in the feature docs and `_shared.md`.
+
 Also read if available:
+
 - `docs/specifications.md` or similar spec files
-- `docs/architecture/features/*.md` — feature-specific docs
 
 ### 1.3 Scan Existing Codebase
 
 Use Glob and Grep to understand:
+
 - What source files exist and their languages
 - Test file locations and testing frameworks used
 - CI/CD configuration files
@@ -123,6 +132,7 @@ best practices for every detected technology. Full procedure lives in
 [references/context7-research.md](references/context7-research.md).
 
 Required steps:
+
 1. Identify every language, framework, library, and tool from `tech-stack.md`
    and the codebase scan.
 2. For each, resolve the library ID via context7 and fetch current docs
@@ -141,16 +151,17 @@ Two categories of skills are generated: **Expert Roles** and **Language/Framewor
 
 ### 2.1 Expert Role Definitions
 
-| Role | Slug | Generated When |
-|------|------|----------------|
-| Frontend Developer | `expert-frontend` | Project has a frontend component (React, Vue, mobile app, etc.) |
-| Backend Developer | `expert-backend` | Project has a backend/server component |
-| QA Tester | `expert-qa` | Always (every project needs testing) |
-| Code Analyst | `expert-analyst` | Always (every project benefits from code analysis) |
-| DevOps / Infrastructure | `expert-devops` | Project has deployment, CI/CD, Docker, cloud infra |
-| Project Q&A | `expert-qa-project` | Always (answers questions about the project) |
+| Role                    | Slug                | Generated When                                                  |
+| ----------------------- | ------------------- | --------------------------------------------------------------- |
+| Frontend Developer      | `expert-frontend`   | Project has a frontend component (React, Vue, mobile app, etc.) |
+| Backend Developer       | `expert-backend`    | Project has a backend/server component                          |
+| QA Tester               | `expert-qa`         | Always (every project needs testing)                            |
+| Code Analyst            | `expert-analyst`    | Always (every project benefits from code analysis)              |
+| DevOps / Infrastructure | `expert-devops`     | Project has deployment, CI/CD, Docker, cloud infra              |
+| Project Q&A             | `expert-qa-project` | Always (answers questions about the project)                    |
 
 One-line role focus (full templates live in `references/expert-templates.md`):
+
 - `expert-frontend` — implements UI components, state management, client-side
   communication, and accessibility for the project's frontend stack.
 - `expert-backend` — implements server logic, APIs, database operations, and
@@ -170,19 +181,20 @@ One guide skill is generated per major language or framework detected. These
 are reference skills containing current best practices, conventions, patterns,
 and anti-patterns — sourced from the Phase 1.6 research.
 
-| Guide | Slug | Generated When |
-|-------|------|----------------|
-| C++ Guide | `guide-cpp` | Project uses C++ |
-| Rust Guide | `guide-rust` | Project uses Rust |
-| TypeScript Guide | `guide-typescript` | Project uses TypeScript |
-| React Native Guide | `guide-react-native` | Project uses React Native |
-| Python Guide | `guide-python` | Project uses Python |
-| Go Guide | `guide-go` | Project uses Go |
-| Java/Kotlin Guide | `guide-java` | Project uses Java/Kotlin |
-| Swift Guide | `guide-swift` | Project uses Swift/SwiftUI |
-| [Framework] Guide | `guide-[framework]` | Per major framework (Axum, Next.js, Django, JUCE, etc.) |
+| Guide              | Slug                 | Generated When                                          |
+| ------------------ | -------------------- | ------------------------------------------------------- |
+| C++ Guide          | `guide-cpp`          | Project uses C++                                        |
+| Rust Guide         | `guide-rust`         | Project uses Rust                                       |
+| TypeScript Guide   | `guide-typescript`   | Project uses TypeScript                                 |
+| React Native Guide | `guide-react-native` | Project uses React Native                               |
+| Python Guide       | `guide-python`       | Project uses Python                                     |
+| Go Guide           | `guide-go`           | Project uses Go                                         |
+| Java/Kotlin Guide  | `guide-java`         | Project uses Java/Kotlin                                |
+| Swift Guide        | `guide-swift`        | Project uses Swift/SwiftUI                              |
+| [Framework] Guide  | `guide-[framework]`  | Per major framework (Axum, Next.js, Django, JUCE, etc.) |
 
 **What counts as a "major" technology deserving its own guide:**
+
 - CREATE guide for: languages (C++, Rust, TS, Python, Go), major frameworks
   (Axum, React Native, Next.js, Django, JUCE, Express), major protocols (gRPC, GraphQL).
 - DO NOT create guide for: small utility libraries (uuid, lodash), build tools
@@ -195,13 +207,13 @@ and anti-patterns — sourced from the Phase 1.6 research.
 Frontend expert IF:
   - tech-stack.md mentions React, Vue, Angular, Svelte, React Native, Expo,
     Flutter, SwiftUI, or any frontend framework
-  - components.md has a frontend/mobile/UI component
-  - Folder structure has a frontend/, mobile/, web/, app/, or ui/ directory
+  - folder-structure.md has a frontend/, mobile/, web/, app/, or ui/ directory
+  - a feature doc or _shared.md describes a frontend/mobile/UI component
 
 Backend expert IF:
   - tech-stack.md mentions server-side tech (Rust, Go, Node.js, Python, Java, etc.)
-  - components.md has a server/API/engine component
-  - Folder structure has a server/, api/, backend/, or engine/ directory
+  - folder-structure.md has a server/, api/, backend/, or engine/ directory
+  - a feature doc or _shared.md describes a server/API/engine component
 
 DevOps expert IF:
   - Project has Dockerfile, docker-compose, CI config (.github/workflows, .gitlab-ci),
@@ -235,6 +247,7 @@ practices.
 
 Phase 0 handles the full detection and user prompt. By the time Phase 3 runs,
 the generation mode is already set:
+
 - **ALL mode** (no existing skills, or user chose "Regenerate all"): generate every planned skill, overwriting any that exist.
 - **MISSING-ONLY mode** (user chose "Generate missing only"): skip any skill whose output file already exists.
 - **REGENERATE mode** (`--regenerate` flag): overwrite all existing skills unconditionally.

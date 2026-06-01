@@ -85,7 +85,7 @@ user. `expert-qa` is always in the detected set (plus `expert-analyst` for bug-f
 flows). If 4a returns skills but you loaded none, stop and re-run Step 4 — a
 non-empty project must never reach Phase 3 with zero skills loaded.
 
-Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read scoped architecture docs (always `folder-structure.md` + the docs matching the story's "Files to Create/Modify" paths), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/examples.md](references/examples.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
+Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/examples.md](references/examples.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
@@ -342,6 +342,23 @@ Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
 Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../../references/stories-index.md`](../../../references/stories-index.md).
 
 Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../../references/feature-index.md`](../../../references/feature-index.md).
+
+### 8.6b Feature-Doc Write-Back
+
+Keep the feature doc current with what this story changed. Edit the feature doc read in
+Phase 2 (the `Docs` path for this story's feature):
+
+- Append a one-line entry to its `## Changelog`: `[date] · <story ID> — <delta>` where
+  `<delta>` names the component/endpoint/table/flow added or changed.
+- If the story introduced a **new** component / endpoint / table / flow, add a concise
+  entry to the matching section (`## Components` / `## API` / `## Data` / `## Flows`) —
+  derive it from the story's Files Touched + Implementation Summary; keep it short.
+- If the change is cross-cutting (reused by other features), put it in `_shared.md`
+  instead and link it from the feature doc's `## Shared dependencies`.
+
+**Skip** the write-back for changes with no architectural surface (pure refactors,
+test-only stories, formatting). **Fallback:** if the `Docs` cell is `—`/missing, note
+that the user should run `/ck-code:doc-optimizer sync`, and do not create the doc here.
 
 ### 8.7 Update Parent Epic
 

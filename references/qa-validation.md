@@ -21,6 +21,7 @@ For bug-fix flows, also `Read(".claude/skills/experts/analyst/SKILL.md")`.
 ## Step 1 — Acceptance criteria verification
 
 For EACH acceptance criterion in the original story:
+
 - Confirm a test covers it (Phase 4 / Phase 6 should have produced it).
 - Confirm the implementation fulfils it.
 - Mark **PASS** or **FAIL** with explanation.
@@ -42,12 +43,13 @@ compiler warnings in project-owned files is the bar.
 
 ## Step 4 — Architecture compliance
 
-Check the implementation against `docs/architecture/`:
+Check the implementation against the story's **feature doc**
+(`docs/architecture/features/<slug>.md`, routed via `FEATURE_INDEX`) + `folder-structure.md`:
 
 - New files in correct directories per `folder-structure.md`.
-- API shapes match `api-contracts.md`.
-- Data flow follows `data-flow.md`.
-- DB changes consistent with `database-schema.md`.
+- API shapes match the feature doc's `## API`.
+- Data flow follows the feature doc's `## Flows`.
+- DB changes consistent with the feature doc's `## Data` (and `_shared.md` for base tables).
 
 ## Step 5 — Edge-case analysis
 
@@ -65,6 +67,7 @@ report justifies, flag it and ask the user to narrow scope.
 ## Step 7 — Present QA report
 
 Emit a QA Report with:
+
 - Per-criterion PASS / FAIL.
 - Test totals + new regressions.
 - Code-quality results.

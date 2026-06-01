@@ -42,7 +42,7 @@ Once a candidate is selected (or `AUTO`):
 
 From the story file extract: acceptance criteria, Files Touched, technical notes, Implementation Summary (from `/ck-code:build`).
 
-**Batch 2 (parallel tool-call message, after parsing Batch 1):** read all `docs/architecture/` files matching the affected components — paths come from the story's Files Touched section, so this batch is sequential to Batch 1 but every file inside Batch 2 is parallel.
+**Batch 2 (parallel tool-call message, after parsing Batch 1):** read this bug's **feature doc** — `folder-structure.md` + the feature doc named in the affected feature's `FEATURE_INDEX` `Docs` column (+ `_shared.md` when the bug is cross-cutting). Do not read the retired layer docs; if the `Docs` cell is `—`/missing, read `folder-structure.md` + `_shared.md` and suggest `/ck-code:doc-optimizer sync`. This batch is sequential to Batch 1 but every file inside it is parallel.
 
 For `AUTO`, defer both batches until Phase 2.5 narrows the candidate set.
 
@@ -291,6 +291,16 @@ Existing stories: a `DONE` story stays `DONE`, an `IN PROGRESS` story stays `IN 
 ### 8.3 Update Parent Epic + Index
 
 No change in EPIC.md or `STORIES_INDEX.md` unless a story status changed (it shouldn't here — the bug-fix protocol leaves status alone). The index/epic mutations from Phase 2.6 (stub creation) are already persisted.
+
+### 8.3b Feature-Doc Write-Back
+
+If the fix changed the feature's documented surface (a new/changed endpoint, table,
+component, or flow — not a pure internal fix), update the feature doc read in Phase 1.3
+(the affected feature's `Docs` path): append a `## Changelog` line
+`[date] · <bug/story ID> — <delta>` and adjust the matching section. Cross-cutting
+changes go in `_shared.md`. **Skip** when the fix has no architectural surface (the
+common case). **Fallback:** `Docs` cell `—`/missing → suggest `/ck-code:doc-optimizer
+sync`; do not create the doc here.
 
 ### 8.4 Sync Verification
 
