@@ -1,0 +1,138 @@
+---
+name: doc-optimizer
+description: Use when architecture docs under docs/architecture/ are bloated or slow to read for implementation, when a project still uses the legacy layer docs (components.md, api-contracts.md, database-schema.md, data-flow.md), or when features in FEATURE_INDEX lack a per-feature doc. Argument is `migrate`, `sync`, or `optimize` (default).
+argument-hint: "[migrate|sync|optimize]"
+disable-model-invocation: true
+effort: medium
+---
+
+# Doc Optimizer — Feature-Scoped Architecture Docs
+
+Keep `docs/architecture/` cheap to read during `build`/`fix`: one self-contained
+doc per feature plus a single `_shared.md` for cross-cutting infra, routed by the
+`Docs` column of `tasks/FEATURE_INDEX.md`. This skill migrates legacy layer docs into
+that layout, scaffolds missing feature docs, and prunes duplication.
+
+The feature-doc and `_shared.md` templates are owned by `design` —
+[../design/references/architecture-templates.md](../design/references/architecture-templates.md).
+Use those verbatim; do not redefine them here. Migration heuristics, the dedup rules,
+and the report format live in
+[references/optimizer-playbook.md](references/optimizer-playbook.md).
+
+---
+
+## INPUT
+
+Mode comes from `$ARGUMENTS`: `migrate`, `sync`, or `optimize`. **Default `optimize`**
+when empty. A mode is a hard scope — never run a mode the user did not ask for.
+
+---
+
+## PHASE 0: DETECT STATE
+
+Run once, regardless of mode, to ground the run (read-only):
+
+1. `Glob "docs/architecture/*.md"` and `Glob "docs/architecture/features/*.md"`.
+2. Note which **legacy layer docs** exist: `components.md`, `api-contracts.md`,
+   `database-schema.md`, `data-flow.md`.
+3. Read `tasks/FEATURE_INDEX.md` if present — the feature list and `Docs` column are
+   the routing authority. Note its schema (`v1` = no `Docs` column yet).
+4. If `docs/architecture/` does not exist, tell the user to run `/ck-code:design` first
+   and stop — there is nothing to optimize.
+
+Then branch to the requested mode. If `migrate` is requested but no legacy layer docs
+exist, say so and suggest `sync` instead.
+
+---
+
+## PHASE 1: MIGRATE (`migrate`)
+
+Decompose legacy layer docs into the feature-scoped layout. Repeatable and safe —
+originals are archived, never deleted.
+
+1. Build the **feature list**: from `FEATURE_INDEX` if present, else from the headings
+   in `components.md` / spec. Confirm the list with the user before slicing.
+2. For each legacy layer doc, split its content by feature using the mapping rules in
+   [references/optimizer-playbook.md](references/optimizer-playbook.md) — a component,
+   endpoint, table, or flow goes to the feature that owns it; anything ≥2 features share
+   goes to `_shared.md`.
+3. For each feature, Write `docs/architecture/features/<slug>.md` from the Feature Doc
+   template, filling `## Components` / `## API` / `## Data` / `## Flows` with that
+   feature's slices and linking shared pieces to `_shared.md`.
+4. Write/extend `docs/architecture/_shared.md` with the cross-cutting content.
+5. Move the originals to `docs/architecture/archive/` (`mkdir -p` first). Never delete.
+6. Update the `README.md` index (Feature Documents table + changelog).
+7. Run the **FEATURE_INDEX update** (below) to fill the `Docs` column and upgrade v1→v2.
+8. Report: features created, `_shared.md` size, archived files, before/after token totals.
+
+---
+
+## PHASE 2: SYNC (`sync`)
+
+Bring the doc set into lockstep with `FEATURE_INDEX` — the "as the project grows" pass.
+
+1. Read `FEATURE_INDEX`. For each feature, check whether
+   `docs/architecture/features/<slug>.md` exists.
+2. **Missing** → scaffold it from the Feature Doc template (header + section stubs +
+   a `[TO BE DEFINED]` note), using the epic `Description` for the `## Summary`. Do not
+   invent component/API/data detail — leave stubs for `design`/`build` to fill.
+3. **Slug drift** → if a feature doc exists under a different slug than the epic
+   (e.g. design used `roles`, plan's epic is `role-management`), rename the file to the
+   epic slug and fix inbound links. Ask before renaming if ambiguous.
+4. Run the **FEATURE_INDEX update** (below): set each `Docs` cell to the resolved path,
+   `—` only when no doc could be created.
+5. Update the `README.md` Feature Documents table.
+6. Report: docs scaffolded, renamed, and any features left as `—`.
+
+---
+
+## PHASE 3: OPTIMIZE (`optimize`, default)
+
+The token diet. Operates on the existing feature docs + `_shared.md` — never invents
+content, only restructures and reports.
+
+1. **Measure** — report a per-doc token estimate (see the report format in
+   [references/optimizer-playbook.md](references/optimizer-playbook.md)) and a total.
+2. **Dedup** — find content that appears in 2+ feature docs (shared components, base
+   tables, common middleware). Move one canonical copy to `_shared.md` and replace each
+   occurrence with a link under `## Shared dependencies`.
+3. **Prune** — flag sections that are empty, `[TO BE DEFINED]` stale, or duplicate the
+   global docs; remove redundant prose, keep tables/lists. Confirm before deleting any
+   non-empty content.
+4. **Right-size** — if a single feature doc is oversized (covers what are really two
+   features), propose a split and, on confirmation, create the second doc + a new
+   `FEATURE_INDEX`/epic-slug note for the user to wire into `plan`.
+5. Update `README.md` if files changed; run the **FEATURE_INDEX update** if any `Docs`
+   path changed.
+6. Report before/after token totals per doc and the total saved.
+
+---
+
+## FEATURE_INDEX UPDATE (shared sub-step)
+
+Whenever a feature doc is created, relocated, or renamed, update
+`tasks/FEATURE_INDEX.md` per [../../references/feature-index.md](../../references/feature-index.md):
+
+- Set the feature's `Docs` cell to `docs/architecture/features/<slug>.md`.
+- Upgrade a `v1` header to `v2` and add the `Docs` column (cell `—` for any feature
+  with no doc).
+- This is the only skill allowed to fill a `—` `Docs` cell from scratch.
+
+---
+
+## RULES
+
+- **Never delete the original layer docs** — `migrate` moves them to
+  `docs/architecture/archive/`, always.
+- **Never invent technical content.** `sync` scaffolds stubs; `optimize` restructures
+  and measures. Component/API/data detail is authored by `design`/`build`, not here.
+- **Never duplicate the feature-doc or `_shared.md` template** — reference
+  `design`'s `architecture-templates.md` as the single source.
+- **Respect the requested mode** — run only `migrate`, `sync`, or `optimize` as asked;
+  default to `optimize` only when no argument is given.
+- **Never validate docs against source code** — drift auditing is out of scope; do not
+  read the codebase to verify documented components exist.
+- **Always update `FEATURE_INDEX.Docs` and the `README.md` index** in the same run that
+  a feature doc is created, renamed, or moved — never leave routing stale.
+- **Always confirm before destructive or structural changes** — deleting non-empty
+  content, renaming on ambiguous slug drift, or splitting a feature doc.
