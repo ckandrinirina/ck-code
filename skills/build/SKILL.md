@@ -29,10 +29,10 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 
 ### 1.2 If No Story Path (Interactive — index-driven)
 
-**1.2.0 Feature gate (read the top-level feature index FIRST).** Before any story index, Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in [`../../../references/feature-index.md`](../../../references/feature-index.md): bootstrap it if missing; compute the unfinished set (`Status` ≠ `DONE`); **0** → all features done, suggest `/ck-code:plan`, stop; **1** → auto-select and announce it; **2** → fall through (no prompt); **> 2** → AskUserQuestion "Which feature do you want to build?" (single-select, one option per unfinished feature). The chosen feature's `Plan` + `NN` scope the story index read below to that one epic. Backfill a blank `Description` from `EPIC.md` in this pass. This phase runs ONLY in interactive mode — an explicit `$ARGUMENTS` story path skips it.
+**1.2.0 Feature gate (read the top-level feature index FIRST).** Before any story index, Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in [`../../references/feature-index.md`](../../references/feature-index.md): bootstrap it if missing; compute the unfinished set (`Status` ≠ `DONE`); **0** → all features done, suggest `/ck-code:plan`, stop; **1** → auto-select and announce it; **2** → fall through (no prompt); **> 2** → AskUserQuestion "Which feature do you want to build?" (single-select, one option per unfinished feature). The chosen feature's `Plan` + `NN` scope the story index read below to that one epic. Backfill a blank `Description` from `EPIC.md` in this pass. This phase runs ONLY in interactive mode — an explicit `$ARGUMENTS` story path skips it.
 
 1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN` (the project-level index — one Read covers every story).
-2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
+2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../references/stories-index.md`](../../references/stories-index.md), then re-read.
 3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
 4. Sort by epic, then story number, then size (S < M < L < XL).
 5. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with > 1 non-DONE story is a wave candidate (a partly-blocked epic is the dependency-order case wave mode exists for).
@@ -66,9 +66,9 @@ Present the linked issue (or "No linked issue found").
 
 Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See [references/story-template.md](references/story-template.md) for the exact transition.
 
-Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `TODO` to `IN PROGRESS`. The story file and the index must never disagree — see the mutation protocol in [`../../../references/stories-index.md`](../../../references/stories-index.md).
+Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `TODO` to `IN PROGRESS`. The story file and the index must never disagree — see the mutation protocol in [`../../references/stories-index.md`](../../references/stories-index.md).
 
-If this is the first story of its feature to start (the feature was `TODO`), also Edit `tasks/FEATURE_INDEX.md`: set that feature's `Status` cell `TODO` → `IN PROGRESS` (per [`../../../references/feature-index.md`](../../../references/feature-index.md)).
+If this is the first story of its feature to start (the feature was `TODO`), also Edit `tasks/FEATURE_INDEX.md`: set that feature's `Status` cell `TODO` → `IN PROGRESS` (per [`../../references/feature-index.md`](../../references/feature-index.md)).
 
 ---
 
@@ -82,7 +82,7 @@ lists skills but you loaded none, stop and re-run Step 4 — a non-empty project
 never reach Phase 3 with zero skills loaded, else Phases 5/6 "follow loaded skills"
 silently become no-ops.
 
-Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
+Follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
@@ -254,7 +254,7 @@ plugin's `agents/` folder — runs the suite, maps results to acceptance criteri
 failures with file:line). If it is not registered, run the inline procedure below.
 
 Mark the QA task `in_progress`, then follow the full procedure in
-[`../../../references/qa-validation.md`](../../../references/qa-validation.md): load
+[`../../references/qa-validation.md`](../../references/qa-validation.md): load
 `experts/qa` + `experts/qa-project` (mandatory), verify each acceptance criterion
 (PASS/FAIL), run the full suite for regressions, run code-quality checks (commands per
 stack in [references/tdd-walkthrough.md](references/tdd-walkthrough.md)), check
@@ -308,9 +308,9 @@ ACCEPT AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never
 
 Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
 
-Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../../references/stories-index.md`](../../../references/stories-index.md).
+Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../references/stories-index.md`](../../references/stories-index.md).
 
-Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../../references/feature-index.md`](../../../references/feature-index.md).
+Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../references/feature-index.md`](../../references/feature-index.md).
 
 ### 8.6b Feature-Doc Write-Back
 
