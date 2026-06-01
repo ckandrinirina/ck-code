@@ -296,7 +296,7 @@ For the story file template, see [references/templates.md#story-template](refere
 
 ### 4.5 STORIES_INDEX.md Content
 
-After all story files are written, generate `tasks/<slug>/STORIES_INDEX.md` from the in-memory list of stories you just authored. Format and mutation protocol: see [`ck-code/references/stories-index.md`](../../../references/stories-index.md). Template: [references/templates.md#stories-index-template](references/templates.md#stories-index-template).
+After all story files are written, generate `tasks/<slug>/STORIES_INDEX.md` from the in-memory list of stories you just authored. Format and mutation protocol: see [`ck-code/references/stories-index.md`](../../references/stories-index.md). Template: [references/templates.md#stories-index-template](references/templates.md#stories-index-template).
 
 This index is the single source of truth that downstream skills (`build`, `parallel-build`, `track`) read to find ready stories — they will NOT scan individual story files for status. Every row must be present and correctly populated here.
 
@@ -304,7 +304,7 @@ This index is the single source of truth that downstream skills (`build`, `paral
 
 ### 4.5b FEATURE_INDEX.md Content (top-level, one row per epic)
 
-After the story index is written, update the project-wide `tasks/FEATURE_INDEX.md` — the top-level rollup that `build`/`parallel-build` read FIRST to pick a feature before opening any story index. Format and mutation protocol: see [`ck-code/references/feature-index.md`](../../../references/feature-index.md).
+After the story index is written, update the project-wide `tasks/FEATURE_INDEX.md` — the top-level rollup that `build`/`parallel-build` read FIRST to pick a feature before opening any story index. Format and mutation protocol: see [`ck-code/references/feature-index.md`](../../references/feature-index.md).
 
 Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Docs` = `docs/architecture/features/<slug>/index.md` if that feature doc exists (it usually does when `design` ran first, matching the epic slug) else `—`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v2 header with the `Docs` column). The index is always schema v2 here — the version gate (Phase 0) guarantees it. Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched. Any feature left `—` should be scaffolded with `/ck-code:doc-optimizer sync`.
 

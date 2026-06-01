@@ -10,7 +10,7 @@ allowed-tools: Bash(git *) Bash(gh *) Bash(sleep *)
 
 Commit changes, optionally create a PR, and update linked GitHub Issues. Detects story context to link everything.
 
-**CRITICAL RULE — No AI references in any artefact.** Full rule in [`../../../references/no-ai-references.md`](../../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
+**CRITICAL RULE — No AI references in any artefact.** Full rule in [`../../references/no-ai-references.md`](../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
 
 ## INPUT
 
@@ -235,7 +235,7 @@ Present a final block covering: Commit (hash/branch/message), PR (url/status), G
 
 ### No AI references — absolute
 
-See [`../../../references/no-ai-references.md`](../../../references/no-ai-references.md) for the full rule. It applies to commits, PRs, issue comments, branch names, and any GitHub artefact this skill produces.
+See [`../../references/no-ai-references.md`](../../references/no-ai-references.md) for the full rule. It applies to commits, PRs, issue comments, branch names, and any GitHub artefact this skill produces.
 
 ### Commit Messages Must Be Clean
 

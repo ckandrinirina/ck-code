@@ -40,7 +40,7 @@ Find all stories ready to implement.
 
 ### 1.0 Feature Gate (top-level feature index — read FIRST)
 
-**Before the story index**, Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in [`../../../references/feature-index.md`](../../../references/feature-index.md): bootstrap it if missing; compute the unfinished set (`Status` ≠ `DONE`); **0** → all done, suggest `/ck-code:plan`, stop; **1** → auto-select; **2** → fall through; **> 2** → AskUserQuestion "Which feature do you want to build?" (single-select). The chosen feature's `Plan` + epic `NN` scope every step below to that one epic. Skip this phase entirely when `$ARGUMENTS` carries explicit story IDs or `--epic NN` — an explicit scope is always respected.
+**Before the story index**, Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in [`../../references/feature-index.md`](../../references/feature-index.md): bootstrap it if missing; compute the unfinished set (`Status` ≠ `DONE`); **0** → all done, suggest `/ck-code:plan`, stop; **1** → auto-select; **2** → fall through; **> 2** → AskUserQuestion "Which feature do you want to build?" (single-select). The chosen feature's `Plan` + epic `NN` scope every step below to that one epic. Skip this phase entirely when `$ARGUMENTS` carries explicit story IDs or `--epic NN` — an explicit scope is always respected.
 
 ### 1.1 Read the Index
 
@@ -52,7 +52,7 @@ The index is the only source of truth for story selection.
 
 The table contains `ID`, `Title`, `Status`, `Size`, `Blocked by`, and `File` columns; no per-story file reads are needed at this phase.
 
-**Bootstrap check (only if index is absent or header ≠ `<!-- Schema: v1 -->`):** follow the bootstrap procedure in [`../../../references/stories-index.md`](../../../references/stories-index.md), then re-read.
+**Bootstrap check (only if index is absent or header ≠ `<!-- Schema: v1 -->`):** follow the bootstrap procedure in [`../../references/stories-index.md`](../../references/stories-index.md), then re-read.
 
 ### 1.2 Resolve Ready Set
 
@@ -342,7 +342,7 @@ the merged target to catch cross-branch integration issues. Procedure:
 `tasks/FEATURE_INDEX.md` once: recompute the built feature's `Stories` count and roll up its
 `Status` — mark the feature `DONE` if its last story is now merged, else `IN PROGRESS`. Never
 leave the rollup stale after a completed parallel build (per
-[`../../../references/feature-index.md`](../../../references/feature-index.md)). If clean, proceed to **Phase 7**.
+[`../../references/feature-index.md`](../../references/feature-index.md)). If clean, proceed to **Phase 7**.
 
 **Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
 Remind the user to run Phase 7 after merging.

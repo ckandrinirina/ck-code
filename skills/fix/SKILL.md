@@ -134,7 +134,7 @@ After writes, re-read the index and each modified EPIC.md to confirm the new row
 
 ### 3.1 Detect & Load Skills
 
-Follow the shared procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md). For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis). Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
+Follow the shared procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md). For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis). Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
 
 ### 3.2 Prepare Systematic Debugging Approach
 
@@ -270,7 +270,7 @@ section using the SOLID Verification template in
 
 **Goal:** QA expert verifies the fix is complete and nothing else broke.
 
-Follow the shared procedure in [`../../../references/qa-validation.md`](../../../references/qa-validation.md). Bug-fix flows include the **minimalism check** (Step 6) — the fix must be the smallest change that resolves the root cause; no unrelated refactoring.
+Follow the shared procedure in [`../../references/qa-validation.md`](../../references/qa-validation.md). Bug-fix flows include the **minimalism check** (Step 6) — the fix must be the smallest change that resolves the root cause; no unrelated refactoring.
 
 Skill-specific report and escalation templates: `references/qa-dialogue.md` (Phase 7.5 / 7.6). Iteration cap = 3; on iteration 3 escalate with `MANUAL FIX / ACCEPT / REVERT`. On NEEDS FIXES, loop back to Phase 6.
 
