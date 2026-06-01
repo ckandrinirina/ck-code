@@ -9,7 +9,9 @@ argument-hint: "[path-to-story.md]"
 Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
 and automated QA validation. Cycle: plan → test → implement → refactor → QA → commit.
 
-References: [examples.md](references/examples.md) (per-phase dialogues) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+
+**Read each reference at most once per run.** `output-blocks.md` and `tdd-walkthrough.md` are cited from many phases — load each once, keep it in working context, and reuse it for every later phase. Never re-`Read` a reference for a block you already loaded this run.
 
 ## INPUT
 
@@ -43,14 +45,11 @@ Once a story is selected, **batch the story file and parent `EPIC.md` in a singl
 
 ### 1.4 Epic-Wave Offer (explicit-path only, before status mutation)
 
-Interactive parallel/epic routing lives in Phase 1.2, so **skip this phase** when the 1.2
-menu ran or when running non-interactively / as a dispatched sub-agent — it runs ONLY for
-a story PATH passed via `$ARGUMENTS`. An explicit single-story request is respected:
-**never auto-pull parallel-safe peers**. Offer only the whole-epic build — if the story's
-epic still has > 1 non-DONE story, ask (AskUserQuestion) build-whole-epic-in-waves
-(`B → Skill("ck-code:parallel-build", "--epic NN")`, status stays `TODO`, exit) vs stay on
-this story (`C → 1.5`); if only this story remains, skip silently. Detail:
-[references/parallel-switch.md](references/parallel-switch.md).
+Runs ONLY for an explicit `$ARGUMENTS` story path — **skip** when the 1.2 menu ran or
+non-interactively. Never auto-pull parallel-safe peers. If the story's epic still has > 1
+non-DONE story, ask (AskUserQuestion): build-whole-epic-in-waves (`B → Skill("ck-code:parallel-build",
+"--epic NN")`, status stays `TODO`, exit) vs stay on this story (`C → 1.5`); if only this
+story remains, skip silently. Detail: [parallel-switch.md](references/parallel-switch.md).
 
 ### 1.5 Detect Linked GitHub Issues
 
@@ -75,17 +74,15 @@ If this is the first story of its feature to start (the feature was `TODO`), als
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING (BLOCKING GATE)
 
-**Mandatory — this phase blocks Phase 3. Never plan or write code until it has run
-to completion.** Phases 5 and 6 tell you to "follow loaded guide/expert skills"; if
-Phase 2 is skipped, those instructions silently apply nothing and the work ships
-without its experts and guides. The phase is done ONLY when all three are true:
-(1) the 4a `ls` has run, (2) every detected-and-present skill has been `Read`, and
-(3) the Step 5 "Skills loaded for this implementation" block has been shown to the
-user. `expert-qa` is always in the detected set (plus `expert-analyst` for bug-fix
-flows). If 4a returns skills but you loaded none, stop and re-run Step 4 — a
-non-empty project must never reach Phase 3 with zero skills loaded.
+**Mandatory — blocks Phase 3. Never plan or write code until it completes.** Done
+ONLY when all three hold: (1) the 4a `ls` ran, (2) every detected-and-present skill
+was `Read`, and (3) the "Skills loaded for this implementation" block was shown to the
+user. `expert-qa` is always detected (+ `expert-analyst` for bug-fix flows). If 4a
+lists skills but you loaded none, stop and re-run Step 4 — a non-empty project must
+never reach Phase 3 with zero skills loaded, else Phases 5/6 "follow loaded skills"
+silently become no-ops.
 
-Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/examples.md](references/examples.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
+Follow the full procedure in [`../../../references/skill-detection.md`](../../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
@@ -95,18 +92,14 @@ Create a SOLID-compliant plan **before writing any code.**
 
 ### 3.1 Research (if needed)
 
-If the story involves patterns or technologies that could benefit from current docs:
-
-- Use context7 (MCP tools if available, else `npx -y @upstash/context7`) to look up relevant framework documentation
-- Use WebSearch for uncommon patterns referenced in technical notes
-- Only research what's actually needed — don't research well-known basics
+Only when the story needs current docs: use context7 (MCP tools, else `npx -y @upstash/context7`)
+for framework docs and WebSearch for uncommon patterns in the technical notes. Don't research
+well-known basics.
 
 ### 3.2 Clarify Ambiguities
 
-Review the acceptance criteria. If any are vague or incomplete:
-
-- Ask the user 1-2 targeted questions
-- Do NOT ask about things already clear in the story or architecture docs
+If any acceptance criterion is vague or incomplete, ask the user 1-2 targeted questions —
+never about things already clear in the story or architecture docs.
 
 ### 3.3 Design with SOLID
 
@@ -118,38 +111,26 @@ principle must be addressed before moving on.
 
 ### 3.4 Create Subtasks
 
-**Seed from the story's task list when present.** If the story file has an
-`## Implementation Tasks` section (authored by `plan`), use those ordered tasks
-as the concrete implementation steps — fold them into the implementation phase
-of the subtask board rather than inventing generic steps. If the section is
-absent or empty (older stories, or a story created without `plan`), proceed with
-the default breakdown below exactly as before — never block on a missing task list.
+**Seed from the story's `## Implementation Tasks` section when present** (authored by
+`plan`) — fold those ordered tasks into the implementation steps rather than inventing
+generic ones; if absent/empty, use the default breakdown. Never block on a missing list.
 
-Break the work into ordered subtasks using **Claude Tasks** (TaskCreate; template in
-[references/tdd-walkthrough.md](references/tdd-walkthrough.md)) so the story's progress
-is tracked on a live board and updated as each phase runs (4.1 / 5.1 / 6 / 7 / 8.4).
-The fixed ordering and dependencies are mandatory:
-
-- tests → implementation → refactor → QA → completion
-- Implementation is blocked by tests; refactor is blocked by implementation;
-  QA is blocked by refactor; completion is blocked by QA.
-
-**Always use Claude Tasks when the Task tools are available.** If they are not (e.g. a
-host without TaskCreate), fall back to tracking the same ordered subtasks as a checklist
-in the story file's Implementation Plan section — never skip the breakdown.
+Track subtasks on **Claude Tasks** (TaskCreate; template in
+[tdd-walkthrough.md](references/tdd-walkthrough.md)), updated as each phase runs
+(4.1 / 5.1 / 6 / 7 / 8.4). Mandatory ordering — each step blocked by the previous:
+tests → implementation → refactor → QA → completion. If Task tools are unavailable,
+fall back to a checklist in the story's Implementation Plan section — never skip the breakdown.
 
 ### 3.5 Update Story File
 
-**Do this BEFORE writing any implementation code.** The story file is the source
-of truth — the plan must exist in it before work begins, not appended after the fact.
-
-Append the Implementation Plan block (template in
-[references/story-template.md](references/story-template.md)) to the story file using Edit.
+**Before writing any code**, append the Implementation Plan block (template in
+[story-template.md](references/story-template.md)) to the story file with Edit — the
+story file is the source of truth; the plan must exist there before work begins.
 
 ### 3.6 Confirm Plan
 
 Present the plan to the user (template in
-[references/examples.md](references/examples.md)) and **wait for user confirmation**
+[references/output-blocks.md](references/output-blocks.md)) and **wait for user confirmation**
 (`YES / ADJUST`) before proceeding.
 
 ### 3.7 Confirm Branch Strategy
@@ -189,15 +170,10 @@ Follow the patterns from loaded guide skills.
 
 ### 4.3 Write Tests from Acceptance Criteria
 
-For EACH acceptance criterion in the story, write at minimum one test. Worked
-example mapping criteria → test names is in
-[references/tdd-walkthrough.md](references/tdd-walkthrough.md).
-
-Also add tests for:
-
-- **Edge cases** — empty input, boundary values, max limits
-- **Error scenarios** — invalid input, connection failures, timeouts
-- **Integration points** — if the story connects two components
+For EACH acceptance criterion, write at minimum one test (worked criteria → test-name
+mapping in [tdd-walkthrough.md](references/tdd-walkthrough.md)). Also cover **edge cases**
+(empty input, boundary values, max limits), **error scenarios** (invalid input, connection
+failures, timeouts), and **integration points** when the story connects two components.
 
 ### 4.4 Run Tests — Confirm RED
 
@@ -206,7 +182,7 @@ Run the test suite (cargo test, npm test, pytest, etc.).
 implementation, the test is likely wrong (testing something that already exists
 or is trivially true) — review and fix.
 
-Present the RED Phase Complete block (see examples). Mark test task as `completed`.
+Present the RED Phase Complete block (see output-blocks). Mark test task as `completed`.
 
 ---
 
@@ -227,14 +203,12 @@ Order: (1) create new files from the story's "Files to Create/Modify";
 (2) modify existing files as specified; (3) run tests after each significant
 change; (4) stop as soon as all tests pass — don't over-engineer.
 
-**Implementation rules:**
-
-- Follow SOLID principles from the Phase 3 plan
-- Follow loaded guide skills' best practices and expert skills' coding standards
-- Reuse existing code — check `docs/architecture/` and scan existing files
-- Write the simplest code that passes the tests
-- Add inline comments only where logic isn't self-evident
-- **Log unplanned changes incrementally.** If you modify a file not in the story's "Files to Create/Modify" table, fix a bug noticed in passing, or add a helper/test file that wasn't in the Phase 3 plan, append one line to a `## Unplanned Changes` section in the story file in the same Edit pass. Format: `- <path> — <what> — <why>`. Record at the moment of the change, not at the end. Empty section = omit the heading.
+**Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse existing
+code (check `docs/architecture/`, scan files); write the simplest code that passes; comment
+only non-obvious logic. **Log unplanned changes incrementally** — any file touched outside
+the story's "Files to Create/Modify" table (bug fixed in passing, helper/test added) gets one
+line in a `## Unplanned Changes` section in the same Edit pass: `- <path> — <what> — <why>`.
+Record at the moment of change; empty section = omit the heading.
 
 ### 5.3 Run Tests — Confirm GREEN
 
@@ -242,7 +216,7 @@ Run the full test suite. **Expected: ALL tests PASS.** If tests fail, read the
 output and fix the implementation (NOT the tests, unless the test itself has a
 bug). Re-run until green.
 
-Present the GREEN Phase Complete block (see examples). Mark implementation task(s) as `completed`.
+Present the GREEN Phase Complete block (see output-blocks). Mark implementation task(s) as `completed`.
 
 ---
 
@@ -259,18 +233,15 @@ ISSUE entry to fix in 6.2.
 
 ### 6.2 Apply Refactorings
 
-For each issue: (1) apply the refactoring, (2) run tests — must still pass,
-(3) if tests break, revert and reconsider. Common refactorings: extract function,
-rename, introduce interface/trait for dependency inversion, split large functions,
-move code to the correct module per `folder-structure.md`.
-
-Refactors that touch files outside the Phase 3 "Files to Create/Modify" list
-also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format
-used in Phase 5.2).
+For each issue: apply the refactoring, run tests (must stay green), revert and reconsider
+if they break. Common refactorings: extract function, rename, introduce interface/trait for
+dependency inversion, split large functions, move code to the correct module per
+`folder-structure.md`. Refactors touching files outside the Phase 3 "Files to Create/Modify"
+list also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as Phase 5.2).
 
 ### 6.3 Final Green Check
 
-Run full test suite one more time and present the REFACTOR Phase Complete block (see examples).
+Run full test suite one more time and present the REFACTOR Phase Complete block (see output-blocks).
 
 ---
 
@@ -278,10 +249,9 @@ Run full test suite one more time and present the REFACTOR Phase Complete block 
 
 QA expert skills review the work — this is **not** a self-review.
 
-**Preferred subagent_type:** delegate to `ck-code:qa-validator` if available
-(defined in this plugin's `agents/` folder — runs the test suite, maps
-results to acceptance criteria, reports failures with file:line citations).
-If the subagent_type is not registered, run the inline procedure.
+**Preferred subagent_type:** delegate to `ck-code:qa-validator` if available (in this
+plugin's `agents/` folder — runs the suite, maps results to acceptance criteria, reports
+failures with file:line). If it is not registered, run the inline procedure below.
 
 Mark the QA task `in_progress`, then follow the full procedure in
 [`../../../references/qa-validation.md`](../../../references/qa-validation.md): load
@@ -289,10 +259,10 @@ Mark the QA task `in_progress`, then follow the full procedure in
 (PASS/FAIL), run the full suite for regressions, run code-quality checks (commands per
 stack in [references/tdd-walkthrough.md](references/tdd-walkthrough.md)), check
 architecture compliance against `docs/architecture/`, analyse edge cases, and present the
-QA Report (template in [references/examples.md](references/examples.md)).
+QA Report (template in [references/output-blocks.md](references/output-blocks.md)).
 
 **Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS /
-ABORT` (wording in examples); never silently continue past 3. On NEEDS FIXES inside the
+ABORT` (wording in output-blocks); never silently continue past 3. On NEEDS FIXES inside the
 loop: fix each issue → re-run Phase 6 (refactor) → re-run this phase with a fresh QA check.
 
 ---
@@ -324,16 +294,15 @@ Use TaskUpdate to mark all remaining tasks as `completed`. Use TaskList to show 
 Story stays IN PROGRESS until the user confirms PASS here. Never mark DONE or
 update the EPIC before that.
 
-**8.5.1** Present the prompt (template in [references/examples.md](references/examples.md)) — scenarios from acceptance criteria + edge case. Ask `Result? PASS / ISSUES`.
+**8.5.1** Present the prompt (template in [references/output-blocks.md](references/output-blocks.md)) — scenarios from acceptance criteria + edge case. Ask `Result? PASS / ISSUES`.
 
 **8.5.2** On `PASS` → proceed to 8.6.
 
-**8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop: regression test (red) → minimum fix
-(green) → **mandatory** re-run of Phase 6 (Refactor) + Phase 7 (QA) → update the
-`## Manual-Test Bugs` entry `OPEN` → `FIXED` → re-prompt at 8.5.1. The full eight ordered
-steps are in [references/completion.md](references/completion.md). **Cap = 3 cycles**; on
-the 3rd, escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (template in
-[references/examples.md](references/examples.md)). Never continue silently past 3.
+**8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop (eight ordered steps in
+[completion.md](references/completion.md) § 8.5.3): regression test (red) → minimum fix
+(green) → **mandatory** re-run of Phase 6 + Phase 7 → mark the `## Manual-Test Bugs` entry
+`FIXED` → re-prompt at 8.5.1. **Cap = 3 cycles**; on the 3rd, escalate `FIX MANUALLY /
+ACCEPT AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never continue past 3.
 
 ### 8.6 Update Story File — Status DONE (story file + index, same phase)
 
@@ -345,26 +314,10 @@ Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and
 
 ### 8.6b Feature-Doc Write-Back
 
-Keep the feature doc current with what this story changed. Edit the canonical doc read
-in Phase 2 (the `Docs` path for this story's feature, `features/<slug>/index.md`):
-
-- If the story introduced a **new** component / endpoint / table / flow, add a concise
-  entry to the matching section (`## Components` / `## API` / `## Data` / `## Flows`) —
-  derive it from the story's Files Touched + Implementation Summary; keep it short.
-- Append a one-line entry to its `## Changelog`: `[date] · <story ID> — <delta> ·
-[./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)` where `<delta>` names the
-  component/endpoint/table/flow added or changed.
-- **Write the dated delta doc** beside it:
-  `features/<slug>/YYYY-MM-DD_<story ID>_<short>.md` from the Increment / Fix Delta Doc
-  template (see `design`'s [architecture-templates.md](../design/references/architecture-templates.md)) —
-  the change narrative (what changed · why · surface touched). `index.md` stays the
-  routed source of truth; this dated doc is an append-only journal entry.
-- If the change is cross-cutting (reused by other features), put it in `_shared.md`
-  instead and link it from the feature doc's `## Shared dependencies`.
-
-**Skip** the write-back for changes with no architectural surface (pure refactors,
-test-only stories, formatting). **Fallback:** if the `Docs` cell is `—`/missing, note
-that the user should run `/ck-code:doc-optimizer sync`, and do not create the doc here.
+Keep the feature doc current with what this story changed: update `features/<slug>/index.md`
+(the `Docs` path read in Phase 2) and write a dated delta doc beside it. Full field specs,
+the changelog format, the cross-cutting `_shared.md` rule, and the skip/fallback conditions
+are in [references/completion.md](references/completion.md) (§ 8.6b).
 
 ### 8.7 Update Parent Epic
 
@@ -372,13 +325,10 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 
 ### 8.8 Ship (Commit + PR + Issue Updates)
 
-**If PASS:** Present the ship options (see examples):
-
-- **A) SHIP** — Invoke `/ck-code:ship` with the story file path. It handles
-  branch creation, staging, commit message, PR, and GitHub Issue updates
-  (closing story issue, updating epic checklist).
-- **B) SKIP** — Don't commit yet. Remind the user they can run
-  `/ck-code:ship [story-path]` later manually.
+**If PASS:** present the ship options (see output-blocks): **A) SHIP** — invoke `/ck-code:ship`
+with the story file path (handles branch, staging, commit, PR, and GitHub Issue updates —
+closing story issue, updating epic checklist); **B) SKIP** — don't commit yet; remind the
+user they can run `/ck-code:ship [story-path]` later.
 
 ---
 
@@ -386,11 +336,11 @@ Read the parent EPIC.md and update the story's status in the stories table to `D
 
 Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
 
-- **Version gate** — before any architecture-doc read or write, run the shared [version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes (or stop if the user declines). Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
-- **Phase 1.2.0** — Interactive runs read `tasks/FEATURE_INDEX.md` FIRST (bootstrap if missing); > 2 unfinished features ⇒ ask which feature, then scope story selection to its epic. Story rollup (`Stories`/`Status`) is updated on the feature when a story completes (Phase 8.6) — never leave it stale.
-- **Phase 1.2** — Interactive selection prefers parallel: ≥ 2 conflict-free ready stories ⇒ the parallel set is the recommended one-confirm option, then auto-fan-out to worktree agents. An explicit story arg is always single-story — never auto-expanded.
-- **Phase 2** — Experts + guides detected, loaded via `Read`, and the "Skills loaded" block shown BEFORE any planning or code. `expert-qa` always detected (+ `expert-analyst` for fixes). A non-empty 4a `ls` must never reach Phase 3 with zero skills loaded — skipping Phase 2 turns the "follow loaded skills" rules in Phases 5/6 into no-ops.
-- **Phase 3.7** — Branch chosen before any code. Never implement on `main` / `develop`.
+- **Version gate** — run the shared [version gate](../../references/version-gate.md) before any architecture-doc read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes. `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+- **Phase 1.2.0** — interactive runs read `tasks/FEATURE_INDEX.md` first (bootstrap if missing); > 2 unfinished features ⇒ ask which, then scope to its epic. Feature rollup updated on completion (8.6) — never stale.
+- **Phase 1.2** — interactive selection prefers the parallel set (≥ 2 conflict-free ready ⇒ one-confirm, auto-fan-out to worktrees). An explicit story arg is always single-story.
+- **Phase 2** — experts + guides detected, `Read`, and the "Skills loaded" block shown BEFORE any planning/code; `expert-qa` always detected. Non-empty 4a `ls` ⇒ never reach Phase 3 with zero skills.
+- **Phase 3.7** — branch chosen before any code. Never implement on `main` / `develop`.
 - **Phase 4** — Failing tests written before implementation (strict Red→Green→Refactor; trivial boilerplate exempt).
 - **Phase 3.3 + Phase 6.1** — SOLID applied at design AND verified after refactor.
 - **Phase 5.2 / 6.2** — Off-plan file touches logged to `## Unplanned Changes` in the same Edit pass.

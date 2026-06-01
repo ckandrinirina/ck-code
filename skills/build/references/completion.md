@@ -44,3 +44,26 @@ returning to 8.5.1:
 
 **Bug-Fix iteration cap = 3.** On the 3rd cycle, escalate `FIX MANUALLY / ACCEPT AS-IS /
 ABORT` (template in `examples.md`). Never silently continue past 3.
+
+## 8.6b — Feature-Doc Write-Back
+
+Keep the feature doc current with what this story changed. Edit the canonical doc read
+in Phase 2 (the `Docs` path for this story's feature, `features/<slug>/index.md`):
+
+- If the story introduced a **new** component / endpoint / table / flow, add a concise
+  entry to the matching section (`## Components` / `## API` / `## Data` / `## Flows`) —
+  derive it from the story's Files Touched + Implementation Summary; keep it short.
+- Append a one-line entry to its `## Changelog`: `[date] · <story ID> — <delta> ·
+[./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)` where `<delta>` names the
+  component/endpoint/table/flow added or changed.
+- **Write the dated delta doc** beside it:
+  `features/<slug>/YYYY-MM-DD_<story ID>_<short>.md` from the Increment / Fix Delta Doc
+  template (see `design`'s [architecture-templates.md](../../design/references/architecture-templates.md)) —
+  the change narrative (what changed · why · surface touched). `index.md` stays the
+  routed source of truth; this dated doc is an append-only journal entry.
+- If the change is cross-cutting (reused by other features), put it in `_shared.md`
+  instead and link it from the feature doc's `## Shared dependencies`.
+
+**Skip** the write-back for changes with no architectural surface (pure refactors,
+test-only stories, formatting). **Fallback:** if the `Docs` cell is `—`/missing, note
+that the user should run `/ck-code:doc-optimizer sync`, and do not create the doc here.
