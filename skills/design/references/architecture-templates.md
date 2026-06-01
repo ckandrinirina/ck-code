@@ -5,8 +5,10 @@ Use exactly as shown, filling placeholders with project-specific content derived
 from the spec and user answers.
 
 The architecture is **feature-scoped**: global docs describe the whole system, and
-each feature owns a self-contained slice (`features/<slug>.md`) holding its own
-components, APIs, data, and flows. Cross-cutting infra lives once in `_shared.md`.
+each feature owns a self-contained slice (`features/<slug>/index.md`) holding its own
+components, APIs, data, and flows. Per-increment / per-fix changes are journaled as
+dated delta docs beside it (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) while
+`index.md` stays the canonical current truth. Cross-cutting infra lives once in `_shared.md`.
 The retired layer docs (`components.md`, `api-contracts.md`, `database-schema.md`,
 `data-flow.md`) are no longer generated — their content lives in feature docs.
 
@@ -42,10 +44,10 @@ A `build`/`fix` story reads only its feature doc (+ `folder-structure.md`, + `_s
 when noted) — never the whole architecture. The `tasks/FEATURE_INDEX.md` `Docs` column
 routes a story to the right one.
 
-| Feature          | Document                                                 |
-| ---------------- | -------------------------------------------------------- |
-| [Feature 1 Name] | [features/feature-1-slug.md](features/feature-1-slug.md) |
-| [Feature 2 Name] | [features/feature-2-slug.md](features/feature-2-slug.md) |
+| Feature          | Document                                                             |
+| ---------------- | -------------------------------------------------------------------- |
+| [Feature 1 Name] | [features/feature-1-slug/index.md](features/feature-1-slug/index.md) |
+| [Feature 2 Name] | [features/feature-2-slug/index.md](features/feature-2-slug/index.md) |
 
 ## Source
 
@@ -201,12 +203,19 @@ best practices (research via context7/WebSearch if needed).
 
 ---
 
-## features/&lt;slug&gt;.md (Feature Doc)
+## features/&lt;slug&gt;/index.md (Feature Doc)
 
-**File:** `docs/architecture/features/<slug>.md` — one per feature (= one epic).
+**File:** `docs/architecture/features/<slug>/index.md` — one per feature (= one epic).
 Self-contained: holds everything a `build`/`fix` story for this feature needs, so the
 story never opens another feature's doc. `<slug>` matches the epic folder slug so
-`FEATURE_INDEX.Docs` can route to it.
+`FEATURE_INDEX.Docs` can route to it. Per-increment / per-fix changes are journaled as
+dated sibling docs (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`, see template below);
+`index.md` stays the canonical current truth that readers route to.
+
+> **Relative links:** `index.md` sits one level deeper than the legacy flat doc, so
+> links to `_shared.md` and sibling globals use `../../` (e.g. `../../_shared.md`,
+> `../../folder-structure.md`) — two hops up from `features/<slug>/` to
+> `docs/architecture/`.
 
 ```markdown
 # [Feature Name]
@@ -268,12 +277,44 @@ Step 2: [Component] → [Transform] → [Output]
 ## Shared dependencies
 [Bullet links into _shared.md for cross-cutting pieces this feature relies on —
 do not duplicate their content here.]
-- [Auth middleware](../_shared.md#auth--middleware)
-- [Base User entity](../_shared.md#base-entities--core-schema)
+- [Auth middleware](../../_shared.md#auth--middleware)
+- [Base User entity](../../_shared.md#base-entities--core-schema)
 
 ## Changelog
-[Append-only write-back deltas from build/fix — newest last.]
-- [date] · [story id] — [one-line: component/endpoint/table/flow added or changed]
+[Append-only write-back deltas from build/fix — newest last. Each line links the
+dated delta doc that records the full change narrative.]
+- [date] · [story id] — [one-line: component/endpoint/table/flow added or changed] · [./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)
+```
+
+---
+
+## features/&lt;slug&gt;/YYYY-MM-DD\_&lt;id&gt;\_&lt;short&gt;.md (Increment / Fix Delta Doc)
+
+**File:** `docs/architecture/features/<slug>/YYYY-MM-DD_<id>_<short>.md` — one per
+`build` story or `fix` that changed the feature's documented surface. Written by
+`build` (Phase 8.6b) and `fix` (Phase 8.3b) **in addition to** updating `index.md`.
+It is an append-only journal entry (the change narrative); it is NOT routed to by
+readers — `index.md` always holds the consolidated current truth. `<id>` is the story
+or bug ID; `<short>` is a 2–4 word kebab slug of the change.
+
+```markdown
+# [date] · [story/bug ID] — [short title]
+
+> Delta journal for feature **[slug]**. The consolidated state lives in
+> [index.md](./index.md); this file records what this one change added or altered.
+
+## What changed
+
+[1–3 sentences: the component/endpoint/table/flow added, changed, or removed.]
+
+## Why
+
+[1–2 sentences: the story goal or bug this addressed.]
+
+## Surface touched
+
+- **Components / API / Data / Flows:** [the matching `index.md` section(s) updated]
+- **Shared:** [`../../_shared.md` section, if cross-cutting — else "none"]
 ```
 
 ---

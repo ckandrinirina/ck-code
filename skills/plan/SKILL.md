@@ -76,8 +76,8 @@ In Feature Mode, present three options to the user (A / B / C):
 1. Read the **global** architecture docs (`overview.md`, `tech-stack.md`,
    `folder-structure.md`, `_shared.md`) + the `README.md` index for architectural
    context. Do NOT read every feature doc — the README index lists each feature with a
-   one-line summary; open a full `features/<slug>.md` only for a feature the new work
-   directly integrates with.
+   one-line summary; open a full `features/<slug>/index.md` only for a feature the new
+   work directly integrates with.
 2. Read `$ARGUMENTS` spec/feature file.
 3. Scan existing `tasks/` folders to understand what's already planned (avoid duplicating stories).
 4. Ask: "What new feature do you want to plan?" (if not clear from the file).
@@ -111,7 +111,7 @@ Read the entire specification file provided in `$ARGUMENTS` using the Read tool.
 
 Before extracting dimensions:
 
-1. **Read the global architecture docs + feature index** — `overview.md`, `tech-stack.md`, `folder-structure.md`, `_shared.md`, and the `README.md` index (which lists every feature with a one-line summary). Open a full `features/<slug>.md` only for a feature the new work directly integrates with — not the whole set.
+1. **Read the global architecture docs + feature index** — `overview.md`, `tech-stack.md`, `folder-structure.md`, `_shared.md`, and the `README.md` index (which lists every feature with a one-line summary). Open a full `features/<slug>/index.md` only for a feature the new work directly integrates with — not the whole set.
 2. **Scan existing plans** in `tasks/` — read `ROADMAP.md` and `EPIC.md` files to understand what's already planned and what numbering to continue from.
 3. **Scan the actual codebase** — use Glob to check which planned components already exist as source files. This tells you what's built vs. what's only planned.
 
@@ -287,7 +287,7 @@ This index is the single source of truth that downstream skills (`build`, `paral
 
 After the story index is written, update the project-wide `tasks/FEATURE_INDEX.md` — the top-level rollup that `build`/`parallel-build` read FIRST to pick a feature before opening any story index. Format and mutation protocol: see [`ck-code/references/feature-index.md`](../../../references/feature-index.md).
 
-Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Docs` = `docs/architecture/features/<slug>.md` if that feature doc exists (it usually does when `design` ran first, matching the epic slug) else `—`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v2 header with the `Docs` column). Upgrade a legacy `v1` header to `v2`, adding the `Docs` column. Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched. Any feature left `—` should be scaffolded with `/ck-code:doc-optimizer sync`.
+Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Docs` = `docs/architecture/features/<slug>/index.md` if that feature doc exists (it usually does when `design` ran first, matching the epic slug; a legacy flat `features/<slug>.md` is also accepted) else `—`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v2 header with the `Docs` column). Upgrade a legacy `v1` header to `v2`, adding the `Docs` column. Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched. Any feature left `—` should be scaffolded with `/ck-code:doc-optimizer sync`.
 
 ### 4.6 ROADMAP.md Content
 

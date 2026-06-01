@@ -295,12 +295,23 @@ No change in EPIC.md or `STORIES_INDEX.md` unless a story status changed (it sho
 ### 8.3b Feature-Doc Write-Back
 
 If the fix changed the feature's documented surface (a new/changed endpoint, table,
-component, or flow — not a pure internal fix), update the feature doc read in Phase 1.3
-(the affected feature's `Docs` path): append a `## Changelog` line
-`[date] · <bug/story ID> — <delta>` and adjust the matching section. Cross-cutting
-changes go in `_shared.md`. **Skip** when the fix has no architectural surface (the
-common case). **Fallback:** `Docs` cell `—`/missing → suggest `/ck-code:doc-optimizer
-sync`; do not create the doc here.
+component, or flow — not a pure internal fix):
+
+1. **Update the canonical doc** read in Phase 1.3 (the affected feature's `Docs` path,
+   `features/<slug>/index.md`): adjust the matching `## Components` / `## API` / `## Data`
+   / `## Flows` section and append a `## Changelog` line `[date] · <bug/story ID> —
+<delta> · [./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)`. Cross-cutting
+   changes go in `_shared.md`.
+2. **Write the dated delta doc** beside it:
+   `features/<slug>/YYYY-MM-DD_<bug/story ID>_<short>.md` from the Increment / Fix Delta
+   Doc template (see `design`'s [architecture-templates.md](../design/references/architecture-templates.md)) —
+   the change narrative (what changed · why · surface touched). `index.md` stays the
+   routed source of truth; this dated doc is an append-only journal entry.
+
+**Skip both** when the fix has no architectural surface (the common case). **Fallback:**
+`Docs` cell `—`/missing, or a legacy flat `features/<slug>.md` with no subfolder → update
+the flat doc in place if present, else suggest `/ck-code:doc-optimizer sync`; do not
+create the canonical doc from scratch here.
 
 ### 8.4 Sync Verification
 

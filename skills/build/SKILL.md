@@ -345,14 +345,23 @@ Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and
 
 ### 8.6b Feature-Doc Write-Back
 
-Keep the feature doc current with what this story changed. Edit the feature doc read in
-Phase 2 (the `Docs` path for this story's feature):
+Keep the feature doc current with what this story changed. Edit the canonical doc read
+in Phase 2 (the `Docs` path for this story's feature, `features/<slug>/index.md`):
 
-- Append a one-line entry to its `## Changelog`: `[date] · <story ID> — <delta>` where
-  `<delta>` names the component/endpoint/table/flow added or changed.
 - If the story introduced a **new** component / endpoint / table / flow, add a concise
   entry to the matching section (`## Components` / `## API` / `## Data` / `## Flows`) —
   derive it from the story's Files Touched + Implementation Summary; keep it short.
+- Append a one-line entry to its `## Changelog`: `[date] · <story ID> — <delta> ·
+[./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)` where `<delta>` names the
+  component/endpoint/table/flow added or changed.
+- **Write the dated delta doc** beside it:
+  `features/<slug>/YYYY-MM-DD_<story ID>_<short>.md` from the Increment / Fix Delta Doc
+  template (see `design`'s [architecture-templates.md](../design/references/architecture-templates.md)) —
+  the change narrative (what changed · why · surface touched). `index.md` stays the
+  routed source of truth; this dated doc is an append-only journal entry.
+- **Legacy/fallback:** if the feature is still on a flat `features/<slug>.md` (no
+  subfolder), update it in place and skip the dated doc; suggest `/ck-code:doc-optimizer
+sync` to migrate it to the subfolder layout.
 - If the change is cross-cutting (reused by other features), put it in `_shared.md`
   instead and link it from the feature doc's `## Shared dependencies`.
 

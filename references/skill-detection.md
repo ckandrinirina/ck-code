@@ -7,8 +7,12 @@ the files a story or bug touches.
 ## Step 1 — Read the story's feature doc (feature-scoped)
 
 Architecture docs are **feature-scoped**: each feature owns a self-contained
-`docs/architecture/features/<slug>.md` with its components, APIs, data, and flows.
-A story reads its **own feature's doc**, not the whole architecture.
+`docs/architecture/features/<slug>/index.md` with its components, APIs, data, and
+flows (legacy flat layout: `docs/architecture/features/<slug>.md` — read as-is).
+A story reads its **own feature's doc**, not the whole architecture. The dated
+per-increment / per-fix delta docs beside `index.md`
+(`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) are a history journal — do NOT read
+them; `index.md` always carries current truth.
 
 Read, in a **single parallel tool-call message** (no inter-dependency — sequential
 reads here are the largest avoidable latency in `build`/`fix` Phase 2):
@@ -16,7 +20,8 @@ reads here are the largest avoidable latency in `build`/`fix` Phase 2):
 1. **`docs/architecture/folder-structure.md`** — always (small, universally useful).
 2. **The story's feature doc.** The caller already read `tasks/FEATURE_INDEX.md` during
    selection; the story's epic `NN` maps to one feature row. Read the path in that row's
-   **`Docs`** column (`docs/architecture/features/<slug>.md`).
+   **`Docs`** column (`docs/architecture/features/<slug>/index.md`, or a legacy flat
+   `docs/architecture/features/<slug>.md`).
 3. **`docs/architecture/_shared.md`** — only when the work touches cross-cutting infra:
    the feature doc's `## Shared dependencies` section links into it, OR the story's
    Technical Notes / touched paths involve shared concerns (auth, base entities,

@@ -69,7 +69,7 @@ Resolve `$ARGUMENTS` against on-disk state:
    - `README.md`, `docs/SPEC.md`, `docs/specifications.md`,
      `docs/product/*`, `docs/functional-spec.md` if present
    - Glob `docs/architecture/*.md` (the global docs + `README.md` index) and
-     `docs/specs/*/pre-spec.md`. Do NOT read every `docs/architecture/features/*.md`;
+     `docs/specs/*/pre-spec.md`. Do NOT read every `docs/architecture/features/*/index.md`;
      open a single feature doc only when this pre-spec extends that existing feature.
 5. Slugify the feature name to kebab-case ASCII; confirm if non-obvious.
 

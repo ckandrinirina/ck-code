@@ -12,7 +12,10 @@ and generate **feature-scoped** architecture documentation ready for development
 
 The architecture is split into a few **global** docs (overview, folder-structure,
 tech-stack, `_shared.md`, configuration, dev-guide) plus one **self-contained feature
-doc** per feature in `docs/architecture/features/<slug>.md`. There are no
+doc** per feature in `docs/architecture/features/<slug>/index.md`. Per-increment /
+per-fix changes are journaled as dated sibling docs
+(`features/<slug>/YYYY-MM-DD_<id>_<short>.md`); `index.md` stays the canonical truth a
+later `build`/`fix` story routes to. There are no
 `components.md` / `api-contracts.md` / `database-schema.md` / `data-flow.md` files —
 that content lives inside each feature's doc so a later `build`/`fix` story reads only
 the one feature doc it needs.
@@ -137,7 +140,7 @@ available, marking gaps with `[TO BE DEFINED]`.
 
 - **Feature Mode:** use the feature-scoped question set (Scope & Integration,
   Architecture, Boundaries). After answers, map impact into the **single feature doc**
-  `features/<slug>.md` — new endpoints → its `## API`, new tables → its `## Data`, new
+  `features/<slug>/index.md` — new endpoints → its `## API`, new tables → its `## Data`, new
   components → its `## Components`, new flows → its `## Flows`. Truly cross-cutting infra
   (shared auth, base tables) goes in `_shared.md` and is linked from the feature doc.
 - **New Project Mode:** use the priority-ordered question bank covering
@@ -191,11 +194,13 @@ mkdir -p docs/architecture
 When adding or extending a feature in an existing project:
 
 1. **Never delete or overwrite existing content.** Only add or extend.
-2. **One feature = one doc.** Write/extend `docs/architecture/features/<slug>.md`
-   using the Feature Doc template. New feature → Write the file; existing feature →
-   Read it and Edit the relevant section (`## Components` / `## API` / `## Data` /
-   `## Flows`). The `<slug>` should match the planned epic slug so `FEATURE_INDEX.Docs`
-   routes to it.
+2. **One feature = one doc.** Write/extend `docs/architecture/features/<slug>/index.md`
+   using the Feature Doc template (`mkdir -p` the `<slug>/` folder first). New feature →
+   Write the file; existing feature → Read it and Edit the relevant section
+   (`## Components` / `## API` / `## Data` / `## Flows`). The `<slug>` should match the
+   planned epic slug so `FEATURE_INDEX.Docs` routes to it. (A pre-existing legacy flat
+   `features/<slug>.md` — extend it in place; `/ck-code:doc-optimizer` relocates it into
+   the subfolder.)
 3. **Cross-cutting only** goes in `_shared.md`: if the feature introduces infra that
    other features will reuse (shared middleware, base entities), add it to `_shared.md`
    and link it from the feature doc's `## Shared dependencies` — never duplicate it into
@@ -215,18 +220,18 @@ Use those templates verbatim, filling placeholders with project-specific
 content derived from the spec and user answers.
 
 First identify the **feature list** from the spec (the same features `plan` will turn
-into epics). Each becomes one `features/<slug>.md`. Then generate:
+into epics). Each becomes one `features/<slug>/index.md`. Then generate:
 
-| Step | File                                                                   | Template section                       |
-| ---- | ---------------------------------------------------------------------- | -------------------------------------- |
-| 3.3  | `README.md` (index)                                                    | README.md (Index)                      |
-| 3.4  | `overview.md`                                                          | overview.md                            |
-| 3.5  | `folder-structure.md`                                                  | folder-structure.md                    |
-| 3.6  | `tech-stack.md`                                                        | tech-stack.md                          |
-| 3.7  | `_shared.md` (cross-cutting infra)                                     | \_shared.md                            |
-| 3.8  | `features/<slug>.md` — **one per feature** (components/API/data/flows) | features/&lt;slug&gt;.md (Feature Doc) |
-| 3.9  | `configuration.md`                                                     | configuration.md                       |
-| 3.10 | `dev-guide.md`                                                         | dev-guide.md                           |
+| Step | File                                                                         | Template section                             |
+| ---- | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| 3.3  | `README.md` (index)                                                          | README.md (Index)                            |
+| 3.4  | `overview.md`                                                                | overview.md                                  |
+| 3.5  | `folder-structure.md`                                                        | folder-structure.md                          |
+| 3.6  | `tech-stack.md`                                                              | tech-stack.md                                |
+| 3.7  | `_shared.md` (cross-cutting infra)                                           | \_shared.md                                  |
+| 3.8  | `features/<slug>/index.md` — **one per feature** (components/API/data/flows) | features/&lt;slug&gt;/index.md (Feature Doc) |
+| 3.9  | `configuration.md`                                                           | configuration.md                             |
+| 3.10 | `dev-guide.md`                                                               | dev-guide.md                                 |
 
 **Feature list note:** derive features from the spec's capability breakdown. Pick a
 short `<slug>` per feature (e.g. `roles`, `customer`, `billing`) and reuse it as the

@@ -56,9 +56,11 @@ originals are archived, never deleted.
    [references/optimizer-playbook.md](references/optimizer-playbook.md) — a component,
    endpoint, table, or flow goes to the feature that owns it; anything ≥2 features share
    goes to `_shared.md`.
-3. For each feature, Write `docs/architecture/features/<slug>.md` from the Feature Doc
-   template, filling `## Components` / `## API` / `## Data` / `## Flows` with that
-   feature's slices and linking shared pieces to `_shared.md`.
+3. For each feature, `mkdir -p docs/architecture/features/<slug>/` and Write
+   `docs/architecture/features/<slug>/index.md` from the Feature Doc template, filling
+   `## Components` / `## API` / `## Data` / `## Flows` with that feature's slices and
+   linking shared pieces to `_shared.md` with `../../` relative paths (two hops up from
+   `features/<slug>/`).
 4. Write/extend `docs/architecture/_shared.md` with the cross-cutting content.
 5. Move the originals to `docs/architecture/archive/` (`mkdir -p` first). Never delete.
 6. Update the `README.md` index (Feature Documents table + changelog).
@@ -72,17 +74,29 @@ originals are archived, never deleted.
 Bring the doc set into lockstep with `FEATURE_INDEX` — the "as the project grows" pass.
 
 1. Read `FEATURE_INDEX`. For each feature, check whether
-   `docs/architecture/features/<slug>.md` exists.
-2. **Missing** → scaffold it from the Feature Doc template (header + section stubs +
+   `docs/architecture/features/<slug>/index.md` exists (canonical), or a legacy flat
+   `docs/architecture/features/<slug>.md` exists (pre-subfolder layout).
+2. **Layout migration (legacy flat → subfolder)** → when a flat
+   `features/<slug>.md` exists but `features/<slug>/index.md` does not: `mkdir -p
+features/<slug>/`, move the file to `features/<slug>/index.md`, and rewrite its
+   inbound/outbound relative links one hop deeper (`../_shared.md` → `../../_shared.md`,
+   `../folder-structure.md` → `../../folder-structure.md`). Then sweep any **loose dated
+   delta docs** sitting flat in `features/` (`features/YYYY-MM-DD_<...>.md`) into the
+   parent feature folder they belong to — match by the feature each delta names; if the
+   parent is ambiguous, list them and ask before moving. Never delete; only move.
+3. **Missing** → `mkdir -p features/<slug>/` and scaffold
+   `features/<slug>/index.md` from the Feature Doc template (header + section stubs +
    a `[TO BE DEFINED]` note), using the epic `Description` for the `## Summary`. Do not
    invent component/API/data detail — leave stubs for `design`/`build` to fill.
-3. **Slug drift** → if a feature doc exists under a different slug than the epic
-   (e.g. design used `roles`, plan's epic is `role-management`), rename the file to the
-   epic slug and fix inbound links. Ask before renaming if ambiguous.
-4. Run the **FEATURE_INDEX update** (below): set each `Docs` cell to the resolved path,
-   `—` only when no doc could be created.
-5. Update the `README.md` Feature Documents table.
-6. Report: docs scaffolded, renamed, and any features left as `—`.
+4. **Slug drift** → if a feature doc exists under a different slug than the epic
+   (e.g. design used `roles`, plan's epic is `role-management`), rename the
+   `features/<slug>/` folder to the epic slug and fix inbound links. Ask before renaming
+   if ambiguous.
+5. Run the **FEATURE_INDEX update** (below): set each `Docs` cell to the resolved
+   `features/<slug>/index.md` path, `—` only when no doc could be created.
+6. Update the `README.md` Feature Documents table.
+7. Report: docs migrated (flat→subfolder), delta docs relocated, scaffolded, renamed,
+   and any features left as `—`.
 
 ---
 
@@ -113,7 +127,7 @@ content, only restructures and reports.
 Whenever a feature doc is created, relocated, or renamed, update
 `tasks/FEATURE_INDEX.md` per [../../references/feature-index.md](../../references/feature-index.md):
 
-- Set the feature's `Docs` cell to `docs/architecture/features/<slug>.md`.
+- Set the feature's `Docs` cell to `docs/architecture/features/<slug>/index.md`.
 - Upgrade a `v1` header to `v2` and add the `Docs` column (cell `—` for any feature
   with no doc).
 - This is the only skill allowed to fill a `—` `Docs` cell from scratch.

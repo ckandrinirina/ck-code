@@ -63,8 +63,8 @@ changes files; for `optimize` always show the saving.
 
 | Doc                          | Before | After | Δ      |
 | ---------------------------- | ------ | ----- | ------ |
-| features/roles.md            | 3,200  | 1,900 | −1,300 |
-| features/customer.md         | 2,800  | 2,100 | −700   |
+| features/roles/index.md      | 3,200  | 1,900 | −1,300 |
+| features/customer/index.md   | 2,800  | 2,100 | −700   |
 | _shared.md                   | 400    | 1,250 | +850   |
 | **Total**                    | 6,400  | 5,250 | −1,150 |
 

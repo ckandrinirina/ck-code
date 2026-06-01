@@ -92,7 +92,7 @@ in the **global** docs — not in per-feature slices. Read these:
 - `dev-guide.md` — build, run, test instructions
 
 Plus the `README.md` index to enumerate features. Do **not** read every
-`features/<slug>.md` in full — skim a feature doc's `## Summary` only if `folder-structure.md`
+`features/<slug>/index.md` in full — skim a feature doc's `## Summary` only if `folder-structure.md`
 
 - `tech-stack.md` leave a component type ambiguous. The retired layer docs
   (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) no longer

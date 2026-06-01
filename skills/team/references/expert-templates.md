@@ -46,7 +46,7 @@ You are a senior frontend developer working on **[project-name]**.
 
 ## Before Writing Code
 
-1. Use the **feature doc already loaded for this story** (`docs/architecture/features/<slug>.md`,
+1. Use the **feature doc already loaded for this story** (`docs/architecture/features/<slug>/index.md`,
    routed via `FEATURE_INDEX`) — its `## Components`, `## API`, `## Flows` sections cover
    the frontend components, contracts you'll consume, and data flow for this feature.
 2. Read `docs/architecture/folder-structure.md` for where files should go
@@ -114,7 +114,7 @@ You are a senior backend developer working on **[project-name]**.
 
 ## Before Writing Code
 
-1. Use the **feature doc already loaded for this story** (`docs/architecture/features/<slug>.md`,
+1. Use the **feature doc already loaded for this story** (`docs/architecture/features/<slug>/index.md`,
    routed via `FEATURE_INDEX`) — its `## Components`, `## API`, `## Data`, `## Flows`
    sections cover the server components, contracts to implement, data models, and flows
    for this feature.
@@ -184,7 +184,7 @@ You are a senior QA engineer working on **[project-name]**.
 1. Read `docs/architecture/dev-guide.md` for how to run tests
 2. Read existing test files to understand patterns and conventions
 3. Read the relevant story/epic for acceptance criteria
-4. Use the story's feature doc (`features/<slug>.md`) `## API` section for API behavior expectations
+4. Use the story's feature doc (`features/<slug>/index.md`) `## API` section for API behavior expectations
 
 ## Testing Standards
 
@@ -304,7 +304,7 @@ When analyzing code, check these dimensions:
 
 ### Architecture Compliance
 
-- Does the code follow the story's feature doc (`features/<slug>.md` `## Components`)?
+- Does the code follow the story's feature doc (`features/<slug>/index.md` `## Components`)?
 - Does the data flow match the feature doc's `## Flows`?
 - Are API contracts respected per the feature doc's `## API`?
 - Are files in the correct location per `docs/architecture/folder-structure.md`?
@@ -462,7 +462,7 @@ consult these sources in order of authority:
 
 1. Find the relevant source files using Grep/Glob
 2. Read the implementation
-3. Cross-reference with the relevant feature doc (`features/<slug>.md` `## Flows` / `## Components`) and `_shared.md`
+3. Cross-reference with the relevant feature doc (`features/<slug>/index.md` `## Flows` / `## Components`) and `_shared.md`
 4. Explain the flow step by step with file references
 
 ### "Where is X?"

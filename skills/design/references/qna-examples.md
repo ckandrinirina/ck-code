@@ -77,8 +77,8 @@ Use these instead of the New Project flow when in Feature Mode.
    - "Any performance, security, or compatibility requirements specific to this feature?"
    - "Does this change affect the existing folder structure?"
 
-After gathering answers, map impact into the feature's single doc
-`features/<slug>.md` (new endpoints → its `## API`, new tables → its `## Data`, new
+After gathering answers, map impact into the feature's canonical doc
+`features/<slug>/index.md` (new endpoints → its `## API`, new tables → its `## Data`, new
 components → its `## Components`, new flows → its `## Flows`). Cross-cutting infra shared
 by 2+ features goes in `_shared.md`, linked from the feature doc.
 
@@ -185,8 +185,8 @@ Proceed? YES / NO / ADJUST
 | folder-structure.md | Created |
 | tech-stack.md | Created |
 | _shared.md | Created |
-| features/[slug-1].md | Created |
-| features/[slug-2].md | Created |
+| features/[slug-1]/index.md | Created |
+| features/[slug-2]/index.md | Created |
 | configuration.md | Created |
 | dev-guide.md | Created |
 
@@ -209,7 +209,7 @@ Proceed? YES / NO / ADJUST
 
 | File | Action |
 |------|--------|
-| features/[slug].md | CREATED - self-contained feature doc (components/API/data/flows) |
+| features/[slug]/index.md | CREATED - self-contained feature doc (components/API/data/flows) |
 | _shared.md | UPDATED - added [shared infra] (only if 2+ features reuse it) |
 | README.md | UPDATED - added feature to index + changelog |
 | README.md | UPDATED - changelog entry added |
