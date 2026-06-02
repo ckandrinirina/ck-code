@@ -292,26 +292,6 @@ Existing stories: a `DONE` story stays `DONE`, an `IN PROGRESS` story stays `IN 
 
 No change in EPIC.md or `STORIES_INDEX.md` unless a story status changed (it shouldn't here — the bug-fix protocol leaves status alone). The index/epic mutations from Phase 2.6 (stub creation) are already persisted.
 
-### 8.3b Feature-Doc Write-Back
-
-If the fix changed the feature's documented surface (a new/changed endpoint, table,
-component, or flow — not a pure internal fix):
-
-1. **Update the canonical doc** read in Phase 1.3 (the affected feature's `Docs` path,
-   `features/<slug>/index.md`): adjust the matching `## Components` / `## API` / `## Data`
-   / `## Flows` section and append a `## Changelog` line `[date] · <bug/story ID> —
-<delta> · [./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)`. Cross-cutting
-   changes go in `_shared.md`.
-2. **Write the dated delta doc** beside it:
-   `features/<slug>/YYYY-MM-DD_<bug/story ID>_<short>.md` from the Increment / Fix Delta
-   Doc template (see `design`'s [architecture-templates.md](../design/references/architecture-templates.md)) —
-   the change narrative (what changed · why · surface touched). `index.md` stays the
-   routed source of truth; this dated doc is an append-only journal entry.
-
-**Skip both** when the fix has no architectural surface (the common case). **Fallback:**
-`Docs` cell `—`/missing → suggest `/ck-code:doc-optimizer sync`; do not create the
-canonical doc from scratch here.
-
 ### 8.4 Sync Verification
 
 Re-read `STORIES_INDEX.md` and confirm: every stub story file from Phase 2.6 has a matching row, and every existing story in scope still has its row unchanged. If a mismatch appears, tell the user `Index drift detected — run /ck-code:sync to reconcile.` and continue (do not silently rewrite).

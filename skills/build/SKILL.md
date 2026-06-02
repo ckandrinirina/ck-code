@@ -312,13 +312,6 @@ Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID`
 
 Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../references/feature-index.md`](../../references/feature-index.md).
 
-### 8.6b Feature-Doc Write-Back
-
-Keep the feature doc current with what this story changed: update `features/<slug>/index.md`
-(the `Docs` path read in Phase 2) and write a dated delta doc beside it. Full field specs,
-the changelog format, the cross-cutting `_shared.md` rule, and the skip/fallback conditions
-are in [references/completion.md](references/completion.md) (§ 8.6b).
-
 ### 8.7 Update Parent Epic
 
 Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
