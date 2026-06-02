@@ -11,6 +11,8 @@ Shown to the user before any files are written. Wait for explicit YES / NO / ADJ
 ```
 ## Project Plan: [Project Name]
 
+**Granularity:** [Coarse | Balanced | Fine] (chosen in Phase 1.5)
+
 ### Epics ([count] total)
 
 **Epic 01: [Name]** ([story count] stories)
@@ -49,36 +51,42 @@ Proceed with generating the full plan? YES / NO / ADJUST
 ## Recommended Implementation Order
 
 ### Phase 1: [Phase Name]
+
 **Goal:** [What this phase achieves]
 
 1. **[Epic/Story ID]** - [Title] ([Size])
    - [Why this comes first]
 2. **[Epic/Story ID]** - [Title] ([Size])
    - [Dependency or reason]
-...
+     ...
 
 ### Phase 2: [Phase Name]
+
 ...
 
 ## Parallelization Opportunities
+
 - [Story A] and [Story B] can be developed simultaneously because [reason]
 - [Epic X] backend work can overlap with [Epic Y] frontend work
 
 ## Critical Path
+
 The longest sequential chain is:
 [Story] -> [Story] -> [Story] -> ...
 
 ## Risk Areas
-| Risk | Impact | Mitigation |
-|------|--------|------------|
+
+| Risk     | Impact            | Mitigation        |
+| -------- | ----------------- | ----------------- |
 | [Risk 1] | [High/Medium/Low] | [How to mitigate] |
-| [Risk 2] | ... | ... |
+| [Risk 2] | ...               | ...               |
 
 ## Milestones
-| Milestone | Epics Included | Deliverable |
-|-----------|---------------|-------------|
-| [Name] | Epic 01, 02 | [What's usable] |
-| [Name] | Epic 03 | [What's added] |
+
+| Milestone | Epics Included | Deliverable     |
+| --------- | -------------- | --------------- |
+| [Name]    | Epic 01, 02    | [What's usable] |
+| [Name]    | Epic 03        | [What's added]  |
 ```
 
 ---

@@ -22,15 +22,19 @@ with epics, stories, dependencies, and a recommended roadmap.
 
 ## EFFORT SCALING
 
-Higher effort adds **depth per story** — never more epics or stories. Fewer,
-larger stories is the goal at every level: each story is one downstream `build`
-session, so fewer stories means fewer tool invocations and lower token cost.
+Effort and granularity are **two orthogonal axes**:
 
-Adapt to the current effort level (**${CLAUDE_EFFORT}**):
+- **Effort** (this section) controls **depth per story** — how much detail each
+  story carries. It never changes how many epics or stories exist.
+- **Granularity** (chosen by the user in Phase 1.5) controls the **count** — how
+  finely the work is broken into epics and stories.
 
-- **low** — One epic; a handful of large, vertically-complete stories; minimal acceptance criteria.
-- **medium** (default) — A few epics; each story is a complete feature slice with clear acceptance criteria and dependencies.
-- **high / xhigh / max** — Same lean epic/story count; add detailed acceptance criteria, edge cases, test notes, a finer-grained `## Implementation Tasks` breakdown per story, and an explicit dependency graph in the roadmap. Do **not** split stories finer to spend the effort — add task and criteria depth instead.
+Higher effort adds depth per story, not more stories. Adapt to the current
+effort level (**${CLAUDE_EFFORT}**):
+
+- **low** — Minimal acceptance criteria; terse technical notes.
+- **medium** (default) — Each story is a complete feature slice with clear acceptance criteria and dependencies.
+- **high / xhigh / max** — Add detailed acceptance criteria, edge cases, test notes, a finer-grained `## Implementation Tasks` breakdown per story, and an explicit dependency graph in the roadmap. Do **not** split stories finer to spend the effort — add task and criteria depth instead.
 
 ## INPUT
 
@@ -161,16 +165,47 @@ Map out:
 
 ---
 
+## PHASE 1.5: GRANULARITY SELECTION
+
+**Goal:** Let the user choose how finely the plan is broken down — the _count_
+axis — before structuring. Orthogonal to effort (which controls depth per story).
+
+From the Phase 1 analysis, **recommend one level**, then ask the user to confirm
+or override. Always state _why_ you recommend it (cite the spec signals below).
+
+| Level                | Shape                                                        | Best when                                                                                                |
+| -------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| **Coarse** (default) | Fewest epics; large L/XL stories, each a full vertical slice | Solo `build`, token-sensitive work, tightly-coupled code, smaller specs                                  |
+| **Balanced**         | A few epics; M–L stories split only at natural seams         | Medium projects with some independent parts                                                              |
+| **Fine**             | More epics; smaller M stories, one per discrete concern      | `parallel-build` across many agents/people, large or complex domains, fine-grained issue/tracking boards |
+
+**Recommendation signals:**
+
+- Highly parallelizable work, many independent components, or a team / `parallel-build` target → **Fine**.
+- Tightly-coupled work, solo or token-sensitive build, or a small spec → **Coarse**.
+- Otherwise → **Balanced**.
+
+Present the recommendation (marked) alongside all three options and wait for the
+user's choice. Record the chosen level as the **granularity** that governs every
+sizing decision in Phase 2. If the user expresses no preference, use your
+recommendation.
+
+---
+
 ## PHASE 2: EPIC & STORY STRUCTURING
 
 **Goal:** Organize the analysis into a clean epic/story hierarchy.
 
 ### 2.1 Define Epics
 
-**Minimize epics.** Create the fewest epics that still separate genuinely
-distinct deliverables. Group related functionality under one epic instead of
-spawning many small ones. Only open a new epic when the work ships as a separate
-milestone or has a hard dependency boundary; aim for 1–4 epics on a typical plan.
+**Scale the epic count to the chosen granularity (Phase 1.5):**
+
+- **Coarse** — fewest epics that still separate distinct deliverables; aim for 1–4. Only open a new epic for a separate milestone or a hard dependency boundary.
+- **Balanced** — a moderate set of epics, one per cohesive area of work.
+- **Fine** — one epic per discrete deliverable, so parallel agents/people own clean boundaries.
+
+At every level, never create an epic that marks neither a distinct milestone nor
+a dependency boundary — group such work under an existing epic.
 
 Each epic should:
 
@@ -197,45 +232,58 @@ Each epic should:
 
 ### 2.2 Define Stories Within Each Epic
 
-**Favor fewer, larger stories.** A story should deliver a complete, coherent
-slice of functionality — a full feature or component, not a single file edit.
-One story = one downstream `build` session, so combining related work into one
-story directly cuts tool calls and token cost. Size up and combine by default.
+**Size stories to the chosen granularity (Phase 1.5).** One story = one
+downstream `build` session. Whatever the level, each story stays a complete,
+coherent slice and never mixes unrelated concerns.
 
-Each story must still:
+- **Coarse** — fewer, larger L/XL stories; combine related work by default and size up.
+- **Balanced** — M–L stories, split at natural seams between sub-features.
+- **Fine** — smaller M stories, one per discrete concern, so independent pieces can be built in parallel.
+
+Each story must, at every level:
 
 - Cover one cohesive concern (a feature, a component, a vertical slice) — never mix unrelated concerns into one story.
 - Be numbered sequentially within its epic (`01`, `02`, ...) with a short descriptive slug.
 - Carry clear, testable acceptance criteria and an explicit files-to-touch list so `build` can execute it in one focused session.
 
-**Story sizing rubric:**
+**Story sizing rubric** (default target follows granularity: Coarse → L, Balanced → M/L, Fine → M):
 
-- **L (default target):** A full feature or component — multiple files, real logic or integration. Aim for this size.
+- **L:** A full feature or component — multiple files, real logic or integration. The Coarse default.
 - **XL:** A large but tightly-coupled deliverable (e.g., a complete subsystem). Keep it as one story when splitting would gain nothing.
-- **M:** Only when a piece of work is genuinely small, self-contained, and cannot be folded into a related L story.
+- **M:** A self-contained concern. The Fine default; under Coarse, only when it cannot be folded into a related L story.
 - **S:** Avoid as a standalone story. Fold small changes (a config file, a type definition) into the story that consumes them.
 
-**Split a story ONLY when** one of these holds — otherwise keep it as a single story:
+**Split a story when** the granularity calls for it (Fine splits at each discrete
+concern) **or** one of these holds at any level:
 
 - The pieces are independent and can be implemented in parallel by different agents/people, or
 - There is a hard dependency boundary (one part must merge and stabilize before the next can start), or
 - The concerns are genuinely unrelated.
 
+Under **Coarse**, split only for the three reasons above; under **Fine**, prefer
+the finer split wherever each piece is independently verifiable.
+
 ### 2.2b Consolidation Pass
 
-Before presenting the plan, review the draft story list and merge wherever the split is not justified by the rule above:
+Before presenting the plan, review the draft story list. How aggressively you
+merge depends on the chosen granularity (Phase 1.5):
 
-- Stories that touch the same files or the same component/layer → merge into one.
-- A chain of stories that can only run sequentially with no parallelization or dependency-boundary benefit → merge into one.
-- Standalone S stories → fold into the related story that consumes them.
-- An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone.
+- **Coarse** — apply every merge below; target the smallest epic/story count that still yields clear, independently-verifiable deliverables.
+- **Balanced** — apply only the clearly-redundant merges (same files, standalone S stories).
+- **Fine** — merge only stories that are genuinely the same concern; preserve the finer split otherwise.
 
-Target the smallest epic/story count that still yields clear, independently-verifiable deliverables.
+Merge candidates:
+
+- Stories that touch the same files or the same component/layer → merge (Coarse/Balanced).
+- A chain of stories that can only run sequentially with no parallelization or dependency-boundary benefit → merge (Coarse).
+- Standalone S stories → always fold into the related story that consumes them.
+- An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone (Coarse/Balanced).
 
 ### 2.2c Break Each Story into Tasks
 
-Fewer, larger stories stay precise only when each one carries an explicit,
-ordered task list. For every story, decompose the work into concrete
+A story stays precise only when it carries an explicit, ordered task list —
+this matters most for the larger stories of a Coarse plan, but applies at every
+granularity. For every story, decompose the work into concrete
 step-by-step **implementation tasks** — each task is one verifiable action that
 moves the story toward its acceptance criteria (e.g. "define the `X` interface",
 "implement `Y` against it", "wire `Y` into the handler"). These tasks populate
@@ -343,8 +391,8 @@ Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** 
 - **No hardcoding:** Never reference specific project names, technologies, or paths in the skill logic. Derive everything from the spec.
 - **Thoroughness:** Every functional requirement in the spec must be covered by at least one story; related requirements may share a single story. If a requirement is vague, cover it with a note about needed clarification.
 - **Scanning readability:** Use tables, bullet points, and headers. Avoid walls of text.
-- **Consolidation-first sizing:** When in doubt, combine. Fewer, larger stories beat many small ones — each story is one `build` session, so fewer stories means fewer tool calls and lower token cost. Never split for the sake of granularity.
-- **Precision via tasks, not splitting:** Recover the precision a large story might lose by giving it an ordered `## Implementation Tasks` list (Phase 2.2c) — never by breaking it into more, smaller stories.
+- **Granularity is the user's choice:** size epics/stories to the level chosen in Phase 1.5 (Coarse / Balanced / Fine). Always recommend a level from the spec signals, but never override an explicit user choice. Within the chosen level, when genuinely undecided, combine.
+- **Precision via tasks, not arbitrary splitting:** recover the precision a larger story might lose by giving it an ordered `## Implementation Tasks` list (Phase 2.2c), not by splitting below the chosen granularity.
 - **Preserve spec language:** When the spec uses specific technical terms, preserve them in story titles and descriptions.
 - **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
 - **Reusability:** This skill must work with any project specification, not just the current project.
