@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.0.4] — 2026-06-02
+
+### Added
+
+- **plan**: user-selectable epic/story granularity. New Phase 1.5 recommends a level (Coarse / Balanced / Fine) from spec signals and lets the user confirm or override, instead of always producing fewer, larger stories. Effort (depth) and granularity (count) are now explicitly orthogonal axes.
+
 ## [3.0.3] — 2026-06-02
 
 ### Changed
