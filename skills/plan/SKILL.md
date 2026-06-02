@@ -170,8 +170,14 @@ Map out:
 **Goal:** Let the user choose how finely the plan is broken down — the _count_
 axis — before structuring. Orthogonal to effort (which controls depth per story).
 
-From the Phase 1 analysis, **recommend one level**, then ask the user to confirm
-or override. Always state _why_ you recommend it (cite the spec signals below).
+**Continue Mode:** read the prior plan's `ROADMAP.md` granularity marker
+(`<!-- Granularity: … -->`) and default to that level so the appended work
+matches the existing plan — recommend it, and only re-ask if the user wants to
+change it.
+
+Otherwise, from the Phase 1 analysis, **recommend one level**, then ask the user
+to confirm or override. Always state _why_ you recommend it (cite the spec
+signals below).
 
 | Level                | Shape                                                        | Best when                                                                                                |
 | -------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
@@ -187,8 +193,12 @@ or override. Always state _why_ you recommend it (cite the spec signals below).
 
 Present the recommendation (marked) alongside all three options and wait for the
 user's choice. Record the chosen level as the **granularity** that governs every
-sizing decision in Phase 2. If the user expresses no preference, use your
-recommendation.
+sizing decision in Phase 2, and persist it in the generated `ROADMAP.md`
+(`<!-- Granularity: … -->` marker, Phase 4.6) so Continue Mode reuses it. If the
+user expresses no preference, use your recommendation.
+
+When the user picks **Fine**, note that `/ck-code:parallel-build` is the natural
+downstream — it runs the independent stories concurrently across agents.
 
 ---
 
@@ -368,6 +378,9 @@ This is what makes "what still needs planning?" a cheap ledger lookup for the ne
 ### 4.6 ROADMAP.md Content
 
 For the roadmap template, see [references/roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).
+Fill the `<!-- Granularity: … -->` marker with the level chosen in Phase 1.5 so
+Continue Mode can reuse it. **Continue Mode:** preserve the existing marker —
+do not downgrade it when appending work at the same level.
 
 ---
 
@@ -382,6 +395,8 @@ After all files are created, present a summary tailored to the mode. For each su
 ## NEXT
 
 Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
+
+If the plan was generated at **Fine** granularity, recommend `/ck-code:parallel-build` instead — it builds the independent stories concurrently across agents, which is the payoff of the finer split.
 
 ---
 

@@ -44,6 +44,8 @@ Proceed with generating the full plan? YES / NO / ADJUST
 ```markdown
 # Implementation Roadmap: [Project Name]
 
+<!-- Granularity: [Coarse | Balanced | Fine] -->
+
 ## Dependency Graph
 
 [ASCII diagram showing epic dependencies]
