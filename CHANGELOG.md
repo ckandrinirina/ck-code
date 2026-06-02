@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.0.3] — 2026-06-02
+
+### Changed
+
+- **build, fix**: removed feature-doc write-back (phases 8.6b / 8.3b) — only `design` writes to architecture docs; `build` and `fix` write to the story file only.
+
 ## [3.0.2] — 2026-06-01
 
 ### Fixed
