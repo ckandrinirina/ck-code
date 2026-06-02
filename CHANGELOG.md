@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.0.5] — 2026-06-02
+
+### Added
+
+- **plan**: granularity is now persisted in `ROADMAP.md` (`<!-- Granularity -->` marker) so Continue Mode reuses the prior level instead of re-asking, and Fine plans are handed off to `/ck-code:parallel-build` (NEXT step + Phase 1.5 note) to realize the parallel-build payoff of the finer split.
+
 ## [3.0.4] — 2026-06-02
 
 ### Added
