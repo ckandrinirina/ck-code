@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.2] — 2026-06-03
+
+### Fixed
+
+- **fix**: verdict C (NEW-FEATURE) now defers to `/ck-code:design` instead of jumping straight to `/ck-code:plan`, so a fix that turns out to be a new feature enters the normal flow (design → team → plan) and gets architecture docs before story planning.
+
 ## [3.1.1] — 2026-06-03
 
 ### Changed
