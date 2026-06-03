@@ -1,6 +1,6 @@
 ---
 name: team
-description: Use to generate project-tailored expert skills and language guides from architecture docs. Depth flag `--basic|--standard|--max` sets how many skills to generate (default `--standard`); `--check` audits only, `--regenerate` refreshes all.
+description: Use to generate project-tailored expert skills and technology guides (languages, frameworks, and idiomatic libraries) from architecture docs. Depth flag `--basic|--standard|--max` sets how many skills to generate (default `--standard`); `--check` audits only, `--regenerate` refreshes all.
 argument-hint: "[--basic|--standard|--max] [--check|--regenerate]"
 disable-model-invocation: true
 effort: high
@@ -211,6 +211,20 @@ when two areas need genuinely different expertise; merge when one person would o
 - `--max` — the finest justified split: a dedicated expert for every distinct
   area, including domain-specific roles — but still **only where a real need exists**.
 
+**Prefer a guide over an expert.** A single library or single cross-cutting concern
+is almost always a **guide** (auto-loaded, cheap) folded under the expert that owns
+the surrounding code — not its own expert. Litmus test:
+
+- "How do I write idiomatic X?" → **guide-x**. Even at `--max`, do **not** mint
+  `expert-analytics`, `expert-i18n`, `expert-styling`, or `expert-api` — these are
+  guides under `expert-web`/`expert-backend`.
+- "Who owns this whole subsystem end-to-end?" → **expert-x** — only a **distinct
+  body of work** with its own files and lifecycle (a blockchain settlement pipeline,
+  a separate mobile app, a data/ML pipeline). Cross-cutting _qualities_ like
+  performance live in `expert-analyst` plus guides, not a standalone
+  `expert-performance` — unless there is a dedicated perf workstream (benchmark
+  suite, a latency budget with its own code).
+
 **Common anchor roles** (start here, then add project-specific roles as needed).
 Full templates: [`references/expert-templates.md`](references/expert-templates.md).
 
@@ -241,17 +255,45 @@ from `tech-stack.md` and the codebase, not from a fixed language list. A technol
 earns a guide when code is (or will be) written in it and getting it right is
 non-trivial.
 
-- **Generate for:** the project's languages, its major frameworks, and major
-  protocols it implements (e.g. gRPC, GraphQL) — whatever the project actually uses.
-- **Skip:** small utility libraries, build tools, serialization formats, and engines
-  with no idiom to teach — these live inside the relevant expert/language guide.
+The bar is **"does this library have an idiom that is easy to get wrong?"** — not
+"is it a language or a framework". Most of a project's best-practice surface lives
+in libraries that are neither, so they MUST be able to earn a guide.
+
+- **Generate for:**
+  1. the project's **languages**;
+  2. its major **frameworks** (Next.js, NestJS, React, React-Admin, Redux Toolkit…);
+  3. major **protocols** it implements (gRPC, GraphQL…);
+  4. **significant libraries with non-trivial idiom** — the category that was
+     previously dropped. A library qualifies when using it well requires conventions
+     a newcomer would not guess. Common kinds, with concrete examples:
+     - **Styling systems** — Tailwind (utility ordering, design tokens, `@apply`
+       misuse), CSS-in-JS.
+     - **i18n** — i18next (namespace/key organization, interpolation, pluralization,
+       lazy-loading).
+     - **Analytics / feature flags** — PostHog (event-naming, capture conventions,
+       flag patterns, PII).
+     - **Client SDKs** — Firebase/FCM (SW setup, token lifecycle, fg/bg handling),
+       auth SDKs (Web3Auth flows), blockchain libs (ethers/web3 signing, gas, nonce).
+     - **State / data** — Redux Toolkit, React Query (cache keys, invalidation).
+     - **Forms / validation** — react-hook-form + zod (resolver, schema patterns).
+     - **Charts, maps, rich-text, file-upload** — any library with a real API idiom.
+- **Skip only genuinely idiom-free utilities:** lodash, date-fns, uuid, dotenv,
+  class-variance-authority, clsx, and plain build tools/bundlers/serializers. If a
+  newcomer could use it correctly by reading its function signature, it needs no guide.
 
 **Guide depth by tier:**
 
 - `--basic` — one guide per detected **language** only.
-- `--standard` — language guides **plus** one per detected **major framework**.
+- `--standard` — language guides **plus** one per detected **major framework** AND
+  per **core daily-use library with strong idiom** (styling system, primary state
+  library, i18n) — the libraries the team touches in almost every file.
 - `--max` — the above **plus** major **protocols**, the primary **test framework**
-  (`guide-testing`), and a **tooling** guide when the build/tooling is non-trivial.
+  (`guide-testing`), a **tooling** guide when the build/tooling is non-trivial, AND
+  **every remaining significant library with non-trivial idiom** (analytics/flags,
+  push/SDK, auth SDK, blockchain lib, forms/validation, charts).
+
+A library earns **one** guide, owned by the expert whose code uses it — it is never
+a reason to mint a new expert (see the guide-over-expert rule in 2.1).
 
 All guide content comes from Phase 1.6 research; the template is in
 [`references/guide-templates.md`](references/guide-templates.md).

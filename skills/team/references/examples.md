@@ -65,18 +65,22 @@ Derived from your project's architecture and tech stack:
 | Code Analyst | /expert-analyst | Always (review) |
 | Project Q&A | /expert-qa-project | Always (project knowledge) |
 
-### Language & Framework Guides (researched via context7)
+### Language, Framework & Library Guides (researched via context7)
+Guides cover idiomatic libraries too — not just languages and frameworks.
 | Guide | Command | Best Practices Source |
 |-------|---------|----------------------|
 | Rust (Axum 0.7) | /guide-rust | context7 + WebSearch |
 | React Native (Expo SDK 50+) | /guide-react-native | context7 + WebSearch |
+| Zustand (state idiom) | /guide-zustand | context7 + WebSearch |
+| i18next (namespaces, plurals) | /guide-i18next | context7 + WebSearch |
 
 **Output:**
 - .claude/skills/experts/<slug>/SKILL.md  (each with paths/keywords for auto-load)
 - .claude/skills/guides/<slug>/SKILL.md
 
-Skipped (not warranted at this tier): expert-performance, expert-api, expert-docs.
-Re-run with --max to include every justified specialist.
+Skipped — handled as guides under an existing expert, not as standalone experts:
+analytics, i18n, styling, API-contract (guide-over-expert rule). Skipped at this
+tier: expert-performance, expert-docs. Re-run with --max to widen the guide set.
 
 Proceed? YES / NO / ADJUST
 ```
