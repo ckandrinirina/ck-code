@@ -89,12 +89,12 @@ On `YES`: go directly to Phase 3 (no Phase 2.5.5 gate). On `ADJUST`: re-score wi
 ```
 ## Stop — This Looks Like a New Feature, Not a Bug
 
-What you described isn't a regression — it's behavior that was never built. The right tool is `/ck-code:plan`.
+What you described isn't a regression — it's behavior that was never built. A new feature goes through the normal flow, which starts with architecture: `design` → `team` → `plan`. Don't skip straight to story planning.
 
 Suggested next step:
-  /ck-code:plan <path-to-spec-or-feature-description>
+  /ck-code:design <path-to-spec-or-feature-description>
 
-Pick mode A (ADD FEATURE) or C (CONTINUE) when prompted.
+`design` produces the architecture docs that `plan` later turns into epics and stories.
 
 Proceed anyway? NO (recommended — stop) / YES (force fix flow with stub stories)
 ```

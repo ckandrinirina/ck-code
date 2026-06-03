@@ -88,9 +88,9 @@ Use the report in `references/qa-dialogue.md` (Phase 2.5). Wait for explicit `YE
 
 **Verdict A fast-path:** when the verdict is A (single-story, no stubs, no sync work), the Phase 2.5 report uses the verdict-A combined prompt — one gate covers both the verdict and the (trivial) story set. **Skip Phase 2.5.5 entirely and proceed to Phase 3 on `YES`.** Verdicts B / D still flow through Phase 2.5.5 separately because the story set adds real information (stubs, epic syncs).
 
-### 2.5.3 Verdict C (NEW-FEATURE) — Defer to /ck-code:plan
+### 2.5.3 Verdict C (NEW-FEATURE) — Defer to /ck-code:design
 
-Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5b) and **STOP** unless the user explicitly forces the fix flow (which falls through to verdict D handling). Do NOT create stub stories under verdict C — the planner handles that with full architecture context.
+A new feature must enter the **normal flow** — `design` → `team` → `plan` — not jump straight to story planning. Print the deferral prompt from `references/qa-dialogue.md` (Phase 2.5b), which recommends `/ck-code:design <spec-or-feature-description>` first (it produces the architecture docs that `plan` later consumes). **STOP** unless the user explicitly forces the fix flow (which falls through to verdict D handling). Do NOT create stub stories under verdict C — `design` then `plan` handle that with full architecture context.
 
 ### 2.5.4 Verdict E (PLANNED-IN-FUTURE) — Defer to /ck-code:build
 
@@ -357,7 +357,7 @@ Each gate is enforced inside its phase — listed here as a checklist:
 
 ### Scope discipline (cross-cutting)
 
-- **Verdict C (NEW-FEATURE)** → defer to `/ck-code:plan`. Never create stub stories from the fix flow.
+- **Verdict C (NEW-FEATURE)** → defer to `/ck-code:design` (normal flow: design → team → plan). Never create stub stories from the fix flow.
 - **Verdict E (PLANNED-IN-FUTURE)** → defer to `/ck-code:build <future-story>`. `PROCEED ANYWAY` falls through to the underlying A/B/D verdict; it does NOT bypass other gates.
 - **Minimal fix only.** No refactor, no improvement, no feature. Drive-by fixes for OTHER bugs stay in the Phase 4.4 related-issues note, never inline.
 - **Index purity.** `STORIES_INDEX.md` tracks only `TODO` / `IN PROGRESS` / `DONE` / `SKIP`. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the Bug Report.
