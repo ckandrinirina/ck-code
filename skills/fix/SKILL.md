@@ -134,7 +134,7 @@ After writes, re-read the index and each modified EPIC.md to confirm the new row
 
 ### 3.1 Detect & Load Skills
 
-Follow the shared procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md). For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis). Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
+Follow the shared procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md). Experts/guides are matched by each present skill's `paths`/`keywords` frontmatter (anchor tables as fallback) — the slug set is project-derived, not fixed. For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis), and `guide-conventions` always loads when present. Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
 
 ### 3.2 Prepare Systematic Debugging Approach
 

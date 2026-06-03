@@ -39,26 +39,50 @@ and migrated originals live under `docs/architecture/archive/`. Never read them.
 Skip files absent on disk. Do NOT read `ROADMAP.md` here — it is loaded
 only when the story's technical notes reference it.
 
-## Step 2 — Detect required expert skills
+## Step 2 — Detect required expert skills (self-describing manifest)
 
-| File path / keyword                                           | Expert                                                          |
-| ------------------------------------------------------------- | --------------------------------------------------------------- |
-| `mobile/`, `app/`, `components/`, `screens/`, `ui/`           | `expert-frontend`                                               |
-| `server/`, `api/`, `backend/`, `services/`                    | `expert-backend`                                                |
-| `.test.`, `.spec.`, `__tests__/`                              | `expert-qa` _(always detected; loaded if present — see Step 4)_ |
-| `docker/`, `.github/`, `ci/`, `deploy/`                       | `expert-devops`                                                 |
-| DB migrations, `.sql`, schema changes                         | `expert-backend`                                                |
-| Technical Notes mentions "frontend"/"UI"/"component"/"screen" | `expert-frontend`                                               |
-| Technical Notes mentions "API"/"endpoint"/"server"/"handler"  | `expert-backend`                                                |
-| Technical Notes mentions "deploy"/"CI"/"docker"/"pipeline"    | `expert-devops`                                                 |
+`/ck-code:team` derives experts dynamically — their slugs are **not a fixed list**
+(a project may have `expert-graphics`, `expert-firmware`, etc.). So detection is
+**manifest-driven**: each generated expert declares its own load triggers in
+frontmatter. Match those, not a hardcoded table.
 
-`expert-qa` is **always detected** regardless of work type. For bug-fix
-flows, `expert-analyst` is **always detected** in addition (root cause
-analysis). Detection means the skill enters the required set; whether it
-is actually loaded depends on the filesystem check in Step 4 (a missing
-file is reported, not silently assumed).
+For each expert present on disk (from Step 4a), read its frontmatter and load it when:
 
-## Step 3 — Detect required guide skills (by file extension)
+- any `paths:` glob matches a file the story/bug **touches**, OR
+- any `keywords:` entry appears in the story's **title or Technical Notes**.
+
+**Always required** (loaded if present, no trigger needed): `expert-qa`; plus
+`expert-analyst` for bug-fix flows (root-cause analysis). These three —
+`expert-qa`, `expert-analyst`, `expert-qa-project` — carry no `paths`/`keywords`.
+
+**Fallback for experts with no `paths`/`keywords` frontmatter** (older generations):
+use the anchor mapping below.
+
+| File path / keyword                                           | Expert            |
+| ------------------------------------------------------------- | ----------------- |
+| `mobile/`, `app/`, `components/`, `screens/`, `ui/`           | `expert-frontend` |
+| `server/`, `api/`, `backend/`, `services/`                    | `expert-backend`  |
+| `docker/`, `.github/`, `ci/`, `deploy/`                       | `expert-devops`   |
+| `auth/`, secrets/crypto/payment paths or keywords             | `expert-security` |
+| DB migrations, `.sql`, `models/`, schema changes              | `expert-database` |
+| Technical Notes mentions "frontend"/"UI"/"component"/"screen" | `expert-frontend` |
+| Technical Notes mentions "API"/"endpoint"/"server"/"handler"  | `expert-backend`  |
+| Technical Notes mentions "deploy"/"CI"/"docker"/"pipeline"    | `expert-devops`   |
+
+Detection means the skill enters the required set; whether it is actually loaded
+depends on the filesystem check in Step 4 (a missing file is reported, not
+silently assumed).
+
+## Step 3 — Detect required guide skills (manifest-driven)
+
+Guides are also derived dynamically. Each generated guide declares a `paths:` glob
+in its frontmatter (the source files it covers). Load a guide when any of its
+`paths:` globs match a file the story/bug touches.
+
+**`guide-conventions` is always required** (loaded if present, no trigger needed) —
+it holds the project's house rules and overrides generic guides on conflict.
+
+**Fallback for guides with no `paths` frontmatter** — use the anchor mapping:
 
 | Extension / pattern  | Guide                                         |
 | -------------------- | --------------------------------------------- |
@@ -100,6 +124,21 @@ generated, and the `ls` output overrides them in every case. Only an empty `ls`
 result means the project has no skills — go straight to 4c. Never conclude "no
 skills exist" without having run this command in this flow.
 
+**4a.2. Build the detection manifest (when slugs are not all recognized):**
+
+Because slugs are dynamic, extract each present skill's load triggers before
+deciding. One cheap, non-loading pass over the frontmatter:
+
+```bash
+for f in $(ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md 2>/dev/null); do
+  echo "== $f"; sed -n '/^---$/,/^---$/p' "$f" | grep -E '^(name|paths|keywords|-)' ;
+done
+```
+
+Match each skill against the story per Steps 2–3 (frontmatter first, anchor table
+as fallback). This `sed`/`grep` reads only frontmatter — it does **not** load the
+skill body into context; only Step 4b's `Read` does that, and only for matches.
+
 **4b. Load each detected skill via `Read` only:**
 
 For every skill detected in Step 2 / Step 3 AND present in 4a's output,
@@ -117,7 +156,8 @@ skill; when no such plugin exists, it would error before any fallback ran.
 `experts/qa/SKILL.md` and (for bug-fix flows) `experts/analyst/SKILL.md`
 are loaded **only when 4a confirms their files exist on disk**. They are
 no longer loaded unconditionally — a missing file is reported in 4c,
-never silently faked.
+never silently faked. `guides/conventions/SKILL.md` is likewise **always
+loaded when present** (the project house rules), with no trigger required.
 
 **Batching:** issue all confirmed-present `Read` calls in a **single
 parallel tool-call message**. The 4a filesystem check is the only
@@ -126,6 +166,8 @@ blocking step — once it returns, every present skill is read in parallel.
 **4c. Report missing skills and gate:**
 
 Compute `missing = (detected_in_steps_2_3 ∪ qa-always-set) − present_in_4a`.
+`guide-conventions` is **optional** — it is owned by `/ck-code:convention`, not
+`team`. Load it when present, but never list it as `missing` when absent.
 
 - `missing` is empty → continue to the caller's next phase.
 - `missing` is non-empty → print one line per missing skill (full
@@ -146,7 +188,7 @@ Print one block:
 ```
 Skills loaded for this implementation:
   Experts: expert-backend, expert-qa
-  Guides:  guide-rust, guide-axum
+  Guides:  guide-rust, guide-axum, guide-conventions
   Missing (skipped): expert-frontend
 ```
 
@@ -187,5 +229,10 @@ Skills loaded for this implementation:
   assumed.
 - **Never** infer skill names from training data — only load skills that
   appear in the 4a filesystem-check output.
+- **Never** assume the expert/guide set is the fixed anchor list — slugs are
+  derived per project. Match each present skill by its own `paths`/`keywords`
+  frontmatter (Step 2/3); the anchor tables are a fallback for skills lacking it.
+- **Always** load `guides/conventions` when present (project house rules), and
+  never report it as missing when absent — it is owned by `/ck-code:convention`.
 - **Always** report the loaded skills to the user (Step 5) before returning
   to the caller — skill loading is never silent.

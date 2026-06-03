@@ -77,12 +77,13 @@ If this is the first story of its feature to start (the feature was `TODO`), als
 **Mandatory — blocks Phase 3. Never plan or write code until it completes.** Done
 ONLY when all three hold: (1) the 4a `ls` ran, (2) every detected-and-present skill
 was `Read`, and (3) the "Skills loaded for this implementation" block was shown to the
-user. `expert-qa` is always detected (+ `expert-analyst` for bug-fix flows). If 4a
+user. `expert-qa` is always detected (+ `expert-analyst` for bug-fix flows), and
+`guide-conventions` always loads when present. If 4a
 lists skills but you loaded none, stop and re-run Step 4 — a non-empty project must
 never reach Phase 3 with zero skills loaded, else Phases 5/6 "follow loaded skills"
 silently become no-ops.
 
-Follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by file path + Technical Notes keywords; `expert-qa` is **always** loaded) and guides (by file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
+Follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by each present skill's `paths`/`keywords` frontmatter, anchor table as fallback; `expert-qa` **always** loaded, `guide-conventions` always loaded when present) and guides (by their `paths` frontmatter / file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
