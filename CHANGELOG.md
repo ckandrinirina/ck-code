@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.1] — 2026-06-03
+
+### Changed
+
+- **team**: rebalanced expert vs. guide derivation. Guides now cover **idiomatic libraries** (Tailwind, i18next, PostHog, Firebase/FCM, auth/blockchain SDKs, forms/validation), not just languages, frameworks, and protocols — closing the gap where high-idiom libraries were dropped as "small utilities". Added a **guide-over-expert** rule so single-library or cross-cutting concerns become guides under an existing expert instead of standalone experts (no more `expert-analytics`/`expert-i18n`/`expert-styling`/`expert-api`), curbing expert proliferation at `--max`.
+
 ## [3.1.0] — 2026-06-03
 
 ### Added
