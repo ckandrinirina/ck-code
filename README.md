@@ -6,7 +6,7 @@
 
 1. **Design** — refine your spec into a complete set of architecture documents (folder structure, components, APIs, database schema, tech stack)
 2. **Plan** — break the architecture into epics and stories with sizes (S/M/L/XL) and explicit dependencies
-3. **Team** — generate a project-tailored team of expert and language-guide skills (frontend, backend, QA, DevOps, plus per-language guides for Rust, TypeScript, Python, React Native, etc.)
+3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture: it generates only the roles the project actually needs (frontend, backend, QA, security, database, DevOps, and domain-specific roles), at a depth you choose (`--basic` / `--standard` / `--max`), plus per-technology guides. Capture your own house conventions with **Convention**.
 4. **Build** — implement each story using test-driven development (TDD), SOLID principles, and a built-in dev-QA validation loop
 5. **Ship** — commit with conventional commits, open a pull request, and auto-update linked GitHub Issues
 
@@ -104,7 +104,8 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 | `/ck-code:pre-spec`       | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon)                                                                                                                                                                                               | feature description or notes file           | `docs/pre-specs/` and/or GitHub issue                           |
 | `/ck-code:design`         | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`)                                                                                                                                                                          | spec file                                   | `docs/architecture/`                                            |
 | `/ck-code:doc-optimizer`  | One-shot `upgrade` migrates a pre-v3 project to the v3 layout (layer docs → per-feature docs, flat docs → `features/<slug>/index.md`, index → v2, scaffold `DESIGN_LEDGER.md`, stamp `tasks/VERSION.md`); also `migrate` / `sync` / `optimize` for ongoing upkeep and token diet | `upgrade` / `migrate` / `sync` / `optimize` | v3 `docs/architecture/` + `FEATURE_INDEX` `Docs` + `VERSION.md` |
-| `/ck-code:team`           | Generate per-project expert + guide skills                                                                                                                                                                                                                                       | `docs/architecture/`                        | `.claude/skills/experts/`, `.claude/skills/guides/`             |
+| `/ck-code:team`           | Derive per-project expert + guide skills from the architecture — only what the project needs; depth `--basic` / `--standard` / `--max`                                                                                                                                           | `docs/architecture/`                        | `.claude/skills/experts/`, `.claude/skills/guides/`             |
+| `/ck-code:convention`     | Capture your conventions (code structure, naming, style, architecture) into a `guide-conventions` skill every expert reads; also create custom experts/guides or adjust generated ones                                                                                           | conventions / `new` / `adjust`              | `.claude/skills/guides/conventions/`, custom skills             |
 | `/ck-code:plan`           | Create epics, stories, roadmap at a chosen granularity (Coarse / Balanced / Fine — recommended from the spec, user confirms)                                                                                                                                                     | spec file                                   | `tasks/YYYY-MM-DD_<project>/` + `tasks/FEATURE_INDEX.md` rows   |
 | `/ck-code:quick-story`    | Add a single small story to an existing epic without the full `plan` cycle (e.g. add a DB column, tweak a config)                                                                                                                                                                | one-line brief + epic                       | story file + `STORIES_INDEX.md` row + `EPIC.md` row             |
 | `/ck-code:to-issues`      | Push a plan to GitHub Issues at a chosen granularity: one feature issue, one per epic, or the full epic+story hierarchy (`--mode feature\|epics\|stories`)                                                                                                                       | tasks folder                                | GitHub Issues                                                   |
@@ -148,7 +149,8 @@ ck-code/
 │   ├── doc-optimizer/             # migrate/scaffold/prune feature docs to cut read tokens
 │   ├── plan/                      # architecture → epics/stories
 │   ├── quick-story/                # add one small story to an existing epic without the full plan cycle
-│   ├── team/                      # generate per-project experts + guides
+│   ├── team/                      # derive per-project experts + guides (tiered)
+│   ├── convention/                # capture house conventions + custom/adjusted skills
 │   ├── to-issues/                 # push tasks/ → GitHub Issues (batch)
 │   ├── track/                     # progress dashboard
 │   ├── build/                     # TDD story implementation
