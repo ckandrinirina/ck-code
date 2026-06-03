@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-06-03
+
+### Added
+
+- **convention**: new skill that captures a project's own conventions (code structure, naming, coding style, architectural rules) into a `guide-conventions` skill every expert reads, and can create custom experts/guides or adjust generated ones — covering the house rules `team`'s research-driven generation cannot.
+- **team**: depth flags `--basic` / `--standard` / `--max` (default `--standard`) controlling how many skills are generated; new detection-gated specialist experts (`security`, `database`, `performance`, `api`, `mobile`, `data`, `docs`) plus a generic `derived-expert` template for project-specific roles.
+
+### Changed
+
+- **team**: Phase 2 now _derives_ the expert/guide set intelligently from the project context and generates only what the project genuinely needs, instead of matching a fixed catalog. Generated experts/guides carry self-describing `paths`/`keywords` frontmatter.
+- **skill-detection** (build/fix/parallel-build): expert/guide loading is now manifest-driven — matched by each skill's `paths`/`keywords` frontmatter so dynamically-named experts auto-load (anchor tables kept as fallback); `guide-conventions` always loads when present.
+
 ## [3.0.5] — 2026-06-02
 
 ### Added
