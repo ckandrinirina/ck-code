@@ -15,15 +15,18 @@ these for the exact phrasing of its plan and post-generation summary.
 **Architecture:** [type, e.g., client-server with 3 components]
 
 **Components:**
+
 - [Component 1]: [tech] — [purpose]
 - [Component 2]: [tech] — [purpose]
 - ...
 
 **Tech Stack:**
+
 - [Layer]: [technology] [version]
 - ...
 
 **Key Patterns:**
+
 - Communication: [protocols used]
 - Serialization: [formats used]
 - Database: [engine + ORM]
@@ -42,37 +45,44 @@ these for the exact phrasing of its plan and post-generation summary.
 
 ## Plan Presentation (Phase 2.4)
 
-```
-## Skills to Generate
+The roles below are **derived from this project**, not a fixed list — include any
+project-specific role the domain warrants, and only the skills the project needs.
+State the resolved tier in the header.
 
-Based on your project's tech stack and architecture:
+```
+## Skills to Generate  (tier: standard)
+
+Derived from your project's architecture and tech stack:
 
 ### Expert Roles
-| Expert | Command | Reason |
-|--------|---------|--------|
-| Frontend Developer | /expert-frontend | React Native + Expo mobile app detected |
-| Backend Developer | /expert-backend | Rust Axum server detected |
-| QA Tester | /expert-qa | Always generated |
-| Code Analyst | /expert-analyst | Always generated |
-| DevOps | /expert-devops | No CI/CD yet — will focus on setup guidance |
-| Project Q&A | /expert-qa-project | Always generated |
+| Expert | Command | Why this project needs it |
+|--------|---------|---------------------------|
+| Frontend Developer | /expert-frontend | React Native + Expo mobile app (mobile/) |
+| Backend Developer | /expert-backend | Rust Axum server (server/) |
+| Database Engineer | /expert-database | sqlx + migrations/ detected |
+| Security Engineer | /expert-security | JWT auth + secrets in _shared.md |
+| QA Tester | /expert-qa | Always (testing) |
+| Code Analyst | /expert-analyst | Always (review) |
+| Project Q&A | /expert-qa-project | Always (project knowledge) |
 
 ### Language & Framework Guides (researched via context7)
 | Guide | Command | Best Practices Source |
 |-------|---------|----------------------|
-| C++ (JUCE 8.x) | /guide-cpp | context7 + WebSearch |
 | Rust (Axum 0.7) | /guide-rust | context7 + WebSearch |
 | React Native (Expo SDK 50+) | /guide-react-native | context7 + WebSearch |
-| gRPC / Protobuf | /guide-grpc | context7 + WebSearch |
 
 **Output:**
-- .claude/skills/experts/<slug>/SKILL.md
+- .claude/skills/experts/<slug>/SKILL.md  (each with paths/keywords for auto-load)
 - .claude/skills/guides/<slug>/SKILL.md
+
+Skipped (not warranted at this tier): expert-performance, expert-api, expert-docs.
+Re-run with --max to include every justified specialist.
 
 Proceed? YES / NO / ADJUST
 ```
 
-If ADJUST, let user add/remove experts/guides or customize.
+If ADJUST, let user add/remove experts/guides or customize. House conventions are
+captured separately via `/ck-code:convention` (guide-conventions is not produced here).
 
 ---
 

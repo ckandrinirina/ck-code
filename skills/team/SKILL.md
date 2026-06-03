@@ -1,7 +1,7 @@
 ---
 name: team
-description: Use to generate project-tailored expert skills and language guides from architecture docs. Argument is `--check` to audit only or `--regenerate` to refresh all; default generates missing.
-argument-hint: "[--check|--regenerate]"
+description: Use to generate project-tailored expert skills and language guides from architecture docs. Depth flag `--basic|--standard|--max` sets how many skills to generate (default `--standard`); `--check` audits only, `--regenerate` refreshes all.
+argument-hint: "[--basic|--standard|--max] [--check|--regenerate]"
 disable-model-invocation: true
 effort: high
 ---
@@ -24,10 +24,27 @@ context and research.
 ## INPUT
 
 `$ARGUMENTS` can include a path to the architecture docs folder (default:
-`docs/architecture/`) and/or one of these flags:
+`docs/architecture/`), one **depth flag**, and/or one **mode flag**.
 
-- `--check` — audit which skills are missing/present, then stop (no generation)
+**Depth flags** (how many skills to generate — see Phase 2's `Tier` column):
+
+- `--basic` — core experts (`frontend`, `backend`, `qa`, `analyst`, `qa-project`)
+  - one guide per detected language. Smallest set.
+- `--standard` — **default.** Core + strongly-signalled specialists
+  (`devops`, `security`, `database`) + language and major-framework guides.
+- `--max` — every applicable expert AND every guide: all specialists
+  (`performance`, `api`, `mobile`, `data`, `docs` — each still detection-gated),
+  plus framework, protocol, and tooling guides.
+
+The resolved tier is carried through Phases 0.5–3 as `TIER` and decides the
+EXPECTED skill set everywhere. If no depth flag is passed, `TIER = standard`.
+
+**Mode flags** (what to do with that set):
+
+- `--check` — audit which skills are missing/present **for the resolved tier**, then stop (no generation)
 - `--regenerate` — overwrite all previously generated skills with fresh versions
+
+A depth flag and a mode flag can be combined (e.g. `--max --check` audits the full catalog).
 
 ---
 
@@ -50,7 +67,8 @@ IF NOT skills_exist OR --regenerate:
 
 IF skills_exist AND NOT --regenerate:
   1. Quick-read docs/architecture/tech-stack.md
-  2. Run Phase 2.3 auto-detection logic → build EXPECTED skills list
+  2. Run the Phase 2.1/2.2 derivation, gated by TIER → build EXPECTED skills list
+     (a skill is EXPECTED only when the project has a real need for it at this tier)
   3. Scan .claude/skills/experts/ and .claude/skills/guides/ → build EXISTING list
   4. Compute:
        MISSING = EXPECTED − EXISTING
@@ -70,6 +88,11 @@ IF skills_exist AND NOT --regenerate:
 **MISSING-ONLY mode** is an internal flag carried through Phases 1–3: Phase 1.6
 researches only the technologies needed for missing skills; Phase 2.4 shows only
 missing skills in its plan table; Phase 3/3b generates only the missing skills.
+
+**Externally-managed skills are never EXTRA.** `guides/conventions` and any expert
+or guide created via `/ck-code:convention` are owned by that skill, not by `team`.
+Exclude them from the EXTRA set and never overwrite them on `--regenerate` — they
+hold hand-authored house rules that research-driven regeneration would destroy.
 
 ---
 
@@ -150,88 +173,110 @@ Required steps:
 
 ---
 
-## PHASE 2: DETERMINE WHICH SKILLS TO GENERATE
+## PHASE 2: DERIVE WHICH SKILLS TO GENERATE
 
-**Goal:** Create only the skills relevant to this project's tech stack.
-Two categories of skills are generated: **Expert Roles** and **Language/Framework Guides**.
+**This is the intelligent core of the skill — not a lookup against a fixed list.**
+Read the project context from Phase 1 and _derive_ the set of experts and guides
+**this specific project** actually needs. Two categories are produced: **Expert
+Roles** and **Language/Framework Guides**.
 
-### 2.1 Expert Role Definitions
+**Two non-negotiable principles:**
 
-| Role                    | Slug                | Generated When                                                  |
-| ----------------------- | ------------------- | --------------------------------------------------------------- |
-| Frontend Developer      | `expert-frontend`   | Project has a frontend component (React, Vue, mobile app, etc.) |
-| Backend Developer       | `expert-backend`    | Project has a backend/server component                          |
-| QA Tester               | `expert-qa`         | Always (every project needs testing)                            |
-| Code Analyst            | `expert-analyst`    | Always (every project benefits from code analysis)              |
-| DevOps / Infrastructure | `expert-devops`     | Project has deployment, CI/CD, Docker, cloud infra              |
-| Project Q&A             | `expert-qa-project` | Always (answers questions about the project)                    |
+1. **Necessary only.** Generate a skill only when the project has a real,
+   demonstrable area of work for it. A signal you can point to in the docs or
+   codebase — not "most projects have one". If you cannot name the files,
+   components, or requirements a skill would serve, do not generate it.
+2. **Project-derived, not catalog-bound.** The lists below are **common anchors
+   and examples**, never an exhaustive or mandatory set. Derive roles and guides
+   from _this_ project's domain. A game engine may warrant `expert-graphics` /
+   `expert-gameplay`; an embedded project `expert-firmware`; a fintech project
+   `expert-compliance`; a blockchain project `expert-smart-contract`. Invent the
+   role the project needs; never force a project into a predefined slot.
 
-One-line role focus (full templates live in `references/expert-templates.md`):
+### 2.1 Derive the expert set
 
-- `expert-frontend` — implements UI components, state management, client-side
-  communication, and accessibility for the project's frontend stack.
-- `expert-backend` — implements server logic, APIs, database operations, and
-  inter-service communication for the project's backend stack.
-- `expert-qa` — designs test strategies, writes automated tests, and validates
-  acceptance criteria across components.
-- `expert-analyst` — performs deep code review, architecture compliance checks,
-  complexity and security analysis.
-- `expert-devops` — owns build systems, CI/CD, containers, environment setup,
-  and dev-experience tooling.
-- `expert-qa-project` — answers any project question by reading code, docs,
-  task plans, and git history.
+For each genuine **area of concern** in the project, generate one expert that owns
+it. Identify areas of concern from: components in the feature docs and `_shared.md`,
+top-level directories in `folder-structure.md`, the technologies in `tech-stack.md`,
+and the requirements/targets in the spec. One expert per distinct area — split only
+when two areas need genuinely different expertise; merge when one person would own both.
 
-### 2.2 Language/Framework Guide Definitions
+**`TIER` controls how finely you split, never whether to fabricate a need:**
 
-One guide skill is generated per major language or framework detected. These
-are reference skills containing current best practices, conventions, patterns,
-and anti-patterns — sourced from the Phase 1.6 research.
+- `--basic` — the minimal viable set: the few core roles the project's primary
+  work demands, plus the always-on `expert-qa`, `expert-analyst`, `expert-qa-project`.
+- `--standard` (default) — core **plus** every specialist the project clearly
+  warrants (e.g. security when there is auth/secrets, database when there is a
+  schema, devops when there is deployment).
+- `--max` — the finest justified split: a dedicated expert for every distinct
+  area, including domain-specific roles — but still **only where a real need exists**.
 
-| Guide              | Slug                 | Generated When                                          |
-| ------------------ | -------------------- | ------------------------------------------------------- |
-| C++ Guide          | `guide-cpp`          | Project uses C++                                        |
-| Rust Guide         | `guide-rust`         | Project uses Rust                                       |
-| TypeScript Guide   | `guide-typescript`   | Project uses TypeScript                                 |
-| React Native Guide | `guide-react-native` | Project uses React Native                               |
-| Python Guide       | `guide-python`       | Project uses Python                                     |
-| Go Guide           | `guide-go`           | Project uses Go                                         |
-| Java/Kotlin Guide  | `guide-java`         | Project uses Java/Kotlin                                |
-| Swift Guide        | `guide-swift`        | Project uses Swift/SwiftUI                              |
-| [Framework] Guide  | `guide-[framework]`  | Per major framework (Axum, Next.js, Django, JUCE, etc.) |
+**Common anchor roles** (start here, then add project-specific roles as needed).
+Full templates: [`references/expert-templates.md`](references/expert-templates.md).
 
-**What counts as a "major" technology deserving its own guide:**
+| Role               | Slug                 | Typical Tier | Generate when the project has…                                  |
+| ------------------ | -------------------- | ------------ | --------------------------------------------------------------- |
+| Frontend Developer | `expert-frontend`    | basic        | a UI/client component (web or mobile framework, UI directory)   |
+| Backend Developer  | `expert-backend`     | basic        | a server/API/engine component                                   |
+| QA Tester          | `expert-qa`          | basic        | always (testing)                                                |
+| Code Analyst       | `expert-analyst`     | basic        | always (review)                                                 |
+| Project Q&A        | `expert-qa-project`  | basic        | always (project knowledge)                                      |
+| DevOps / Infra     | `expert-devops`      | standard     | deployment, CI/CD, Docker, cloud infra (lightweight if planned) |
+| Security Engineer  | `expert-security`    | standard     | auth, secrets, crypto, payments, PII, or a public API surface   |
+| Database Engineer  | `expert-database`    | standard     | a database, ORM, or migrations                                  |
+| Performance Eng.   | `expert-performance` | max          | explicit latency/throughput targets, realtime, or heavy compute |
+| API Designer       | `expert-api`         | max          | a public/external/versioned API contract surface                |
+| Mobile Developer   | `expert-mobile`      | max          | a mobile app (React Native, Expo, Flutter, native iOS/Android)  |
+| Data / ML Engineer | `expert-data`        | max          | a data pipeline, ETL, or ML/AI workflow                         |
+| Technical Writer   | `expert-docs`        | max          | a docs site or user/developer documentation requirement         |
 
-- CREATE guide for: languages (C++, Rust, TS, Python, Go), major frameworks
-  (Axum, React Native, Next.js, Django, JUCE, Express), major protocols (gRPC, GraphQL).
-- DO NOT create guide for: small utility libraries (uuid, lodash), build tools
-  (CMake, Cargo), serialization formats (JSON, Protobuf), databases (SQLite) —
-  these are covered within relevant expert skills and language guides.
+For an anchor role, use its template. For a **derived (project-specific) role**, use
+the generic [`#derived-expert`](references/expert-templates.md#derived-expert) template
+and fill it from the project context and Phase 1.6 research.
 
-### 2.3 Auto-Detection Logic
+### 2.2 Derive the guide set
 
-```
-Frontend expert IF:
-  - tech-stack.md mentions React, Vue, Angular, Svelte, React Native, Expo,
-    Flutter, SwiftUI, or any frontend framework
-  - folder-structure.md has a frontend/, mobile/, web/, app/, or ui/ directory
-  - a feature doc or _shared.md describes a frontend/mobile/UI component
+Generate one guide per **significant technology actually in the stack** — derived
+from `tech-stack.md` and the codebase, not from a fixed language list. A technology
+earns a guide when code is (or will be) written in it and getting it right is
+non-trivial.
 
-Backend expert IF:
-  - tech-stack.md mentions server-side tech (Rust, Go, Node.js, Python, Java, etc.)
-  - folder-structure.md has a server/, api/, backend/, or engine/ directory
-  - a feature doc or _shared.md describes a server/API/engine component
+- **Generate for:** the project's languages, its major frameworks, and major
+  protocols it implements (e.g. gRPC, GraphQL) — whatever the project actually uses.
+- **Skip:** small utility libraries, build tools, serialization formats, and engines
+  with no idiom to teach — these live inside the relevant expert/language guide.
 
-DevOps expert IF:
-  - Project has Dockerfile, docker-compose, CI config (.github/workflows, .gitlab-ci),
-    Terraform, Kubernetes configs, or cloud deployment docs
-  - dev-guide.md mentions deployment steps
-  - If NONE of the above exist, still generate but mark as "lightweight"
-    (focused on local dev setup, build scripts, and future CI planning)
+**Guide depth by tier:**
 
-Language/Framework guide IF:
-  - Technology appears in tech-stack.md as a primary language or major framework
-  - Technology has source files in the codebase OR is planned per architecture docs
-```
+- `--basic` — one guide per detected **language** only.
+- `--standard` — language guides **plus** one per detected **major framework**.
+- `--max` — the above **plus** major **protocols**, the primary **test framework**
+  (`guide-testing`), and a **tooling** guide when the build/tooling is non-trivial.
+
+All guide content comes from Phase 1.6 research; the template is in
+[`references/guide-templates.md`](references/guide-templates.md).
+`guide-conventions` is **not** produced here — it is owned by `/ck-code:convention`
+(see NEXT). `team` never creates or overwrites it.
+
+### 2.3 Self-describing detection metadata (enables dynamic auto-load)
+
+Because the expert/guide set is derived — not a fixed list `build`/`fix` can hardcode —
+**every generated skill must describe its own auto-load triggers in frontmatter** so
+the consumers in [`../../references/skill-detection.md`](../../references/skill-detection.md)
+can load it without knowing its name in advance:
+
+- `paths:` — glob(s) for the files this skill owns (e.g. `server/**`, `**/*.rs`,
+  `mobile/**`). Derive from `folder-structure.md` and the technology's extensions.
+- `keywords:` — Technical-Notes / story trigger words (e.g. `auth`, `migration`,
+  `endpoint`, `shader`). Used when the touched-path globs do not fire.
+
+`expert-qa`, `expert-analyst`, and `expert-qa-project` set no triggers — they are
+always-relevant and loaded unconditionally by the consumers. Set `paths`/`keywords`
+on every other expert and on every guide.
+
+For the derivation worked through `TIER` and the EXPECTED-set rule (a skill enters
+EXPECTED only when a real need exists for it at the resolved tier), this metadata is
+what makes a dynamically-named expert discoverable later.
 
 ### 2.4 Present Plan
 
@@ -258,40 +303,30 @@ the generation mode is already set:
 - **MISSING-ONLY mode** (user chose "Generate missing only"): skip any skill whose output file already exists.
 - **REGENERATE mode** (`--regenerate` flag): overwrite all existing skills unconditionally.
 
-### 3.1 Generate: expert-frontend
+### 3.1 Generate each EXPECTED expert
 
-For the frontend-expert template, see
-[references/expert-templates.md#frontend-expert](references/expert-templates.md#frontend-expert).
+For every expert in the Phase 2 EXPECTED set (respecting the generation mode
+above), write `.claude/skills/experts/<role>/SKILL.md`. Pick the template from
+[references/expert-templates.md](references/expert-templates.md):
 
-### 3.2 Generate: expert-backend
+- **Anchor roles** map to a named template:
+  - core: `#frontend-expert`, `#backend-expert`, `#qa-expert`, `#analyst-expert`, `#qa-project-expert`
+  - standard: `#devops-expert`, `#security-expert`, `#database-expert`
+  - max: `#performance-expert`, `#api-expert`, `#mobile-expert`, `#data-expert`, `#docs-expert`
+- **Derived (project-specific) roles** use the generic `#derived-expert` template,
+  filled from the project context and Phase 1.6 research.
 
-For the backend-expert template, see
-[references/expert-templates.md#backend-expert](references/expert-templates.md#backend-expert).
+When emitting any expert skill:
 
-### 3.3 Generate: expert-qa
-
-For the qa-expert template, see
-[references/expert-templates.md#qa-expert](references/expert-templates.md#qa-expert).
-
-### 3.4 Generate: expert-analyst
-
-For the analyst-expert template, see
-[references/expert-templates.md#analyst-expert](references/expert-templates.md#analyst-expert).
-
-### 3.5 Generate: expert-devops
-
-For the devops-expert template, see
-[references/expert-templates.md#devops-expert](references/expert-templates.md#devops-expert).
-
-### 3.6 Generate: expert-qa-project
-
-For the qa-project-expert template, see
-[references/expert-templates.md#qa-project-expert](references/expert-templates.md#qa-project-expert).
-
-When emitting any expert skill: resolve every `[bracketed placeholder]` from
-real project data, replace `[PROJECT CONTEXT BLOCK — injected from Phase 1.5]`
-with the actual block, and inject relevant slices of the Phase 1.6
-best-practices knowledge so advice is current and version-correct.
+1. Resolve every `[bracketed placeholder]` from real project data and replace
+   `[PROJECT CONTEXT BLOCK — injected from Phase 1.5]` with the actual block.
+2. Inject relevant slices of the Phase 1.6 best-practices knowledge so advice is
+   current and version-correct.
+3. **Emit detection frontmatter** (Phase 2.3): set `paths:` and `keywords:` on
+   every expert except the three always-on ones (`qa`, `analyst`, `qa-project`),
+   which carry none.
+4. Reference `/guide-conventions` in the Coding Standards section so the project's
+   house rules (if present) override generic defaults.
 
 ---
 
@@ -336,7 +371,11 @@ or new tech additions. For the exact layout, see
 
 ## NEXT
 
-Run `/ck-code:plan <spec-file>` to break the architecture into epics, stories, and a roadmap.
+- Run `/ck-code:convention` to capture your project's own conventions (code
+  structure, naming, style, architectural rules) into a `guide-conventions`
+  skill that every expert reads — or to create/adjust custom experts and guides
+  the research-driven generator does not produce.
+- Run `/ck-code:plan <spec-file>` to break the architecture into epics, stories, and a roadmap.
 
 ---
 
@@ -354,6 +393,12 @@ Run `/ck-code:plan <spec-file>` to break the architecture into epics, stories, a
   into the generated skills.
 - **Tech stack adaptation:** Only generate skills relevant to the project. A
   pure backend CLI tool doesn't need a frontend expert or React guide.
+- **Tier gates breadth, detection gates relevance:** a skill ships only when its
+  detection signal fires AND its Tier ≤ the resolved `TIER`. Never generate a
+  specialist whose signal is absent just because `--max` was passed.
+- **Never touch convention-owned skills:** `guide-conventions` and any expert/guide
+  created by `/ck-code:convention` are off-limits to `team` — never generate,
+  overwrite, or flag them as EXTRA, even on `--regenerate`.
 - **Consistency:** All generated experts reference the same architecture docs
   and follow the same format for easy maintenance.
 - **Updatable:** When `--regenerate` is used, completely replace the expert
