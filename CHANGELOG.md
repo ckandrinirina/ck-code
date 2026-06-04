@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.3] — 2026-06-04
+
+### Fixed
+
+- **plan**: size every story to a single agent dispatch — removed the Coarse/Balanced/Fine granularity size-adjustment and the L/XL stories it produced, so `parallel-build` sub-agents no longer overflow their tool-call/token budget and stall mid-build (the `◐ incomplete` outcome). Larger work is split at a natural seam and connected with `Blocked by`; the ~8-task rule is now the single-dispatch guardrail.
+
 ## [3.1.2] — 2026-06-03
 
 ### Fixed
