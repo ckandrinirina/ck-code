@@ -103,7 +103,7 @@ Used for `epics/NN_<epic-slug>/EPIC.md`.
 | #   | Story   | Size | Status |
 | --- | ------- | ---- | ------ |
 | 01  | [Title] | M    | TODO   |
-| 02  | [Title] | L    | TODO   |
+| 02  | [Title] | S    | TODO   |
 | ... | ...     | ...  | ...    |
 
 ## Acceptance Criteria
@@ -132,7 +132,7 @@ Used for `STORIES_INDEX.md` at the project root (sibling to `PROJECT_OVERVIEW.md
 | Epic             | ID    | Title         | Status | Size | Blocked by | File                                       |
 | ---------------- | ----- | ------------- | ------ | ---- | ---------- | ------------------------------------------ |
 | 01 · [Epic Name] | 01-01 | [Story title] | TODO   | M    | -          | epics/01*<slug>/stories/01*<story-slug>.md |
-| 01 · [Epic Name] | 01-02 | [Story title] | TODO   | L    | 01-01      | epics/01*<slug>/stories/02*<story-slug>.md |
+| 01 · [Epic Name] | 01-02 | [Story title] | TODO   | S    | 01-01      | epics/01*<slug>/stories/02*<story-slug>.md |
 ```
 
 Rows sorted by `ID`. `Blocked by` is comma-separated story IDs or `-`. `File` is the path relative to the project root (`tasks/<slug>/`).
@@ -147,7 +147,7 @@ Used for `epics/NN_<epic-slug>/stories/SS_<story-slug>.md`.
 # Story [EE]-[SS]: [Story Title]
 
 > **Epic:** [Epic Name]
-> **Size:** [S/M/L/XL]
+> **Size:** [S/M] <!-- single-dispatch only; split any larger work -->
 > **Status:** TODO
 
 ## Description

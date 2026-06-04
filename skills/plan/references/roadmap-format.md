@@ -11,8 +11,6 @@ Shown to the user before any files are written. Wait for explicit YES / NO / ADJ
 ```
 ## Project Plan: [Project Name]
 
-**Granularity:** [Coarse | Balanced | Fine] (chosen in Phase 1.5)
-
 ### Epics ([count] total)
 
 **Epic 01: [Name]** ([story count] stories)
@@ -43,8 +41,6 @@ Proceed with generating the full plan? YES / NO / ADJUST
 
 ```markdown
 # Implementation Roadmap: [Project Name]
-
-<!-- Granularity: [Coarse | Balanced | Fine] -->
 
 ## Dependency Graph
 
@@ -108,8 +104,8 @@ The longest sequential chain is:
 ### Quick Stats
 - S stories: [count]
 - M stories: [count]
-- L stories: [count]
-- XL stories: [count]
+
+(Every story is sized S/M — single-dispatch. If any L/XL appears, split it before building.)
 
 ### Next Steps
 1. Review the generated plan in tasks/
@@ -137,8 +133,8 @@ The longest sequential chain is:
 ### Quick Stats
 - S stories: [count]
 - M stories: [count]
-- L stories: [count]
-- XL stories: [count]
+
+(Every story is sized S/M — single-dispatch. If any L/XL appears, split it before building.)
 
 ### Next Steps
 1. Review the feature plan in tasks/

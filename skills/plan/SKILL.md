@@ -22,19 +22,15 @@ with epics, stories, dependencies, and a recommended roadmap.
 
 ## EFFORT SCALING
 
-Effort and granularity are **two orthogonal axes**:
-
-- **Effort** (this section) controls **depth per story** — how much detail each
-  story carries. It never changes how many epics or stories exist.
-- **Granularity** (chosen by the user in Phase 1.5) controls the **count** — how
-  finely the work is broken into epics and stories.
-
-Higher effort adds depth per story, not more stories. Adapt to the current
-effort level (**${CLAUDE_EFFORT}**):
+**Effort** controls **depth per story** — how much detail each story carries. It
+never changes how many stories exist and it never changes story **size**: every
+story is always sized to a single agent dispatch (Phase 2.2). Higher effort adds
+depth per story, not larger or fewer stories. Adapt to the current effort level
+(**${CLAUDE_EFFORT}**):
 
 - **low** — Minimal acceptance criteria; terse technical notes.
 - **medium** (default) — Each story is a complete feature slice with clear acceptance criteria and dependencies.
-- **high / xhigh / max** — Add detailed acceptance criteria, edge cases, test notes, a finer-grained `## Implementation Tasks` breakdown per story, and an explicit dependency graph in the roadmap. Do **not** split stories finer to spend the effort — add task and criteria depth instead.
+- **high / xhigh / max** — Add detailed acceptance criteria, edge cases, test notes, a finer-grained `## Implementation Tasks` breakdown per story, and an explicit dependency graph in the roadmap. Do **not** make stories larger to spend the effort — add task and criteria depth instead.
 
 ## INPUT
 
@@ -165,57 +161,16 @@ Map out:
 
 ---
 
-## PHASE 1.5: GRANULARITY SELECTION
-
-**Goal:** Let the user choose how finely the plan is broken down — the _count_
-axis — before structuring. Orthogonal to effort (which controls depth per story).
-
-**Continue Mode:** read the prior plan's `ROADMAP.md` granularity marker
-(`<!-- Granularity: … -->`) and default to that level so the appended work
-matches the existing plan — recommend it, and only re-ask if the user wants to
-change it.
-
-Otherwise, from the Phase 1 analysis, **recommend one level**, then ask the user
-to confirm or override. Always state _why_ you recommend it (cite the spec
-signals below).
-
-| Level                | Shape                                                        | Best when                                                                                                |
-| -------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| **Coarse** (default) | Fewest epics; large L/XL stories, each a full vertical slice | Solo `build`, token-sensitive work, tightly-coupled code, smaller specs                                  |
-| **Balanced**         | A few epics; M–L stories split only at natural seams         | Medium projects with some independent parts                                                              |
-| **Fine**             | More epics; smaller M stories, one per discrete concern      | `parallel-build` across many agents/people, large or complex domains, fine-grained issue/tracking boards |
-
-**Recommendation signals:**
-
-- Highly parallelizable work, many independent components, or a team / `parallel-build` target → **Fine**.
-- Tightly-coupled work, solo or token-sensitive build, or a small spec → **Coarse**.
-- Otherwise → **Balanced**.
-
-Present the recommendation (marked) alongside all three options and wait for the
-user's choice. Record the chosen level as the **granularity** that governs every
-sizing decision in Phase 2, and persist it in the generated `ROADMAP.md`
-(`<!-- Granularity: … -->` marker, Phase 4.6) so Continue Mode reuses it. If the
-user expresses no preference, use your recommendation.
-
-When the user picks **Fine**, note that `/ck-code:parallel-build` is the natural
-downstream — it runs the independent stories concurrently across agents.
-
----
-
 ## PHASE 2: EPIC & STORY STRUCTURING
 
 **Goal:** Organize the analysis into a clean epic/story hierarchy.
 
 ### 2.1 Define Epics
 
-**Scale the epic count to the chosen granularity (Phase 1.5):**
-
-- **Coarse** — fewest epics that still separate distinct deliverables; aim for 1–4. Only open a new epic for a separate milestone or a hard dependency boundary.
-- **Balanced** — a moderate set of epics, one per cohesive area of work.
-- **Fine** — one epic per discrete deliverable, so parallel agents/people own clean boundaries.
-
-At every level, never create an epic that marks neither a distinct milestone nor
-a dependency boundary — group such work under an existing epic.
+Open a new epic only for a **distinct milestone or a hard dependency boundary** —
+aim for the fewest epics that cleanly separate deliverables. Group cohesive work
+that shares a milestone under one epic. Never create an epic that marks neither a
+distinct milestone nor a dependency boundary — fold such work into an existing epic.
 
 Each epic should:
 
@@ -242,58 +197,49 @@ Each epic should:
 
 ### 2.2 Define Stories Within Each Epic
 
-**Size stories to the chosen granularity (Phase 1.5).** One story = one
-downstream `build` session. Whatever the level, each story stays a complete,
-coherent slice and never mixes unrelated concerns.
+**One story = one agent dispatch.** Every story must be small enough that a single
+`build` session — or one `parallel-build` sub-agent — can implement it end-to-end
+(red → green → refactor → QA → commit) without exhausting its tool-call/token
+budget. A dispatched agent **cannot be resumed**, so an oversized story stalls
+mid-build (the `◐ incomplete` outcome in `parallel-build`) and forces a costly
+continue-in-place recovery pass. Sizing every story to one dispatch is what keeps
+the plan buildable solo and in parallel.
 
-- **Coarse** — fewer, larger L/XL stories; combine related work by default and size up.
-- **Balanced** — M–L stories, split at natural seams between sub-features.
-- **Fine** — smaller M stories, one per discrete concern, so independent pieces can be built in parallel.
+Each story must:
 
-Each story must, at every level:
-
-- Cover one cohesive concern (a feature, a component, a vertical slice) — never mix unrelated concerns into one story.
+- Cover exactly one cohesive concern (a feature, a component, a vertical slice) — never mix unrelated concerns into one story.
+- Be sized **S or M only** — a self-contained concern a single dispatch finishes comfortably. Never plan an **L** or **XL** story.
 - Be numbered sequentially within its epic (`01`, `02`, ...) with a short descriptive slug.
 - Carry clear, testable acceptance criteria and an explicit files-to-touch list so `build` can execute it in one focused session.
 
-**Story sizing rubric** (default target follows granularity: Coarse → L, Balanced → M/L, Fine → M):
+**Story sizing rubric** (target: every story S or M, single-dispatch):
 
-- **L:** A full feature or component — multiple files, real logic or integration. The Coarse default.
-- **XL:** A large but tightly-coupled deliverable (e.g., a complete subsystem). Keep it as one story when splitting would gain nothing.
-- **M:** A self-contained concern. The Fine default; under Coarse, only when it cannot be folded into a related L story.
-- **S:** Avoid as a standalone story. Fold small changes (a config file, a type definition) into the story that consumes them.
+- **M:** A self-contained concern — one feature, one component, or one vertical slice with real logic. The default target.
+- **S:** A small, focused change. Fold a trivial S (a lone config or type file) into the M story that consumes it rather than leaving it standalone.
+- **L / XL:** Never plan one — they overflow a single dispatch. Split the work at a natural seam (interface vs. implementation, per-endpoint, per-component) **even when the parts are coupled**, and order the pieces with `Blocked by` dependencies. The split pieces stay coherent through their shared epic and dependency graph, and `## Implementation Tasks` (Phase 2.2c) carries the precision a single larger story would have held.
 
-**Split a story when** the granularity calls for it (Fine splits at each discrete
-concern) **or** one of these holds at any level:
+**Always split a story** when it would exceed one dispatch, **or** when one of these holds:
 
-- The pieces are independent and can be implemented in parallel by different agents/people, or
+- The pieces are independent and can be built in parallel by different agents/people, or
 - There is a hard dependency boundary (one part must merge and stabilize before the next can start), or
 - The concerns are genuinely unrelated.
 
-Under **Coarse**, split only for the three reasons above; under **Fine**, prefer
-the finer split wherever each piece is independently verifiable.
-
 ### 2.2b Consolidation Pass
 
-Before presenting the plan, review the draft story list. How aggressively you
-merge depends on the chosen granularity (Phase 1.5):
+Before presenting the plan, review the draft story list and merge only genuine
+redundancy — **never merge to the point a story would exceed one dispatch** (Phase 2.2):
 
-- **Coarse** — apply every merge below; target the smallest epic/story count that still yields clear, independently-verifiable deliverables.
-- **Balanced** — apply only the clearly-redundant merges (same files, standalone S stories).
-- **Fine** — merge only stories that are genuinely the same concern; preserve the finer split otherwise.
+- Standalone **S** stories → fold into the related story that consumes them.
+- Two stories that are truly the same concern on the same files → merge **only if the result still fits one dispatch**; otherwise keep them split.
+- An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone or dependency boundary.
 
-Merge candidates:
-
-- Stories that touch the same files or the same component/layer → merge (Coarse/Balanced).
-- A chain of stories that can only run sequentially with no parallelization or dependency-boundary benefit → merge (Coarse).
-- Standalone S stories → always fold into the related story that consumes them.
-- An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone (Coarse/Balanced).
+Never combine stories just to reduce the count: a smaller plan that yields an
+oversized, unbuildable story is worse than more single-dispatch stories.
 
 ### 2.2c Break Each Story into Tasks
 
-A story stays precise only when it carries an explicit, ordered task list —
-this matters most for the larger stories of a Coarse plan, but applies at every
-granularity. For every story, decompose the work into concrete
+A story stays precise only when it carries an explicit, ordered task list. For
+every story, decompose the work into concrete
 step-by-step **implementation tasks** — each task is one verifiable action that
 moves the story toward its acceptance criteria (e.g. "define the `X` interface",
 "implement `Y` against it", "wire `Y` into the handler"). These tasks populate
@@ -303,7 +249,7 @@ Rules:
 
 - Tasks are **story-specific**, not generic TDD phases — never write "write tests / implement / refactor / QA" as the task list; that is build's runtime concern.
 - Order tasks so each one builds on the previous; the final task completes the last acceptance criterion.
-- Keep tasks at the right altitude: a handful of meaningful steps, not one line per file edit. If a story needs more than ~8 tasks, it is probably two stories.
+- Keep tasks at the right altitude: a handful of meaningful steps, not one line per file edit. **If a story needs more than ~8 tasks, it is too big for one dispatch — split it** (Phase 2.2). The task count is the practical size guardrail.
 - Every acceptance criterion must be reachable by following the task list end to end.
 
 ### 2.3 Map Story Dependencies
@@ -378,9 +324,6 @@ This is what makes "what still needs planning?" a cheap ledger lookup for the ne
 ### 4.6 ROADMAP.md Content
 
 For the roadmap template, see [references/roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).
-Fill the `<!-- Granularity: … -->` marker with the level chosen in Phase 1.5 so
-Continue Mode can reuse it. **Continue Mode:** preserve the existing marker —
-do not downgrade it when appending work at the same level.
 
 ---
 
@@ -396,7 +339,7 @@ After all files are created, present a summary tailored to the mode. For each su
 
 Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
 
-If the plan was generated at **Fine** granularity, recommend `/ck-code:parallel-build` instead — it builds the independent stories concurrently across agents, which is the payoff of the finer split.
+Because every story is sized to a single dispatch, an epic with independent stories is a natural fit for `/ck-code:parallel-build` — it builds them concurrently across agents, each finishing its story in one pass.
 
 ---
 
@@ -406,8 +349,8 @@ If the plan was generated at **Fine** granularity, recommend `/ck-code:parallel-
 - **No hardcoding:** Never reference specific project names, technologies, or paths in the skill logic. Derive everything from the spec.
 - **Thoroughness:** Every functional requirement in the spec must be covered by at least one story; related requirements may share a single story. If a requirement is vague, cover it with a note about needed clarification.
 - **Scanning readability:** Use tables, bullet points, and headers. Avoid walls of text.
-- **Granularity is the user's choice:** size epics/stories to the level chosen in Phase 1.5 (Coarse / Balanced / Fine). Always recommend a level from the spec signals, but never override an explicit user choice. Within the chosen level, when genuinely undecided, combine.
-- **Precision via tasks, not arbitrary splitting:** recover the precision a larger story might lose by giving it an ordered `## Implementation Tasks` list (Phase 2.2c), not by splitting below the chosen granularity.
+- **One story = one agent dispatch:** every story is sized **S or M** so a single `build`/`parallel-build` dispatch finishes it end-to-end. Never plan an L/XL story — split larger work at a natural seam (even when coupled) and connect the pieces with `Blocked by`. A dispatched agent cannot be resumed, so an oversized story stalls mid-build and breaks parallel runs.
+- **Precision via tasks and seams, not oversized stories:** give each story an ordered `## Implementation Tasks` list (Phase 2.2c) for precision, and split at natural seams when work exceeds one dispatch — never grow a story past one dispatch to keep the count low.
 - **Preserve spec language:** When the spec uses specific technical terms, preserve them in story titles and descriptions.
 - **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
 - **Reusability:** This skill must work with any project specification, not just the current project.
