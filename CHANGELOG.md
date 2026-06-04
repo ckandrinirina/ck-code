@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.7] — 2026-06-04
+
+### Added
+
+- **subagent-fanout**: New shared dispatch contract (`references/subagent-fanout.md`) plus gated parallel subagent fan-out in five skills — `team` (parallel skill generation, ≥4 skills), `design` (per-feature architecture docs, New-Project ≥4 features), `plan` (read-only domain analysis, ≥4 components), `doc-optimizer` (read-only per-doc measure, ≥8 docs), and `fix` (read-only hypothesis probes, verdict B/D). Subagents never write shared files, prompt the user, or re-run the version gate; the orchestrator owns all interaction, merging, and shared writes, and fan-out is gated so small inputs stay sequential.
+
 ## [3.1.6] — 2026-06-04
 
 ### Fixed
