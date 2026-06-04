@@ -91,8 +91,15 @@ For each wave, in order:
    HEAD** — which already contains previous waves' merged code — NOT from a stale `main`.
    This is what lets a dependent story (e.g. 01-03) see its merged dependencies and their
    `DONE` index status.
-3. **Single-story wave** → short-circuit to `/ck-code:build` for that one story
-   (SKILL.md Phase 2.5 rule); skip dispatch and conflict analysis for that wave.
+3. **Single-story wave** → still dispatch it as a **one-agent worktree run** (Phase 3
+   with N=1), NOT an inline `/ck-code:build`. The orchestrator is long-lived across the
+   remaining waves: inline build would load that story's whole TDD/QA detail into the
+   orchestrator context (taxing every later wave) and could land the work on a
+   `story/…` branch off the wave target instead of on it. Skip only the cross-branch
+   conflict analysis (Phase 4) — with one branch there is nothing to compare. **Exception:**
+   the *terminal* wave, when it is a single story and no wave follows, may inline
+   `/ck-code:build` — there is no downstream orchestrator context to protect and it regains
+   build's interactive gates.
 4. **Run the pipeline on this wave's stories:** SKILL.md Phase 3 (dispatch) → 3.5
    (integrity) → 4 (conflict, intra-wave only) → 5 (QA) → 5.5 (manual-test gate).
 5. **Merge this wave** into the target branch with Phase 6 Option 1 logic — merge-eligible

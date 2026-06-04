@@ -131,6 +131,10 @@ Switching to /ck-code:build directly (no worktree, no sub-agent).
 
 Then call `Skill("ck-code:build", "<story-file-path>")` and exit — do NOT continue to Phase 3, Phase 4, Phase 5, etc. The build skill owns the rest of the workflow.
 
+**This batch-level short-circuit does NOT apply inside wave mode.** A single-story *wave*
+keeps one-agent worktree dispatch (Phase 3, N=1) so the long-lived orchestrator stays lean
+and the work lands on the wave target — see Phase 2.7 / [`references/wave-mode.md`](references/wave-mode.md).
+
 **If two or more stories are in scope**, continue to Phase 3 with full parallel dispatch.
 
 ---
@@ -160,7 +164,10 @@ Follow [`references/wave-mode.md`](references/wave-mode.md) in full. Key contrac
    the epic is done. A story whose blocker ended up BLOCKED-from-merge is **held** and
    reported, not dispatched.
 
-A single-story wave short-circuits to `/ck-code:build` (Phase 2.5 rule).
+A single-story wave still runs through **one-agent worktree dispatch** (Phase 3, N=1), NOT
+inline `/ck-code:build` — the long-lived orchestrator stays lean across later waves and the
+work lands on the wave target branch. Only a *terminal* single-story wave may inline. See
+[`references/wave-mode.md`](references/wave-mode.md).
 
 ---
 
@@ -410,7 +417,7 @@ confirmation (format in `references/conflict-format.md`).
 - **Always delete** agent worktrees after merging — `git worktree remove -f -f` then
   `git worktree prune`.
 - **Never modify** story files in `tasks/` directly — `/ck-code:build` handles that.
-- **Single-story runs short-circuit to `/ck-code:build`.** Phase 2.5 detects a one-story scope (from Phase 1.2 / Phase 2 selection / `$ARGUMENTS`) and delegates to `/ck-code:build` directly — no worktree, no sub-agent dispatch, no conflict analysis. Parallel orchestration only makes sense for ≥ 2 stories.
+- **Single-story batches short-circuit to `/ck-code:build`; single-story waves do not.** Phase 2.5 detects a one-story *batch* scope (from Phase 1.2 / Phase 2 selection / `$ARGUMENTS`) and delegates to `/ck-code:build` directly — no worktree, no sub-agent dispatch, no conflict analysis, since nothing orchestrates after it. A single-story *wave* (Phase 2.7) instead keeps one-agent worktree dispatch (Phase 3, N=1) so the long-lived orchestrator stays lean across later waves and the work lands on the wave target branch — only a terminal single-story wave may inline. Parallel dispatch otherwise only makes sense for ≥ 2 stories.
 - **Run final QA on the merged target branch** before cleanup — cross-branch integration issues only appear after all merges.
 - **Never hardcode `main` as merge target.** Phase 6 Option 1 always resolves to the orchestrator's current branch (`git branch --show-current` in the main checkout). Detached HEAD = stop and ask.
 
