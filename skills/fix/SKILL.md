@@ -161,6 +161,17 @@ not registered, do the steps below inline.
 
 Identify likely source files (Grep + the story's file list), read source + existing tests, trace the execution path that triggers the bug.
 
+### 4.1.5 Parallel hypothesis investigation (fan-out — verdict B/D or ≥2 competing causes only)
+
+When diagnosis spans multiple subsystems (Phase 2.5 verdict **B**/MULTI-STORY or **D**/MIXED) or
+Phase 3.2 produced **≥2 plausible competing root causes**, dispatch one **read-only** investigator
+per hypothesis (cap 2–4) following the investigation variant in
+[../../references/subagent-fanout.md](../../references/subagent-fanout.md). Each agent traces ONE
+suspect path and returns `{hypothesis, confidence, file:line evidence, confirm/refute}` — no tests,
+no edits. The orchestrator converges the reports to the **single** highest-confidence root cause
+before 4.2 (never carry two forward). Skip entirely for verdict A or any obvious single-cause bug —
+go straight to 4.2. The Phase 6 TDD fix stays strictly sequential and is never parallelized.
+
 ### 4.2 Reproduce the Bug — write a FAILING test FIRST
 
 1. **Check existing tests** for this scenario: passes → test is wrong/insufficient; fails → confirms the bug; no coverage → gap identified.

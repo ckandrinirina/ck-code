@@ -142,6 +142,17 @@ Use extended thinking (ultrathink) to reason through ambiguities. Extract:
 - **FEATURES & REQUIREMENTS** — functional (explicit and implied), non-functional (performance, security, latency), user-facing vs. infrastructure, API surface (REST, WebSocket, gRPC, etc.).
 - **PHASES / ROADMAP** (if specified) — phased rollout, MVP vs. future scope, priority indicators.
 
+### 1.2b (Optional) Parallel domain analysis (fan-out — large multi-component specs)
+
+If 1.2 surfaced **≥4 genuinely independent components** and the spec is large, dispatch one
+**read-only** `general-purpose` Agent per component following the investigation variant in
+[../../references/subagent-fanout.md](../../references/subagent-fanout.md). Each returns an
+analysis brief (its features, requirements, tech stack, intra-domain deps) — no writes to
+`tasks/`. Fix PROJECT IDENTITY (1.2) before dispatch so slugs stay consistent, then merge the
+briefs here and do **all** cross-domain dependency mapping yourself in 1.4 (subagents see only
+their slice and would miss integration points). Skip when components are few, tightly coupled, or
+the spec is small — Phase 2 structuring and Phase 4 writes always stay sequential.
+
 ### 1.3 Research Tech Stack (when beneficial)
 
 If the spec references frameworks/libraries/protocols that would benefit from current documentation lookup, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best practices, identify version-specific considerations, and understand standard project structures. Only do this for unfamiliar or rapidly-evolving technologies.

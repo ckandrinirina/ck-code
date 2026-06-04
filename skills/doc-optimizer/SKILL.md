@@ -141,6 +141,12 @@ content, only restructures and reports.
 
 1. **Measure** — report a per-doc token estimate (see the report format in
    [references/optimizer-playbook.md](references/optimizer-playbook.md)) and a total.
+   **Fan-out (≥8 feature docs):** dispatch one **read-only** `general-purpose` Agent per
+   `features/<slug>/index.md` following the investigation variant in
+   [../../references/subagent-fanout.md](../../references/subagent-fanout.md); each returns
+   `{token estimate, candidate shared sections}` and writes nothing. Merge the reports here.
+   Below ~8 docs, measure inline. All steps below (Dedup, Prune, Right-size, index/`_shared.md`
+   writes) stay sequential in the orchestrator — subagents only measure and propose.
 2. **Dedup** — find content that appears in 2+ feature docs (shared components, base
    tables, common middleware). Move one canonical copy to `_shared.md` and replace each
    occurrence with a link under `## Shared dependencies`.

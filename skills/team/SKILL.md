@@ -370,6 +370,16 @@ When emitting any expert skill:
 4. Reference `/guide-conventions` in the Coding Standards section so the project's
    house rules (if present) override generic defaults.
 
+### 3.1a Parallel generation (fan-out — when ≥4 skills remain)
+
+Each expert/guide is one independent `SKILL.md` at its own path. When the generation mode is
+settled and **≥4 skills remain**, dispatch one `general-purpose` Agent per skill per the artifact
+variant in [../../references/subagent-fanout.md](../../references/subagent-fanout.md). Give each its
+resolved PROJECT CONTEXT BLOCK (1.5), Phase 1.6 research slice, and template name; it writes exactly
+one `experts/<role>/SKILL.md` (or `guides/<tech>/SKILL.md`) and nothing else. All prompts (Phase
+0.5, 2.4) and `guide-conventions` stay with the orchestrator, before dispatch; Phase 4.1 still
+verifies centrally. Below 4 skills, write inline.
+
 ---
 
 ## PHASE 3b: GENERATE LANGUAGE/FRAMEWORK GUIDE SKILLS

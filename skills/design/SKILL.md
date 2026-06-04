@@ -247,6 +247,19 @@ epic slug so the `FEATURE_INDEX.Docs` column lines up. Put a component/table/end
 structure, use it as the base and refine/expand. Otherwise, propose one based
 on the tech stack and best practices (research via context7/WebSearch if needed).
 
+### 3.8a (New Project Mode, ≥4 features) Parallel feature-doc fan-out
+
+Each `features/<slug>/index.md` is self-contained, so the per-feature docs parallelize. When
+this is a New Project run with **≥4 independent features**, author the globals AND `_shared.md`
+(steps 3.3–3.7) **first** so `_shared.md` is frozen, then dispatch one `general-purpose` Agent per
+feature following [../../references/subagent-fanout.md](../../references/subagent-fanout.md)
+(artifact variant). Pass each agent the frozen `_shared.md` contract, its `<slug>`, its spec slice,
+and `references/architecture-templates.md` (used verbatim — no improvising structure); it writes
+ONLY its own `features/<slug>/` directory. The orchestrator collects and writes the shared
+`README.md` index rows and `DESIGN_LEDGER.md` rows once, post-merge (never inside a subagent), and
+the Phase 0 version gate runs only in the orchestrator. Feature Mode (one doc) and specs with
+<4 features stay sequential.
+
 ### 3.11 Design records + DESIGN_LEDGER (both modes)
 
 For **each feature this run added or changed**, record the design pass so `plan` can
