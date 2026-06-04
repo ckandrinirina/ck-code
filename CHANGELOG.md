@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.6] — 2026-06-04
+
+### Fixed
+
+- **parallel-build**: Single-story _waves_ now dispatch a one-agent worktree run (Phase 3, N=1) instead of short-circuiting to inline `/ck-code:build`. Inline build inside a wave bloated the long-lived orchestrator context across later waves and could land work on a `story/…` branch off the wave target; dispatch keeps the orchestrator lean and on-target. The single-story _batch_ short-circuit (Phase 2.5) is unchanged, and a terminal single-story wave may still inline.
+
 ## [3.1.5] — 2026-06-04
 
 ### Changed
