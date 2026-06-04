@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.5] — 2026-06-04
+
+### Changed
+
+- **skills**: Deduplicated the version-gate paragraph and its intra-file RULES restatement into a single terse, fast-path-preserving line across the 9 change-producing skills, leaving `references/version-gate.md` as the lone source for the gate logic.
+- **design, plan**: Standardized the context7 MCP-vs-CLI phrasing to one terse form.
+- **build**: Trimmed the Phase 7 QA checklist that duplicated `qa-validation.md`, and added a skip-fast guard that bypasses the 238-line `skill-detection.md` when a project has no generated skills — both cut per-invocation tokens with no behavior change.
+
 ## [3.1.4] — 2026-06-04
 
 ### Changed
