@@ -4,47 +4,19 @@ Templates appended to the story markdown file at specific phases of the build sk
 
 ---
 
-## Phase 3.5 — Implementation Plan (append before any code)
-
-Appended via Edit. The story file is the source of truth — the plan must exist
-in it before work begins, not after the fact.
-
-```markdown
-
----
-
-## Implementation Plan
-
-**Planned:** [date]
-**Skills loaded:** [list of expert/guide skills detected]
-**SOLID approach:** [1-line summary]
-
-### Subtasks
-1. [ ] Write tests ([count] tests planned)
-2. [ ] Implement [component A]
-3. [ ] Implement [component B]
-4. [ ] Refactor for SOLID compliance
-5. [ ] QA validation
-6. [ ] Update docs and commit
-
-### Design Notes
-[Key design decisions, patterns chosen, abstractions planned]
-```
-
----
-
 ## Phase 5 — Unplanned Changes (append on first deviation, then per-change)
 
 Appended via Edit. Skip entirely on a clean run (no heading written when
 empty). Add one bullet per unplanned change at the moment it happens.
 
 ```markdown
-
 ## Unplanned Changes
+
 - <path> — <one-line what> — <why it was needed during the planned work>
 ```
 
 **Format rules:**
+
 - One bullet per change. Three slash-separated fields: path, what, why.
 - "Why" must explain what triggered the change during the planned work
   (e.g., "broke test for AC-2 without it", "needed twice by planned handler",
@@ -56,6 +28,7 @@ empty). Add one bullet per unplanned change at the moment it happens.
   Phase 3 "Files to Create/Modify" plan, with reasoning.
 
 Examples:
+
 - `- src/api/user.ts — added null check in getUser() — broke test for AC-2 without it`
 - `- src/queue/retry.go — extracted retryWithBackoff() — needed twice by planned handler, would have duplicated`
 - `- tests/helpers/mock_clock.ts — new file — planned tests required time-mocking, not anticipated in Files to Create/Modify`
@@ -65,7 +38,6 @@ Examples:
 ## Phase 8.2 — Implementation Summary (append after QA pass)
 
 ```markdown
-
 ---
 
 ## Implementation Summary
@@ -80,18 +52,21 @@ Examples:
 **Unplanned changes:** [count, or "none"]
 
 ### What Was Implemented
+
 - [Key implementation point 1]
 - [Key implementation point 2]
 
 ### Files Touched
-[Precise reference of every file and line changed — no descriptions, just locations]
 
+[Precise reference of every file and line changed — no descriptions, just locations]
 ```
-CREATED  src/server/ws/handler.rs
-CREATED  src/server/ws/mod.rs
+
+CREATED src/server/ws/handler.rs
+CREATED src/server/ws/mod.rs
 MODIFIED src/server/main.rs:12,45-48,92
 MODIFIED src/server/config.rs:8,23
-CREATED  tests/ws_handler_test.rs
+CREATED tests/ws_handler_test.rs
+
 ```
 
 ### SOLID Compliance
@@ -125,39 +100,30 @@ Update the row for this story in the parent epic's stories table:
 
 ---
 
-## Phase 8.5 — Implementation Plan Subtasks (final state)
-
-Mark all subtasks in the story's Implementation Plan section as done:
-
-```
-1. [x] Write tests (5 tests)
-2. [x] Implement server handler
-3. [x] Implement client serializer
-4. [x] Refactor for SOLID compliance
-5. [x] QA validation
-6. [x] Update docs and commit
-```
-
----
-
 ## Phase 1.4 — Status Transitions
 
 Story status moves through these states. Edit the existing line in the story file.
 
 TODO → IN PROGRESS (Phase 1.4):
+
 ```
 > **Status:** TODO
 ```
+
 →
+
 ```
 > **Status:** IN PROGRESS
 ```
 
 IN PROGRESS → DONE (Phase 8.1, only after manual testing PASS in 8.7):
+
 ```
 > **Status:** IN PROGRESS
 ```
+
 →
+
 ```
 > **Status:** DONE
 ```
@@ -171,8 +137,8 @@ empty). Add one entry per bug at the moment it is reported, then update the
 same entry once `FIXED`.
 
 ```markdown
-
 ## Manual-Test Bugs
+
 - **#1** [OPEN | FIXED] — <reported date>: <one-line bug description>
   - Repro: <steps>
   - Expected: <expected behaviour>
@@ -184,6 +150,7 @@ same entry once `FIXED`.
 ```
 
 **Format rules:**
+
 - Status starts at `OPEN` and flips to `FIXED` only after Phase 8.5.3 steps 5–7 (Refactor + QA + entry update) complete.
 - "Files" follows the same `path:line[,line]` precision as Implementation Summary's Files Touched.
 - One entry per bug; if the same code is touched again later, update the existing entry rather than appending a duplicate.

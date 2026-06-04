@@ -120,13 +120,14 @@ Track subtasks on **Claude Tasks** (TaskCreate; template in
 [tdd-walkthrough.md](references/tdd-walkthrough.md)), updated as each phase runs
 (4.1 / 5.1 / 6 / 7 / 8.4). Mandatory ordering — each step blocked by the previous:
 tests → implementation → refactor → QA → completion. If Task tools are unavailable,
-fall back to a checklist in the story's Implementation Plan section — never skip the breakdown.
+fall back to an in-session checklist held in working context (never written to the story file) — never skip the breakdown.
 
-### 3.5 Update Story File
+### 3.5 Keep the Plan in Session — Do Not Write It to the Story File
 
-**Before writing any code**, append the Implementation Plan block (template in
-[story-template.md](references/story-template.md)) to the story file with Edit — the
-story file is the source of truth; the plan must exist there before work begins.
+**Never persist the implementation plan to the story file.** Hold it in the session:
+subtasks live on Claude Tasks (Phase 3.4) and the plan is presented to the user in
+Phase 3.6. The story file records only status, the final summary, and unplanned
+changes — not the plan. Proceed straight to 3.6.
 
 ### 3.6 Confirm Plan
 
@@ -282,13 +283,14 @@ fields and the **mandatory Files Touched precision** (CREATED = path; MODIFIED =
 
 Mark all acceptance criteria as `[x]` checked in the story file.
 
-### 8.3 Update Implementation Plan Subtasks
+### 8.3 Mark Subtasks Complete
 
-Mark all subtasks in the story's Implementation Plan section as `[x]` done.
+Mark every implementation subtask `completed` on Claude Tasks via TaskUpdate — subtasks
+live on Claude Tasks, never the story file.
 
-### 8.4 Mark All Claude Tasks Completed
+### 8.4 Show Final Task Summary
 
-Use TaskUpdate to mark all remaining tasks as `completed`. Use TaskList to show final summary.
+Use TaskList to show the final completed summary of all tasks.
 
 ### 8.5 User Manual Testing — REQUIRED GATE
 
