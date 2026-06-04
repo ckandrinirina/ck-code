@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.4] — 2026-06-04
+
+### Changed
+
+- **build**: the implementation plan stays in the session (presented at Phase 3.6, tracked on Claude Tasks) and is no longer written into the story file.
+
 ## [3.1.3] — 2026-06-04
 
 ### Fixed
