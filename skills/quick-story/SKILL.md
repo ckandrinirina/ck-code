@@ -20,7 +20,7 @@ Scaffold one small story directly inside an existing `tasks/` plan, without runn
 
 ## PHASE 0 — Version gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
 
 ## PHASE 1 — Locate active plan & target epic
 
@@ -194,7 +194,6 @@ PHASE 5 — Hand-off
 
 ## Rules
 
-- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **Never** create a new epic. If no epic fits, the user must run `/ck-code:plan` instead — tell them so and abort.
 - **Never** write any file before the user types `CONFIRM` in Phase 3.
 - **Never** auto-launch `/ck-code:build` or `/ck-code:to-issues`. Phase 5 is suggestion-only.

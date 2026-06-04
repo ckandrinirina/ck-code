@@ -54,7 +54,7 @@ Resolve `$ARGUMENTS` against on-disk state:
 
 ## PHASE 0 — Version gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
 
 ---
 
@@ -208,7 +208,6 @@ linking still works.
 
 ## IMPORTANT
 
-- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **No tooling self-promotion in the OUTPUT.** Never mention `/ck-code:*`,
   this skill, or any other internal tooling in the generated spec body.
 - **Respect user-saved memory.** Memory entries about issue location,

@@ -46,11 +46,7 @@ The user provides a path to a specification file or feature description via `$AR
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Before reading or writing any `docs/architecture/` doc or `tasks/FEATURE_INDEX.md`, run
-the shared [version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout),
-print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it
-PASSes — stop if the user declines. Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`)
-makes this one cheap read in the common case.
+Before reading/writing any `docs/architecture/` doc or `tasks/FEATURE_INDEX.md`, run the shared [version gate](../../references/version-gate.md); on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). Fast path: `tasks/VERSION.md` = `layout: v3`.
 
 ---
 
@@ -148,7 +144,7 @@ Use extended thinking (ultrathink) to reason through ambiguities. Extract:
 
 ### 1.3 Research Tech Stack (when beneficial)
 
-If the spec references frameworks/libraries/protocols that would benefit from current documentation lookup, use context7 (MCP tools if available, else the `ctx7` CLI via `npx -y @upstash/context7`) or WebSearch to confirm current best practices, identify version-specific considerations, and understand standard project structures. Only do this for unfamiliar or rapidly-evolving technologies.
+If the spec references frameworks/libraries/protocols that would benefit from current documentation lookup, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best practices, identify version-specific considerations, and understand standard project structures. Only do this for unfamiliar or rapidly-evolving technologies.
 
 ### 1.4 Identify Dependencies & Complexity
 
@@ -355,4 +351,3 @@ Because every story is sized to a single dispatch, an epic with independent stor
 - **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
 - **Reusability:** This skill must work with any project specification, not just the current project.
 - **Design ledger drives planning:** the `pending` rows of `DESIGN_LEDGER.md` are the work-to-plan list (Phase 1.1c); flip each planned feature's row to `planned` with its `Plan ref` in Phase 4.5c. Never leave a planned feature `pending`.
-- **Never read or write an architecture doc or `FEATURE_INDEX.md` before the version gate (Phase 0) passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.

@@ -21,7 +21,7 @@ For the index format and mutation contract, see [`../../references/stories-index
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
 
 ## PHASE 1: SELECT PLAN(S)
 
@@ -106,7 +106,6 @@ If any repair failed, instruct the user to fix the file by hand and re-run `/ck-
 
 ## RULES
 
-- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **Story files are the source of truth** — `sync` never rewrites a story file based on the index. Edit the story file directly first, then re-run `sync`.
 - **Always confirm before writing.** No diff is applied without explicit `YES` (or a `SELECT` subset).
 - **Never edit the index header** — the `<!-- AUTO-GENERATED ... -->` and `<!-- Schema: v1 -->` lines are the contract.

@@ -32,7 +32,7 @@ References:
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
 
 ## PHASE 1: DISCOVERY (index-driven)
 
@@ -371,7 +371,6 @@ confirmation (format in `references/conflict-format.md`).
 
 ## RULES
 
-- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 - **Always read `tasks/FEATURE_INDEX.md` before the story index** (Phase 1.0) — bootstrap it if missing; when > 2 features are unfinished, ask which feature and scope the run to its epic; an explicit story-ID / `--epic` argument bypasses the gate. After merging (Phase 6 Option 1), recompute the built feature's `Stories`/`Status` rollup and mark it `DONE` when its last story merges — never leave it stale.
 - **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
 - **Never merge** a story branch without QA passing first.

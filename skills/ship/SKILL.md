@@ -25,7 +25,7 @@ Commit changes, optionally create a PR, and update linked GitHub Issues. Detects
 
 ### 0.0 Version Gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before reading or writing any architecture doc or `tasks/FEATURE_INDEX.md`. If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes — stop if the user declines. The Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
 
 ### 0.1 Resolve Current Branch
 
@@ -228,10 +228,6 @@ Present a final block covering: Commit (hash/branch/message), PR (url/status), G
 6. No issue updates (no story to link).
 
 ## IMPORTANT GUIDELINES
-
-### Version gate first
-
-- **Never read or write an architecture doc before the version gate passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
 
 ### No AI references — absolute
 

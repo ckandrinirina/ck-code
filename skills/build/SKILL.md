@@ -83,7 +83,9 @@ lists skills but you loaded none, stop and re-run Step 4 — a non-empty project
 never reach Phase 3 with zero skills loaded, else Phases 5/6 "follow loaded skills"
 silently become no-ops.
 
-Follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by each present skill's `paths`/`keywords` frontmatter, anchor table as fallback; `expert-qa` **always** loaded, `guide-conventions` always loaded when present) and guides (by their `paths` frontmatter / file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
+**Skip-fast:** if `.claude/skills/experts/` and `.claude/skills/guides/` are both absent there are no project skills to load — read `docs/architecture/folder-structure.md` + the story's feature doc (+ `_shared.md` when cross-cutting), tell the user "No project skills — run `/ck-code:team` to generate them", show the "Skills loaded" block as empty, and proceed to Phase 3 without reading `skill-detection.md`.
+
+Otherwise, follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by each present skill's `paths`/`keywords` frontmatter, anchor table as fallback; `expert-qa` **always** loaded, `guide-conventions` always loaded when present) and guides (by their `paths` frontmatter / file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
@@ -256,12 +258,11 @@ plugin's `agents/` folder — runs the suite, maps results to acceptance criteri
 failures with file:line). If it is not registered, run the inline procedure below.
 
 Mark the QA task `in_progress`, then follow the full procedure in
-[`../../references/qa-validation.md`](../../references/qa-validation.md): load
-`experts/qa` + `experts/qa-project` (mandatory), verify each acceptance criterion
-(PASS/FAIL), run the full suite for regressions, run code-quality checks (commands per
-stack in [references/tdd-walkthrough.md](references/tdd-walkthrough.md)), check
-architecture compliance against `docs/architecture/`, analyse edge cases, and present the
-QA Report (template in [references/output-blocks.md](references/output-blocks.md)).
+[`../../references/qa-validation.md`](../../references/qa-validation.md) — it loads the QA
+experts, validates every acceptance criterion, runs the suite + code-quality checks
+(commands per stack in [references/tdd-walkthrough.md](references/tdd-walkthrough.md)), and
+checks architecture compliance. Present the QA Report (template in
+[references/output-blocks.md](references/output-blocks.md)).
 
 **Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS /
 ABORT` (wording in output-blocks); never silently continue past 3. On NEEDS FIXES inside the

@@ -345,7 +345,7 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.7). `SHIP` → invok
 
 Each gate is enforced inside its phase — listed here as a checklist:
 
-- **Version gate** — before any architecture-doc read or write, run the shared [version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout), print its message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes (or stop if the user declines). Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes this one cheap read in the common case.
+- **Version gate** — run the shared [version gate](../../references/version-gate.md) before any architecture-doc read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
 - **Phase 2.5** — Scope analysis mandatory, even when `$ARGUMENTS` provides a story path.
 - **Phase 2.5.1** — Score `DONE` / `IN PROGRESS` AND `TODO` rows; TODO matches trigger verdict E.
 - **Phase 2.5.2 / 2.5.5 / 5.4** — Three confirmation gates; no writes without explicit `YES`.

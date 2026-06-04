@@ -52,12 +52,7 @@ Spec file path comes from `$ARGUMENTS`.
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Before reading or writing any `docs/architecture/` doc, run the shared
-[version gate](../../references/version-gate.md). If it BLOCKs (pre-v3 layout), print its
-message, offer `/ck-code:doc-optimizer upgrade`, and do not proceed until it PASSes —
-stop if the user declines. On a greenfield project (nothing to migrate) the gate stamps
-`tasks/VERSION.md` and passes. Tier-1 fast path (`tasks/VERSION.md` = `layout: v3`) makes
-this one cheap read in the common case.
+Before reading/writing any `docs/architecture/` doc, run the shared [version gate](../../references/version-gate.md); on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). On greenfield (nothing to migrate) it stamps `tasks/VERSION.md` and passes. Fast path: `tasks/VERSION.md` = `layout: v3`.
 
 ---
 
@@ -163,8 +158,7 @@ and PARTIAL dimensions, see [references/qna-examples.md](references/qna-examples
 
 ### Research During Refinement
 
-When the user mentions specific technologies, use context7 (MCP tools if
-available, else the `ctx7` CLI via `npx -y @upstash/context7`) or WebSearch to:
+When the user mentions specific technologies, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to:
 
 - Look up current best practices for project structure
 - Verify standard folder conventions for the frameworks mentioned
@@ -319,4 +313,3 @@ applicable for this project."
 - **Scanning readability:** Use tables, code blocks, ASCII diagrams, and bullet points. Avoid walls of text.
 - **File independence:** Each file should be self-contained, with cross-references where relevant.
 - **Always record the design pass (Phase 3.11):** every added/changed feature gets a dated design record and a `pending` row in `DESIGN_LEDGER.md` — this is how `plan` knows what still needs planning. Never mark a ledger row `planned` from `design`.
-- **Never read or write an architecture doc before the version gate (Phase 0) passes** — pre-v3 layouts are migrated via `/ck-code:doc-optimizer upgrade` first.
