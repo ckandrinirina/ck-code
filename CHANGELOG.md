@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.10] — 2026-06-09
+
+### Changed
+- **qa-validator**: pinned the agent to the `fast` (Haiku) tier so every QA pass runs on the cheapest model in its own context, keeping verbose build/test/lint output off the expensive orchestrator session.
+- **build**: Phase 7 now always delegates QA to the Haiku `qa-validator` agent (inline only as a fallback) for token efficiency.
+- **parallel-build**: Phase 5 now dispatches one Haiku `qa-validator` agent per story in a single parallel batch instead of running `cargo test`/`pnpm`/`cmake` inline in the orchestrator — heavy output stays out of the long-lived session and QA runs in parallel.
+
 ## [3.1.9] — 2026-06-09
 
 ### Fixed
