@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.11] — 2026-06-09
+
+### Changed
+- **fix**: Phase 7 QA now always delegates the suite/build/lint to the Haiku `qa-validator` agent (inline only as a fallback), and Phase 4 reproduction delegation was upgraded to the same token-efficiency mandate — heavy output stays off the main fix session, matching the `build` Phase 7 pattern.
+
 ## [3.1.10] — 2026-06-09
 
 ### Changed
