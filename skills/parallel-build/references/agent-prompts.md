@@ -89,6 +89,43 @@ that exhausted its dispatch budget). It is recovered via Phase 6 **Continue in p
 auto-continue loop (prompt below), never by reattaching to the agent (no `SendMessage`) and
 never by fresh re-dispatch into a new worktree (that discards the partial work).
 
+## Phase 5 — QA-Validation Sub-Agent Prompt
+
+Dispatch ONE per merge-candidate story, **all in a single parallel message** (Phase 5.2).
+Pinned to the `fast` (Haiku) tier — the agent absorbs the verbose build/test/lint output in
+its own cheap context and returns only a compact verdict, keeping the orchestrator lean.
+
+```
+subagent_type: ck-code:qa-validator   # falls back to inline 5.1 commands if not registered
+model: fast (Haiku)                    # qa-validator pins model: haiku; this is the explicit default
+isolation: none                        # run inside the story's existing worktree
+cwd: <existing worktree path for this story>
+description: "QA story XX-YY: [story title]"
+prompt: |
+  You are running QA for story XX-YY inside its EXISTING worktree. Read-only against the
+  project — run the stack commands below, never edit code or any file.
+
+  STEP 0 — confirm `git rev-parse --show-toplevel` equals the worktree path below; if not,
+  STOP and report "WRONG WORKTREE". Read the story file from the in-worktree path.
+
+  Worktree:   <existing worktree path>
+  Story file (INSIDE the worktree): <worktree path>/<relative story path>
+  Stack QA commands (run exactly, in order, from the worktree):
+    <concrete commands for this story's epic — from SKILL.md Phase 5.1>
+
+  Your task:
+  1. Run each stack QA command above. Capture the first failing command and a short excerpt
+     of its output (the failing test names / clippy or lint errors / type errors).
+  2. Map results to the story's acceptance criteria where the suite covers them.
+  3. Do NOT attempt fixes — only report.
+
+  END YOUR REPLY WITH THIS EXACT VERDICT LINE (the orchestrator parses it):
+    QA: PASS
+  or, on any failure:
+    QA: FAIL — <which command failed> — <one-line excerpt>
+  Report PASS only if every stack command succeeded.
+```
+
 ## Phase 5.5.3 — Bug-Fix Sub-Agent Prompt
 
 Used when a Phase 5.5 manual-test reports `ISSUES`. Dispatch ONE Agent into

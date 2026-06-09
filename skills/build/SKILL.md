@@ -255,9 +255,14 @@ Run full test suite one more time and present the REFACTOR Phase Complete block 
 
 QA expert skills review the work — this is **not** a self-review.
 
-**Preferred subagent_type:** delegate to `ck-code:qa-validator` if available (in this
-plugin's `agents/` folder — runs the suite, maps results to acceptance criteria, reports
-failures with file:line). If it is not registered, run the inline procedure below.
+**Always delegate to `ck-code:qa-validator` when available** (in this plugin's `agents/`
+folder — pinned to the `fast` (Haiku) tier). It runs the test suite, build, and lint, maps
+results to acceptance criteria, and reports failures with file:line. Delegation is the
+default for token efficiency, not just a convenience: the verbose suite/build/lint output is
+absorbed in the cheap Haiku agent's own context and only a compact PASS/FAIL verdict returns
+to this orchestrator — never run the heavy commands inline in the main session while the
+agent is available. **Run the inline procedure below ONLY as a fallback** when the
+`qa-validator` subagent_type is not registered.
 
 Mark the QA task `in_progress`, then follow the full procedure in
 [`../../references/qa-validation.md`](../../references/qa-validation.md) — it loads the QA

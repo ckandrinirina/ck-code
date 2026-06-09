@@ -319,18 +319,42 @@ Print the conflict report (format in `references/conflict-format.md`): per-branc
 result, cross-branch overlaps, and suggested merge order (fewest overlaps first). No
 conflicts → "No conflicts detected — all branches merge cleanly."
 
-## PHASE 5: QA & TESTING
+## PHASE 5: QA & TESTING (delegated to parallel Haiku QA agents)
 
-Validate builds, tests, and lint per story's worktree, based on its epic/component.
-Use the worktree path the agent returned.
+Validate builds, tests, and lint per story's worktree, based on its epic/component — but
+**never run the heavy commands inline in this orchestrator.** A long-lived parallel-build
+orchestrator that runs `cargo test`, `cmake --build`, `pnpm run typescript`, `vitest`, etc.
+for every story in its own context floods the most expensive session in the run with verbose
+build/test/lint output. Instead, **dispatch one `ck-code:qa-validator` agent per completed
+story** — pinned to the `fast` (Haiku) tier — so each agent runs its stack's QA commands
+**inside its own worktree and its own cheap context**, and returns only a compact PASS/FAIL
+verdict. The orchestrator stays lean and the QA passes run in parallel instead of one-by-one.
+
+### 5.1 Stack QA Commands (passed to each agent)
+
+Each story's epic/component determines the commands the agent runs in its worktree:
 
 - **Engine (epic 02):** `cd [wt]/engine && cmake --build build --config Release` — verify binary exists at `engine/build/Release/<binary>`.
 - **Server (epics 03, 09):** `cd [wt]/server && cargo test && cargo clippy -- -D warnings && cargo fmt --check`.
 - **Desktop (epics 10–13):** `cd [wt]/desktop && pnpm run typescript && npx vitest run`.
 - **Mobile (epic 04):** `cd [wt]/mobile && pnpm run typescript && npx eslint .`.
 
-Print per-story QA results (format in `references/conflict-format.md`). Mark any
-story with QA failures as **BLOCKED from merge** — keep its worktree.
+### 5.2 Dispatch QA Agents — SINGLE MESSAGE, PARALLEL
+
+For every story that reached Phase 3.5 ✓ COMPLETE or ⚠ warning (merge-candidate set),
+dispatch one Agent in a single parallel message (like Phase 3.3) with `subagent_type:
+ck-code:qa-validator`, `isolation: none`, `cwd: <worktree>`, and the **Phase 5 QA-Validation
+Sub-Agent** prompt from [`references/agent-prompts.md`](references/agent-prompts.md) carrying
+that story's concrete stack commands from 5.1. The agent runs the commands, captures any
+failing output, and returns the QA Report verdict line. If the `ck-code:qa-validator`
+subagent_type is not registered, **fall back** to running the 5.1 commands inline per
+worktree.
+
+### 5.3 Aggregate Verdicts
+
+Collect each agent's verdict and print the per-story QA Report (format in
+`references/conflict-format.md`). Mark any story with QA failures as **BLOCKED from merge** —
+keep its worktree. ◐ incomplete and 🚫 blocked stories from Phase 3.5 are not QA candidates.
 
 ## PHASE 5.5: PER-STORY MANUAL TESTING GATE (orchestrator-level, sequential)
 
@@ -432,6 +456,7 @@ confirmation (format in `references/conflict-format.md`).
 - **Never let sub-agents edit the shared indexes in their worktrees** — `STORIES_INDEX.md`, `FEATURE_INDEX.md`, and each story's parent `EPIC.md` are shared cross-story files, and concurrent worktree edits to them are the cause of merge conflicts on the target branch. `/ck-code:build` auto-detects its worktree and defers all three (updating only the per-story file); the orchestrator reconciles them **once on the target branch after each merge** (Phase 6 Option 1, and per wave in wave mode — before the next wave re-resolves). This single-writer reconciliation is what keeps parallel merges conflict-free.
 - **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
 - **Never merge** a story branch without QA passing first.
+- **Always delegate Phase 5 QA to parallel `ck-code:qa-validator` (Haiku) agents, never run the heavy commands inline** (Phase 5.2) — one agent per merge-candidate story, all dispatched in a single message, each running its stack's build/test/lint inside its own worktree and returning a compact verdict. The verbose output stays out of the long-lived orchestrator context and the QA passes run in parallel. Inline 5.1 commands are a fallback only when the `qa-validator` subagent_type is unavailable.
 - **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.
 - **Always dispatch all agents in one message** — not sequentially. True parallelism
   requires multiple Agent calls in a single turn.
