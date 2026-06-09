@@ -152,10 +152,11 @@ This prevents "grep-driven debugging" — changing code without understanding wh
 
 **Goal:** QA expert reproduces the bug and confirms diagnosis BEFORE any fix.
 
-**Preferred subagent_type:** delegate reproduction to `ck-code:qa-validator` if
-available (defined in this plugin's `agents/` folder — writes a minimal failing
-test for the bug and reports a root-cause hypothesis). If the subagent_type is
-not registered, do the steps below inline.
+**Always delegate reproduction to `ck-code:qa-validator` when available** (defined in this
+plugin's `agents/` folder — pinned to the `fast` (Haiku) tier; writes a minimal failing test for
+the bug and reports a root-cause hypothesis). The agent absorbs the verbose test-run output in
+its own cheap context and returns a compact result, keeping this orchestrator lean. **Do the
+steps below inline ONLY as a fallback** when the `qa-validator` subagent_type is not registered.
 
 ### 4.1 Locate the Buggy Code
 
@@ -281,6 +282,15 @@ section using the SOLID Verification template in
 
 **Goal:** QA expert verifies the fix is complete and nothing else broke.
 
+**Always delegate to `ck-code:qa-validator` when available** (in this plugin's `agents/`
+folder — pinned to the `fast` (Haiku) tier). It runs the full suite, build, and lint, re-checks
+every acceptance criterion, and reports failures with file:line. Delegation is the default for
+token efficiency, not just a convenience: the verbose suite/build/lint output is absorbed in the
+cheap Haiku agent's own context and only a compact PASS/FAIL verdict returns to this orchestrator
+— never run the heavy commands inline in the main fix session while the agent is available.
+**Run the inline procedure below ONLY as a fallback** when the `qa-validator` subagent_type is
+not registered.
+
 Follow the shared procedure in [`../../references/qa-validation.md`](../../references/qa-validation.md). Bug-fix flows include the **minimalism check** (Step 6) — the fix must be the smallest change that resolves the root cause; no unrelated refactoring.
 
 Skill-specific report and escalation templates: `references/qa-dialogue.md` (Phase 7.5 / 7.6). Iteration cap = 3; on iteration 3 escalate with `MANUAL FIX / ACCEPT / REVERT`. On NEEDS FIXES, loop back to Phase 6.
@@ -363,7 +373,7 @@ Each gate is enforced inside its phase — listed here as a checklist:
 - **Phase 2.6.3 / 2.6.4** — Stub story + `STORIES_INDEX.md` + parent `EPIC.md` synced in the same phase.
 - **Phase 4.2 + 5.0** — Failing reproduction test before any fix code.
 - **Phase 6.4 + 7** — SOLID re-check (bounded to changed lines) AND QA pass after every code change.
-- **Phase 7** — QA iteration cap = 3 → escalate `MANUAL FIX / ACCEPT / REVERT`.
+- **Phase 7** — Always delegate the QA suite/build/lint to the Haiku `ck-code:qa-validator` agent; never run the heavy commands inline in the fix session while the agent is registered (inline = fallback only). QA iteration cap = 3 → escalate `MANUAL FIX / ACCEPT / REVERT`.
 - **Phase 8.6.5** — Manual-test loop cap = 3 on the same Bug ID → escalate.
 
 ### Scope discipline (cross-cutting)
