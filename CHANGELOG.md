@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.9] — 2026-06-09
+
+### Fixed
+
+- **parallel-build**: Guarantee each worktree converges to a verified-complete state, fixing four failure modes seen in production parallel runs. (1) Base divergence — freeze the merge target once (`$TARGET`/`$TARGET_SHA`, never hardcoded `main`) and normalize every story branch onto it on return (`rebase --onto`), so a worktree cut from a divergent base is corrected automatically instead of by hand ("stray commit" archaeology). (2) Silent no-op resume (`0 tool uses · Done`) — continue-in-place is now an auto-continue loop gated on an objective COMPLETE check (all criteria `[x]` + clean tree + QA green), with a work-proof guard that flags a zero-progress round as STUCK and never merges it. (3) Unreliable completion signal — agents end with a parseable `STATUS`/`COMMITS`/`REMAINING` block and self-verify they are in the assigned worktree before working. (4) Lost work — dirty worktrees are WIP-committed before resume/cleanup, and per-phase commits keep an early stop recoverable.
+
 ## [3.1.8] — 2026-06-09
 
 ### Fixed
