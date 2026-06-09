@@ -75,8 +75,9 @@ Mutator responsibilities:
 | Skill / agent | When | What changes in index |
 |---|---|---|
 | `plan` (Phase 4.5) | After all story files written | Create the index from those stories |
-| `build` (Phase 1.4) | `TODO → IN PROGRESS` | Status cell |
-| `build` (Phase 8.1) | `IN PROGRESS → DONE` | Status cell |
+| `build` (Phase 1.6) | `TODO → IN PROGRESS` | Status cell — **skipped when build runs inside a parallel-build worktree** (deferred to `parallel-build`) |
+| `build` (Phase 8.6) | `IN PROGRESS → DONE` | Status cell — **skipped when build runs inside a parallel-build worktree** (deferred to `parallel-build`) |
+| `parallel-build` (Phase 6, after each merge) | Merged stories flip to `DONE` | Flip each merged story's row to `DONE` on the target branch — the single-writer reconciliation that replaces the deferred per-worktree edits |
 | `plan` (Continue mode) | New stories appended | Insert new rows in `ID` order |
 | `fix` (Phase 2.6) | Stub stories created (verdicts B/D) | Insert new rows in `ID` order |
 | `sync` (any phase) | Index drifted from story files | Rewrite mismatched rows / add orphan rows / remove rows for deleted files |
@@ -88,7 +89,7 @@ Mutator responsibilities:
 ## Rules
 
 - **Never** read every story file just to check status — that's what the index exists to avoid.
-- **Never** mutate story-file `Status:` without mutating the matching index row in the same phase.
+- **Never** mutate story-file `Status:` without mutating the matching index row in the same phase — **except** when `build` runs inside a parallel-build worktree, where the shared index edit is deliberately deferred (concurrent worktree edits collide at merge) and `parallel-build` reconciles every merged row on the target branch post-merge.
 - **Never** edit the index by hand — the comment header is the contract.
 - **Always** run the bootstrap check first if the index is missing; do not error.
 - The index is the source of truth for **selection / dependency resolution**. The story file remains the source of truth for full content (acceptance criteria, technical notes, implementation summary).

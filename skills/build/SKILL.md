@@ -66,9 +66,11 @@ Present the linked issue (or "No linked issue found").
 
 Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See [references/story-template.md](references/story-template.md) for the exact transition.
 
-Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `TODO` to `IN PROGRESS`. The story file and the index must never disagree — see the mutation protocol in [`../../references/stories-index.md`](../../references/stories-index.md).
+**Parallel-worktree guard (detect once, applies to 1.6 / 8.6 / 8.7).** Run `git rev-parse --show-toplevel`; if the path contains `.claude/worktrees/agent-` this build is a parallel-build sub-agent. In that case update **only the per-story file** in 1.6 / 8.6 / 8.7 and **do NOT edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or the parent `EPIC.md`** — those are shared cross-story files, and concurrent worktree edits to them collide at merge. The parallel-build orchestrator reconciles all three once on the target branch after the merge (its Phase 6). Outside a worktree (normal single-story build), update the story file AND the shared indexes exactly as written below.
 
-If this is the first story of its feature to start (the feature was `TODO`), also Edit `tasks/FEATURE_INDEX.md`: set that feature's `Status` cell `TODO` → `IN PROGRESS` (per [`../../references/feature-index.md`](../../references/feature-index.md)).
+Then (non-worktree only) Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `TODO` to `IN PROGRESS`. The story file and the index must never disagree — see the mutation protocol in [`../../references/stories-index.md`](../../references/stories-index.md).
+
+If this is the first story of its feature to start (the feature was `TODO`), also (non-worktree only) Edit `tasks/FEATURE_INDEX.md`: set that feature's `Status` cell `TODO` → `IN PROGRESS` (per [`../../references/feature-index.md`](../../references/feature-index.md)).
 
 ---
 
@@ -312,13 +314,15 @@ ACCEPT AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never
 
 Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
 
-Then Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../references/stories-index.md`](../../references/stories-index.md).
+**Parallel-worktree guard applies (see 1.6).** In a parallel-build worktree, stop here — the story file is the only update; `STORIES_INDEX.md` and `FEATURE_INDEX.md` are reconciled by the orchestrator post-merge. Skip the two index edits below.
 
-Then Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../references/feature-index.md`](../../references/feature-index.md).
+Then (non-worktree only) Edit `tasks/<slug>/STORIES_INDEX.md`: locate the row with this story's `ID` and change the `Status` cell from `IN PROGRESS` to `DONE`. Both edits in the same phase — see [`../../references/stories-index.md`](../../references/stories-index.md).
+
+Then (non-worktree only) Edit `tasks/FEATURE_INDEX.md`: recompute this feature's `Stories` count and roll up its `Status` — `IN PROGRESS`, or `DONE` once this was its last remaining story. Do not leave the feature rollup stale after a completed build. See [`../../references/feature-index.md`](../../references/feature-index.md).
 
 ### 8.7 Update Parent Epic
 
-Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
+**Parallel-worktree guard applies (see 1.6).** In a parallel-build worktree, skip this — `EPIC.md` is shared across the epic's stories and the orchestrator reconciles it post-merge. Otherwise: Read the parent EPIC.md and update the story's status in the stories table to `DONE`.
 
 ### 8.8 Ship (Commit + PR + Issue Updates)
 

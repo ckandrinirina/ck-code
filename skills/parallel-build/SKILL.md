@@ -256,10 +256,12 @@ re-hits the same budget wall). See the RULES block for the absolute form.
 
 After all agents finish — before conflict analysis — verify each **successfully
 completed** story is properly recorded and no code was silently lost. For each: confirm
-its worktree story file reads `Status: DONE` (NOT the main-checkout index, which is
-pre-implementation until merge), and run the code-integrity checks (empty diff,
-unexpected deletions, pure-deletion files). Commands and flag definitions:
-[`references/pipeline.md`](references/pipeline.md).
+its worktree **story file** reads `Status: DONE` (NOT the index — sub-agents defer all
+shared-index edits in parallel mode, so the worktree's `STORIES_INDEX.md` / `EPIC.md`
+stay at their pre-build status by design; that is not drift and must not be flagged. The
+orchestrator reconciles the indexes post-merge in Phase 6). Then run the code-integrity
+checks (empty diff, unexpected deletions, pure-deletion files). Commands and flag
+definitions: [`references/pipeline.md`](references/pipeline.md).
 
 For any ◐ **incomplete** story from Phase 3.4, also run the status + diff check here: it
 is the signal that separates resumable progress from a dead end.
@@ -345,11 +347,22 @@ Option 1, even if QA and conflict checks pass.
 order into the **orchestrator's current branch** (never a hardcoded `main`; detached HEAD
 → stop and ask). Resolve and confirm the target, merge each branch, then run final QA on
 the merged target to catch cross-branch integration issues. Procedure:
-[`references/pipeline.md`](references/pipeline.md). **After the merges land**, Edit
-`tasks/FEATURE_INDEX.md` once: recompute the built feature's `Stories` count and roll up its
-`Status` — mark the feature `DONE` if its last story is now merged, else `IN PROGRESS`. Never
-leave the rollup stale after a completed parallel build (per
-[`../../references/feature-index.md`](../../references/feature-index.md)). If clean, proceed to **Phase 7**.
+[`references/pipeline.md`](references/pipeline.md).
+
+**After the merges land, reconcile the shared indexes once on the target branch** — the
+sub-agents deferred every shared-index edit, so the merged tree carries each story file at
+`Status: DONE` while the indexes still show the pre-build status. The orchestrator is the
+sole writer here, so these edits never conflict. In one pass:
+
+1. `tasks/<slug>/STORIES_INDEX.md` — flip each merged story's `Status` cell to `DONE`
+   (mutation protocol: [`../../references/stories-index.md`](../../references/stories-index.md)).
+2. Each merged story's parent `EPIC.md` — set its row in the stories table to `DONE`.
+3. `tasks/FEATURE_INDEX.md` — recompute the built feature's `Stories` count and roll up its
+   `Status`: mark the feature `DONE` if its last story is now merged, else `IN PROGRESS`. Never
+   leave the rollup stale after a completed parallel build (per
+   [`../../references/feature-index.md`](../../references/feature-index.md)).
+
+Commit the reconciliation on the target branch. If clean, proceed to **Phase 7**.
 
 **Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
 Remind the user to run Phase 7 after merging.
@@ -379,6 +392,7 @@ confirmation (format in `references/conflict-format.md`).
 ## RULES
 
 - **Always read `tasks/FEATURE_INDEX.md` before the story index** (Phase 1.0) — bootstrap it if missing; when > 2 features are unfinished, ask which feature and scope the run to its epic; an explicit story-ID / `--epic` argument bypasses the gate. After merging (Phase 6 Option 1), recompute the built feature's `Stories`/`Status` rollup and mark it `DONE` when its last story merges — never leave it stale.
+- **Never let sub-agents edit the shared indexes in their worktrees** — `STORIES_INDEX.md`, `FEATURE_INDEX.md`, and each story's parent `EPIC.md` are shared cross-story files, and concurrent worktree edits to them are the cause of merge conflicts on the target branch. `/ck-code:build` auto-detects its worktree and defers all three (updating only the per-story file); the orchestrator reconciles them **once on the target branch after each merge** (Phase 6 Option 1, and per wave in wave mode — before the next wave re-resolves). This single-writer reconciliation is what keeps parallel merges conflict-free.
 - **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
 - **Never merge** a story branch without QA passing first.
 - **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.

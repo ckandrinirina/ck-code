@@ -24,7 +24,11 @@ prompt: |
 
   Important:
   - Work only on files relevant to this story
-  - Do not modify story files in tasks/ (the /ck-code:build skill updates those)
+  - /ck-code:build updates this story's own file `Status:` — let it. But it MUST NOT
+    edit the shared indexes (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) or the parent
+    `EPIC.md` inside this worktree: concurrent edits to those collide at merge. Build
+    auto-detects the worktree and defers them; the orchestrator reconciles all three on
+    the target branch after merge. If you see build about to edit them, skip that edit.
   - Do NOT run build's Phase 1.4 Parallel-Build Opportunity Check — you are already
     inside a parallel run and cannot prompt the user. Proceed straight to Phase 1.5.
   - **Stop after Phase 8.4 (Mark All Tasks Completed) — DO NOT run Phase 8.5
@@ -148,5 +152,7 @@ prompt: |
   - Stop after Phase 8.4 — DO NOT run Phase 8.5 (manual testing); the orchestrator owns it.
   - Leave Status: IN PROGRESS and report back what you finished and what (if anything)
     still remains. If you again stop before finishing, say so explicitly.
-  - Modify only files relevant to this story; do not touch story files in tasks/.
+  - Modify only files relevant to this story. Build updates this story's own file
+    `Status:`, but must NOT edit the shared `STORIES_INDEX.md` / `FEATURE_INDEX.md` /
+    `EPIC.md` in this worktree — the orchestrator reconciles those post-merge.
 ```

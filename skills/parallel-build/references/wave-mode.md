@@ -103,7 +103,11 @@ For each wave, in order:
 4. **Run the pipeline on this wave's stories:** SKILL.md Phase 3 (dispatch) → 3.5
    (integrity) → 4 (conflict, intra-wave only) → 5 (QA) → 5.5 (manual-test gate).
 5. **Merge this wave** into the target branch with Phase 6 Option 1 logic — merge-eligible
-   = QA-passed + manual-test-passed + conflict-free. Run the post-merge QA on the target.
+   = QA-passed + manual-test-passed + conflict-free. Then **reconcile the shared indexes on
+   the target branch** (`STORIES_INDEX.md` rows → `DONE`, each story's `EPIC.md` row →
+   `DONE`, `FEATURE_INDEX.md` rollup) — sub-agents deferred these edits, and this
+   reconciliation MUST land before step 8 so the next wave's re-resolve sees this wave's
+   stories as `DONE`. Run the post-merge QA on the target.
 6. **Cleanup this wave's worktrees** (Phase 7) before the next wave. Keep only the
    worktrees of BLOCKED stories.
 7. **Update Tasks.** Mark this wave's merged stories `completed`; a BLOCKED story stays

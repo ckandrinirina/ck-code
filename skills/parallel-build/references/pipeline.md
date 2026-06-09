@@ -43,10 +43,11 @@ Run per **successfully completed** story, before conflict analysis.
 **Status check (worktree-based):** read the story file from `<worktree-path>/<rel-path>`
 and confirm `Status: DONE`. Do NOT read `STORIES_INDEX.md` from the main checkout — it is
 pre-implementation until merge. If the worktree story file still shows TODO/IN PROGRESS →
-⚠️ **Story file not updated** (build failed to complete Phase 8); also check
-`<worktree-path>/tasks/<slug>/STORIES_INDEX.md` for index/story sync (mutation protocol:
-`../../../references/stories-index.md`). Acceptance-criteria checkboxes are validated by
-build's QA phase, not here.
+⚠️ **Story file not updated** (build failed to complete Phase 8). Do NOT check the
+worktree's `STORIES_INDEX.md` / `EPIC.md` for sync — sub-agents defer all shared-index
+edits in parallel mode, so those files are intentionally at their pre-build status and a
+mismatch is expected, not drift. The orchestrator reconciles them post-merge (Phase 6).
+Acceptance-criteria checkboxes are validated by build's QA phase, not here.
 
 **Code integrity (relative to `main`):**
 
@@ -99,8 +100,20 @@ git -C <main-checkout> checkout "$target_branch"
 git -C <main-checkout> merge --no-ff story/XX-YY -m "feat: implement story XX-YY"
 ```
 
-Run final QA on the merged target (types + tests) to catch cross-branch integration
-issues before Phase 7.
+**Then reconcile the shared indexes on the target branch (orchestrator is the sole
+writer — no conflict possible).** Sub-agents deferred these edits, so each merged story
+file reads `DONE` but the indexes still show pre-build status. For each merged story, Edit
+on the target checkout:
+
+```
+STORIES_INDEX.md  →  flip the story's row Status cell to DONE
+EPIC.md           →  flip the story's row in the epic stories table to DONE
+FEATURE_INDEX.md  →  recompute the feature's Stories count + Status rollup (DONE on last story)
+```
+
+Then `git -C <main-checkout> add` those index files and commit (e.g.
+`chore: reconcile story/feature indexes after parallel merge`). Run final QA on the merged
+target (types + tests) to catch cross-branch integration issues before Phase 7.
 
 ## Phase 7 — Worktree Cleanup (after merge)
 
