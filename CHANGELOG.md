@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.8] — 2026-06-09
+
+### Fixed
+
+- **parallel-build / build**: Parallel sub-agents no longer edit the shared `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or parent `EPIC.md` inside their worktrees — concurrent edits to those files were the cause of merge conflicts on the target branch. `build` now auto-detects its parallel-build worktree and defers all shared-index writes (updating only the per-story file); `parallel-build` reconciles the three indexes once on the target branch after each merge (and per wave, before re-resolving the next wave) as the sole writer, keeping parallel merges conflict-free.
+
 ## [3.1.7] — 2026-06-04
 
 ### Added
