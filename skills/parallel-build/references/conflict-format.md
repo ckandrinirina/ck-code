@@ -131,6 +131,7 @@ Reply A / B / C.
 Summary:
   ✓ Ready to merge:   story/02-05  (QA + manual-test passed, no conflicts)
   ◐ Incomplete:       story/03-04  (agent stopped early — partial work in worktree)
+  🚫 Stuck:           story/03-07  (auto-continue made 0 progress / too large — never merged)
   ⚠ Review needed:   story/03-01  (QA failed: clippy errors)
   ⚠ Manual-test blocked: story/04-02  (3 cycles exhausted — escalation pending)
   ✗ Build failed:    story/02-06  (agent error / empty diff during /ck-code:build)

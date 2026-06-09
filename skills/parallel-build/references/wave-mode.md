@@ -87,10 +87,12 @@ For each wave, in order:
 
 1. **Confirm (confirm-each-wave gate).** Present this wave's stories and AskUserQuestion
    `YES / SKIP STORY / ABORT`. Wave 1's confirmation is the plan-table prompt above.
-2. **Branch base.** Create this wave's worktrees from the **merge target branch's current
-   HEAD** — which already contains previous waves' merged code — NOT from a stale `main`.
-   This is what lets a dependent story (e.g. 01-03) see its merged dependencies and their
-   `DONE` index status.
+2. **Branch base.** Freeze this wave's target (`$TARGET` / `$TARGET_SHA`, SKILL.md Phase 3.0)
+   from the **merge target branch's current HEAD** — which already contains previous waves'
+   merged code — NOT a stale `main`. This is what lets a dependent story (e.g. 01-03) see its
+   merged dependencies and their `DONE` index status. Phase 3.5b still normalizes each branch
+   onto this wave's `$TARGET_SHA` on return, so a divergent worktree base is corrected
+   automatically rather than polluting the wave merge.
 3. **Single-story wave** → still dispatch it as a **one-agent worktree run** (Phase 3
    with N=1), NOT an inline `/ck-code:build`. The orchestrator is long-lived across the
    remaining waves: inline build would load that story's whole TDD/QA detail into the

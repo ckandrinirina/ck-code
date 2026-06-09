@@ -20,7 +20,10 @@ prompt: |
   Your task:
   1. Invoke the /ck-code:build skill using the Skill tool:
      Skill({ skill: "ck-code:build", args: "[full path to story markdown file]" })
-  2. Follow the /ck-code:build skill completely — it handles TDD, SOLID principles, QA, and commit
+  2. Follow the /ck-code:build skill completely — it handles TDD, SOLID principles, QA, and commit.
+     **Commit after every TDD cycle / phase** — if you run out of budget mid-story, the
+     committed state is the only thing the orchestrator can resume from. Never leave the
+     whole story uncommitted.
 
   Important:
   - Work only on files relevant to this story
@@ -36,8 +39,14 @@ prompt: |
     per-story manual-testing gate in its own Phase 5.5 — sub-agents cannot
     interact with the user. Leave the story `Status: IN PROGRESS` and report
     back; the orchestrator will flip it to `DONE` after manual-test PASS.
-  - If /ck-code:build completes through Phase 8.4 successfully, your job is done
   - If /ck-code:build fails or encounters a blocker, report the error clearly in your final response
+
+  END YOUR REPLY WITH THIS EXACT BLOCK (the orchestrator parses it; a missing block is
+  treated as PARTIAL / incomplete):
+    STATUS: SUCCESS | PARTIAL | BLOCKED
+    COMMITS: <number of commits you made>
+    REMAINING: <unfinished acceptance criteria, or "none">
+  Report SUCCESS only if build reached Phase 8.4 with every criterion checked and QA green.
 ```
 
 ## Launch Announcement Template
@@ -64,17 +73,21 @@ Live progress on the task board below. (To pin a model, set the tier env var and
 ## Result Collection Template
 
 ```
-Agent results:
-  02-05  →  ✓ completed
-  02-06  →  ✗ failed: [brief error]
-  03-01  →  ◐ incomplete: stopped at ~41 tool-calls, story still IN PROGRESS (partial work in worktree)
-  03-04  →  ◐ incomplete: stopped at ~99 tool-calls, story still IN PROGRESS (partial work in worktree)
+Agent results (provisional — verified objectively in Phase 3.5):
+  02-05  →  ✓ STATUS: SUCCESS   (COMMITS: 6,  REMAINING: none)
+  02-06  →  ✗ STATUS: BLOCKED   [brief error]
+  03-01  →  ◐ STATUS: PARTIAL   (COMMITS: 3,  REMAINING: "rate limiting", "audit log")
+  03-04  →  ◐ no status block returned (bare stop) → treat as PARTIAL / incomplete
 ```
+
+The trailing `STATUS:` block is a **hint**, not the outcome of record — Phase 3.5's
+✓ COMPLETE gate (criteria + clean tree + QA) decides. A missing block, or `SUCCESS` that
+fails the gate, is treated as ◐ incomplete.
 
 `◐ incomplete` = agent returned with no error but did not finish (typically an XL story
 that exhausted its dispatch budget). It is recovered via Phase 6 **Continue in place**
-(prompt below), never by reattaching to the agent (no `SendMessage`) and never by fresh
-re-dispatch into a new worktree (that discards the partial work).
+auto-continue loop (prompt below), never by reattaching to the agent (no `SendMessage`) and
+never by fresh re-dispatch into a new worktree (that discards the partial work).
 
 ## Phase 5.5.3 — Bug-Fix Sub-Agent Prompt
 
@@ -91,7 +104,12 @@ description: "Fix manual-test bug for story XX-YY: [bug summary]"
 prompt: |
   You are running inside the existing worktree for story XX-YY.
 
-  Story file: [full path inside this worktree]
+  STEP 0 — confirm `git rev-parse --show-toplevel` equals the worktree path below; if not,
+  STOP and report "WRONG WORKTREE". Read the story file from the in-worktree path, never
+  the main checkout.
+
+  Worktree: <existing worktree path>
+  Story file (INSIDE the worktree): <worktree path>/<relative story path>
   Reported bug: <verbatim bug description from user>
   Repro:    <steps>
   Expected: <expected>
@@ -114,7 +132,13 @@ prompt: |
   Constraints:
   - Story status stays IN PROGRESS — do NOT flip to DONE.
   - Modify only files relevant to this fix and to the story.
-  - Report back the bug entry's fix summary and Files Touched list.
+  - Commit the fix inside the worktree before returning.
+
+  END YOUR REPLY WITH THIS EXACT BLOCK:
+    STATUS: SUCCESS | PARTIAL | BLOCKED
+    COMMITS: <number of commits you made>
+    REMAINING: <anything still open, or "none">
+  SUCCESS only if the bug entry is FIXED and Phase 7 QA passed.
 ```
 
 ## Phase 6 Option 3 — Continue-Incomplete Sub-Agent Prompt
@@ -134,25 +158,40 @@ prompt: |
   budget and stopped before finishing — its partial work is already here (committed and/or
   in the working tree). You are NOT starting over.
 
-  Story file: [full path inside this worktree]
-  Branch:     story/XX-YY
+  Worktree: <existing worktree path>
+  Story file (INSIDE the worktree): <worktree path>/<relative story path>
+  Branch:   story/XX-YY
+
+  STEP 0 — PROVE YOU ARE IN THE RIGHT PLACE (mandatory, before anything else):
+  - Run `git rev-parse --show-toplevel` and confirm it equals the Worktree path above.
+    If it does NOT match, STOP and report "WRONG WORKTREE" — do not proceed. (This is the
+    guard against the silent no-op: an agent in the wrong dir sees nothing to do and exits.)
+  - Read the story file from the IN-WORKTREE path above — NEVER the main checkout copy.
+    If that file is missing here, STOP and report "STORY FILE NOT IN WORKTREE" — do not
+    invent or proceed.
 
   Your task:
-  1. First, inspect current progress — `git log --oneline`, `git status`, and the story
-     file's acceptance-criteria checkboxes — to see what is already done.
+  1. Inspect current progress — `git log --oneline`, `git status`, and the story file's
+     acceptance-criteria checkboxes — to see what is already done.
   2. Invoke /ck-code:build via the Skill tool to finish the REMAINING work only:
-     Skill({ skill: "ck-code:build", args: "[story path]" })
+     Skill({ skill: "ck-code:build", args: "<in-worktree story path>" })
      Build re-enters on the IN PROGRESS story and continues from where it left off — do
      NOT redo completed criteria or rewrite passing code.
-  3. Follow build through Phase 8.4 (TDD, SOLID, QA, commit). Commit incrementally so any
-     further early stop still preserves progress.
+  3. Follow build through Phase 8.4 (TDD, SOLID, QA). **Commit after every TDD cycle / phase**
+     so any further early stop still preserves progress — never leave work uncommitted.
 
   Important:
   - Do NOT run build's Phase 1.4 Parallel-Build Opportunity Check — proceed to Phase 1.5.
   - Stop after Phase 8.4 — DO NOT run Phase 8.5 (manual testing); the orchestrator owns it.
-  - Leave Status: IN PROGRESS and report back what you finished and what (if anything)
-    still remains. If you again stop before finishing, say so explicitly.
   - Modify only files relevant to this story. Build updates this story's own file
     `Status:`, but must NOT edit the shared `STORIES_INDEX.md` / `FEATURE_INDEX.md` /
     `EPIC.md` in this worktree — the orchestrator reconciles those post-merge.
+
+  END YOUR REPLY WITH THIS EXACT BLOCK (the orchestrator parses it; a missing block is
+  treated as PARTIAL):
+    STATUS: SUCCESS | PARTIAL | BLOCKED
+    COMMITS: <number of NEW commits you made this round>
+    REMAINING: <unfinished acceptance criteria, or "none">
+  Report SUCCESS only if every acceptance criterion is checked and QA passed. If you did no
+  work (nothing left, or you could not proceed), say so explicitly — do NOT report SUCCESS.
 ```

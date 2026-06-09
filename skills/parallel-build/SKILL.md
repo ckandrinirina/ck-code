@@ -175,6 +175,16 @@ work lands on the wave target branch. Only a *terminal* single-story wave may in
 
 Create worktrees and dispatch all sub-agents in one parallel batch.
 
+### 3.0 Freeze the Merge Target (base pin — do this FIRST)
+
+Before any dispatch, **freeze the merge target once**: `$TARGET` = current branch,
+`$TARGET_SHA` = its HEAD (detached HEAD → stop and ask); confirm a clean tree. Every later
+phase uses `$TARGET` / `$TARGET_SHA` — **never a hardcoded `main`** (diffing against `main`
+while on a `docs`/feature branch is what produced the "stray commit" archaeology).
+`isolation: worktree` won't let us pin the base at dispatch, so base correctness is
+**guaranteed on return** (Phase 3.5b normalize), not at launch. Commands:
+[`references/pipeline.md`](references/pipeline.md) Phase 3.0.
+
 ### 3.1 Model Selection
 
 Pick a model **tier by reasoning complexity, not by story `Size:`**. After plan
@@ -237,37 +247,54 @@ Worktree isolation rules:
 
 ### 3.4 Collect Results
 
-Record one of **three** outcomes per story (not two) — print the status summary
-(format in `references/conflict-format.md`):
+Each agent ends with a structured signal line (`STATUS: SUCCESS|PARTIAL|BLOCKED`,
+`COMMITS:`, `REMAINING:` — enforced by `story-implementer` and the dispatch prompts). Use
+it as a hint, but **never trust the agent's word as the outcome of record.** The outcome is
+*derived from the worktree* in Phase 3.5 (criteria + QA + commits), because the failure you
+must catch is precisely an agent that did nothing yet reported "Done". Record one of
+**three** provisional outcomes per story (format in `references/conflict-format.md`):
 
-- **✓ completed** — agent ran `/ck-code:build` through Phase 8.4 and returned done.
-- **✗ failed** — agent returned an explicit error/blocker (capture the message).
-- **◐ incomplete** — agent stopped **without an error and without finishing** (e.g. ran
-  out of its tool-call/token budget mid-implementation). Common on **XL stories**: one
-  dispatch can't hold the whole scope. This is NOT a failure — partial work exists.
+- **✓ completed** — agent reported SUCCESS through Phase 8.4 (verified objectively in 3.5).
+- **✗ failed** — agent reported an explicit error/blocker (capture the message).
+- **◐ incomplete** — agent stopped **without an error and without finishing** (ran out of
+  its tool-call/token budget mid-implementation), OR returned no structured status at all
+  (a bare stop). Common on **XL stories**: one dispatch can't hold the whole scope. This is
+  NOT a failure — partial work exists and is recoverable.
 
-**Dispatched agents cannot be resumed** (no `SendMessage` in this harness) — a returned
-agent is gone and its **only durable state is its worktree**. So an ◐ incomplete story is
-recovered by continuing the work in its existing worktree (Phase 6 Option 3), never by
-reattaching to the dead agent or re-dispatching fresh (which discards the partial work and
-re-hits the same budget wall). See the RULES block for the absolute form.
+**Dispatched agents cannot be resumed** (no `SendMessage`) — a returned agent is gone and
+its **only durable state is its worktree**. So an ◐ incomplete story is recovered by the
+Phase 6 Option 3 auto-continue loop (runs until *verified* complete) in its existing
+worktree — never by reattaching to the dead agent or re-dispatching fresh.
 
 ## PHASE 3.5: STORY FILE & CODE INTEGRITY VERIFICATION
 
-After all agents finish — before conflict analysis — verify each **successfully
-completed** story is properly recorded and no code was silently lost. For each: confirm
-its worktree **story file** reads `Status: DONE` (NOT the index — sub-agents defer all
-shared-index edits in parallel mode, so the worktree's `STORIES_INDEX.md` / `EPIC.md`
-stay at their pre-build status by design; that is not drift and must not be flagged. The
-orchestrator reconciles the indexes post-merge in Phase 6). Then run the code-integrity
-checks (empty diff, unexpected deletions, pure-deletion files). Commands and flag
-definitions: [`references/pipeline.md`](references/pipeline.md).
+After all agents finish — before conflict analysis — verify each story is properly
+recorded and no code was silently lost. Two **pre-steps run first per worktree** (commands:
+[`references/pipeline.md`](references/pipeline.md) Phase 3.5a/3.5b):
 
-For any ◐ **incomplete** story from Phase 3.4, also run the status + diff check here: it
-is the signal that separates resumable progress from a dead end.
+1. **Preserve uncommitted work (3.5a).** The resume model needs committed state, but an
+   agent can stop with work **uncommitted** (transcript 01-01 had *no* commit — one
+   `git worktree prune` from losing it). WIP-commit every dirty worktree so it is durable
+   and rebaseable.
+2. **Normalize the base (3.5b).** If a branch's merge-base with `$TARGET_SHA` isn't
+   `$TARGET_SHA`, it was cut from a divergent point and carries foreign commits (the
+   `dabfb20` / `f298946` archaeology). Don't investigate by hand —
+   `git rebase --onto $TARGET_SHA <merge-base> story/XX-YY` replays only the story's work
+   onto the target, so the diff and merge are exactly the story.
+
+Then verify the worktree **story file** reads `Status: DONE` (NOT the index — sub-agents
+defer all shared-index edits in parallel mode, so the worktree's `STORIES_INDEX.md` /
+`EPIC.md` stay at pre-build status by design; not drift, reconciled post-merge) and run the
+code-integrity checks against `$TARGET_SHA` (empty diff, unexpected deletions, pure-deletion
+files). For any ◐ incomplete story, the status + diff check here is what separates resumable
+progress from a dead end.
 
 **Gate** (print the integrity report, format in `references/conflict-format.md`):
 
+- ✓ **COMPLETE** — the objective, orchestrator-verified done state (never the agent's
+  self-report): the worktree story file reads `Status: DONE`, **every** acceptance-criteria
+  checkbox is `[x]`, the working tree is clean (all work committed), and Phase 5 QA passes.
+  This is the exact condition the Phase 6 Option 3 auto-continue loop runs *until*.
 - ⚠️ **warning** (incomplete criteria, pure-deletion ratio) → proceeds to QA/merge but
   must appear in the Phase 6 summary for operator review.
 - ◐ **INCOMPLETE (resumable)** — story file still TODO/IN PROGRESS **but the diff carries
@@ -285,8 +312,8 @@ Detect file-level conflicts between **successfully completed** story branches be
 merge. **Preferred subagent_type:** delegate to `ck-code:conflict-analyzer` if available
 (defined in this plugin's `agents/` folder — runs dry-run merges, classifies risk,
 recommends merge order, aborts cleanly); else run the inline procedure in
-[`references/pipeline.md`](references/pipeline.md) — dry-run merge each branch onto main,
-then detect cross-branch file overlaps.
+[`references/pipeline.md`](references/pipeline.md) — dry-run merge each branch onto the
+frozen `$TARGET`, then detect cross-branch file overlaps.
 
 Print the conflict report (format in `references/conflict-format.md`): per-branch dry-run
 result, cross-branch overlaps, and suggested merge order (fewest overlaps first). No
@@ -367,15 +394,25 @@ Commit the reconciliation on the target branch. If clean, proceed to **Phase 7**
 **Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
 Remind the user to run Phase 7 after merging.
 
-**Option 3 — Continue in place (◐ incomplete stories).** For each ◐ incomplete story,
-dispatch ONE fresh agent **into its existing worktree** (`isolation: none`,
-`cwd: <worktree path>`) using the **Continue-Incomplete Sub-Agent Prompt** in
-`references/agent-prompts.md`. The agent reads what is already committed/changed and
-finishes the _remaining_ acceptance criteria via `/ck-code:build` — it does not redo
-done work, so it is far less likely to hit the same budget wall. After it returns, re-run
-Phase 3.5 → 4 → 5 → 5.5 for that story, then loop back to this Phase 6 prompt. If a story
-stops incomplete **twice**, treat it as too large for one dispatch: stop and recommend
-splitting it into smaller stories before retrying.
+**Option 3 — Continue in place (◐ incomplete stories) — AUTO-CONTINUE UNTIL VERIFIED.**
+One dispatch cannot be guaranteed to finish an XL story (the per-agent budget is the
+harness's, not ours), so completion is reached by *looping*, not by hoping one retry lands.
+For each ◐ incomplete story, dispatch a fresh Continue-Incomplete agent INTO its existing
+worktree (`isolation: none`, `cwd: <worktree>`, in-worktree story path) and **repeat until
+the Phase 3.5 ✓ COMPLETE gate passes**, capped at 3 rounds. Loop mechanics + commands:
+[`references/pipeline.md`](references/pipeline.md) Phase 6 Option 3. Three rules:
+
+- **Done is the gate, never the message** — `complete` = criteria all `[x]` + clean tree +
+  QA green (Phase 3.5), never the agent's "Done".
+- **Zero-progress round = STUCK, not success** — if a round returns the same commit count
+  AND same working-tree diff (the `0 tool uses · Done` no-op), break and flag `🚫 STUCK`;
+  never accept it, never merge it.
+- **CAP reached while still progressing** → too large for one budget: stop and **recommend
+  splitting**. Do not claim done.
+
+Verified complete → re-run Phase 4 → 5 → 5.5, then back to this prompt as merge-eligible.
+The loop's only exits — *verified complete* or *flagged (stuck / too-large)* — guarantee a
+worktree can never again silently report Done with unfinished or empty work.
 
 **Option 4 — Re-dispatch from scratch (✗ failed / empty stories).** Re-run Phase 3 with
 **new** worktrees only for stories that failed with an error or have an empty diff (no
@@ -426,14 +463,16 @@ confirmation (format in `references/conflict-format.md`).
 - **Always isolate** each agent in its own worktree (`isolation: worktree`).
 - **Always run story file & code integrity verification** (Phase 3.5) after agents complete — catch missing status updates and code loss before conflict analysis.
 - **Never reattach to a returned sub-agent** — `SendMessage` is unavailable in this harness, so a dispatched agent cannot be resumed. The worktree is the only durable state.
-- **Always continue ◐ incomplete stories in place, never from scratch** (Phase 3.4 / 3.5 / 6) — an agent that stopped without an error but left real partial work in its worktree is resumed by dispatching a fresh agent INTO that worktree (`isolation: none`, `cwd: <worktree>`) to finish the remaining criteria. Fresh re-dispatch into a new worktree is only for ✗ failed / empty-diff stories; it discards partial work and re-hits the same budget wall. A story incomplete twice is too large — recommend splitting it.
+- **Freeze the merge target once, normalize every branch onto it, never hardcode `main`** (Phase 3.0 / 3.5b / 6) — resolve `$TARGET` / `$TARGET_SHA` before dispatch (detached HEAD → stop) and use it for integrity (3.5), conflict (4), and merge (6). On return, `git rebase --onto $TARGET_SHA <merge-base> story/XX-YY` strips any divergent base so a branch never drags foreign commits into the merge. Diffing against a literal `main` while on another branch is the exact cause of the "stray commit" archaeology.
+- **Always WIP-commit dirty worktrees before resume or cleanup** (Phase 3.5a) — the resume model needs committed state; an uncommitted worktree is one `prune` from lost work.
+- **Completion is orchestrator-verified, never agent-reported; a zero-progress resume is STUCK** (Phase 3.5 gate / 6 Option 3) — done = story file `DONE` + every criterion `[x]` + clean tree + QA green, never the agent's "Done". A continue round returning the same commit count AND same diff (the `0 tool uses · Done` no-op) is flagged `🚫 STUCK` — never accepted, never merged.
+- **Continue ◐ incomplete stories in place via the auto-continue loop, never from scratch** (Phase 6 Option 3) — dispatch a fresh agent INTO the existing worktree (`isolation: none`, in-worktree story path) and loop until the ✓ COMPLETE gate passes, cap 3 rounds. Fresh re-dispatch (new worktree) is only for ✗ failed / empty-diff stories. Still incomplete after 3 progressing rounds → too large, recommend splitting.
 - **Always run dry-run merge conflict detection** (Phase 4) before any merge.
 - **Always delete** agent worktrees after merging — `git worktree remove -f -f` then
   `git worktree prune`.
 - **Never modify** story files in `tasks/` directly — `/ck-code:build` handles that.
 - **Single-story batches short-circuit to `/ck-code:build`; single-story waves do not.** Phase 2.5 detects a one-story *batch* scope (from Phase 1.2 / Phase 2 selection / `$ARGUMENTS`) and delegates to `/ck-code:build` directly — no worktree, no sub-agent dispatch, no conflict analysis, since nothing orchestrates after it. A single-story *wave* (Phase 2.7) instead keeps one-agent worktree dispatch (Phase 3, N=1) so the long-lived orchestrator stays lean across later waves and the work lands on the wave target branch — only a terminal single-story wave may inline. Parallel dispatch otherwise only makes sense for ≥ 2 stories.
 - **Run final QA on the merged target branch** before cleanup — cross-branch integration issues only appear after all merges.
-- **Never hardcode `main` as merge target.** Phase 6 Option 1 always resolves to the orchestrator's current branch (`git branch --show-current` in the main checkout). Detached HEAD = stop and ask.
 
 ## NEXT
 
