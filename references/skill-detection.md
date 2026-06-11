@@ -48,8 +48,10 @@ frontmatter. Match those, not a hardcoded table.
 
 For each expert present on disk (from Step 4a), read its frontmatter and load it when:
 
-- any `paths:` glob matches a file the story/bug **touches**, OR
+- any `paths:` glob matches a file the story/bug **touches** (its `Files to Create/Modify` set — the precise signal; prefer this), OR
 - any `keywords:` entry appears in the story's **title or Technical Notes**.
+
+A `paths` match is authoritative; treat a `keywords`-only match as the weaker fallback signal — when a skill matches on neither the touched files nor a title/Technical-Notes keyword, do not load its body.
 
 **Always required** (loaded if present, no trigger needed): `expert-qa`; plus
 `expert-analyst` for bug-fix flows (root-cause analysis). These three —
