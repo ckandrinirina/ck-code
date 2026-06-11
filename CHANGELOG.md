@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.14] — 2026-06-11
+
+### Changed
+- **parallel-build**: cut launch-time context use in the same way as `build`. Phase 1.4 no longer full-`Read`s every ready story body to recommend the parallel-safe set — it extracts only each ready story's `Files to Create/Modify` table via a batched `awk` call, keeping every story's acceptance criteria and technical notes out of the long-lived orchestrator context.
+
 ## [3.1.13] — 2026-06-11
 
 ### Changed
