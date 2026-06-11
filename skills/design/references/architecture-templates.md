@@ -26,8 +26,6 @@ The retired layer docs (`components.md`, `api-contracts.md`, `database-schema.md
 
 ## Global Documents
 
-These describe the whole system and are read on demand, not per story.
-
 | Document                                   | Description                                                |
 | ------------------------------------------ | ---------------------------------------------------------- |
 | [overview.md](overview.md)                 | Project vision, goals, and target users                    |
@@ -39,10 +37,7 @@ These describe the whole system and are read on demand, not per story.
 
 ## Feature Documents
 
-Each feature owns a self-contained slice (its components, APIs, data, and flows).
-A `build`/`fix` story reads only its feature doc (+ `folder-structure.md`, + `_shared.md`
-when noted) — never the whole architecture. The `tasks/FEATURE_INDEX.md` `Docs` column
-routes a story to the right one.
+Each owns a self-contained slice; `FEATURE_INDEX.Docs` routes a story to one.
 
 | Feature          | Document                                                             |
 | ---------------- | -------------------------------------------------------------------- |
@@ -111,34 +106,13 @@ routes a story to the right one.
 
 ## Directory Tree
 
-[Complete ASCII tree with annotations]
-
-Example:
-project-name/
-├── component-a/ # [Purpose of this component]
-│ ├── src/
-│ │ ├── main.ext # [Entry point description]
-│ │ ├── module1/ # [Module purpose]
-│ │ └── module2/ # [Module purpose]
-│ ├── tests/
-│ └── config.ext
-├── component-b/ # [Purpose]
-│ └── ...
-├── shared/ # [Shared code/types/protos]
-│ └── ...
-├── docs/
-├── scripts/
-└── README.md
+[Complete ASCII tree with per-directory annotations]
 
 ## Key Directories Explained
 
-### component-a/
+### [directory]
 
-[2-3 sentences about what this contains and why]
-
-### component-b/
-
-[2-3 sentences]
+[1-2 sentences: what it contains and why]
 
 ## Conventions
 
@@ -220,8 +194,7 @@ dated sibling docs (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`, see template b
 ```markdown
 # [Feature Name]
 
-> Feature doc — self-contained. A story for this feature reads THIS file
-> (+ folder-structure.md, + \_shared.md when noted), not the other feature docs.
+> Self-contained — a story reads this (+ folder-structure.md, + \_shared.md when noted), not other feature docs.
 
 ## Summary
 
@@ -430,40 +403,23 @@ optimize` hoists content that appears in multiple feature docs into this file.
 
 ## Configuration Files
 
-### [Config File 1] (e.g., server/config.toml)
+### [file, e.g. server/config.toml]
 
-**Purpose:** [What this configures]
-**Format:** [TOML/JSON/YAML/ENV]
-```
+**Purpose:** [what it configures] · **Format:** [TOML/JSON/YAML/ENV]
 
-[Full example configuration with comments explaining each field]
-
-```
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
+| Field   | Type   | Default   | Description   |
+| ------- | ------ | --------- | ------------- |
 | [field] | [type] | [default] | [description] |
-
-### [Config File 2]
-...
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| [VAR_NAME] | Yes/No | [default] | [description] |
+| Variable   | Required | Default   | Description   |
+| ---------- | -------- | --------- | ------------- |
+| [VAR_NAME] | Yes/No   | [default] | [description] |
 
-## Platform-Specific Configuration
+## Secrets
 
-### [Platform 1] (e.g., macOS)
-- [Specific config notes]
-
-### [Platform 2] (e.g., Windows)
-- [Specific config notes]
-
-## Secrets Management
-- [How secrets/credentials are handled]
-- [What should NEVER be committed]
+- [How secrets are handled; what must NEVER be committed]
 ```
 
 ---
@@ -475,97 +431,32 @@ optimize` hoists content that appears in multiple feature docs into this file.
 
 ## Prerequisites
 
-### Required Software
-
-| Software   | Version    | Install Command   |
+| Software   | Version    | Install           |
 | ---------- | ---------- | ----------------- |
 | [Software] | [version]+ | [install command] |
 
-### Platform-Specific Prerequisites
-
-#### [Platform 1]
-
-```bash
-[Installation commands]
-```
-````
-
-#### [Platform 2]
-
-```bash
-[Installation commands]
-```
-
 ## Setup
 
-### 1. Clone the Repository
-
 ```bash
-git clone [repo-url]
-cd [project-name]
+git clone [repo-url] && cd [project-name]
+[build / install commands]
 ```
 
-### 2. [Build/Install Step]
+## Running
+
+[Startup order, if it matters, then the command(s) to run each component.]
 
 ```bash
-[commands]
+[run commands]
 ```
 
-### 3. [Next Step]
-
-```bash
-[commands]
-```
-
-## Running the Application
-
-### Startup Order
-
-[If order matters, explain why and list the order]
-
-```bash
-# Step 1: [description]
-[command]
-
-# Step 2: [description]
-[command]
-```
-
-### Quick Start Script
-
-```bash
-[If applicable, a one-command start]
-```
-
-## Development Workflow
-
-### Running Tests
+## Testing
 
 ```bash
 [test commands per component]
 ```
 
-### Debugging
-
-- [How to enable debug mode]
-- [Useful debug commands or tools]
-
-### Code Style
-
-- [Linting tools and commands]
-- [Formatting tools and commands]
-
 ## Troubleshooting
 
-### [Common Issue 1]
-
-**Symptom:** [what you see]
-**Fix:** [how to fix]
-
-### [Common Issue 2]
-
-...
-
-```
-
-```
+- **[Symptom]** — [fix]
+````
