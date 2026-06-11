@@ -67,8 +67,17 @@ If no stories are ready: list the still-blocked `TODO` stories and which of thei
 From the ready set, recommend which stories are safe to build **at the same time** —
 i.e. their declared file scopes don't overlap, so they won't collide at merge.
 
-1. For each ready story, read only its `Files to Create/Modify` table (the index lacks
-   file scopes; this targeted read is allowed here, unlike Phase-1 discovery).
+1. Extract **only** each ready story's `Files to Create/Modify` table in a single batched
+   Bash call (the index lacks file scopes, so this targeted extraction is allowed here,
+   unlike Phase-1 discovery) — never a full `Read` of each story body, which would load
+   every story's acceptance criteria and technical notes into the long-lived orchestrator
+   just to compare file paths:
+
+   ```bash
+   for f in <ready-story paths from the index `File` column>; do
+     echo "== $f"; awk '/^## Files to Create\/Modify/{p=1;next} /^## /{p=0} p' "$f"
+   done
+   ```
 2. Group stories so that no two stories in a group share a file path. The largest
    conflict-free group is the **recommended parallel set**; any story that overlaps
    another is tagged "run in a separate batch".
