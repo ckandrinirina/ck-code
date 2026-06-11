@@ -101,19 +101,8 @@ paths:
 // Example test following conventions
 ```
 
-## Dependencies & Package Management
-
-- [Package manager usage and conventions]
-- [How to add/update/remove dependencies]
-- [Lock file handling]
-- [Version pinning strategy]
-
-## Build & Tooling
-
-- [Build commands]
-- [Linting configuration and commands]
-- [Formatting tools]
-- [Debugging tools and techniques]
+<!-- Build commands, dependency management, and tooling live in tech-stack.md and
+     dev-guide.md — do not repeat them here. -->
 
 ## Framework-Specific Guidelines
 
