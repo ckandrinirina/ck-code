@@ -175,14 +175,11 @@ API contracts, data structures, etc.]
 
 ## Implementation Tasks
 
-Ordered, concrete steps a single `build` session follows to deliver this story.
-Each task is one verifiable action — keep them specific to this story, not generic
-TDD phases. This is what keeps a large story precise.
+Ordered, concrete, verifiable steps one `build` session follows — specific to this story,
+not generic TDD phases.
 
-1. [ ] [First concrete step — e.g. "Define the `OrderRepository` interface in repo/order.ts"]
-2. [ ] [Next step — e.g. "Implement Postgres-backed `OrderRepository`, mapping rows to `Order`"]
-3. [ ] [Next step — e.g. "Wire the repository into the order handler via constructor injection"]
-4. [ ] [Continue until the story's acceptance criteria are all satisfied]
+1. [ ] [Concrete step]
+2. [ ] [Next step — continue until all acceptance criteria are satisfied]
 
 ## Dependencies
 
