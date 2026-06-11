@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.13] — 2026-06-11
+
+### Changed
+- **build**: cut launch-time context use during interactive story selection. Phase 1.2 no longer full-`Read`s every ready story body to detect the parallel-safe set — it extracts only each ready story's `Files to Create/Modify` table via a batched `awk` call, leaving the single selected story (Phase 1.3) as the only full story read. Phase 2 now matches experts/guides against that known touched-files set, preferring narrow `paths` matches over broad `keywords` matches so unused skill bodies stay out of the resident session.
+
 ## [3.1.12] — 2026-06-11
 
 ### Changed
