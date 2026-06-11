@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.12] — 2026-06-11
+
+### Changed
+- **design**: trimmed the generated architecture-doc templates so emitted `docs/architecture/*` files are leaner — slimmed `dev-guide.md` and `configuration.md` scaffolds, dropped the inline folder-structure example tree, and condensed README/feature-doc prose. Section headings, routing tables, `_shared` anchors, and the DESIGN_LEDGER schema are unchanged.
+- **plan**: condensed the story Implementation Tasks template, replacing verbose inline examples with a compact placeholder.
+- **team**: removed the Build & Tooling and Dependencies sections from the generated language-guide template (covered by `tech-stack.md`/`dev-guide.md` — one rule, one doc) and condensed the QA Test Strategy and analyst Report Format scaffolds in the expert templates.
+
 ## [3.1.11] — 2026-06-09
 
 ### Changed
