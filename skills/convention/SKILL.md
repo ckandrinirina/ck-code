@@ -21,6 +21,17 @@ by this skill: `team --regenerate` never overwrites it.
   — brand-new custom skills not in `team`'s catalog.
 - Edits to any existing generated expert/guide (append or revise a section).
 
+## ROUTING CHECK (do first)
+
+This skill captures **house conventions** `team` can't research, and edits/creates
+expert + guide skills. If the request is actually something else, STOP and recommend
+the better skill:
+
+- No expert/guide skills generated yet → `/ck-code:team` (first)
+- Generating architecture docs from a spec → `/ck-code:design`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+
 ## INPUT
 
 `$ARGUMENTS` selects the mode:

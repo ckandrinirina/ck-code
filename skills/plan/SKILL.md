@@ -20,6 +20,18 @@ with epics, stories, dependencies, and a recommended roadmap.
 - Requires `/ck-code:design` to have run first (architecture docs in `docs/architecture/`).
 - Hands off to `/ck-code:build` (or `/ck-code:to-issues` then `/ck-code:build`) once the plan is generated.
 
+## ROUTING CHECK (do first)
+
+This skill breaks a spec into a **full epic/story plan**.
+If the request is actually something else, STOP and recommend the better skill:
+
+- One small addition to an existing plan → `/ck-code:quick-story`
+- No architecture docs yet → `/ck-code:design` (first)
+- A stakeholder-facing spec, not a task breakdown → `/ck-code:pre-spec`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:to-issues` *(optional)* or `/ck-code:track next`.
+
 ## EFFORT SCALING
 
 **Effort** controls **depth per story** — how much detail each story carries. It

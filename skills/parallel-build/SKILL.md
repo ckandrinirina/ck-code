@@ -19,6 +19,17 @@ References:
 - `references/wave-mode.md` — dependency-ordered multi-wave epic builds (`--epic NN`)
 - `references/pipeline.md` — bash mechanics for model resolution, integrity, conflict, merge, cleanup
 
+## ROUTING CHECK (do first)
+
+This skill builds **multiple independent stories** in parallel worktrees.
+If the request is actually something else, STOP and recommend the better skill:
+
+- One story, or stories with `Blocked by` dependencies → `/ck-code:build`
+- A bug in already-implemented code → `/ck-code:fix`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:ship` (per branch).
+
 ## INPUT
 
 `$ARGUMENTS` is optional:

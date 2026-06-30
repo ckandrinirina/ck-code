@@ -23,6 +23,16 @@ Use those verbatim; do not redefine them here. Migration heuristics, the dedup r
 and the report format live in
 [references/optimizer-playbook.md](references/optimizer-playbook.md).
 
+## ROUTING CHECK (do first)
+
+This skill **migrates and optimizes existing** architecture docs. If the request is
+actually something else, STOP and recommend the better skill:
+
+- Generating *new* architecture docs from a spec → `/ck-code:design`
+- Breaking work into epics/stories → `/ck-code:plan`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+
 ---
 
 ## INPUT

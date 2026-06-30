@@ -21,6 +21,17 @@ structure, and conventions.
 `--regenerate` after architecture or framework upgrades to refresh project
 context and research.
 
+## ROUTING CHECK (do first)
+
+This skill turns **architecture docs** into expert + guide skills.
+If the request is actually something else, STOP and recommend the better skill:
+
+- No `docs/architecture/` exists yet → `/ck-code:design` (first)
+- Capturing *house* conventions team can't research → `/ck-code:convention`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:plan`.
+
 ## INPUT
 
 `$ARGUMENTS` can include a path to the architecture docs folder (default:

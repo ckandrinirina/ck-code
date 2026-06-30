@@ -55,6 +55,47 @@ mirrors the *plan* to GitHub Issues so anyone can see what's coming;
 `ship` mirrors the *implementation* (commit, PR, issue close) once a
 story is done. Most projects run both.
 
+## Misuse redirects — "am I the right skill?"
+
+Single source of truth for the `## ROUTING CHECK` block every action skill
+runs first. If an invoked skill matches a row's *actual task*, it STOPs and
+recommends the skill in the last column instead.
+
+| Invoked | …but the task is actually | Use instead |
+|---|---|---|
+| `pre-spec` | a spec already exists / ready for technical design | `design` |
+| `pre-spec` | one tiny tweak to an existing plan | `quick-story` |
+| `design` | no stakeholder spec yet and you want one | `pre-spec` (first) |
+| `design` | breaking work into epics/stories | `plan` (design runs *before* plan) |
+| `design` | existing architecture docs are bloated / stale layout | `doc-optimizer` |
+| `team` | no `docs/architecture/` exists yet | `design` (first) |
+| `team` | capturing *house* conventions team can't research | `convention` |
+| `plan` | one small addition to an existing plan | `quick-story` |
+| `plan` | no architecture docs yet | `design` (first) |
+| `plan` | stakeholder-facing spec, not a task breakdown | `pre-spec` |
+| `to-issues` | committing/PR-ing implemented code | `ship` (sequential, not either/or) |
+| `to-issues` | no `tasks/` plan exists yet | `plan` (first) |
+| `build` | a bug in already-implemented code | `fix` |
+| `build` | 3+ independent ready stories, no `Blocked by` | `parallel-build` |
+| `build` | no story exists for the work | `quick-story` or `plan` |
+| `parallel-build` | one story, or stories with `Blocked by` deps | `build` |
+| `parallel-build` | a bug in implemented code | `fix` |
+| `fix` | new functionality / new acceptance criteria (not a bug) | `build` (add story via `quick-story`) |
+| `fix` | just committing a finished change | `ship` |
+| `quick-story` | a bug in implemented code | `fix` |
+| `quick-story` | a full feature spanning multiple epics/components | `plan` |
+| `quick-story` | the story already exists and you want to code it | `build` |
+| `ship` | the story isn't implemented yet | `build` / `fix` (first) |
+| `ship` | mirroring the *plan* (not code) to GitHub | `to-issues` |
+| `sync` | adding a new story | `quick-story` |
+| `sync` | just viewing progress | `track` |
+| `convention` | no expert/guide skills generated yet | `team` (first) |
+| `doc-optimizer` | generating *new* architecture docs from a spec | `design` |
+
+When the user is simply unsure which skill to run (no work invoked yet),
+point them to `/ck-code:start` (state-aware) or `/ck-code:help` (static),
+never a redirect.
+
 ## Output locations
 
 | Skill | Writes to |

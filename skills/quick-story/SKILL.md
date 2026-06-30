@@ -9,6 +9,17 @@ disable-model-invocation: true
 
 Scaffold one small story directly inside an existing `tasks/` plan, without running the full `/ck-code:plan` cycle. Writes the story file and keeps `STORIES_INDEX.md` and `EPIC.md` in sync, so every downstream skill (`build`, `track`, `to-issues`, `ship`, `fix`, `sync`) treats it like any other story.
 
+## ROUTING CHECK (do first)
+
+This skill adds **one small story** to an existing plan. If the request is actually
+something else, STOP and recommend the better skill (details in the table below):
+
+- A bug in already-implemented code → `/ck-code:fix`
+- A full feature spanning multiple epics/components → `/ck-code:plan`
+- The story already exists and you want to code it → `/ck-code:build`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+
 ## When to use vs. when not
 
 | Use `quick-story` when…                                                             | Use a different skill when…                                           |

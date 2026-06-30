@@ -103,7 +103,7 @@ stop.
 
 Why this fits: <1–2 sentence reasoning tied to the state above>
 
-(For the full workflow graph: `references/workflow-map.md`.)
+(For the full workflow graph and the "am I the right skill?" redirect matrix: `references/workflow-map.md`.)
 ```
 
 ---
@@ -119,3 +119,6 @@ Why this fits: <1–2 sentence reasoning tied to the state above>
   obvious — the table is the user's evidence the recommendation is
   correct.
 - **Always** apply the decision table top-to-bottom; never combine rows.
+- **If the user describes a specific task** (not just "what's next?"), check it
+  against the misuse-redirect matrix in `references/workflow-map.md` and name the
+  exact skill that fits — e.g. a bug in shipped code → `/ck-code:fix`, not `build`.

@@ -15,6 +15,16 @@ Detects and (after confirmation) repairs drift between `STORIES_INDEX.md`, each
 For diff and report templates, see [references/sync-report.md](references/sync-report.md).
 For the index format and mutation contract, see [`../../references/stories-index.md`](../../references/stories-index.md).
 
+## ROUTING CHECK (do first)
+
+This skill **reconciles drift** between story files, index, and epics.
+If the request is actually something else, STOP and recommend the better skill:
+
+- Adding a new story → `/ck-code:quick-story`
+- Just viewing progress → `/ck-code:track`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+
 ## INPUT
 
 `$ARGUMENTS` is either a `tasks/<slug>` path (sync that one plan), `--all` (sync every plan folder), or empty (interactive plan picker).

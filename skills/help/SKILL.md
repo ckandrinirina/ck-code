@@ -232,5 +232,6 @@ acceptance criteria. Never use `build` to "rebuild" a buggy story —
 `fix` keeps the original story file, appends a Bug Report section, and
 preserves history.
 
-For the full workflow graph, hand-off table, and output-location
-reference: see [`../../references/workflow-map.md`](../../references/workflow-map.md).
+For the full workflow graph, hand-off table, the **"am I the right skill?"
+misuse-redirect matrix**, and output-location reference: see
+[`../../references/workflow-map.md`](../../references/workflow-map.md).

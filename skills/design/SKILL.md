@@ -25,6 +25,18 @@ the one feature doc it needs.
 - **New Project Mode:** Generate global docs + one feature doc per feature from a project spec
 - **Feature Mode:** Add or extend a single feature doc, keeping the global docs consistent
 
+## ROUTING CHECK (do first)
+
+This skill turns a spec into **architecture docs** — it runs *before* `plan`.
+If the request is actually something else, STOP and recommend the better skill:
+
+- No stakeholder spec yet and you want one → `/ck-code:pre-spec` (first)
+- Breaking work into epics/stories → `/ck-code:plan` (design comes first)
+- Existing architecture docs are bloated or on a stale layout → `/ck-code:doc-optimizer`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:team`.
+
 This skill never modifies the original specification file. It reads it as the source
 of truth and produces refined documentation in `docs/architecture/`.
 

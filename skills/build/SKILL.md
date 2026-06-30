@@ -13,6 +13,18 @@ References: [output-blocks.md](references/output-blocks.md) (compact per-phase p
 
 **Read each reference at most once per run.** `output-blocks.md` and `tdd-walkthrough.md` are cited from many phases — load each once, keep it in working context, and reuse it for every later phase. Never re-`Read` a reference for a block you already loaded this run.
 
+## ROUTING CHECK (do first)
+
+This skill TDD-implements **one new story**. If the request is actually something
+else, STOP and recommend the better skill:
+
+- A bug in already-implemented code → `/ck-code:fix` (keeps the story, adds a regression test)
+- 3+ independent ready stories with no `Blocked by` → `/ck-code:parallel-build`
+- No story exists for the work yet → `/ck-code:quick-story` or `/ck-code:plan` (first)
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:ship`.
+
 ## INPUT
 
 `$ARGUMENTS` is an optional path to a story markdown file. If provided: read and

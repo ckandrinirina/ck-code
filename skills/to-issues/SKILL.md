@@ -12,6 +12,17 @@ Reads a generated tasks/ folder and creates GitHub Issues at the granularity the
 user picks: a single feature issue, one issue per epic, or the full epic+story
 hierarchy.
 
+## ROUTING CHECK (do first)
+
+This skill mirrors the **plan** into GitHub Issues — it is *not* an alternative to `ship`.
+If the request is actually something else, STOP and recommend the better skill:
+
+- Committing / PR-ing implemented code → `/ck-code:ship` (run both; they're sequential)
+- No `tasks/` plan exists yet → `/ck-code:plan` (first)
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:track next`.
+
 ## PREREQUISITES
 
 - The `gh` CLI must be installed and authenticated (`gh auth status`)

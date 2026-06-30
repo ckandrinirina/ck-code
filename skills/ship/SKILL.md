@@ -12,6 +12,17 @@ Commit changes, optionally create a PR, and update linked GitHub Issues. Detects
 
 **CRITICAL RULE — No AI references in any artefact.** Full rule in [`../../references/no-ai-references.md`](../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
 
+## ROUTING CHECK (do first)
+
+This skill **delivers finished code** (commit + PR + issue updates). If the request
+is actually something else, STOP and recommend the better skill:
+
+- The story isn't implemented yet → `/ck-code:build` or `/ck-code:fix` (first)
+- Mirroring the *plan* (not code) into GitHub Issues → `/ck-code:to-issues`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:track next` or `/ck-code:explain`.
+
 ## INPUT
 
 `$ARGUMENTS` is an optional path to a story file.

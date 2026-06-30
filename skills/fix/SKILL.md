@@ -14,6 +14,17 @@ For user-facing prompt scripts, see [references/qa-dialogue.md](references/qa-di
 For story-file bug section templates, see [references/bug-section-template.md](references/bug-section-template.md).
 For the index/epic sync contract, see [`../../references/stories-index.md`](../../references/stories-index.md).
 
+## ROUTING CHECK (do first)
+
+This skill diagnoses and **minimally fixes a bug** tied to an existing story.
+If the request is actually something else, STOP and recommend the better skill:
+
+- New functionality / new acceptance criteria (not a bug) → `/ck-code:build` (add a story via `/ck-code:quick-story`)
+- Just committing a finished change → `/ck-code:ship`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:ship`.
+
 ## INPUT
 
 `$ARGUMENTS` is an optional path to the story file. If provided, read it as a starting candidate (Phase 2.5 may still expand scope). If empty, enter interactive story selection (Phase 1.2) with `AUTO` as a supported answer.

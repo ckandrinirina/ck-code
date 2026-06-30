@@ -17,6 +17,17 @@ The OUTPUT must include: numbered objectives, tables of rules and
 decisions, narrative behaviors with concrete defaults inline, an open
 "Next step" inviting comments from anyone.
 
+## ROUTING CHECK (do first)
+
+This skill drafts a **stakeholder-friendly spec** before any technical work.
+If the request is actually something else, STOP and recommend the better skill:
+
+- A spec already exists / ready for architecture → `/ck-code:design`
+- One tiny tweak to an existing `tasks/` plan → `/ck-code:quick-story`
+
+Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:design`.
+
 ---
 
 ## STORAGE
