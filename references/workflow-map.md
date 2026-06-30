@@ -21,6 +21,7 @@ instead of duplicating the workflow graph.
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues
 
+   /ck-code:advise       (Anytime) Describe a task in words → best-fit skill
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
    /ck-code:help         (Anytime) Static reference for commands and flow
 ```
@@ -93,8 +94,9 @@ recommends the skill in the last column instead.
 | `doc-optimizer` | generating *new* architecture docs from a spec | `design` |
 
 When the user is simply unsure which skill to run (no work invoked yet),
-point them to `/ck-code:start` (state-aware) or `/ck-code:help` (static),
-never a redirect.
+route them, never redirect: `/ck-code:advise "<task>"` maps a plain-language
+task to a skill, `/ck-code:start` recommends from project state, and
+`/ck-code:help` is the static command reference.
 
 ## Output locations
 

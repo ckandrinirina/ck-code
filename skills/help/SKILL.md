@@ -1,6 +1,6 @@
 ---
 name: help
-description: Use when unsure which ck-code skill to run, or to look up command syntax, expected outputs, and the full workflow order. Static reference — for an active state-aware recommendation, use `/ck-code:start` instead.
+description: Use to look up ck-code command syntax, expected outputs, and the full workflow order. Static reference — to route a plain-language task to a skill use `/ck-code:advise`, for a state-aware next-step recommendation use `/ck-code:start`.
 argument-hint: "[command-name]"
 effort: low
 disallowed-tools: Write, Edit, NotebookEdit
@@ -15,6 +15,21 @@ decision tree live in [`../../references/workflow-map.md`](../../references/work
 This file lists the per-command syntax and examples.
 
 ## Commands
+
+### /ck-code:advise [describe what you want to do]
+
+Don't know which command to run? Describe the task in plain language and this
+read-only router recommends the best-fit skill, names any missing prerequisite,
+and prints the exact command. Routes by *intent*; `/ck-code:start` routes by
+*project state*.
+
+```
+/ck-code:advise "fix the login crash"          # → /ck-code:fix
+/ck-code:advise "add a dark mode toggle"       # → /ck-code:quick-story or /ck-code:plan
+/ck-code:advise                                # Asks what you want, then recommends
+```
+
+---
 
 ### /ck-code:pre-spec [feature-description | notes-file | existing-slug | issue-url]
 
