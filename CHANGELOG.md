@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.1.15] — 2026-06-30
+
+### Added
+- **all skills**: a `## ROUTING CHECK` block at the top of every action skill (pre-spec, design, team, plan, to-issues, build, parallel-build, fix, quick-story, ship, sync, convention, doc-optimizer) that detects a wrong-tool invocation and redirects to the correct skill (e.g. `quick-story` → `fix` for a bug, `build` → `parallel-build` for many independent stories). A single "Misuse redirects — am I the right skill?" matrix in `references/workflow-map.md` is the source of truth; `start` and `help` now surface it too.
+
 ## [3.1.14] — 2026-06-11
 
 ### Changed
