@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.2.0] — 2026-06-30
+
+### Added
+- **advise**: new plain-language entry-point skill. The user describes a task in their own words (`/ck-code:advise "fix the login crash"`) and the skill recommends the best-fit ck-code skill, names any missing prerequisite, and prints the exact command — read-only, never launches. Routes by *intent*, complementing `start` (routes by project *state*) and `help` (static reference). Wired into `references/workflow-map.md`, `help`, and `start`.
+
 ## [3.1.15] — 2026-06-30
 
 ### Added
