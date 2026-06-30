@@ -115,6 +115,7 @@ These generated skills are project-level (not plugin-namespaced) and are intenti
 | `/ck-code:fix`            | Diagnose and fix a bug across one or more stories — auto-matches the best story, defers the fix when a future TODO story already plans it, can create stub stories in the right epic when functionality is missing, keeps index/epic in sync                                     | story file (optional)                       | minimal fix + regression test + (optional) new stub stories     |
 | `/ck-code:sync`           | Reconcile `STORIES_INDEX.md`, `EPIC.md` story lists, and story files when they drift apart                                                                                                                                                                                       | tasks plan path or `--all`                  | repaired index + epic lists                                     |
 | `/ck-code:ship`           | Commit, PR, update GitHub Issues                                                                                                                                                                                                                                                 | story file (optional)                       | commit + PR + issue updates                                     |
+| `/ck-code:advise`         | Don't know which command to run? Describe the task in plain language and get the best-fit skill recommended (read-only router; routes by intent, names any missing prerequisite)                                                                                                  | plain-language task                         | recommended command + prerequisite + next step                  |
 | `/ck-code:explain`        | Explain what was just implemented                                                                                                                                                                                                                                                | —                                           | walkthrough + verification steps                                |
 | `/ck-code:help`           | Quick reference for all commands                                                                                                                                                                                                                                                 | —                                           | this table                                                      |
 
@@ -158,6 +159,7 @@ ck-code/
 │   ├── ship/                      # commit + PR + Issue updates
 │   ├── fix/                       # multi-story bug fixes (auto-matches scope, can create stub stories in the right epic)
 │   ├── sync/                      # reconcile STORIES_INDEX.md / EPIC.md / story files when they drift
+│   ├── advise/                   # plain-language task → best-fit skill (read-only router)
 │   ├── explain/                   # post-implementation walkthrough
 │   └── help/                      # command reference
 └── README.md
