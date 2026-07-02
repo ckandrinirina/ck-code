@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-07-02
+
+### Added
+- **reuse-first**: new shared constraint `references/reuse-first.md` (read context first, reuse before rebuilding, simplest viable approach, don't re-analyze what's already clear) — mirrors the `no-ai-references.md` pattern and extends the anti-overthinking discipline that already lived in `build`/`fix` up into the authoring skills.
+
+### Changed
+- **design / plan / team / pre-spec**: each now cites `reuse-first.md` and carries one surgical guard at its overthinking hotspot — `design` treats spec/doc-answered dimensions as CLEAR (no manufactured gaps); `plan` restricts ultrathink to genuine ambiguities and reuses settled architecture; `team` scopes the mandatory research to current/version-specific/project-relevant practices (no padded fundamentals); `pre-spec` lists only genuinely relevant forgotten items instead of padding to a 5-12 count.
+
 ## [3.2.0] — 2026-06-30
 
 ### Added
