@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.1] — 2026-07-02
+
+### Changed
+- **plan**: every plan run now ends with a mandatory final Integration & E2E epic (Phase 2.4) that proves the whole feature/project works end-to-end through real entry points, `Blocked by` all prior epics — its stories exercise real user journeys and stay sized to one dispatch (split by journey when needed).
+
 ## [3.3.0] — 2026-07-02
 
 ### Added
