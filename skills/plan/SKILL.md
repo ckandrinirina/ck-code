@@ -219,6 +219,7 @@ Each epic should:
 - Epics with no dependencies on other epics come before those that depend on them
 - If the spec defines phases, respect that ordering
 - Within a phase: shared/core code first, then feature code, then integration
+- The plan's **last** epic is always the mandatory Integration & E2E epic (Phase 2.4)
 
 ### 2.2 Define Stories Within Each Epic
 
@@ -284,6 +285,39 @@ For each story, identify:
 - Which other stories must be completed first (blockers)
 - Which stories can run in parallel
 - Cross-epic dependencies
+
+### 2.4 Mandatory Final Integration & E2E Epic
+
+**Every plan run ends with a dedicated final epic that validates the whole feature (or
+project) end-to-end** — no plan is complete without it. Individual feature stories prove
+their own slice; this epic proves the slices work together through real entry points.
+
+Add it as the **last** epic (highest number), regardless of mode:
+
+- **New Project Mode:** the final epic covers the whole project end-to-end.
+- **Feature / Add Feature Mode:** the final epic covers the whole feature end-to-end,
+  including its integration points with the existing system (from `FEATURE_OVERVIEW.md`).
+- **Continue Mode:** add a new final Integration & E2E epic for the appended scope only;
+  do not touch the prior plan's existing epics.
+
+Rules for this epic:
+
+- Title/slug it `integration-e2e` (e.g. `NN_integration-e2e`); Goal states what end-to-end
+  behavior it proves.
+- **`Blocked by` every prior epic** in this plan — it runs only after the pieces exist, so
+  it is always last in the roadmap and never a `parallel-build` candidate alongside the work
+  it verifies.
+- Its stories **exercise real user journeys / flows through actual entry points** (API,
+  CLI, UI, message bus — whatever the spec defines), asserting cross-component behavior and
+  the integration seams identified in Phase 1.4. Not more unit tests.
+- **Each E2E story is still S or M, one dispatch** (Phase 2.2). When full coverage exceeds
+  one dispatch, split by user-journey / flow (happy-path, error/edge, each major
+  integration point) into multiple stories under this epic — never one oversized E2E story.
+- Give each story an ordered `## Implementation Tasks` list like any other (Phase 2.2c):
+  set up fixtures/environment → drive the flow → assert observable outcomes.
+
+Do not fold this coverage into a feature epic and do not skip it because "the stories
+already have tests" — those are per-slice; this epic is the whole-feature guarantee.
 
 ---
 
@@ -373,6 +407,7 @@ Because every story is sized to a single dispatch, an epic with independent stor
 - **Language:** All output must be in English, regardless of the specification language.
 - **No hardcoding:** Never reference specific project names, technologies, or paths in the skill logic. Derive everything from the spec.
 - **Thoroughness:** Every functional requirement in the spec must be covered by at least one story; related requirements may share a single story. If a requirement is vague, cover it with a note about needed clarification.
+- **Mandatory final Integration & E2E epic:** every plan run ends with a dedicated final epic (Phase 2.4) that proves the whole feature/project works end-to-end through real entry points, `Blocked by` all prior epics. Never skip it and never fold it into a feature epic — its stories stay sized to one dispatch, split by user-journey when needed.
 - **Scanning readability:** Use tables, bullet points, and headers. Avoid walls of text.
 - **One story = one agent dispatch:** every story is sized **S or M** so a single `build`/`parallel-build` dispatch finishes it end-to-end. Never plan an L/XL story — split larger work at a natural seam (even when coupled) and connect the pieces with `Blocked by`. A dispatched agent cannot be resumed, so an oversized story stalls mid-build and breaks parallel runs.
 - **Precision via tasks and seams, not oversized stories:** give each story an ordered `## Implementation Tasks` list (Phase 2.2c) for precision, and split at natural seams when work exceeds one dispatch — never grow a story past one dispatch to keep the count low.
