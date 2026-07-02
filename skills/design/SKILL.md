@@ -37,6 +37,9 @@ If the request is actually something else, STOP and recommend the better skill:
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:team`.
 
+**Reuse-first:** read the existing docs & spec first, reuse before rebuilding, and design the
+simplest thing that meets the requirement — see [`reuse-first.md`](../../references/reuse-first.md).
+
 This skill never modifies the original specification file. It reads it as the source
 of truth and produces refined documentation in `docs/architecture/`.
 
@@ -128,7 +131,8 @@ This context is critical — new feature docs must be consistent with existing a
 
 ### 1.2 Assess Coverage
 
-Score each of these 12 dimensions as CLEAR / PARTIAL / MISSING:
+Score each of these 12 dimensions as CLEAR / PARTIAL / MISSING. A dimension the spec or an
+existing doc already answers is CLEAR — reuse that answer; never manufacture a gap to fill:
 
 Project vision & goals · Target users · System architecture · Folder structure · Tech stack & versions · Component breakdown · Data flow · API contracts · Database schema · Configuration · Build & run instructions · Non-functional requirements
 

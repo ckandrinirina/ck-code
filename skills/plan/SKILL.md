@@ -32,6 +32,10 @@ If the request is actually something else, STOP and recommend the better skill:
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:to-issues` *(optional)* or `/ck-code:track next`.
 
+**Reuse-first:** plan from the design docs and existing `tasks/` — reuse settled architecture
+instead of re-deriving it, and pick the simplest viable epic/story structure. See
+[`reuse-first.md`](../../references/reuse-first.md).
+
 ## EFFORT SCALING
 
 **Effort** controls **depth per story** — how much detail each story carries. It
@@ -146,7 +150,9 @@ this run; in Phase 4.5c you will flip their rows to `planned`. If the ledger is 
 
 ### 1.2 Extract Core Dimensions
 
-Use extended thinking (ultrathink) to reason through ambiguities. Extract:
+Use extended thinking (ultrathink) to reason through **genuine** ambiguities only — where the
+spec or `docs/architecture/` already answers something, reuse that answer rather than
+re-deriving it. Extract:
 
 - **PROJECT IDENTITY** — name (slug: lowercase, hyphens, no spaces), one-line description, problem solved, target users.
 - **ARCHITECTURE** — system architecture (monolith, microservices, client-server, etc.), major components/sub-systems, data flow, external integrations.

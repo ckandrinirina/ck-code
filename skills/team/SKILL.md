@@ -32,6 +32,10 @@ If the request is actually something else, STOP and recommend the better skill:
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:plan`.
 
+**Reuse-first:** generate only skills a real project signal demands, and research only what's
+current, version-specific, or project-specific — not well-known fundamentals. See
+[`reuse-first.md`](../../references/reuse-first.md).
+
 ## INPUT
 
 `$ARGUMENTS` can include a path to the architecture docs folder (default:
@@ -170,6 +174,10 @@ spec / task plans. For the exact shape, see
 This step is **NOT optional**. Before generating ANY skill, research current
 best practices for every detected technology. Full procedure lives in
 [references/context7-research.md](references/context7-research.md).
+
+Scope the research to what a guide actually needs: **current, version-specific, and
+project-relevant** practices — not well-known language fundamentals every developer
+already knows. The goal is current, project-specific guidance, never padded basics.
 
 Required steps:
 

@@ -28,6 +28,10 @@ If the request is actually something else, STOP and recommend the better skill:
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:design`.
 
+**Reuse-first:** read the existing project context first and surface only genuinely relevant
+gaps — don't pad breadth or re-ask what's already clear. See
+[`reuse-first.md`](../../references/reuse-first.md).
+
 ---
 
 ## STORAGE
@@ -110,9 +114,9 @@ If the project context surfaced contradictions, present them BEFORE Q&A:
 | What you described | What the project says today | Decision needed |
 ```
 
-Cite sources concretely. Then list 5-12 things the user may have
-forgotten, tailored to the feature category. Bank in
-[`references/templates.md`](references/templates.md).
+Cite sources concretely. Then list only the genuinely relevant things the user may
+have forgotten, tailored to the feature category (typically a handful — don't pad to
+a count). Bank in [`references/templates.md`](references/templates.md).
 
 ### Q&A refinement
 
