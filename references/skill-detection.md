@@ -203,38 +203,12 @@ Skills loaded for this implementation:
 
 ## Rules
 
-- **Never** read the whole architecture or another feature's doc — a story reads
-  `folder-structure.md` + its own feature doc (+ `_shared.md` when cross-cutting).
-  Narrow, feature-scoped reads are the point.
-- **Never** read the retired layer docs (`components.md`, `api-contracts.md`,
-  `database-schema.md`, `data-flow.md`); fall back to `folder-structure.md` + `_shared.md`
-  and suggest `/ck-code:doc-optimizer sync` when a feature doc is missing.
-- **Never** skip the 4a filesystem check before loading or warning — it
-  is the only authoritative source of what can be loaded.
-- **Never** treat a CLAUDE.md or documentation note (e.g. "`/ck-code:team`
-  generation deferred", "skills not yet generated") as evidence that skills
-  are absent — those notes go stale. Only the 4a `ls` output decides; run it
-  first, before reading any such note, and never conclude skills are missing
-  without it.
-- **Never** use the `Skill` tool inside this procedure. Only project-local
-  `Read` calls under `.claude/skills/experts/` and `.claude/skills/guides/`
-  are permitted — `Skill` resolves against the global plugin registry and
-  must not be used to load ck-code-generated skills.
-- **Never** load skills outside the two ck-code-generated namespaces
-  (`experts/`, `guides/`). Plugin-namespaced skills (`superpowers:*`,
-  `frontend-design:*`, etc.) are out of scope for build / fix /
-  parallel-build skill detection, even when they are available in the
-  current session.
-- **Always** verify file presence before claiming a skill is loaded —
-  including `experts/qa` and `experts/analyst`. A skill listed in Step 2
-  / Step 3 but absent from 4a's output is reported in 4c, not silently
-  assumed.
-- **Never** infer skill names from training data — only load skills that
-  appear in the 4a filesystem-check output.
-- **Never** assume the expert/guide set is the fixed anchor list — slugs are
-  derived per project. Match each present skill by its own `paths`/`keywords`
-  frontmatter (Step 2/3); the anchor tables are a fallback for skills lacking it.
-- **Always** load `guides/conventions` when present (project house rules), and
-  never report it as missing when absent — it is owned by `/ck-code:convention`.
-- **Always** report the loaded skills to the user (Step 5) before returning
-  to the caller — skill loading is never silent.
+- **Never** skip the 4a `ls` before loading or warning.
+- **Never** treat a CLAUDE.md or doc note as evidence that skills are absent — only 4a decides.
+- **Never** infer skill names from training data, or assume the anchor list is the real set.
+- **Never** use the `Skill` tool here — project-local `Read` only.
+- **Never** load outside `experts/` and `guides/` (no plugin-namespaced skills).
+- **Never** read the whole architecture, another feature's doc, or the retired layer docs.
+- **Always** verify presence before claiming a skill is loaded — including `qa` and `analyst`.
+- **Always** load `guides/conventions` when present; never report it missing when absent.
+- **Always** report the loaded skills (Step 5) — loading is never silent.

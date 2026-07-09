@@ -17,7 +17,9 @@ with epics, stories, dependencies, and a recommended roadmap.
 
 **Hand-off rules:**
 
-- Requires `/ck-code:design` to have run first (architecture docs in `docs/architecture/`).
+- Requires `/ck-code:design` (architecture docs in `docs/architecture/`), then `/ck-code:team`
+  (expert + guide skills). If `.claude/skills/experts/` is absent, say so and recommend
+  `/ck-code:team` before continuing — `build` relies on those skills.
 - Hands off to `/ck-code:build` (or `/ck-code:to-issues` then `/ck-code:build`) once the plan is generated.
 
 ## ROUTING CHECK (do first)
@@ -38,11 +40,8 @@ instead of re-deriving it, and pick the simplest viable epic/story structure. Se
 
 ## EFFORT SCALING
 
-**Effort** controls **depth per story** — how much detail each story carries. It
-never changes how many stories exist and it never changes story **size**: every
-story is always sized to a single agent dispatch (Phase 2.2). Higher effort adds
-depth per story, not larger or fewer stories. Adapt to the current effort level
-(**${CLAUDE_EFFORT}**):
+**Effort** controls **depth per story**, never story count or story size. Adapt to the
+current effort level (**${CLAUDE_EFFORT}**):
 
 - **low** — Minimal acceptance criteria; terse technical notes.
 - **medium** (default) — Each story is a complete feature slice with clear acceptance criteria and dependencies.
@@ -62,7 +61,7 @@ The user provides a path to a specification file or feature description via `$AR
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Before reading/writing any `docs/architecture/` doc or `tasks/FEATURE_INDEX.md`, run the shared [version gate](../../references/version-gate.md); on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). Fast path: `tasks/VERSION.md` = `layout: v3`.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ---
 
@@ -259,9 +258,6 @@ redundancy — **never merge to the point a story would exceed one dispatch** (P
 - Two stories that are truly the same concern on the same files → merge **only if the result still fits one dispatch**; otherwise keep them split.
 - An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone or dependency boundary.
 
-Never combine stories just to reduce the count: a smaller plan that yields an
-oversized, unbuildable story is worse than more single-dispatch stories.
-
 ### 2.2c Break Each Story into Tasks
 
 A story stays precise only when it carries an explicit, ordered task list. For
@@ -398,20 +394,16 @@ After all files are created, present a summary tailored to the mode. For each su
 
 Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
 
-Because every story is sized to a single dispatch, an epic with independent stories is a natural fit for `/ck-code:parallel-build` — it builds them concurrently across agents, each finishing its story in one pass.
+An epic of independent stories is a natural fit for `/ck-code:parallel-build`.
 
 ---
 
-## IMPORTANT GUIDELINES
+## RULES
 
-- **Language:** All output must be in English, regardless of the specification language.
-- **No hardcoding:** Never reference specific project names, technologies, or paths in the skill logic. Derive everything from the spec.
-- **Thoroughness:** Every functional requirement in the spec must be covered by at least one story; related requirements may share a single story. If a requirement is vague, cover it with a note about needed clarification.
-- **Mandatory final Integration & E2E epic:** every plan run ends with a dedicated final epic (Phase 2.4) that proves the whole feature/project works end-to-end through real entry points, `Blocked by` all prior epics. Never skip it and never fold it into a feature epic — its stories stay sized to one dispatch, split by user-journey when needed.
-- **Scanning readability:** Use tables, bullet points, and headers. Avoid walls of text.
-- **One story = one agent dispatch:** every story is sized **S or M** so a single `build`/`parallel-build` dispatch finishes it end-to-end. Never plan an L/XL story — split larger work at a natural seam (even when coupled) and connect the pieces with `Blocked by`. A dispatched agent cannot be resumed, so an oversized story stalls mid-build and breaks parallel runs.
-- **Precision via tasks and seams, not oversized stories:** give each story an ordered `## Implementation Tasks` list (Phase 2.2c) for precision, and split at natural seams when work exceeds one dispatch — never grow a story past one dispatch to keep the count low.
-- **Preserve spec language:** When the spec uses specific technical terms, preserve them in story titles and descriptions.
-- **Date format:** Always use ISO 8601 (`YYYY-MM-DD`) for the folder name.
-- **Reusability:** This skill must work with any project specification, not just the current project.
-- **Design ledger drives planning:** the `pending` rows of `DESIGN_LEDGER.md` are the work-to-plan list (Phase 1.1c); flip each planned feature's row to `planned` with its `Plan ref` in Phase 4.5c. Never leave a planned feature `pending`.
+- **Never plan an L/XL story** (Phase 2.2) — split at a natural seam and connect with `Blocked by`.
+- **Never skip the final Integration & E2E epic** (Phase 2.4), and never fold it into a feature epic.
+- **Never leave a planned feature `pending`** in `DESIGN_LEDGER.md` (Phase 4.5c).
+- **Never hardcode** project names, technologies, or paths — derive everything from the spec.
+- **Always cover every functional requirement** with at least one story; flag vague ones for clarification.
+- **Always preserve the spec's technical terms** in story titles and descriptions.
+- **Always use ISO 8601** (`YYYY-MM-DD`) for the folder name, and output in English.

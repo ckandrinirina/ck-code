@@ -196,7 +196,8 @@ Proceed? YES / NO / ADJUST
 ### Next Steps
 1. Review the generated docs in docs/architecture/
 2. Fill in any [TO BE DEFINED] placeholders
-3. Run `/ck-code:plan` to generate epics and stories from this architecture
+3. Run `/ck-code:team` to generate expert + guide skills from this architecture
+4. Then `/ck-code:plan` to generate epics and stories
 ```
 
 **(Feature Mode):**
@@ -225,7 +226,8 @@ Proceed? YES / NO / ADJUST
 
 ### Next Steps
 1. Review the updated docs in docs/architecture/
-2. Run `/ck-code:plan` to generate epics and stories for this feature
+2. Run `/ck-code:team` to refresh expert + guide skills for this feature's stack
+3. Then `/ck-code:plan` to generate epics and stories for this feature
 ```
 
 ---

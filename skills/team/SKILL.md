@@ -65,7 +65,7 @@ A depth flag and a mode flag can be combined (e.g. `--max --check` audits the fu
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path. This runs unconditionally, before the detection step below.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ---
 
@@ -393,7 +393,8 @@ When emitting any expert skill:
 
 Each expert/guide is one independent `SKILL.md` at its own path. When the generation mode is
 settled and **≥4 skills remain**, dispatch one `general-purpose` Agent per skill per the artifact
-variant in [../../references/subagent-fanout.md](../../references/subagent-fanout.md). Give each its
+variant in [../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model:
+sonnet`, since each agent fills a frozen template from a resolved research slice. Give each its
 resolved PROJECT CONTEXT BLOCK (1.5), Phase 1.6 research slice, and template name; it writes exactly
 one `experts/<role>/SKILL.md` (or `guides/<tech>/SKILL.md`) and nothing else. All prompts (Phase
 0.5, 2.4) and `guide-conventions` stay with the orchestrator, before dispatch; Phase 4.1 still
@@ -450,28 +451,12 @@ or new tech additions. For the exact layout, see
 
 ---
 
-## IMPORTANT GUIDELINES
+## RULES
 
-- **Research is MANDATORY.** Phase 1.6 (context7/WebSearch research) MUST run
-  before any skill generation. Never generate skills from stale or generic
-  knowledge.
-- **Project-specific content:** Each skill MUST contain real project details
-  (tech stack, file paths, patterns), NOT generic placeholders. The
-  `[PROJECT CONTEXT BLOCK]` must be fully resolved with actual project data.
-- **No hardcoding in this skill:** This generator skill itself is
-  project-agnostic. It reads the project context dynamically and injects it
-  into the generated skills.
-- **Tech stack adaptation:** Only generate skills relevant to the project. A
-  pure backend CLI tool doesn't need a frontend expert or React guide.
-- **Tier gates breadth, detection gates relevance:** a skill ships only when its
-  detection signal fires AND its Tier ≤ the resolved `TIER`. Never generate a
-  specialist whose signal is absent just because `--max` was passed.
-- **Never touch convention-owned skills:** `guide-conventions` and any expert/guide
-  created by `/ck-code:convention` are off-limits to `team` — never generate,
-  overwrite, or flag them as EXTRA, even on `--regenerate`.
-- **Consistency:** All generated experts reference the same architecture docs
-  and follow the same format for easy maintenance.
-- **Updatable:** When `--regenerate` is used, completely replace the expert
-  skill files with fresh versions. Don't try to merge — full replacement is
-  safer.
-- **Language:** All output in English.
+- **Never generate a skill without Phase 1.6 research** — no stale or generic knowledge.
+- **Never touch convention-owned skills** — `guide-conventions` and anything `/ck-code:convention` created are off-limits, even on `--regenerate`.
+- **Never ship a skill whose detection signal is absent**, whatever the tier: tier gates breadth, detection gates relevance.
+- **Never leave a `[bracketed placeholder]`** or an unresolved `[PROJECT CONTEXT BLOCK]` in a generated skill.
+- **Never merge on `--regenerate`** — replace the file wholesale.
+- **Always keep this generator project-agnostic** — it reads project context dynamically and injects it.
+- **Always output in English.**

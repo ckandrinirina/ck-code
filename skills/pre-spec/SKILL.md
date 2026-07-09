@@ -11,11 +11,12 @@ Stakeholder-ready feature specification: descriptive, no code, no file
 paths, no tooling jargon. PMs, designers, and leadership can read,
 comment, and validate before any architecture work begins.
 
-The OUTPUT must avoid: code blocks, type definitions, schemas, file paths,
-internal tool names, "validated by X" lines.
-The OUTPUT must include: numbered objectives, tables of rules and
-decisions, narrative behaviors with concrete defaults inline, an open
-"Next step" inviting comments from anyone.
+The OUTPUT must avoid: code blocks, type definitions, schemas, file paths, internal tool
+names, architectural primitives (Redis keys, locks, polling), "validated by X" lines, and
+walls of `MUST`/`SHALL` directives.
+The OUTPUT must include: numbered objectives, tables of rules and decisions, narrative
+behaviors with concrete defaults inline, illustrative timelines at human granularity,
+plain-language operational knobs, and an open "Next step" inviting comments from anyone.
 
 ## ROUTING CHECK (do first)
 
@@ -69,7 +70,7 @@ Resolve `$ARGUMENTS` against on-disk state:
 
 ## PHASE 0 — Version gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ---
 
@@ -221,16 +222,10 @@ linking still works.
 
 ---
 
-## IMPORTANT
+## RULES
 
-- **No tooling self-promotion in the OUTPUT.** Never mention `/ck-code:*`,
-  this skill, or any other internal tooling in the generated spec body.
-- **Respect user-saved memory.** Memory entries about issue location,
-  label conventions, default branches override inference from the
-  current repo.
-- **Never invent.** If `CLAUDE.md`, `README.md`, or memory isn't found,
-  ask instead of guessing.
-- **Don't break sync or rename slugs** without confirmation — both can
-  silently break external links.
-- **Tone is descriptive, not prescriptive.** Avoid "MUST"/"SHALL" unless
-  the rule is a non-negotiable product invariant.
+- **Never mention `/ck-code:*`, this skill, or any internal tooling** in the spec body.
+- **Never invent** — when `CLAUDE.md`, `README.md`, or memory is missing, ask.
+- **Never rename a slug or break issue sync** without confirmation — both silently break external links.
+- **Always let user-saved memory override repo inference** for issue location, labels, and default branch.
+- **Always write descriptively, not prescriptively** — `MUST`/`SHALL` only for non-negotiable product invariants.

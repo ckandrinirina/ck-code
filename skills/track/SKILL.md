@@ -62,182 +62,26 @@ Group rows by their `Epic` column to compute per-epic completion counts (DONE / 
 
 ---
 
-## COMMAND: status (default)
+## PHASE 2: RENDER
 
-Present the full dashboard:
+Read only the template for the invoked command from
+[`references/dashboard-templates.md`](references/dashboard-templates.md), then fill it
+from the Phase 1 scan. Multiple task plans → render each separately (template included).
 
-```
-## Project Progress: [project name from PROJECT_OVERVIEW.md]
+### `next` — selection algorithm
 
-**Plan:** [tasks folder name]
-**Total:** [X] epics, [Y] stories
-**Progress:** [done]/[total] stories ([percentage]%)
+Filter to ready stories (Phase 1.3), then order by:
 
-[============================-----------] 72%
+1. **Epic order** — lower epic number first (foundation before features)
+2. **Story order** — lower story number within the epic
+3. **Size** — smaller first (`S` before `M`)
+4. **Unblocking potential** — prefer stories that unblock the most others
 
-### Epic 01: [Title] ([done]/[total])
-[==========----------] 50%
-  [x] 01-01: [Title] (S) — DONE
-  [x] 01-02: [Title] (M) — DONE
-  [>] 01-03: [Title] (L) — IN PROGRESS
-  [ ] 01-04: [Title] (M) — TODO (ready)
-  [~] 01-05: [Title] (S) — TODO (blocked by 01-03)
+Present the top story; list the rest under *Also Ready*.
 
-### Epic 02: [Title] ([done]/[total])
-[--------------------] 0%
-  [~] 02-01: [Title] (L) — TODO (blocked by 01-02)
-  [ ] 02-02: [Title] (M) — TODO (ready — 01-02 is done)
-  ...
+## RULES
 
-[... continue for all epics ...]
-
-### Summary
-- DONE: [count] stories
-- IN PROGRESS: [count] stories
-- TODO (ready): [count] stories
-- TODO (blocked): [count] stories
-
-### Quick Actions
-- Next story: /ck-code:build [path to next recommended story]
-- Full progress: /ck-code:track progress
-```
-
-**Status icons:**
-
-- `[x]` = DONE
-- `[>]` = IN PROGRESS
-- `[ ]` = TODO (ready — all dependencies met)
-- `[~]` = TODO (blocked — waiting on other stories)
-
----
-
-## COMMAND: next
-
-Find and suggest the next best story to implement.
-
-### Selection Algorithm
-
-1. Filter to `Status: TODO` stories only
-2. Remove blocked stories (dependencies not DONE)
-3. From remaining, prioritize by:
-   a. **Epic order** — lower epic number first (foundation before features)
-   b. **Story order** — lower story number within epic first
-   c. **Size** — smaller stories first for quick wins (S > M > L > XL)
-   d. **Unblocking potential** — prefer stories that unblock the most other stories
-
-### Present Recommendation
-
-```
-## Next Story to Implement
-
-**Recommended:** [Story ID] — [Title]
-**Epic:** [Epic title]
-**Size:** [S/M/L/XL]
-**Why this one:** [reason — e.g., "First unblocked story in Epic 01, unblocks 3 other stories"]
-
-### Acceptance Criteria Preview
-- [ ] [Criterion 1]
-- [ ] [Criterion 2]
-- [ ] [Criterion 3]
-
-### Files to Touch
-- [file list from story]
-
-**Implement now?**
-Run: /ck-code:build [full path to story file]
-
-### Also Ready ([count] more)
-- [Story ID]: [Title] (Size)
-- [Story ID]: [Title] (Size)
-- ...
-```
-
-If no stories are ready:
-
-```
-## No Stories Ready
-
-All remaining TODO stories are blocked by incomplete dependencies.
-
-### Blocking Chain
-- [Story X] (IN PROGRESS) blocks: [Story Y], [Story Z]
-- [Story A] (TODO) blocks: [Story B], [Story C]
-
-Complete the IN PROGRESS stories first, then more will unblock.
-```
-
----
-
-## COMMAND: progress
-
-Show high-level epic completion with metrics.
-
-```
-## Project Progress Report
-
-**Project:** [name]
-**Generated:** [date of plan]
-**As of:** [today]
-
-### Overall
-[================================--------] 80%
-[done]/[total] stories complete
-
-### By Size
-| Size | Done | Total | Remaining |
-|------|------|-------|-----------|
-| S | [X] | [Y] | [Z] |
-| M | [X] | [Y] | [Z] |
-| L | [X] | [Y] | [Z] |
-| XL | [X] | [Y] | [Z] |
-
-### By Epic
-| Epic | Title | Done | Total | Progress |
-|------|-------|------|-------|----------|
-| 01 | [Title] | [X] | [Y] | [========--] 80% |
-| 02 | [Title] | [X] | [Y] | [====------] 40% |
-| 03 | [Title] | [X] | [Y] | [----------] 0% |
-
-### Velocity (if enough data)
-- Stories completed: [count]
-- Average per day: [estimate based on DONE dates in Implementation Summary]
-
-### Bottlenecks
-- [Blocked story count] stories waiting on dependencies
-- Biggest blocker: [Story X] — blocks [N] other stories
-
-### Milestone Tracker (from ROADMAP.md)
-| Milestone | Status | Epics |
-|-----------|--------|-------|
-| [Name] | [X]/[Y] epics done | Epic 01, 02 |
-| [Name] | [X]/[Y] epics done | Epic 03 |
-```
-
----
-
-## MULTIPLE TASK PLANS
-
-If multiple task plan folders exist in `tasks/` (e.g., full project + feature plans):
-
-- Show each plan separately
-- Prefix with the plan folder name
-- Feature plans show as: `[Feature] YYYY-MM-DD_feature-xxx`
-
-```
-## Project Plans Found
-
-1. tasks/YYYY-MM-DD_<your-project>/ (main project — 4 epics, 18 stories)
-2. tasks/YYYY-MM-DD_feature-<feature-name>/ (feature — 2 epics, 7 stories)
-
-Showing status for: ALL (use /ck-code:track status tasks/YYYY-MM-DD_<your-project> to filter)
-```
-
----
-
-## IMPORTANT GUIDELINES
-
-- **Read-only:** This skill only reads story/epic files. It never modifies them.
-- **Live data:** Always read files fresh. Never cache or assume state.
-- **Graceful handling:** If a story file is malformed, skip it with a warning rather than failing.
-- **Reusable:** Works with any project using the `tasks/` folder structure from `project-architect`.
-- **Language:** All output in English.
+- **Never** write, edit, or create any file — this skill is read-only.
+- **Never** cache state — every run re-reads the index.
+- **Never** fail on a malformed story row — skip it with a one-line warning.
+- **Always** output in English.

@@ -6,247 +6,72 @@ effort: low
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
-# Project Skills — Quick Reference
+# ck-code — Command Reference
 
-> **Note:** Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+Run the [version gate](../../references/version-gate.md) in hint-only mode (never block).
 
-The full workflow graph, hand-offs, output locations, and "when to use which"
-decision tree live in [`../../references/workflow-map.md`](../../references/workflow-map.md).
-This file lists the per-command syntax and examples.
+The workflow graph, hand-offs, output locations, "when to use which", and the
+misuse-redirect matrix all live in
+[`workflow-map.md`](../../references/workflow-map.md) — read it rather than restating it.
+This file is the per-command syntax.
+
+If `$ARGUMENTS` names a command, print only that row plus its examples.
 
 ## Commands
 
-### /ck-code:advise [describe what you want to do]
+| Command | Argument | Purpose | Writes |
+| --- | --- | --- | --- |
+| `start` | — | Inspect project state, recommend the next step | read-only |
+| `advise` | `[task description]` | Route a plain-language task to the best-fit skill | read-only |
+| `help` | `[command]` | This reference | read-only |
+| `pre-spec` | `[description \| notes-file \| slug \| issue-url]` | Draft or adjust a stakeholder-facing spec | `docs/specs/` (+ issue) |
+| `design` | `<spec-file>` | Spec → architecture docs | `docs/architecture/` |
+| `team` | `[--basic\|--standard\|--max] [--check\|--regenerate]` | Architecture → expert + guide skills | `.claude/skills/` |
+| `convention` | `[new expert\|guide <slug>] [adjust <slug>]` | Capture house conventions into `guide-conventions` | `.claude/skills/` |
+| `plan` | `<spec-file>` | Architecture → epics, stories, roadmap | `tasks/` |
+| `quick-story` | `[brief] [--epic NN]` | Add one small story to an existing plan | story + indexes |
+| `to-issues` | `[tasks-path] [--mode feature\|epics\|stories]` | Publish the plan to GitHub Issues | GitHub only |
+| `track` | `[status\|next\|progress]` | Progress dashboard / next ready story | read-only |
+| `build` | `[story-path]` | TDD-implement one story end-to-end | source, tests, story |
+| `parallel-build` | `[story-ids...] \| --epic NN` | Implement several ready stories in worktrees | branches per story |
+| `fix` | `[story-path]` | Diagnose + minimally fix a bug, with a regression test | source, tests, story |
+| `ship` | `[story-path]` | Commit, open PR, update linked Issues | git + GitHub |
+| `sync` | `[tasks/<slug> \| --all]` | Reconcile indexes and epics with story files | indexes |
+| `doc-optimizer` | `[upgrade\|migrate\|sync\|optimize]` | Migrate or slim architecture docs | `docs/architecture/` |
+| `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
 
-Don't know which command to run? Describe the task in plain language and this
-read-only router recommends the best-fit skill, names any missing prerequisite,
-and prints the exact command. Routes by *intent*; `/ck-code:start` routes by
-*project state*.
-
-```
-/ck-code:advise "fix the login crash"          # → /ck-code:fix
-/ck-code:advise "add a dark mode toggle"       # → /ck-code:quick-story or /ck-code:plan
-/ck-code:advise                                # Asks what you want, then recommends
-```
-
----
-
-### /ck-code:pre-spec [feature-description | notes-file | existing-slug | issue-url]
-
-Generate or adjust a stakeholder-ready feature specification — descriptive,
-non-technical, ready to share with PMs, designers, or leadership for review.
-Output goes to a local folder and/or a GitHub issue (with labels and project
-assignment). Re-invoke later to apply adjustments — the skill detects existing
-specs, edits them in place, and re-syncs the linked GitHub issue.
-
-```
-/ck-code:pre-spec                                 # Interactive: pick existing or create
-/ck-code:pre-spec "add intelligent bots for free games"
-/ck-code:pre-spec docs/notes/feature-draft.md     # CREATE from a notes file
-/ck-code:pre-spec intelligent-bot-system          # ADJUST existing slug
-/ck-code:pre-spec https://github.com/.../issues/809   # ADJUST via issue URL
-```
-
-**Output:** `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ `.metadata.json`)
-and/or GitHub issue. Tone is descriptive — no code, no file paths, no
-internal tooling references.
-
----
-
-### /ck-code:design [spec-file]
-
-Refine a specification into detailed architecture docs in `docs/architecture/`.
-Asks conversational questions to fill gaps. Never modifies the original spec.
+## Examples
 
 ```
+/ck-code:advise "fix the login crash"              # → recommends /ck-code:fix
+/ck-code:pre-spec docs/notes/feature-draft.md      # create spec from notes
+/ck-code:pre-spec intelligent-bot-system           # adjust an existing spec
 /ck-code:design docs/specifications.md
-/ck-code:design docs/new-feature.md          # Also works for adding features
+/ck-code:team --regenerate                         # refresh after architecture changes
+/ck-code:plan docs/new-feature.md                  # feature-scoped plan
+/ck-code:track next                                # next ready story
+/ck-code:build                                     # interactive story picker
+/ck-code:parallel-build 02-05 03-01                # two independent stories
+/ck-code:parallel-build --epic 02                  # whole epic, in waves
+/ck-code:fix                                       # pick from implemented stories
+/ck-code:ship                                      # standalone commit (no story)
 ```
 
-**Output:** `docs/architecture/` (overview, folder-structure, tech-stack, components, data-flow, api-contracts, database-schema, configuration, dev-guide)
-
----
-
-### /ck-code:team [--regenerate]
-
-Generate project-tailored expert and guide skills from `docs/architecture/`.
-Researches current best practices via context7 before generating.
+## Setup sequences
 
 ```
-/ck-code:team                                # First-time generation
-/ck-code:team --regenerate                   # Refresh after architecture changes
+# First time
+/ck-code:design docs/specifications.md → /ck-code:team → /ck-code:plan docs/specifications.md
+→ /ck-code:to-issues (optional) → /ck-code:track next → /ck-code:build
+
+# Adding a feature later
+/ck-code:pre-spec "describe the feature" (optional) → /ck-code:design docs/new-feature.md
+→ /ck-code:team --regenerate → /ck-code:plan docs/new-feature.md → /ck-code:build
 ```
 
-**Output:**
+## Generated skills
 
-- `.claude/skills/experts/` — frontend, backend, qa, analyst, devops, qa-project
-- `.claude/skills/guides/` — one per language/framework (rust, cpp, react-native, etc.)
-
----
-
-### /ck-code:plan [spec-file]
-
-Generate epics, stories, roadmap from a specification. Creates structured `tasks/` folder.
-
-```
-/ck-code:plan docs/specifications.md         # Full project plan
-/ck-code:plan docs/new-feature.md            # Feature-scoped plan
-```
-
-**Output:** `tasks/YYYY-MM-DD_<project>/` with epics, stories, and roadmap
-
----
-
-### /ck-code:to-issues [tasks-folder]
-
-Publish epics and stories to GitHub Issues with labels and cross-references.
-
-```
-/ck-code:to-issues tasks/YYYY-MM-DD_<your-project>   # Publish specific plan
-/ck-code:to-issues                             # Auto-detect if only one plan exists
-```
-
-**Output:** GitHub Issues with `epic`, `story`, `size/*` labels
-
----
-
-### /ck-code:track [status|next|progress]
-
-Show project progress dashboard.
-
-```
-/ck-code:track                               # Full status dashboard
-/ck-code:track next                          # Suggest next story to implement
-/ck-code:track progress                      # Epic completion percentages
-```
-
----
-
-### /ck-code:build [story-path]
-
-Implement a story using TDD with SOLID principles. Auto-loads relevant expert and guide skills.
-
-```
-/ck-code:build tasks/.../stories/01_setup.md  # Implement specific story
-/ck-code:build                                # Interactive story picker
-```
-
-**Workflow:** Tests first (red) → Implement (green) → Refactor → QA validation → Commit
-
----
-
-### /ck-code:fix [story-path]
-
-Fix a bug tied to an existing story. QA reproduces the bug first, then applies a minimal TDD fix.
-
-```
-/ck-code:fix tasks/.../stories/01_setup.md    # Fix bug in specific story
-/ck-code:fix                                  # Interactive story picker
-```
-
-**Workflow:** Select story → Describe bug → QA reproduces → Plan minimal fix → TDD fix (red→green) → QA validates → Ship
-
----
-
-### /ck-code:ship [story-path]
-
-Commit changes, create PR, and update linked GitHub Issues. Auto-detects story context from branch name or file path.
-
-```
-/ck-code:ship tasks/.../stories/01_setup.md   # With story context (links to issues)
-/ck-code:ship                                 # Standalone commit (no story)
-```
-
-**Does:** Stage files → Commit (conventional format) → PR (optional) → Close/comment on story issue → Update epic checklist
-
----
-
-## Expert Skills (generated by /ck-code:team)
-
-| Command              | Role                               |
-| -------------------- | ---------------------------------- |
-| `/expert-frontend`   | Frontend development               |
-| `/expert-backend`    | Backend development                |
-| `/expert-qa`         | Testing and QA                     |
-| `/expert-analyst`    | Code review and analysis           |
-| `/expert-devops`     | CI/CD and infrastructure           |
-| `/expert-qa-project` | Answer questions about the project |
-
-## Guide Skills (auto-loaded, generated by /ck-code:team)
-
-Language and framework best-practice guides. Claude loads these automatically
-when working with the relevant technology. No manual invocation needed.
-
-Examples: `guide-rust`, `guide-cpp`, `guide-react-native`, `guide-axum`
-
----
-
-## Typical First-Time Setup
-
-```
-/ck-code:design docs/specifications.md       # 1. Generate architecture docs
-/ck-code:team                                # 2. Create expert + guide skills
-/ck-code:plan docs/specifications.md         # 3. Generate epics and stories
-/ck-code:to-issues                             # 4. (Optional) Push to GitHub Issues
-/ck-code:track next                          # 5. Find first story to implement
-/ck-code:build                               # 6. Start building!
-```
-
-## Adding a Feature Later
-
-```
-/ck-code:pre-spec "describe the feature"     # 0. (Optional) Align stakeholders first
-/ck-code:design docs/new-feature.md          # 1. Extend architecture docs
-/ck-code:team --regenerate                   # 2. Refresh experts with new context
-/ck-code:plan docs/new-feature.md            # 3. Generate feature epics/stories
-/ck-code:build                               # 4. Start implementing
-```
-
-## Fixing a Bug
-
-```
-/ck-code:fix tasks/.../stories/01_setup.md   # Fix bug in a known story
-/ck-code:fix                                 # Pick from implemented stories
-```
-
-## Shipping Changes
-
-```
-/ck-code:ship tasks/.../stories/01_setup.md  # Commit + PR + update issues
-/ck-code:ship                                # Standalone commit (no story)
-```
-
----
-
-## When to Use Which
-
-**`to-issues` vs `ship`** — these are **sequential, not alternatives**:
-
-- **`/ck-code:to-issues`** mirrors the _plan_ (epics + stories) into GitHub
-  Issues so anyone can see what's coming. Run once, after `/ck-code:plan`.
-  Artefact: GitHub Issues.
-- **`/ck-code:ship`** mirrors the _implementation_ — commit, open PR,
-  close the linked story issue, update the epic checklist. Run once per
-  story/fix after `/ck-code:build` or `/ck-code:fix`. Artefact: code.
-
-Most projects run both. Skip `to-issues` only if you don't track work in
-GitHub Issues.
-
-**`build` vs `parallel-build`** — pick by scope, not by preference:
-
-- **`/ck-code:build`** — one story at a time, full TDD discipline,
-  deepest QA. Default for solo work.
-- **`/ck-code:parallel-build`** — multiple **independent** ready stories,
-  each in its own git worktree, dispatched as parallel sub-agents. Use
-  when the index has 3+ stories with no `Blocked by` between them. Each
-  sub-agent invokes `/ck-code:build` internally — no quality is lost.
-
-**`fix` vs `build`** — `fix` is for bugs in already-implemented stories
-(diagnoses → reproduction test → minimal fix). `build` is for new
-acceptance criteria. Never use `build` to "rebuild" a buggy story —
-`fix` keeps the original story file, appends a Bug Report section, and
-preserves history.
-
-For the full workflow graph, hand-off table, the **"am I the right skill?"
-misuse-redirect matrix**, and output-location reference: see
-[`../../references/workflow-map.md`](../../references/workflow-map.md).
+`/ck-code:team` derives the expert and guide set **from your architecture** — there is no
+fixed list. Experts are invoked directly (e.g. `/expert-backend`); guides
+(`guide-rust`, `guide-axum`, …) auto-load when their technology is in scope.
+`/ck-code:convention` owns `guide-conventions`.

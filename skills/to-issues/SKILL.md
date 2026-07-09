@@ -3,6 +3,7 @@ name: to-issues
 description: Use when the user wants to push a `tasks/` plan into GitHub Issues, at a chosen granularity — one issue for the whole feature, one issue per epic, or one issue per story. Argument is an optional `tasks/<slug>/` path and `--mode feature|epics|stories`. Requires `gh` CLI authenticated.
 argument-hint: "[tasks-folder-path] [--mode feature|epics|stories]"
 disable-model-invocation: true
+effort: low
 allowed-tools: Bash(gh *) Bash(sleep *)
 ---
 
@@ -27,7 +28,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 - The `gh` CLI must be installed and authenticated (`gh auth status`)
 - The current directory must be a git repository with a GitHub remote
-- A tasks/ folder must exist with the structure created by `project-architect`
+- A `tasks/` folder must exist, created by `/ck-code:plan`
 
 ---
 
@@ -63,7 +64,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ---
 
@@ -129,194 +130,31 @@ Proceed? YES / NO / DRY-RUN
 
 ## PHASE 4: CREATE LABELS
 
-Create only the labels the chosen mode needs (`--force` updates if they exist):
+Create only the labels the chosen mode needs (`--force` updates if they exist). In
+`stories` mode add one `size/<S>` label per size actually present in the plan.
 
 ```bash
-# feature mode
 gh label create "feature" --color "0E8A16" --description "Whole-feature tracking issue" --force
-
-# epics mode (and stories mode)
 gh label create "epic" --color "6F42C1" --description "Epic-level issue" --force
-
-# stories mode only
 gh label create "story" --color "0075CA" --description "Implementation story" --force
 gh label create "size/S" --color "C2E0C6" --description "Small story" --force
 gh label create "size/M" --color "BFDADC" --description "Medium story" --force
-gh label create "size/L" --color "FEF2C0" --description "Large story" --force
-gh label create "size/XL" --color "F9D0C4" --description "Extra large story" --force
 ```
 
 ---
 
-## PHASE 5: CREATE ISSUES (branch by mode)
+## PHASE 5: CREATE ISSUES
 
-### 5A — MODE `feature` (single issue)
-
-Create one issue holding the entire plan. Epics become sections; stories become
-a nested task-list under each epic.
-
-```bash
-gh issue create \
-  --title "Feature: [Project Name]" \
-  --label "feature" \
-  --body "$(cat <<'BODY'
-## Overview
-[Summary from PROJECT_OVERVIEW.md]
-
-## Epic 01: [Epic Title]
-[Epic goal/description]
-- [ ] [01-01] [Story title] (S)
-- [ ] [01-02] [Story title] (M)
-
-## Epic 02: [Epic Title]
-[Epic goal/description]
-- [ ] [02-01] [Story title] (L)
-
-## Acceptance Criteria
-[Top-level criteria from PROJECT_OVERVIEW.md]
-BODY
-)"
-```
-
-Capture the single issue number. Done — skip to Phase 6.
-
-### 5B — MODE `epics` (one issue per epic)
-
-For each epic (in order), create one issue. Its stories are an in-body checklist;
-no separate story issues are created.
-
-```bash
-gh issue create \
-  --title "Epic [NN]: [Epic Title]" \
-  --label "epic" \
-  --body "$(cat <<'BODY'
-## Description
-[From EPIC.md]
-
-## Goals
-[From EPIC.md]
-
-## Stories
-- [ ] [EE-01] [Story title] (S)
-- [ ] [EE-02] [Story title] (M)
-
-## Acceptance Criteria
-[From EPIC.md]
-BODY
-)"
-```
-
-Add `sleep 1` between each issue creation. Capture every epic issue number.
-Done — skip to Phase 6.
-
-### 5C — MODE `stories` (full hierarchy)
-
-**Step 1 — epic issues.** For each epic, create an issue with story placeholders:
-
-```bash
-gh issue create \
-  --title "Epic [NN]: [Epic Title]" \
-  --label "epic" \
-  --body "$(cat <<'BODY'
-## Description
-[From EPIC.md]
-
-## Goals
-[From EPIC.md]
-
-## Stories
-- [ ] #TBD - [Story 01 title]
-- [ ] #TBD - [Story 02 title]
-
-## Acceptance Criteria
-[From EPIC.md]
-BODY
-)"
-```
-
-Capture each epic issue number → store `epic slug -> issue number`. `sleep 1` between calls.
-
-**Step 2 — story issues.** For each story (epic order, then story order):
-
-```bash
-gh issue create \
-  --title "[EE-SS] [Story Title]" \
-  --label "story" \
-  --label "size/M" \
-  --body "$(cat <<'BODY'
-## Parent Epic
-Belongs to #[epic-issue-number] - [Epic Title]
-
-## Description
-[From story file]
-
-## Acceptance Criteria
-[From story file]
-
-## Technical Notes
-[From story file]
-
-## Files to Create/Modify
-[Table from story file]
-
-## Dependencies
-[From story file]
-
-## Size: [S/M/L/XL]
-BODY
-)"
-```
-
-Capture each story issue number. `sleep 1` between calls.
-
-**Step 3 — link epics to stories.** Edit each epic issue, replacing the `#TBD`
-placeholders with the real story issue numbers so GitHub tracks completion:
-
-```bash
-gh issue edit [epic-issue-number] \
-  --body "[updated body with real issue numbers in the Stories checklist]"
-```
-
-Result:
-
-```
-## Stories
-- [ ] #42 - Set up project scaffolding
-- [ ] #43 - Implement WebSocket gateway
-```
+Read the section for the chosen mode from
+[`references/issue-bodies.md`](references/issue-bodies.md) and follow it. `feature` and
+`epics` finish in one step; `stories` runs epics → stories → link.
 
 ---
 
 ## PHASE 6: SUMMARY
 
-Present results for the mode that ran:
-
-```
-## Published to GitHub Issues
-
-**Repository:** [owner/repo]
-**Mode:** [feature | epics | stories]
-
-[feature]  #[num] - Feature: [Project Name]
-
-[epics]
-- #[num] - Epic 01: [Title]
-- #[num] - Epic 02: [Title]
-
-[stories]
-### Epic Issues
-- #[num] - Epic 01: [Title]
-### Story Issues
-- #[num] - [01-01] [Title] (S) -> Epic #[num]
-
-### Quick Links
-- All issues: [repo URL]/issues
-- Features: [repo URL]/issues?q=label:feature
-- Epics:    [repo URL]/issues?q=label:epic
-- Stories:  [repo URL]/issues?q=label:story
-
-**Total:** [count] issues created
-```
+Fill the summary shape from [`references/issue-bodies.md`](references/issue-bodies.md)
+for the mode that ran.
 
 ---
 
@@ -342,10 +180,9 @@ anyway / **ABORT**.
 ## RULES
 
 - **Never create issues outside the chosen mode** — `feature` makes exactly 1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
-- **Order matters in `stories` mode** — create all epics first so their issue numbers exist for story cross-references and the linking step.
-- **Always pause between API calls** — `sleep 1` between every `gh` call; GitHub rate-limits issue creation strictly.
-- **Preserve markdown fidelity** — keep all formatting from the original tasks/ files in issue bodies.
-- **Reusable** — works with any tasks/ folder generated by `project-architect`, regardless of project type.
+- **Never create a story issue before every epic issue exists** — story bodies cross-reference epic numbers.
+- **Always `sleep 1` between every `gh` call** — GitHub rate-limits issue creation strictly.
+- **Always preserve markdown fidelity** from the original `tasks/` files in issue bodies.
 
 ---
 

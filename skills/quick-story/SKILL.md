@@ -20,18 +20,11 @@ something else, STOP and recommend the better skill (details in the table below)
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 
-## When to use vs. when not
-
-| Use `quick-story` when…                                                             | Use a different skill when…                                           |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Adding one small adjustment to an existing epic (DB field, config flag, one helper) | Starting a brand-new project or feature → `/ck-code:plan`             |
-| The work fits in one or two sentences                                               | The change spans multiple stories or new components → `/ck-code:plan` |
-| The target epic already exists in `tasks/<slug>/epics/`                             | No `tasks/` plan exists yet → `/ck-code:plan` first                   |
-| You want a TODO story ready for `/ck-code:build`                                    | Reporting a bug → `/ck-code:fix` (it can create stub stories too)     |
+Applies when the work fits in one or two sentences and the target epic already exists. No `tasks/` plan yet → `/ck-code:plan` first.
 
 ## PHASE 0 — Version gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ## PHASE 1 — Locate active plan & target epic
 
@@ -44,7 +37,7 @@ Run the shared [version gate](../../references/version-gate.md) before any archi
 ### 1.2 Read or bootstrap the index
 
 - Read `tasks/<slug>/STORIES_INDEX.md`.
-- If the file is missing or does not contain `<!-- Schema: v1 -->`, run the **Bootstrap** procedure from `ck-code/references/stories-index.md` (glob every story, derive rows, write the index, tell the user how many stories were imported), then re-read.
+- If the file is missing or does not contain `<!-- Schema: v1 -->`, run the **Bootstrap** procedure from [`stories-index.md`](../../references/stories-index.md) (glob every story, derive rows, write the index, tell the user how many stories were imported), then re-read.
 
 ### 1.3 Pick the target epic
 
@@ -117,7 +110,7 @@ All three writes happen in one logical step. If any one fails, stop the remainin
 ### 4.2 Insert the index row
 
 - Build the row: `| EE · Epic Display | EE-SS | <Title> | TODO | <Size> | - | epics/NN_<epic-slug>/stories/SS_<story-slug>.md |`.
-- Use the cell-only Edit pattern from `ck-code/references/stories-index.md` to insert the row in `ID` order. Never re-write the table from scratch.
+- Use the cell-only Edit pattern from [`stories-index.md`](../../references/stories-index.md) to insert the row in `ID` order. Never re-write the table from scratch.
 
 ### 4.3 Append to EPIC.md story table
 
@@ -145,70 +138,8 @@ Next steps (pick one):
 
 The skill exits here. The user runs the next command explicitly.
 
-## Worked example
+## RULES
 
-```
-$ /ck-code:quick-story "Add audit_log column to Order table" --epic 02
-
-PHASE 1 — Locate active plan
-  Found: tasks/2026-04-29_billing-feature/
-  Index: STORIES_INDEX.md (Schema v1, 7 stories)
-  --epic 02 → 02 · Billing (last story 02-03)
-
-PHASE 2 — Capture intent
-  Brief: Add audit_log column to Order table
-  Size:  [empty] → S
-
-PHASE 3 — Draft
-  ID:    02-04
-  Slug:  add-audit-log-column
-
-  # Story 02-04: Add Audit Log Column To Order Table
-  > Epic: Billing   Size: S   Status: TODO
-
-  ## Description
-  Add an `audit_log` JSONB column to the `orders` table so checkout flow
-  events can be appended without a separate audit table.
-
-  ## Acceptance Criteria
-  - [ ] `audit_log` column exists on `orders` (JSONB, nullable, default `[]`)
-  - [ ] Existing rows backfilled to `[]` in the same migration
-  - [ ] ORM model exposes `auditLog: AuditEvent[]`
-
-  ## Technical Notes
-  - New migration in `migrations/` (sequential numbering).
-  - Update `src/models/order.ts` ORM mapping.
-
-  ## Files to Create/Modify
-  | Action | File Path                            | Purpose                  |
-  |--------|--------------------------------------|--------------------------|
-  | CREATE | migrations/008_orders_audit_log.sql  | add column + backfill    |
-  | MODIFY | src/models/order.ts                  | expose auditLog field    |
-
-  ## Dependencies
-  - Blocked by: None
-  - Blocks: None
-
-  ## Related
-  - Epic: billing
-
-  > CONFIRM
-
-PHASE 4 — Persist
-  Created:       tasks/2026-04-29_billing-feature/epics/02_billing/stories/04_add-audit-log-column.md
-  Index updated: STORIES_INDEX.md (row 02-04)
-  Epic updated:  epics/02_billing/EPIC.md
-
-PHASE 5 — Hand-off
-  Next: /ck-code:build tasks/.../stories/04_add-audit-log-column.md
-```
-
-## Rules
-
-- **Never** create a new epic. If no epic fits, the user must run `/ck-code:plan` instead — tell them so and abort.
-- **Never** write any file before the user types `CONFIRM` in Phase 3.
-- **Never** auto-launch `/ck-code:build` or `/ck-code:to-issues`. Phase 5 is suggestion-only.
-- **Never** rewrite `STORIES_INDEX.md` from scratch — use cell-only edits per `ck-code/references/stories-index.md` Mutation Protocol.
-- **Always** keep the story file, index row, and EPIC.md row in sync within the same Phase 4 step. If one write fails, surface which file is out of sync.
-- **Always** redirect bug reports to `/ck-code:fix` — it already auto-matches scope and can create stub stories.
-- **Always** redirect L/XL stories to `/ck-code:plan` after a confirmation prompt — quick stories are small by definition.
+- **Never** create a new epic — abort and send the user to `/ck-code:plan`.
+- **Never** rewrite `STORIES_INDEX.md` from scratch — cell-only edits per its Mutation Protocol.
+- **Always** keep story file, index row, and EPIC.md row in sync in one Phase 4 step; on partial failure, name the out-of-sync file.

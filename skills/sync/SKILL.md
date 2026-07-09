@@ -31,7 +31,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ## PHASE 1: SELECT PLAN(S)
 

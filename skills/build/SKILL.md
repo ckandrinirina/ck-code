@@ -277,14 +277,9 @@ Run full test suite one more time and present the REFACTOR Phase Complete block 
 
 QA expert skills review the work — this is **not** a self-review.
 
-**Always delegate to `ck-code:qa-validator` when available** (in this plugin's `agents/`
-folder — pinned to the `fast` (Haiku) tier). It runs the test suite, build, and lint, maps
-results to acceptance criteria, and reports failures with file:line. Delegation is the
-default for token efficiency, not just a convenience: the verbose suite/build/lint output is
-absorbed in the cheap Haiku agent's own context and only a compact PASS/FAIL verdict returns
-to this orchestrator — never run the heavy commands inline in the main session while the
-agent is available. **Run the inline procedure below ONLY as a fallback** when the
-`qa-validator` subagent_type is not registered.
+**Always delegate to `ck-code:qa-validator`** (Haiku) — it absorbs the verbose
+suite/build/lint output in its own context and returns a compact verdict. Run the heavy
+commands inline **only** when that subagent_type is unregistered.
 
 Mark the QA task `in_progress`, then follow the full procedure in
 [`../../references/qa-validation.md`](../../references/qa-validation.md) — it loads the QA
@@ -362,21 +357,20 @@ user they can run `/ck-code:ship [story-path]` later.
 
 ## HARD GATES (cross-phase contract)
 
-Each gate is enforced inside its phase — listed here as a checklist for orchestrators:
+Each gate is enforced inside its phase; this is the orchestrator's checklist.
 
-- **Version gate** — run the shared [version gate](../../references/version-gate.md) before any architecture-doc read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes. `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
-- **Phase 1.2.0** — interactive runs read `tasks/FEATURE_INDEX.md` first (bootstrap if missing); > 2 unfinished features ⇒ ask which, then scope to its epic. Feature rollup updated on completion (8.6) — never stale.
-- **Phase 1.2** — interactive selection prefers the parallel set (≥ 2 conflict-free ready ⇒ one-confirm, auto-fan-out to worktrees). An explicit story arg is always single-story.
-- **Phase 2** — experts + guides detected, `Read`, and the "Skills loaded" block shown BEFORE any planning/code; `expert-qa` always detected. Non-empty 4a `ls` ⇒ never reach Phase 3 with zero skills.
-- **Phase 3.7** — branch chosen before any code. Never implement on `main` / `develop`.
-- **Phase 4** — Failing tests written before implementation (strict Red→Green→Refactor; trivial boilerplate exempt).
-- **Phase 3.3 + Phase 6.1** — SOLID applied at design AND verified after refactor.
-- **Phase 5.2 / 6.2** — Off-plan file touches logged to `## Unplanned Changes` in the same Edit pass.
-- **Phase 7** — QA iteration cap = 3 → escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`.
-- **Phase 8.5** — Manual-test gate, bug-fix loop cap = 3 (each cycle re-runs Phase 6 + Phase 7).
+- **Version gate** — [shared procedure](../../references/version-gate.md), before any architecture-doc read/write.
+- **Phase 1.2.0** — feature index read first; rollup updated at 8.6.
+- **Phase 1.2** — interactive selection prefers the parallel set; an explicit story arg is always single-story.
+- **Phase 2** — skills detected, `Read`, and reported BEFORE any planning or code.
+- **Phase 3.7** — branch chosen before any code; never `main` / `develop`.
+- **Phase 4** — failing tests before implementation (trivial boilerplate exempt).
+- **Phase 3.3 + 6.1** — SOLID applied at design, verified after refactor.
+- **Phase 5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
+- **Phase 7** — QA iteration cap = 3, then escalate.
+- **Phase 8.5** — manual-test gate, bug-fix loop cap = 3.
 
-Story file is the source of truth. All output in English regardless of spec/story
-language. JUCE test-runner rules live in [references/tdd-walkthrough.md](references/tdd-walkthrough.md).
+Story file is the source of truth. All output in English regardless of spec/story language.
 
 ---
 

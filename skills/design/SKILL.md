@@ -305,9 +305,9 @@ files, impact summary, next steps).
 For the exact summary blocks, see
 [references/qna-examples.md](references/qna-examples.md).
 
-In both modes, the final next step is: run `/ck-code:plan` to generate epics
-and stories — it reads `DESIGN_LEDGER.md` to pick up the `pending` rows this run
-added and flips them to `planned`.
+In both modes, the final next step is: run `/ck-code:team` to generate the expert and
+guide skills from these docs. Then `/ck-code:plan` generates epics and stories — it reads
+`DESIGN_LEDGER.md` to pick up the `pending` rows this run added and flips them to `planned`.
 
 ---
 
@@ -331,14 +331,11 @@ applicable for this project."
 
 ---
 
-## IMPORTANT GUIDELINES
+## RULES
 
-- **Never modify the original specification file.** It is read-only input.
-- **Language:** All output in English, regardless of the spec's language.
-- **No hardcoding:** Derive everything from the spec and user answers. This skill must work with any project.
-- **Use context7/WebSearch** to research standard folder structures and best practices for the specific tech stack.
-- **Be specific:** Every file should contain real, project-specific content derived from the spec and user answers — not generic prose.
-- **Mark gaps:** Use `[TO BE DEFINED]` for anything that couldn't be determined. Never invent information.
-- **Scanning readability:** Use tables, code blocks, ASCII diagrams, and bullet points. Avoid walls of text.
-- **File independence:** Each file should be self-contained, with cross-references where relevant.
-- **Always record the design pass (Phase 3.11):** every added/changed feature gets a dated design record and a `pending` row in `DESIGN_LEDGER.md` — this is how `plan` knows what still needs planning. Never mark a ledger row `planned` from `design`.
+- **Never modify the original specification file** — it is read-only input.
+- **Never invent information** — mark anything undetermined `[TO BE DEFINED]`.
+- **Never mark a ledger row `planned`** from `design`; every added/changed feature leaves a `pending` row (Phase 3.11) — that is how `plan` knows what remains.
+- **Never hardcode** — derive everything from the spec and the user's answers.
+- **Always write project-specific content**, not generic prose; each file self-contained, cross-referenced where relevant.
+- **Always output in English**, regardless of the spec's language.

@@ -153,7 +153,8 @@ content, only restructures and reports.
    [references/optimizer-playbook.md](references/optimizer-playbook.md)) and a total.
    **Fan-out (≥8 feature docs):** dispatch one **read-only** `general-purpose` Agent per
    `features/<slug>/index.md` following the investigation variant in
-   [../../references/subagent-fanout.md](../../references/subagent-fanout.md); each returns
+   [../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: haiku`,
+   since counting tokens and spotting repeated sections is mechanical. Each returns
    `{token estimate, candidate shared sections}` and writes nothing. Merge the reports here.
    Below ~8 docs, measure inline. All steps below (Dedup, Prune, Right-size, index/`_shared.md`
    writes) stay sequential in the orchestrator — subagents only measure and propose.
@@ -204,4 +205,6 @@ Whenever a feature doc is created, relocated, or renamed, update
 - **Always update `FEATURE_INDEX.Docs` and the `README.md` index** in the same run that
   a feature doc is created, renamed, or moved — never leave routing stale.
 - **Always confirm before destructive or structural changes** — deleting non-empty
-  content, renaming on ambiguous slug drift, or splitting a feature doc.
+  content, slicing the feature list (`migrate`), renaming on ambiguous slug drift, or
+  splitting a feature doc.
+- **Always report what was left unresolved** so the user knows what still needs `design`.

@@ -163,11 +163,9 @@ This prevents "grep-driven debugging" — changing code without understanding wh
 
 **Goal:** QA expert reproduces the bug and confirms diagnosis BEFORE any fix.
 
-**Always delegate reproduction to `ck-code:qa-validator` when available** (defined in this
-plugin's `agents/` folder — pinned to the `fast` (Haiku) tier; writes a minimal failing test for
-the bug and reports a root-cause hypothesis). The agent absorbs the verbose test-run output in
-its own cheap context and returns a compact result, keeping this orchestrator lean. **Do the
-steps below inline ONLY as a fallback** when the `qa-validator` subagent_type is not registered.
+**Always delegate reproduction to `ck-code:qa-validator`** (Haiku) — it writes the minimal
+failing test and returns a root-cause hypothesis. Do the steps below inline **only** when
+that subagent_type is unregistered.
 
 ### 4.1 Locate the Buggy Code
 
@@ -178,7 +176,8 @@ Identify likely source files (Grep + the story's file list), read source + exist
 When diagnosis spans multiple subsystems (Phase 2.5 verdict **B**/MULTI-STORY or **D**/MIXED) or
 Phase 3.2 produced **≥2 plausible competing root causes**, dispatch one **read-only** investigator
 per hypothesis (cap 2–4) following the investigation variant in
-[../../references/subagent-fanout.md](../../references/subagent-fanout.md). Each agent traces ONE
+[../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: haiku`,
+since tracing a suspect path is mechanical. Each agent traces ONE
 suspect path and returns `{hypothesis, confidence, file:line evidence, confirm/refute}` — no tests,
 no edits. The orchestrator converges the reports to the **single** highest-confidence root cause
 before 4.2 (never carry two forward). Skip entirely for verdict A or any obvious single-cause bug —
@@ -226,15 +225,8 @@ Before planning, verify:
 
 The fix must be the **smallest possible change** that resolves the bug. **DO NOT** refactor surrounding code, add features, or "improve" unrelated code. Fix ONLY the root cause. Produce a Fix Plan stating: Strategy, Files to modify (minimal), Risk.
 
-**SOLID compliance check:**
-
-- S: each modified function remains single-responsibility.
-- O: stable interfaces left untouched (extend, don't modify).
-- L: changed types still honor their contracts.
-- I: no fat interfaces introduced or widened.
-- D: fix depends on abstractions, not concrete implementations.
-
-If any SOLID principle is violated by the minimal fix, note it explicitly and design the smallest abstraction needed to fix it cleanly.
+Design the fix to hold SOLID (each principle is verified against the diff in Phase 6.4). If
+the minimal fix must violate one, say so here and design the smallest abstraction that avoids it.
 
 ### 5.2 Create Subtasks
 
@@ -293,14 +285,8 @@ section using the SOLID Verification template in
 
 **Goal:** QA expert verifies the fix is complete and nothing else broke.
 
-**Always delegate to `ck-code:qa-validator` when available** (in this plugin's `agents/`
-folder — pinned to the `fast` (Haiku) tier). It runs the full suite, build, and lint, re-checks
-every acceptance criterion, and reports failures with file:line. Delegation is the default for
-token efficiency, not just a convenience: the verbose suite/build/lint output is absorbed in the
-cheap Haiku agent's own context and only a compact PASS/FAIL verdict returns to this orchestrator
-— never run the heavy commands inline in the main fix session while the agent is available.
-**Run the inline procedure below ONLY as a fallback** when the `qa-validator` subagent_type is
-not registered.
+**Always delegate to `ck-code:qa-validator`** (Haiku), as in Phase 4. Run the heavy
+commands inline **only** when that subagent_type is unregistered.
 
 Follow the shared procedure in [`../../references/qa-validation.md`](../../references/qa-validation.md). Bug-fix flows include the **minimalism check** (Step 6) — the fix must be the smallest change that resolves the root cause; no unrelated refactoring.
 
@@ -375,31 +361,31 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.7). `SHIP` → invok
 
 ## HARD GATES (cross-phase contract)
 
-Each gate is enforced inside its phase — listed here as a checklist:
+Each gate is enforced inside its phase; this is the checklist.
 
-- **Version gate** — run the shared [version gate](../../references/version-gate.md) before any architecture-doc read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
-- **Phase 2.5** — Scope analysis mandatory, even when `$ARGUMENTS` provides a story path.
-- **Phase 2.5.1** — Score `DONE` / `IN PROGRESS` AND `TODO` rows; TODO matches trigger verdict E.
-- **Phase 2.5.2 / 2.5.5 / 5.4** — Three confirmation gates; no writes without explicit `YES`.
-- **Phase 2.6.3 / 2.6.4** — Stub story + `STORIES_INDEX.md` + parent `EPIC.md` synced in the same phase.
-- **Phase 4.2 + 5.0** — Failing reproduction test before any fix code.
-- **Phase 6.4 + 7** — SOLID re-check (bounded to changed lines) AND QA pass after every code change.
-- **Phase 7** — Always delegate the QA suite/build/lint to the Haiku `ck-code:qa-validator` agent; never run the heavy commands inline in the fix session while the agent is registered (inline = fallback only). QA iteration cap = 3 → escalate `MANUAL FIX / ACCEPT / REVERT`.
-- **Phase 8.6.5** — Manual-test loop cap = 3 on the same Bug ID → escalate.
+- **Version gate** — [shared procedure](../../references/version-gate.md), before any architecture-doc read/write.
+- **Phase 2.5** — scope analysis mandatory, even with an explicit story path.
+- **Phase 2.5.1** — score `TODO` rows too; a TODO match triggers verdict E.
+- **Phase 2.5.2 / 2.5.5 / 5.4** — confirmation gates; never write without an explicit `YES`.
+- **Phase 2.6.3 / 2.6.4** — stub story, index, and parent `EPIC.md` synced in the same phase.
+- **Phase 4.2 + 5.0** — failing reproduction test before any fix code.
+- **Phase 6.4 + 7** — SOLID re-check (bounded to the diff) and QA pass after every code change.
+- **Phase 7** — QA iteration cap = 3, then escalate `MANUAL FIX / ACCEPT / REVERT`.
+- **Phase 8.6.5** — manual-test loop cap = 3 on the same Bug ID, then escalate.
 
 ### Scope discipline (cross-cutting)
 
-- **Verdict C (NEW-FEATURE)** → defer to `/ck-code:design` (normal flow: design → team → plan). Never create stub stories from the fix flow.
-- **Verdict E (PLANNED-IN-FUTURE)** → defer to `/ck-code:build <future-story>`. `PROCEED ANYWAY` falls through to the underlying A/B/D verdict; it does NOT bypass other gates.
-- **Minimal fix only.** No refactor, no improvement, no feature. Drive-by fixes for OTHER bugs stay in the Phase 4.4 related-issues note, never inline.
-- **Index purity.** `STORIES_INDEX.md` tracks only `TODO` / `IN PROGRESS` / `DONE` / `SKIP`. Bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) live inside the Bug Report.
-- **Unplanned-change log.** Off-plan file touches → one line in `## Unplanned Changes` under the Bug Report (`- <path> — <what> — <why>`). Empty section = omit heading.
+- **Never fix a bug from another story inline** — document it in the Phase 4.4 related-issues note.
+- **Never refactor, improve, or add features** — the minimal fix resolves the root cause and nothing else.
+- **Never write a bug sub-state to `STORIES_INDEX.md`** — `DIAGNOSING` / `FIXING` / `FIXED` live only in the Bug Report.
+- **Verdict C (NEW-FEATURE)** → defer to `/ck-code:design`. Never create stub stories from the fix flow.
+- **Verdict E (PLANNED-IN-FUTURE)** → defer to `/ck-code:build <future-story>`; `PROCEED ANYWAY` bypasses no other gate.
+- **Always log off-plan touches** to `## Unplanned Changes` under the Bug Report.
 
 ### Universal
 
-- **Same `Bug ID` across all in-scope stories** — format `BUG-YYYYMMDD-NN`.
-- **Language: English** for all output.
-- **Reusability.** Works with any project using the `tasks/` story format.
+- **Always use the same `Bug ID`** (`BUG-YYYYMMDD-NN`) across every in-scope story.
+- **Always output in English.**
 
 ---
 

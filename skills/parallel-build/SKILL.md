@@ -43,7 +43,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ## PHASE 1: DISCOVERY (index-driven)
 
@@ -260,10 +260,8 @@ Worktree isolation rules:
 - Each agent runs in its own `.claude/worktrees/agent-XXXXXXXX`.
 - Agents must only modify files relevant to their story.
 - Agents must NOT modify story files in `tasks/` (the build skill updates those).
-- **XL stories may exceed a single dispatch's budget and stop early** (◐ incomplete in
-  Phase 3.4). The worktree is the only durable carry-over — a returned agent cannot be
-  resumed — so `/ck-code:build` commits per phase inside the worktree, and an incomplete
-  story is finished via Phase 6 **Continue in place**, not re-dispatched from scratch.
+- **An oversized story may exhaust its dispatch budget and stop early** (◐ incomplete in
+  Phase 3.4), so `/ck-code:build` commits per phase inside the worktree.
 
 ### 3.4 Collect Results
 
@@ -276,15 +274,14 @@ must catch is precisely an agent that did nothing yet reported "Done". Record on
 
 - **✓ completed** — agent reported SUCCESS through Phase 8.4 (verified objectively in 3.5).
 - **✗ failed** — agent reported an explicit error/blocker (capture the message).
-- **◐ incomplete** — agent stopped **without an error and without finishing** (ran out of
-  its tool-call/token budget mid-implementation), OR returned no structured status at all
-  (a bare stop). Common on **XL stories**: one dispatch can't hold the whole scope. This is
-  NOT a failure — partial work exists and is recoverable.
+- **◐ incomplete** — agent stopped **without an error and without finishing** (budget
+  exhausted mid-implementation), OR returned no structured status at all (a bare stop).
+  This is NOT a failure — partial work exists and is recoverable.
 
 **Dispatched agents cannot be resumed** (no `SendMessage`) — a returned agent is gone and
 its **only durable state is its worktree**. So an ◐ incomplete story is recovered by the
-Phase 6 Option 3 auto-continue loop (runs until *verified* complete) in its existing
-worktree — never by reattaching to the dead agent or re-dispatching fresh.
+Phase 6 Option 3 auto-continue loop in its existing worktree — never by reattaching to the
+dead agent or re-dispatching fresh.
 
 ## PHASE 3.5: STORY FILE & CODE INTEGRITY VERIFICATION
 
@@ -352,12 +349,23 @@ verdict. The orchestrator stays lean and the QA passes run in parallel instead o
 
 ### 5.1 Stack QA Commands (passed to each agent)
 
-Each story's epic/component determines the commands the agent runs in its worktree:
+Derive each story's commands from the component it touches — never from a hardcoded
+epic-to-stack map, which is project-specific and wrong on any other repo. For each
+merge-candidate story, resolve the component directory from its `Files to Create/Modify`
+paths, then detect the stack from that directory's manifest and pass the concrete
+build/test/lint commands to the agent:
 
-- **Engine (epic 02):** `cd [wt]/engine && cmake --build build --config Release` — verify binary exists at `engine/build/Release/<binary>`.
-- **Server (epics 03, 09):** `cd [wt]/server && cargo test && cargo clippy -- -D warnings && cargo fmt --check`.
-- **Desktop (epics 10–13):** `cd [wt]/desktop && pnpm run typescript && npx vitest run`.
-- **Mobile (epic 04):** `cd [wt]/mobile && pnpm run typescript && npx eslint .`.
+| Manifest found | QA commands |
+| --- | --- |
+| `Cargo.toml` | `cargo test && cargo clippy -- -D warnings && cargo fmt --check` |
+| `package.json` | the `test`, `lint`, and typecheck scripts it actually declares |
+| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the expected artifact exists |
+| `pyproject.toml` | `pytest` plus the declared lint/format checks |
+| `go.mod` | `go test ./... && go vet ./...` |
+
+A project's own `guide-conventions` skill (from `/ck-code:convention`) overrides this table
+when it names the canonical commands. If no manifest matches, ask the operator once for the
+QA command and reuse it for every story in the run.
 
 ### 5.2 Dispatch QA Agents — SINGLE MESSAGE, PARALLEL
 
@@ -472,52 +480,24 @@ confirmation (format in `references/conflict-format.md`).
 
 ## RULES
 
-- **Always read `tasks/FEATURE_INDEX.md` before the story index** (Phase 1.0) — bootstrap it if missing; when > 2 features are unfinished, ask which feature and scope the run to its epic; an explicit story-ID / `--epic` argument bypasses the gate. After merging (Phase 6 Option 1), recompute the built feature's `Stories`/`Status` rollup and mark it `DONE` when its last story merges — never leave it stale.
-- **Never let sub-agents edit the shared indexes in their worktrees** — `STORIES_INDEX.md`, `FEATURE_INDEX.md`, and each story's parent `EPIC.md` are shared cross-story files, and concurrent worktree edits to them are the cause of merge conflicts on the target branch. `/ck-code:build` auto-detects its worktree and defers all three (updating only the per-story file); the orchestrator reconciles them **once on the target branch after each merge** (Phase 6 Option 1, and per wave in wave mode — before the next wave re-resolves). This single-writer reconciliation is what keeps parallel merges conflict-free.
-- **Never read individual story files in Phase 1** — `STORIES_INDEX.md` is the only source of truth for story discovery; bootstrap (absent index or wrong schema) is the sole exception.
-- **Never merge** a story branch without QA passing first.
-- **Always delegate Phase 5 QA to parallel `ck-code:qa-validator` (Haiku) agents, never run the heavy commands inline** (Phase 5.2) — one agent per merge-candidate story, all dispatched in a single message, each running its stack's build/test/lint inside its own worktree and returning a compact verdict. The verbose output stays out of the long-lived orchestrator context and the QA passes run in parallel. Inline 5.1 commands are a fallback only when the `qa-validator` subagent_type is unavailable.
-- **Always run per-story manual-testing gate (Phase 5.5)** before merge — sub-agents cannot perform manual testing inside their dispatch, so the orchestrator owns it. A story without `MANUAL-TEST PASS` is never merge-eligible. Cap = 3 cycles per story.
-- **Always dispatch all agents in one message** — not sequentially. True parallelism
-  requires multiple Agent calls in a single turn.
-- **Pick the sub-agent model by reasoning complexity, never by Size** (Phase 3.1) —
-  default `balanced` (Sonnet), escalate to `advanced` (Opus) only on a clear
-  high-reasoning signal. A large consolidated story is not automatically an Opus story.
-- **Always track each story as a Claude Task** (Phase 3.2.5) — create at dispatch, keep
-  `in_progress` through QA/manual-test, mark `completed` at merge — so the parallel run
-  has a live, visible progress board.
-- **Always recommend the parallel-safe set** (Phase 1.4) from non-overlapping file
-  scopes before selection — it is a pre-flight heuristic, not a substitute for the
-  Phase 4 dry-run merge check.
-- **Always offer whole-epic wave mode** when an epic has > 1 non-DONE story (Phase 1.5 /
-  2.2) — surface it as an explicit AskUserQuestion option so the operator is asked
-  epic-vs-batch, never required to know the `epic NN` syntax.
-- **Wave mode is single-epic, never feature-wide** (Phase 1.5 / 2.7) — never merge stories
-  from different epics into one wave plan; a multi-epic feature is built one epic per run
-  and never auto-chains into the next epic.
-- **Always apply the dynamic Wave Depth Guard** (Phase 2.7 / `references/wave-mode.md`) —
-  derive a recommended wave ceiling from the epic's story count, and if the natural depth
-  exceeds it, WARN and require `PROCEED / SPLIT` confirmation before running; never silently
-  run a deep, token-heavy wave chain.
-- **In wave mode, always merge a wave before dispatching the next** (Phase 2.7 /
-  `references/wave-mode.md`) — a dependent story must see its blockers `DONE` on the
-  target branch, so each wave's worktrees branch from the post-merge target HEAD.
-- **In wave mode, always confirm each wave** (`YES / SKIP STORY / ABORT`) before
-  dispatch, and **hold** any story whose blocker ended up BLOCKED-from-merge — never
-  dispatch a story with an unresolved dependency.
-- **Always isolate** each agent in its own worktree (`isolation: worktree`).
-- **Always run story file & code integrity verification** (Phase 3.5) after agents complete — catch missing status updates and code loss before conflict analysis.
-- **Never reattach to a returned sub-agent** — `SendMessage` is unavailable in this harness, so a dispatched agent cannot be resumed. The worktree is the only durable state.
-- **Freeze the merge target once, normalize every branch onto it, never hardcode `main`** (Phase 3.0 / 3.5b / 6) — resolve `$TARGET` / `$TARGET_SHA` before dispatch (detached HEAD → stop) and use it for integrity (3.5), conflict (4), and merge (6). On return, `git rebase --onto $TARGET_SHA <merge-base> story/XX-YY` strips any divergent base so a branch never drags foreign commits into the merge. Diffing against a literal `main` while on another branch is the exact cause of the "stray commit" archaeology.
-- **Always WIP-commit dirty worktrees before resume or cleanup** (Phase 3.5a) — the resume model needs committed state; an uncommitted worktree is one `prune` from lost work.
-- **Completion is orchestrator-verified, never agent-reported; a zero-progress resume is STUCK** (Phase 3.5 gate / 6 Option 3) — done = story file `DONE` + every criterion `[x]` + clean tree + QA green, never the agent's "Done". A continue round returning the same commit count AND same diff (the `0 tool uses · Done` no-op) is flagged `🚫 STUCK` — never accepted, never merged.
-- **Continue ◐ incomplete stories in place via the auto-continue loop, never from scratch** (Phase 6 Option 3) — dispatch a fresh agent INTO the existing worktree (`isolation: none`, in-worktree story path) and loop until the ✓ COMPLETE gate passes, cap 3 rounds. Fresh re-dispatch (new worktree) is only for ✗ failed / empty-diff stories. Still incomplete after 3 progressing rounds → too large, recommend splitting.
-- **Always run dry-run merge conflict detection** (Phase 4) before any merge.
-- **Always delete** agent worktrees after merging — `git worktree remove -f -f` then
-  `git worktree prune`.
-- **Never modify** story files in `tasks/` directly — `/ck-code:build` handles that.
-- **Single-story batches short-circuit to `/ck-code:build`; single-story waves do not.** Phase 2.5 detects a one-story *batch* scope (from Phase 1.2 / Phase 2 selection / `$ARGUMENTS`) and delegates to `/ck-code:build` directly — no worktree, no sub-agent dispatch, no conflict analysis, since nothing orchestrates after it. A single-story *wave* (Phase 2.7) instead keeps one-agent worktree dispatch (Phase 3, N=1) so the long-lived orchestrator stays lean across later waves and the work lands on the wave target branch — only a terminal single-story wave may inline. Parallel dispatch otherwise only makes sense for ≥ 2 stories.
-- **Run final QA on the merged target branch** before cleanup — cross-branch integration issues only appear after all merges.
+- **Never read individual story files in Phase 1** — the index is the only discovery source; bootstrap is the sole exception.
+- **Never let sub-agents edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or `EPIC.md`** — the orchestrator is their single writer, reconciling once on the target branch after each merge.
+- **Never modify story files in `tasks/` directly** — `/ck-code:build` owns them.
+- **Never hardcode `main`** — freeze `$TARGET` / `$TARGET_SHA` once (Phase 3.0) and use it for integrity, conflict, and merge.
+- **Never reattach to a returned sub-agent** — the worktree is its only durable state.
+- **Never trust an agent's self-report** — completion is orchestrator-verified (Phase 3.5 gate); a zero-progress continue round is `🚫 STUCK`.
+- **Never merge** a branch without QA (Phase 5) and `MANUAL-TEST PASS` (Phase 5.5).
+- **Never re-dispatch a ◐ incomplete story from scratch** — continue in place (Phase 6 Option 3); fresh worktrees are only for ✗ failed / empty-diff stories.
+- **Never escalate the sub-agent model on `Size:` alone** (Phase 3.1) — tier by reasoning complexity.
+- **Never run heavy QA commands inline** — delegate to parallel `ck-code:qa-validator` (Haiku) agents; inline is the fallback when that subagent_type is unregistered.
+- **Never run a deep wave chain silently** — the Wave Depth Guard requires `PROCEED / SPLIT` confirmation.
+- **Never dispatch a wave story whose blocker is unresolved**, and never span epics in one wave plan.
+- **Always dispatch agents in a single message** — one turn, multiple Agent calls.
+- **Always isolate** each dispatched agent in its own worktree (`isolation: worktree`).
+- **Always WIP-commit dirty worktrees** before resume or cleanup (Phase 3.5a).
+- **Always merge a wave before dispatching the next** (wave mode).
+- **Always run final QA on the merged target** before cleanup, then delete every agent worktree.
+- **Single-story *batches* short-circuit to `/ck-code:build`; single-story *waves* do not** (Phase 2.5 / 2.7).
 
 ## NEXT
 

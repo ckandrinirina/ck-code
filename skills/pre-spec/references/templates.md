@@ -413,22 +413,3 @@ Apply consistent translations across the whole document.
 For other languages, ask the user once for translations of these titles
 before generating the document.
 
----
-
-## Things to avoid in the OUTPUT (recap)
-
-- ❌ Code blocks describing types, schemas, or env vars
-- ❌ File paths inside the repo (`apps/backend/...`)
-- ❌ Internal tool names (slash commands, plugin names)
-- ❌ "Validated by CTO / approved by PO / etc." lines
-- ❌ Architectural primitives (Redis keys, locks, polling)
-- ❌ Walls of imperative engineering directives ("MUST X", "SHALL Y")
-
-## Things to include (recap)
-
-- ✅ Numbered objectives in plain language
-- ✅ Tables for rules and decisions
-- ✅ Narrative prose for behaviors with concrete defaults inline
-- ✅ Illustrative timelines at human granularity
-- ✅ Plain-language description of operational knobs
-- ✅ Open invitation for stakeholder comments at the end

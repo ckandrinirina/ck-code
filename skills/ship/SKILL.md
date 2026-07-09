@@ -36,7 +36,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ### 0.0 Version Gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) before any architecture-doc or `tasks/FEATURE_INDEX.md` read/write; on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). `tasks/VERSION.md` = `layout: v3` is the cheap fast path.
+Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
 
 ### 0.1 Resolve Current Branch
 
@@ -238,51 +238,16 @@ Present a final block covering: Commit (hash/branch/message), PR (url/status), G
 5. Commit, optionally PR.
 6. No issue updates (no story to link).
 
-## IMPORTANT GUIDELINES
+## RULES
 
-### No AI references — absolute
-
-See [`../../references/no-ai-references.md`](../../references/no-ai-references.md) for the full rule. It applies to commits, PRs, issue comments, branch names, and any GitHub artefact this skill produces.
-
-### Commit Messages Must Be Clean
-
-- Conventional commits format on the subject line; under 70 characters
-- Body is plain-language and readable by non-engineers — what users can now do, see, or notice
-- Body never mentions story IDs, epic names, AC checklists, test counts, file paths, class/function names
-- `Closes #123` footer when applicable
-- No emoji unless the repo convention uses them
-
-### Stage Selectively
-
-- Never `git add -A` or `git add .`; stage specific files by name
-- Never stage secrets, credentials, or environment files; review before committing
-
-### Issue Updates Are Careful
-
-- Only close issues when work is complete; use `Closes #X` so GitHub auto-closes on merge
-- Comments are plain-language outcome summaries — no AC lists, no test counts
-- Update parent checklists on completion
-
-### Branch Naming
-
-- Story: `story/[EE]-[SS]-[slug]`; Bug fix: `fix/[EE]-[SS]-[slug]`; Standalone: `[type]/[slug]`
-- **Never commit directly to `main` or `develop`** — Phase 0 enforces this
-
-### Existing PR Reuse
-
-- **Always check for an existing open PR on the current branch (Phase 0.2)** before opening a new one. Duplicate PRs for the same branch fragment review history.
-- **Always append, never overwrite.** When updating a PR description, preserve the original body and prior `## Updates` entries — add the new entry beneath them.
-- **Always push to the current branch when updating an existing PR** — `git push -u` is reserved for fresh branches (Phase 4.B.3).
-
-### gh CLI Requirements
-
-- `gh` must be installed and authenticated for Phases 1.3, 4, and 5.
-- If `gh` is missing/unauthenticated: skip GitHub steps, surface the error, continue with commit-only flow.
-- If an issue/epic lookup returns nothing, proceed without linking — do not block the commit.
-
-### Reusability
-
-Works with any project using the `tasks/` story format, and standalone without one. No project-specific references.
+- **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
+- **Never commit directly to `main` or `develop`** (Phase 0).
+- **Never `git add -A` or `git add .`** — stage files by name, and never stage secrets or env files.
+- **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language and read by non-engineers.
+- **Never overwrite a PR description** — append beneath the existing body and prior `## Updates` entries.
+- **Never open a second PR for a branch** that already has an open one (Phase 0.2).
+- **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only.
+- **Always close issues with a `Closes #X` footer**, and only when the work is complete.
 
 ---
 

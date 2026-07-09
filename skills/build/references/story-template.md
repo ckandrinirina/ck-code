@@ -58,8 +58,8 @@ Examples:
 
 ### Files Touched
 
-[Precise reference of every file and line changed — no descriptions, just locations]
-```
+[Precise reference of every file and line changed — no descriptions, just locations.
+CREATED = path only; MODIFIED = path:lines, collected via `git diff`.]
 
 CREATED src/server/ws/handler.rs
 CREATED src/server/ws/mod.rs
@@ -67,12 +67,12 @@ MODIFIED src/server/main.rs:12,45-48,92
 MODIFIED src/server/config.rs:8,23
 CREATED tests/ws_handler_test.rs
 
-```
-
 ### SOLID Compliance
+
 - [How SOLID was applied — 1 line per principle]
 
 ### Notes
+
 [Any important notes for future developers]
 ```
 

@@ -83,11 +83,8 @@ run now reads versus reading the whole architecture before. Always include it.
 
 ---
 
-## Safety checklist (every mode)
+## Reporting (every mode)
 
-- Confirm the feature list before slicing (`migrate`) or renaming (`sync`).
-- Archive, never delete, legacy docs.
-- Confirm before removing any non-empty section (`optimize` prune step).
-- Update `tasks/FEATURE_INDEX.md` `Docs` column and `README.md` index in the same run.
-- Report what was left unresolved (`—` cells, `## Unsorted (review)` content) so the
-  user knows what still needs `design`.
+Always report what was left unresolved (`—` cells, `## Unsorted (review)` content) so the
+user knows what still needs `design`. The skill's `## RULES` block owns the safety
+constraints (archive-never-delete, confirm-before-destructive, index routing).
