@@ -190,6 +190,21 @@ Required steps:
 4. Compile results into a "Best Practices Knowledge" block — feeds both
    expert skills (for current advice) and guide skills (as their content).
 
+### 1.6a Parallel research (fan-out — when ≥4 technologies)
+
+Each technology's research is independent, read-only, and non-interactive. When step 1
+identifies **≥4 technologies** to research (MISSING-ONLY mode: count only those needed for
+missing skills), dispatch one Agent per technology per the investigation variant in
+[../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: haiku`;
+escalate a single unit to `sonnet` only when its guidance requires weighing trade-offs the
+docs fetch cannot resolve. Each agent runs steps 2–3 for its technology (context7 lookup,
+WebSearch fallback, scoped per [references/context7-research.md](references/context7-research.md))
+and returns a structured research brief (conventions, structure, patterns, anti-patterns,
+performance, error handling, testing, version notes) — it writes nothing. The orchestrator
+merges the briefs into the single "Best Practices Knowledge" block (step 4), keeping verbose
+doc output out of its own context, and re-runs any failed/empty unit inline before Phase 2.
+Below 4 technologies, research inline.
+
 ---
 
 ## PHASE 2: DERIVE WHICH SKILLS TO GENERATE
