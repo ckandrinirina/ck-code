@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.3] — 2026-07-09
+
+### Changed
+
+- **version gate**: made lazy. Each skill now inlines the Tier-1 stamp check (`tasks/VERSION.md` reads `layout: v3` → proceed), and `references/version-gate.md` is loaded **only** when the stamp is missing or stale. A migrated project pays ~55 tokens instead of ~1,500 on every `design`/`plan`/`build`/`fix`/`ship`/`parallel-build` run; pre-v3 projects are still detected and routed to `/ck-code:doc-optimizer upgrade`. No user-visible behavior change.
+
 ## [3.3.2] — 2026-07-09
 
 ### Added
