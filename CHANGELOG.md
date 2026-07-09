@@ -5,6 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.2] — 2026-07-09
+
+### Added
+
+- **subagent-fanout**: model tiers on the fan-out contract — investigation (read-only) units run on `haiku`, artifact (templated write) units on `sonnet`, with escalation stated explicitly; every fan-out skill inherits this instead of letting subagents run on the orchestrator's model.
+
+### Changed
+
+- **all skills**: each rule is now stated once in its phase; `RULES` blocks are bare absolutes rather than a second copy of the phase bodies — about 7.2k tokens off always-loaded skill bodies.
+- **track**, **to-issues**: inline dashboards and issue-body heredocs moved to `references/`, so only the invoked command's template loads.
+- **help**: rewritten as a command table plus a pointer to the workflow map.
+- **conflict-analyzer**: pinned to `sonnet`; dry-run merges and hunk classification are mechanical.
+- **fix**, **doc-optimizer**, **team**: model pins at each dispatch site; **to-issues** set to `effort: low`.
+
+### Fixed
+
+- **design**: handed off to `plan`, skipping `team`, contradicting the workflow map and `start`'s own gate; **plan** now names `team` as a prerequisite.
+- **parallel-build**: `examples.md` demonstrated globbing story files — the anti-pattern Phase 1.1 forbids — and carried stale option numbers; QA commands are now detected per component manifest instead of a hardcoded epic-to-stack map.
+- **help**: documented retired pre-v3 layer docs and a fixed expert list, both contradicting the derived-skills design.
+- **build**: malformed code fences broke the Files Touched block in `story-template.md`.
+- **quick-story**: repo-root-relative reference links that did not resolve from the skill directory.
+
 ## [3.3.1] — 2026-07-02
 
 ### Changed
