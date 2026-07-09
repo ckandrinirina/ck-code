@@ -359,7 +359,7 @@ user they can run `/ck-code:ship [story-path]` later.
 
 Each gate is enforced inside its phase; this is the orchestrator's checklist.
 
-- **Version gate** — [shared procedure](../../references/version-gate.md), before any architecture-doc read/write.
+- **Version gate** — before any architecture-doc read/write: `tasks/VERSION.md` reads `layout: v3` → proceed; else run the [shared procedure](../../references/version-gate.md).
 - **Phase 1.2.0** — feature index read first; rollup updated at 8.6.
 - **Phase 1.2** — interactive selection prefers the parallel set; an explicit story arg is always single-story.
 - **Phase 2** — skills detected, `Read`, and reported BEFORE any planning or code.

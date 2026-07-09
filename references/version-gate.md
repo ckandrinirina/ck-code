@@ -39,10 +39,17 @@ Location: `tasks/VERSION.md`, sibling to `FEATURE_INDEX.md`.
 
 ### Tier 1 — fast path (the common case, one read)
 
+**Tier 1 lives inline in each skill; this file is opened only when it misses.** A skill's
+Phase 0 reads `tasks/VERSION.md` itself and proceeds on `layout: v3` — so a migrated
+project never loads this reference at all. Skills therefore restate *only* this one check,
+never the Tier-2 detection below.
+
 1. Read `tasks/VERSION.md`.
 2. If it exists AND its `layout:` value equals `LAYOUT` (`v3`) → **PASS**. Proceed
-   immediately; do not scan the filesystem. (If the `ck-code:` line differs from
-   the running version, optionally restamp that one line — cheap, never a migration.)
+   immediately; do not scan the filesystem, do not read this file. (If the `ck-code:` line
+   differs from the running version, optionally restamp that one line — cheap, never a
+   migration.)
+3. Missing or `layout:` ≠ `v3` → read this file and run Tier 2.
 
 ### Tier 2 — full detection (only when the stamp is missing or stale)
 
@@ -99,7 +106,8 @@ greenfield `design` run `tasks/` may not exist yet. Content: the template above 
 | `doc-optimizer`                                                                                                    | **Never gates** — it is the migrator. `upgrade` writes the stamp.                                                                                                                           |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links
-here; it does not restate the detection logic.
+here. It inlines the Tier-1 stamp check (above) so the common case costs one small
+read; it never restates the Tier-2 detection logic.
 
 ## Rules
 
@@ -111,4 +119,4 @@ here; it does not restate the detection logic.
 - **Compare on `layout:` (the major), never the full `ck-code:` version** — a
   minor/patch difference is not a migration trigger.
 - **Tier 2 runs only on a missing/stale stamp** — a valid `layout: v3` stamp short-
-  circuits with no filesystem scan.
+  circuits with no filesystem scan and without loading this file.

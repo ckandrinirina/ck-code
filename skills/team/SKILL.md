@@ -65,7 +65,7 @@ A depth flag and a mode flag can be combined (e.g. `--max --check` audits the fu
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
+Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects, offers `/ck-code:doc-optimizer upgrade`, and stamps.
 
 ---
 

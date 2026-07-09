@@ -363,7 +363,7 @@ Use the ship prompt in `references/qa-dialogue.md` (Phase 8.7). `SHIP` → invok
 
 Each gate is enforced inside its phase; this is the checklist.
 
-- **Version gate** — [shared procedure](../../references/version-gate.md), before any architecture-doc read/write.
+- **Version gate** — before any architecture-doc read/write: `tasks/VERSION.md` reads `layout: v3` → proceed; else run the [shared procedure](../../references/version-gate.md).
 - **Phase 2.5** — scope analysis mandatory, even with an explicit story path.
 - **Phase 2.5.1** — score `TODO` rows too; a TODO match triggers verdict E.
 - **Phase 2.5.2 / 2.5.5 / 5.4** — confirmation gates; never write without an explicit `YES`.

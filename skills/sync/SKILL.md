@@ -31,7 +31,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
+Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects, offers `/ck-code:doc-optimizer upgrade`, and stamps.
 
 ## PHASE 1: SELECT PLAN(S)
 

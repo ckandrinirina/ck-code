@@ -24,7 +24,7 @@ Applies when the work fits in one or two sentences and the target epic already e
 
 ## PHASE 0 — Version gate (hard gate)
 
-Run the shared [version gate](../../references/version-gate.md) (HARD GATE).
+Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects, offers `/ck-code:doc-optimizer upgrade`, and stamps.
 
 ## PHASE 1 — Locate active plan & target epic
 

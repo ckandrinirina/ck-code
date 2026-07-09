@@ -67,7 +67,7 @@ Spec file path comes from `$ARGUMENTS`.
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Before reading/writing any `docs/architecture/` doc, run the shared [version gate](../../references/version-gate.md); on BLOCK (pre-v3), offer `/ck-code:doc-optimizer upgrade` and stop until it PASSes (or the user declines). On greenfield (nothing to migrate) it stamps `tasks/VERSION.md` and passes. Fast path: `tasks/VERSION.md` = `layout: v3`.
+Before reading/writing any `docs/architecture/` doc: Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — on a pre-v3 marker it offers `/ck-code:doc-optimizer upgrade` and stops until it PASSes (or the user declines); on greenfield it stamps `tasks/VERSION.md` and passes.
 
 ---
 

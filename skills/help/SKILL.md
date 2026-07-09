@@ -8,7 +8,7 @@ disallowed-tools: Write, Edit, NotebookEdit
 
 # ck-code — Command Reference
 
-Run the [version gate](../../references/version-gate.md) in hint-only mode (never block).
+Read `tasks/VERSION.md`. If `layout: v3` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
 
 The workflow graph, hand-offs, output locations, "when to use which", and the
 misuse-redirect matrix all live in

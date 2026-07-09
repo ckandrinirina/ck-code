@@ -29,7 +29,7 @@ story statuses, and recommendations for what to implement next.
 
 **This phase runs for ALL commands.**
 
-Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+Read `tasks/VERSION.md`. If `layout: v3` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
 
 ### 1.1 Find All Task Plans
 

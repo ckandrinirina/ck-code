@@ -14,7 +14,7 @@ Produces two sections for the most recently implemented story or feature:
 1. **Manual verification** — exact commands to confirm it works
 2. **What was built** — learner-friendly explanation of every technology and pattern used
 
-> **Note:** Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+> **Note:** Read `tasks/VERSION.md`. If `layout: v3` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
 
 ---
 

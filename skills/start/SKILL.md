@@ -26,7 +26,7 @@ For the full workflow graph and output locations, see
 
 ## PHASE 1: INSPECT PROJECT STATE
 
-Run the [version gate](../../references/version-gate.md) in hint-only mode: if a pre-v3 doc layout is detected, emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+Read `tasks/VERSION.md`. If `layout: v3` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
 
 The read-only project-state probes are **pre-loaded** at skill start via dynamic
 context injection — read the snapshot below and do **not** re-run these `ls`/`find`/`gh`
