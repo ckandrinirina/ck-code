@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.4] — 2026-07-09
+
+### Added
+
+- **plan**: Phase 4.4b parallel story-file generation — when a confirmed plan has ≥8 stories, story files are written by one Sonnet artifact agent each (per `subagent-fanout.md`), while overview, epics, indexes, ledger, and roadmap stay orchestrator-owned. Smaller plans keep writing inline.
+- **team**: Phase 1.6a parallel research — when ≥4 technologies need research, each gets its own read-only Haiku investigator (context7 + WebSearch) returning a structured brief; the orchestrator merges briefs into the Best Practices Knowledge block, keeping verbose doc output out of its context. Fewer technologies research inline.
+
 ## [3.3.3] — 2026-07-09
 
 ### Changed
