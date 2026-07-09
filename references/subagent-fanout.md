@@ -20,10 +20,25 @@ Do **not** fan out sequential chains (TDD red→green→refactor), stateful/orde
 
 ## The two variants
 
-| Variant                       | Subagent does                                             | `isolation`                                              | Writes?              |
-| ----------------------------- | --------------------------------------------------------- | -------------------------------------------------------- | -------------------- |
-| **Investigation** (read-only) | Greps/reads/traces one slice, returns a structured report | `none`                                                   | Never — reports only |
-| **Artifact** (write)          | Produces ONE file in its own dedicated path               | `none` (or `worktree` only if units touch shared source) | Its own path only    |
+| Variant                       | Subagent does                                             | `model`                | `isolation`                                              | Writes?              |
+| ----------------------------- | --------------------------------------------------------- | ---------------------- | -------------------------------------------------------- | -------------------- |
+| **Investigation** (read-only) | Greps/reads/traces one slice, returns a structured report | `haiku`                | `none`                                                   | Never — reports only |
+| **Artifact** (write)          | Produces ONE file in its own dedicated path               | `sonnet`               | `none` (or `worktree` only if units touch shared source) | Its own path only    |
+
+## Model tier (pass `model:` on every dispatch)
+
+Match the model to the *reasoning* the unit needs, never to the unit's size:
+
+- **`haiku`** — mechanical work: grep/trace/count, path extraction, token measurement,
+  classifying output against fixed criteria. No design judgment.
+- **`sonnet`** — filling a frozen template from an already-resolved slice of context.
+  Fidelity to the input matters; the structure is given.
+- **Escalate one tier** only when the unit itself must *decide* something the orchestrator
+  could not pre-resolve — a novel algorithm, a security-sensitive trade-off, an ambiguous
+  requirement. Escalation is the exception; state why in the dispatch prompt.
+
+Omitting `model:` makes the subagent inherit the orchestrator's tier — the most expensive
+model in play — for work that rarely needs it. Never omit it.
 
 ## The orchestrator-owns-shared-writes rule (non-negotiable)
 
@@ -46,9 +61,10 @@ then pass each subagent its slice as **read-only** context.
 1. **Gate** — check the skill's threshold (unit count, input size, mode). Below it → inline, no fan-out.
 2. **Freeze shared state** — author globals/`_shared.md`/indexes; finish user prompts.
 3. **Dispatch** — one `Agent` call per unit, in a single message so they run concurrently.
-   Use `subagent_type: general-purpose` unless a registered ck-code agent fits the unit.
-   Give each: its unit id, its slice of frozen context, its template reference, and an
-   explicit "write only `<your path>`; do not prompt; do not touch shared files" constraint.
+   Use `subagent_type: general-purpose` unless a registered ck-code agent fits the unit, and
+   set `model:` from the tier table above. Give each: its unit id, its slice of frozen
+   context, its template reference, and an explicit "write only `<your path>`; do not prompt;
+   do not touch shared files" constraint.
 4. **Collect** — gather every subagent's result; a failed/empty agent is recovered or
    redone inline by the orchestrator, never left silently missing.
 5. **Converge** — merge into shared files, resolve conflicts, verify each unit landed, summarize.

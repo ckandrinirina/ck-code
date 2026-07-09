@@ -2,6 +2,7 @@
 name: conflict-analyzer
 description: Use when `/ck-code:parallel-build` needs to know whether multiple completed branches will merge cleanly. Returns a conflict report and a safe merge order.
 tools: Read, Bash, Grep
+model: sonnet
 ---
 
 # conflict-analyzer
