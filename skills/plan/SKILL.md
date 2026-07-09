@@ -168,7 +168,8 @@ analysis brief (its features, requirements, tech stack, intra-domain deps) — n
 `tasks/`. Fix PROJECT IDENTITY (1.2) before dispatch so slugs stay consistent, then merge the
 briefs here and do **all** cross-domain dependency mapping yourself in 1.4 (subagents see only
 their slice and would miss integration points). Skip when components are few, tightly coupled, or
-the spec is small — Phase 2 structuring and Phase 4 writes always stay sequential.
+the spec is small — Phase 2 structuring and all Phase 4 shared writes always stay sequential
+(story files may fan out per Phase 4.4b).
 
 ### 1.3 Research Tech Stack (when beneficial)
 
@@ -353,6 +354,22 @@ For the epic template, see [references/templates.md#epic-template](references/te
 
 For the story file template, see [references/templates.md#story-template](references/templates.md#story-template).
 
+### 4.4b Parallel story-file generation (fan-out — when ≥8 stories)
+
+Each story file is one independent artifact at its own path, fully decided in Phase 2 and
+confirmed in Phase 3. When the confirmed plan has **≥8 stories**, dispatch one
+`general-purpose` Agent per story per the artifact variant in
+[../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: sonnet`,
+since each agent fills the frozen story template from an already-resolved slice. Give each:
+its story's full Phase 2 breakdown (title, size, acceptance criteria, `## Implementation
+Tasks` list, `Blocked by` dependencies, files-to-touch), the template reference
+([templates.md#story-template](references/templates.md#story-template)), and its exact output
+path; it writes exactly one `stories/SS_<slug>.md` and nothing else. The orchestrator itself
+writes `PROJECT_OVERVIEW.md`, every `EPIC.md`, and all of 4.5–4.6 (indexes, ledger, roadmap)
+— shared files never go to a subagent, and 4.5 generates the index from the Phase 2 in-memory
+story list, not by re-reading the fanned-out files. On collection, verify every story file
+landed; rewrite any missing/failed unit inline. Below 8 stories, write inline.
+
 ### 4.5 STORIES_INDEX.md Content
 
 After all story files are written, generate `tasks/<slug>/STORIES_INDEX.md` from the in-memory list of stories you just authored. Format and mutation protocol: see [`ck-code/references/stories-index.md`](../../references/stories-index.md). Template: [references/templates.md#stories-index-template](references/templates.md#stories-index-template).
@@ -403,6 +420,7 @@ An epic of independent stories is a natural fit for `/ck-code:parallel-build`.
 - **Never plan an L/XL story** (Phase 2.2) — split at a natural seam and connect with `Blocked by`.
 - **Never skip the final Integration & E2E epic** (Phase 2.4), and never fold it into a feature epic.
 - **Never leave a planned feature `pending`** in `DESIGN_LEDGER.md` (Phase 4.5c).
+- **Never delegate shared writes to a subagent** (Phase 4.4b) — overview, epics, indexes, ledger, and roadmap are orchestrator-owned; subagents write only their own story file.
 - **Never hardcode** project names, technologies, or paths — derive everything from the spec.
 - **Always cover every functional requirement** with at least one story; flag vague ones for clarification.
 - **Always preserve the spec's technical terms** in story titles and descriptions.
