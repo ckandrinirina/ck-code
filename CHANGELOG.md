@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.5] — 2026-07-10
+
+### Changed
+
+- **parallel-build**: manual testing moved from the pre-merge per-worktree gate (old Phase 5.5) to a post-merge Phase 6.5 on the target branch, because an agent worktree has no runnable environment; bug fixes now commit to `$TARGET`, wave mode gates once per wave right after each wave merge, and merge-eligibility depends on automated QA alone.
+
 ## [3.3.4] — 2026-07-09
 
 ### Added
