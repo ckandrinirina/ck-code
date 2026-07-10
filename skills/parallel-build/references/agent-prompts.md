@@ -35,10 +35,10 @@ prompt: |
   - Do NOT run build's Phase 1.4 Parallel-Build Opportunity Check — you are already
     inside a parallel run and cannot prompt the user. Proceed straight to Phase 1.5.
   - **Stop after Phase 8.4 (Mark All Tasks Completed) — DO NOT run Phase 8.5
-    (User Manual Testing).** The parallel-build orchestrator runs the
-    per-story manual-testing gate in its own Phase 5.5 — sub-agents cannot
-    interact with the user. Leave the story `Status: IN PROGRESS` and report
-    back; the orchestrator will flip it to `DONE` after manual-test PASS.
+    (User Manual Testing).** Sub-agents cannot interact with the user, and the
+    software is not runnable from a worktree: the orchestrator manual-tests on
+    the target branch *after* your work is merged (its Phase 6.5). Leave the
+    story file exactly as Phase 8.4 leaves it and report back.
   - If /ck-code:build fails or encounters a blocker, report the error clearly in your final response
 
   END YOUR REPLY WITH THIS EXACT BLOCK (the orchestrator parses it; a missing block is
@@ -126,27 +126,26 @@ prompt: |
   Report PASS only if every stack command succeeded.
 ```
 
-## Phase 5.5.3 — Bug-Fix Sub-Agent Prompt
+## Phase 6.5.3 — Bug-Fix Sub-Agent Prompt
 
-Used when a Phase 5.5 manual-test reports `ISSUES`. Dispatch ONE Agent into
-the story's existing worktree (do NOT create a new worktree — reuse the one
-the original story agent left behind).
+Used when a Phase 6.5 **post-merge** manual test reports `ISSUES`. The story is already
+merged, so its worktree branch is no longer the source of truth: dispatch ONE Agent into
+the **main checkout on the target branch**, where the fix lands as a new commit.
 
 ```
 subagent_type: general-purpose
 model: [tier resolved by reasoning complexity — see SKILL.md 3.1; a bug-fix typically matches the story's original tier]
-isolation: none   # reuse the existing worktree path
-cwd: <existing worktree path for this story>
-description: "Fix manual-test bug for story XX-YY: [bug summary]"
+isolation: none   # main checkout — the story is already merged
+cwd: <repo root>
+description: "Fix post-merge manual-test bug for story XX-YY: [bug summary]"
 prompt: |
-  You are running inside the existing worktree for story XX-YY.
+  You are running in the main checkout on branch <$TARGET>, which already contains the
+  merged code for story XX-YY.
 
-  STEP 0 — confirm `git rev-parse --show-toplevel` equals the worktree path below; if not,
-  STOP and report "WRONG WORKTREE". Read the story file from the in-worktree path, never
-  the main checkout.
+  STEP 0 — confirm `git rev-parse --abbrev-ref HEAD` equals <$TARGET>; if not, STOP and
+  report "WRONG BRANCH". Never check out or commit onto a `story/…` branch.
 
-  Worktree: <existing worktree path>
-  Story file (INSIDE the worktree): <worktree path>/<relative story path>
+  Story file: <repo-root-relative story path>
   Reported bug: <verbatim bug description from user>
   Repro:    <steps>
   Expected: <expected>
@@ -156,20 +155,20 @@ prompt: |
   1. Invoke the /ck-code:build skill via the Skill tool:
      Skill({ skill: "ck-code:build", args: "<story path>" })
   2. The build skill re-enters at Phase 8.5.3 (Bug-Fix Sub-Loop) because the
-     story is IN PROGRESS with the manual-test bug above to address. It will:
+     story carries the manual-test bug above to address. It will:
        - write a failing regression test (TDD red)
        - apply the minimum fix (TDD green)
        - re-run Phase 6 (Refactor) and Phase 7 (QA) — both MANDATORY
        - update the `## Manual-Test Bugs` section: status OPEN → FIXED
-       - commit inside this worktree
+       - commit on <$TARGET>
   3. Stop after the bug entry is FIXED and Phase 7 QA reports PASS.
      DO NOT run Phase 8.5.1 (manual-test prompt) — the parallel-build
      orchestrator will re-prompt the user once you return.
 
   Constraints:
-  - Story status stays IN PROGRESS — do NOT flip to DONE.
+  - The story stays DONE in the indexes — this is a post-merge fix, not a re-open.
   - Modify only files relevant to this fix and to the story.
-  - Commit the fix inside the worktree before returning.
+  - Commit the fix on <$TARGET> before returning.
 
   END YOUR REPLY WITH THIS EXACT BLOCK:
     STATUS: SUCCESS | PARTIAL | BLOCKED

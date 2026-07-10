@@ -103,21 +103,26 @@ For each wave, in order:
    `/ck-code:build` — there is no downstream orchestrator context to protect and it regains
    build's interactive gates.
 4. **Run the pipeline on this wave's stories:** SKILL.md Phase 3 (dispatch) → 3.5
-   (integrity) → 4 (conflict, intra-wave only) → 5 (QA) → 5.5 (manual-test gate).
+   (integrity) → 4 (conflict, intra-wave only) → 5 (QA).
 5. **Merge this wave** into the target branch with Phase 6 Option 1 logic — merge-eligible
-   = QA-passed + manual-test-passed + conflict-free. Then **reconcile the shared indexes on
-   the target branch** (`STORIES_INDEX.md` rows → `DONE`, each story's `EPIC.md` row →
-   `DONE`, `FEATURE_INDEX.md` rollup) — sub-agents deferred these edits, and this
-   reconciliation MUST land before step 8 so the next wave's re-resolve sees this wave's
-   stories as `DONE`. Run the post-merge QA on the target.
-6. **Cleanup this wave's worktrees** (Phase 7) before the next wave. Keep only the
-   worktrees of BLOCKED stories.
-7. **Update Tasks.** Mark this wave's merged stories `completed`; a BLOCKED story stays
-   `in_progress` with the blocker recorded.
-8. **Re-resolve.** Re-read the index from the target branch (this wave's stories now read
+   = QA-passed + conflict-free. Then **reconcile the shared indexes on the target branch**
+   (`STORIES_INDEX.md` rows → `DONE`, each story's `EPIC.md` row → `DONE`,
+   `FEATURE_INDEX.md` rollup) — sub-agents deferred these edits, and this reconciliation
+   MUST land before step 9 so the next wave's re-resolve sees this wave's stories as
+   `DONE`. Run the post-merge QA on the target.
+6. **Manual-test the merged wave** (SKILL.md Phase 6.5) on the target branch in the main
+   checkout — never in a worktree, which has no runnable environment and holds only one
+   story's code. Gate here, per wave, so the next wave never builds on unverified code. A
+   story the operator reverts (6.5.4 option C) returns to `IN PROGRESS`, holds its
+   downstream dependents, and keeps its worktree.
+7. **Cleanup this wave's worktrees** (Phase 7) before the next wave. Keep the worktrees of
+   BLOCKED and reverted stories.
+8. **Update Tasks.** Mark this wave's merged, manual-test-passed stories `completed`; a
+   BLOCKED or reverted story stays `in_progress` with the blocker recorded.
+9. **Re-resolve.** Re-read the index from the target branch (this wave's stories now read
    `DONE`). Recompute the next wave's ready set — a story dispatches only when every
    blocker is `DONE`.
-9. Loop until no scheduled stories remain.
+10. Loop until no scheduled stories remain.
 
 ## Blocked Dependency Handling
 

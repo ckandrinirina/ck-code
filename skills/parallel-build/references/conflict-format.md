@@ -74,41 +74,60 @@ QA Report:
 ─────────────────────────────────────────────────────
 ```
 
-## Phase 5.5 — Per-Story Manual-Test Prompt
-
-Run sequentially per story in the QA-passing set.
+## Phase 6 — Final Summary & Choices
 
 ```
-Manual test for story XX-YY: [story title]
+Summary:
+  ✓ Ready to merge:   story/02-05  (QA passed, no conflicts)
+  ◐ Incomplete:       story/03-04  (agent stopped early — partial work in worktree)
+  🚫 Stuck:           story/03-07  (auto-continue made 0 progress / too large — never merged)
+  ⚠ Review needed:   story/03-01  (QA failed: clippy errors)
+  ✗ Build failed:    story/02-06  (agent error / empty diff during /ck-code:build)
 
-Please manually verify:
+Manual testing runs after the merge, on the target branch (Phase 6.5).
+
+What would you like to do?
+  [1] Merge ready branches now (conflict-free order)
+  [2] Review worktrees first, merge manually
+  [3] Continue ◐ incomplete stories in place (resume in existing worktrees)
+  [4] Re-dispatch ✗ failed / empty stories from scratch (new worktrees)
+```
+
+## Phase 6.5 — Per-Story Manual-Test Prompt
+
+Run sequentially per merged story, in the main checkout on the target branch.
+
+```
+Manual test for story XX-YY: [story title]   (merged into <$TARGET>)
+
+Please manually verify — in the main checkout, not a worktree:
 - [Specific test scenario 1 from acceptance criteria]
 - [Specific test scenario 2]
 - [Edge case to try]
 
-Worktree:  <path>
-Branch:    story/XX-YY
+Branch:    <$TARGET>  (all merged stories of this batch/wave are present)
+Merge SHA: <merge commit>
 
 Result? PASS / ISSUES
 ```
 
-## Phase 5.5 — Manual-Test Result Table
+## Phase 6.5 — Manual-Test Result Table
 
-Print after each story's gate is settled (PASS, BLOCKED, or escalation).
+Print after each story's gate is settled (PASS, accepted, or reverted).
 
 ```
-Manual-Test Gate:
+Manual-Test Gate (post-merge on <$TARGET>):
 ─────────────────────────────────────────────────────
   02-05  →  ✓ MANUAL-TEST PASS  (cycle 1)
-  03-01  →  ✓ MANUAL-TEST PASS  (cycle 2 — 1 bug fixed: BUG-1 timezone offset)
-  02-06  →  🚫 BLOCKED — 3 cycles, escalation pending
+  03-01  →  ✓ MANUAL-TEST PASS  (cycle 2 — 1 bug fixed on target: BUG-1 timezone offset)
+  02-06  →  ↩ REVERTED — 3 cycles exhausted, story reopened IN PROGRESS
 ─────────────────────────────────────────────────────
 ```
 
-## Phase 5.5.4 — Escalation Prompt (after 3 cycles)
+## Phase 6.5.4 — Escalation Prompt (after 3 cycles)
 
 ```
-Story XX-YY has run 3 manual-test bug-fix cycles and issues remain:
+Story XX-YY has run 3 post-merge manual-test bug-fix cycles and issues remain:
 
 Cycles:
   #1  <bug summary>  → FIXED
@@ -117,30 +136,13 @@ Cycles:
 
 Options:
 
-A) FIX MANUALLY  — You apply the specific fix in the worktree;
+A) FIX MANUALLY  — You apply the specific fix on <$TARGET>;
                    Refactor + QA will re-run against your changes
 B) ACCEPT AS-IS  — Mark story MANUAL-TEST PASS with #3 as a known issue
-C) ABORT         — Mark story BLOCKED FROM MERGE; keep worktree for review
+C) REVERT        — git revert -m 1 <merge-sha>; story reopens IN PROGRESS in the
+                   indexes, its worktree is kept, dependents are held
 
 Reply A / B / C.
-```
-
-## Phase 6 — Final Summary & Choices
-
-```
-Summary:
-  ✓ Ready to merge:   story/02-05  (QA + manual-test passed, no conflicts)
-  ◐ Incomplete:       story/03-04  (agent stopped early — partial work in worktree)
-  🚫 Stuck:           story/03-07  (auto-continue made 0 progress / too large — never merged)
-  ⚠ Review needed:   story/03-01  (QA failed: clippy errors)
-  ⚠ Manual-test blocked: story/04-02  (3 cycles exhausted — escalation pending)
-  ✗ Build failed:    story/02-06  (agent error / empty diff during /ck-code:build)
-
-What would you like to do?
-  [1] Merge ready branches now (conflict-free order)
-  [2] Review worktrees first, merge manually
-  [3] Continue ◐ incomplete stories in place (resume in existing worktrees)
-  [4] Re-dispatch ✗ failed / empty stories from scratch (new worktrees)
 ```
 
 ## Phase 7 — Worktree Cleanup Confirmation

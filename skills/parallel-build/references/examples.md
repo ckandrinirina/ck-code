@@ -56,10 +56,6 @@ One `ck-code:qa-validator` (Haiku) agent per candidate, dispatched in a single m
 each running its component's detected stack commands **inside its own worktree**. Both
 return PASS. 02-06 is not a QA candidate.
 
-## Phase 5.5 — Manual Test Gate
-
-Orchestrator prompts per story. Both `PASS` → both merge-eligible.
-
 ## Phase 6 — Merge & Reconcile
 
 The user picks `[1] Merge ready branches now`. Branches merge into `$TARGET` in the
@@ -69,6 +65,13 @@ the `FEATURE_INDEX.md` rollup recomputed. Final QA on the merged target passes.
 
 02-06 (✗ failed, empty of salvageable work) is offered under Option 4 — re-dispatch from
 scratch in a new worktree.
+
+## Phase 6.5 — Post-Merge Manual Test Gate
+
+With both stories merged, the operator runs the app once from the main checkout on
+`$TARGET` — no per-worktree install, and 02-05's UI is testable against 03-01's endpoint.
+02-05 `PASS` on cycle 1. 03-01 reports `ISSUES` (timezone offset); a bug-fix agent commits
+a regression test + fix **on `$TARGET`**, and cycle 2 passes.
 
 ## Phase 7 — Worktree Cleanup
 

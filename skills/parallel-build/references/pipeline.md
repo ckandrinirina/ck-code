@@ -196,7 +196,8 @@ done
 
 - `complete` = the four-part check in Phase 3.5 (`Status: DONE` + no `[ ]` criteria + clean
   tree + QA green). Re-evaluate after the loop.
-- Loop exited COMPLETE → re-run Phase 4 → 5 → 5.5, then treat as merge-eligible.
+- Loop exited COMPLETE → re-run Phase 4 → 5, then treat as merge-eligible (manual testing
+  happens post-merge in Phase 6.5).
 - Loop exited STUCK → flag `🚫 STUCK`, keep worktree, never merge.
 - Loop hit `CAP` while still progressing → story too large; stop and recommend splitting.
 

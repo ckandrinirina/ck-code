@@ -178,8 +178,8 @@ Follow [`references/wave-mode.md`](references/wave-mode.md) in full. Key contrac
    plan table, and create one Claude Task per scheduled story prefixed by wave (`W1 · …`).
 2. **Per wave:** confirm (`YES / SKIP STORY / ABORT`) → branch worktrees from the **target
    branch's current HEAD** (carries prior waves' merged code) → run Phase 3 → 3.5 → 4 → 5
-   → 5.5 → **merge this wave** (Phase 6 Option 1) → **cleanup this wave's worktrees**
-   (Phase 7) → mark its Tasks `completed`.
+   → **merge this wave** (Phase 6 Option 1) → **manual-test the merged wave on the target**
+   (Phase 6.5) → **cleanup this wave's worktrees** (Phase 7) → mark its Tasks `completed`.
 3. **Re-resolve** the next wave's ready set from the freshly-merged index and loop until
    the epic is done. A story whose blocker ended up BLOCKED-from-merge is **held** and
    reported, not dispatched.
@@ -230,12 +230,13 @@ Lifecycle:
 - **3.3 dispatch** → mark each task `in_progress`.
 - **3.4 results** → agent failed: keep `in_progress`, note the error; agent succeeded:
   leave `in_progress` (work continues through integrity, conflict, QA, manual-test).
-- **3.5 / 4 / 5 / 5.5** → a 🚫 BLOCKED or QA-failed story stays `in_progress` with the
+- **3.5 / 4 / 5** → a 🚫 BLOCKED or QA-failed story stays `in_progress` with the
   blocker recorded in its task.
-- **6 merge** → mark `completed` once the story's branch is merged (or the operator
-  accepts/aborts it).
+- **6.5 manual-test gate** → mark `completed` once the merged story passes its gate (or
+  the operator accepts it with a known issue). A reverted or escalated story stays
+  `in_progress`.
 
-Run TaskList at the 3.4, 5, and 6 checkpoints to print the board.
+Run TaskList at the 3.4, 5, and 6.5 checkpoints to print the board.
 
 **Use Claude Tasks when the Task tools are available.** If they are not, skip the board
 and rely on the per-story status tables already printed in Phases 3.4 / 5 / 6.
@@ -384,30 +385,8 @@ Collect each agent's verdict and print the per-story QA Report (format in
 `references/conflict-format.md`). Mark any story with QA failures as **BLOCKED from merge** —
 keep its worktree. ◐ incomplete and 🚫 blocked stories from Phase 3.5 are not QA candidates.
 
-## PHASE 5.5: PER-STORY MANUAL TESTING GATE (orchestrator-level, sequential)
-
-Sub-agents in Phase 3 cannot interact with the user, so manual testing runs at
-the orchestrator level after Phase 5 QA passes. One gate per story, capped at
-3 cycles.
-
-For each story in the QA-passing set:
-
-**5.5.1** Present the manual-test prompt (template in `references/conflict-format.md`)
-with scenarios from the story's acceptance criteria + one edge case.
-Ask `Result? PASS / ISSUES`.
-
-**5.5.2** On `PASS` → mark the story `MANUAL-TEST PASS` (merge-eligible in Phase 6).
-
-**5.5.3** On `ISSUES` → capture the bug from the user, then dispatch ONE Agent
-into that story's existing worktree (prompt template in
-`references/agent-prompts.md` — Phase 5.5.3 Bug-Fix Sub-Agent). The agent invokes
-`/ck-code:build`, which re-enters at Phase 8.5.3 (regression test → fix →
-Refactor → QA) and commits inside the worktree. Story stays IN PROGRESS.
-After the agent returns, loop back to 5.5.1 for the same story.
-
-**5.5.4** Cap = 3 cycles per story. On the third `ISSUES`, mark
-`BLOCKED FROM MERGE — escalation pending` (escalation template in
-`references/conflict-format.md` Phase 5.5.4). Surface in the Phase 6 summary.
+Automated QA is the last gate before merge. **Manual testing runs after the merge**, on the
+target branch — Phase 6.5.
 
 ## PHASE 6: CLEANUP PROMPT
 
@@ -419,13 +398,13 @@ and use AskUserQuestion to wait for the choice:
 3. Continue ◐ incomplete stories in place (resume the work in their existing worktrees)
 4. Re-dispatch ✗ failed / empty stories from scratch (new worktrees)
 
-Stories without `MANUAL-TEST PASS` from Phase 5.5 are **not merge-eligible** under
-Option 1, even if QA and conflict checks pass.
+Merge-eligible = Phase 3.5 ✓ COMPLETE (or ⚠ warning) + Phase 5 QA passing + conflict-free.
+Manual testing is **not** a merge gate — it runs after the merge, in Phase 6.5.
 
-**Option 1** — merge QA-passing, manual-test-passing, conflict-free branches in suggested
-order into the **orchestrator's current branch** (never a hardcoded `main`; detached HEAD
-→ stop and ask). Resolve and confirm the target, merge each branch, then run final QA on
-the merged target to catch cross-branch integration issues. Procedure:
+**Option 1** — merge QA-passing, conflict-free branches in suggested order into the
+**orchestrator's current branch** (never a hardcoded `main`; detached HEAD → stop and ask).
+Resolve and confirm the target, merge each branch, then run final QA on the merged target to
+catch cross-branch integration issues. Procedure:
 [`references/pipeline.md`](references/pipeline.md).
 
 **After the merges land, reconcile the shared indexes once on the target branch** — the
@@ -441,10 +420,11 @@ sole writer here, so these edits never conflict. In one pass:
    leave the rollup stale after a completed parallel build (per
    [`../../references/feature-index.md`](../../references/feature-index.md)).
 
-Commit the reconciliation on the target branch. If clean, proceed to **Phase 7**.
+Commit the reconciliation on the target branch. If clean, proceed to **Phase 6.5**
+(manual testing), then **Phase 7**.
 
 **Option 2** — print worktree paths and stop; worktrees stay intact for manual review.
-Remind the user to run Phase 7 after merging.
+Remind the user to run Phase 6.5 then Phase 7 after merging.
 
 **Option 3 — Continue in place (◐ incomplete stories) — AUTO-CONTINUE UNTIL VERIFIED.**
 One dispatch cannot be guaranteed to finish an XL story (the per-agent budget is the
@@ -462,7 +442,7 @@ the Phase 3.5 ✓ COMPLETE gate passes**, capped at 3 rounds. Loop mechanics + c
 - **CAP reached while still progressing** → too large for one budget: stop and **recommend
   splitting**. Do not claim done.
 
-Verified complete → re-run Phase 4 → 5 → 5.5, then back to this prompt as merge-eligible.
+Verified complete → re-run Phase 4 → 5, then back to this prompt as merge-eligible.
 The loop's only exits — *verified complete* or *flagged (stuck / too-large)* — guarantee a
 worktree can never again silently report Done with unfinished or empty work.
 
@@ -470,9 +450,40 @@ worktree can never again silently report Done with unfinished or empty work.
 **new** worktrees only for stories that failed with an error or have an empty diff (no
 salvageable progress). Do NOT use this for ◐ incomplete stories — it discards their work.
 
+## PHASE 6.5: POST-MERGE MANUAL TESTING GATE (target branch, sequential)
+
+Runs after the Option-1 merge, index reconciliation, and post-merge QA — **before** Phase 7
+cleanup. Manual testing never happens inside an agent worktree: a throwaway
+`.claude/worktrees/agent-XXXXXXXX` tree has no installed dependencies, dev server, env, or
+DB, and holds one story's code in isolation from its siblings'. The only place the operator
+can exercise the software is the main checkout on `$TARGET`, where every merged story sits
+together. Sub-agents also cannot prompt the user, so this gate is always orchestrator-level.
+
+For each merged story, sequentially (cap 3 cycles per story):
+
+**6.5.1** Present the manual-test prompt (template in `references/conflict-format.md`) with
+scenarios from the story's acceptance criteria + one edge case. Ask `Result? PASS / ISSUES`.
+
+**6.5.2** On `PASS` → mark the story `MANUAL-TEST PASS` and its Task `completed`.
+
+**6.5.3** On `ISSUES` → capture the bug, then dispatch ONE Agent into the **main checkout on
+`$TARGET`** (`isolation: none`, `cwd: <repo root>`; prompt in `references/agent-prompts.md` —
+Phase 6.5.3 Bug-Fix Sub-Agent). The story is already merged, so the fix commits to `$TARGET`
+— never to the story worktree, whose branch is no longer the source of truth. The agent
+invokes `/ck-code:build`, which re-enters at Phase 8.5.3 (regression test → fix → Refactor →
+QA). On return, loop back to 6.5.1 for the same story.
+
+**6.5.4** On the third `ISSUES`, escalate (template in `references/conflict-format.md` Phase
+6.5.4): **A) fix manually**, **B) accept as a known issue**, or **C) revert** the story's
+merge commit (`git revert -m 1 <merge-sha>`), which reopens the story `IN PROGRESS` in the
+indexes and keeps its worktree for Phase 6 Option 3.
+
+**Wave mode runs this gate once per wave**, right after that wave's merge and before its
+worktree cleanup — so a dependent wave never builds on code the operator has not exercised.
+
 ## PHASE 7: WORKTREE CLEANUP
 
-Always run after a successful merge. List worktrees, remove each
+Always run after the merge and its Phase 6.5 gate. List worktrees, remove each
 `.claude/worktrees/agent-*` with double-force (`git worktree remove -f -f` — agent
 worktrees are locked by default), then `git worktree prune` and confirm only main
 remains. Commands: [`references/pipeline.md`](references/pipeline.md). Print cleanup
@@ -486,7 +497,9 @@ confirmation (format in `references/conflict-format.md`).
 - **Never hardcode `main`** — freeze `$TARGET` / `$TARGET_SHA` once (Phase 3.0) and use it for integrity, conflict, and merge.
 - **Never reattach to a returned sub-agent** — the worktree is its only durable state.
 - **Never trust an agent's self-report** — completion is orchestrator-verified (Phase 3.5 gate); a zero-progress continue round is `🚫 STUCK`.
-- **Never merge** a branch without QA (Phase 5) and `MANUAL-TEST PASS` (Phase 5.5).
+- **Never merge** a branch that has not passed Phase 5 QA.
+- **Never manual-test inside a worktree** — the gate runs post-merge on `$TARGET` in the main checkout (Phase 6.5), once per wave in wave mode, and its bug fixes commit to `$TARGET`.
+- **Never clean up worktrees before the Phase 6.5 gate settles** — a `C) revert` verdict needs the story's worktree back.
 - **Never re-dispatch a ◐ incomplete story from scratch** — continue in place (Phase 6 Option 3); fresh worktrees are only for ✗ failed / empty-diff stories.
 - **Never escalate the sub-agent model on `Size:` alone** (Phase 3.1) — tier by reasoning complexity.
 - **Never run heavy QA commands inline** — delegate to parallel `ck-code:qa-validator` (Haiku) agents; inline is the fallback when that subagent_type is unregistered.
