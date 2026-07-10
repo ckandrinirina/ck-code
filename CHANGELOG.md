@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.4.0] — 2026-07-10
+
+LTS release of the v3 line — stabilization and optimization only, preparing the ground for v4. No logic, workflow, command, or template-field changes.
+
+### Changed
+- **all skills**: token-efficiency pass across every skill, agent, and shared reference — deduplicated instructions between SKILL.md files and their references (each rule now has one authoritative copy plus pointers), compressed verbose prose, and removed decorative separators (net −154 lines).
+
+### Fixed
+- **build**: stale phase numbers in `story-template.md` and the NEXT section (renumbered to match the current Phase 1/8 layout: manual-test gate is 8.5, parent-epic update is 8.7, status transitions are 1.6).
+- **fix**: `qa-dialogue.md` verdict C recommended `/ck-code:plan` for missing functionality, contradicting the governing flow (2.5.3) which routes to `/ck-code:design`.
+- **plan**: mangled example paths in the Stories Index template (`01*<slug>` → `01_<slug>`).
+- **pre-spec**: stale Q&A phase references in `templates.md` (Phase 3 → Phase 2).
+- **parallel-build**: `examples.md` showed `git worktree remove -f -f`, contradicting SKILL.md and pipeline.md which use a single `-f`.
+- **convention**: broken code-fence placement in `conventions-guide-template.md` left half the template sections outside the fenced block.
+- **team**: two sentences in SKILL.md severed mid-way by stray bullets (INPUT `--basic` scope; Phase 1.2 read rule) rejoined.
+
 ## [3.3.7] — 2026-07-10
 
 ### Fixed
