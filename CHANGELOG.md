@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.6] — 2026-07-10
+
+### Changed
+- **parallel-build**: a single story no longer builds inline in the orchestrator — it dispatches one worktree agent (N=1), skipping only cross-branch conflict analysis, so the long-lived main context never absorbs a build transcript. Terminal waves lose their inline exception too.
+- **parallel-build**: post-merge QA is delegated to a `qa-validator` agent instead of running its test suite inline on the merged target.
+- **parallel-build**: bounded-output discipline throughout — Phase 1.4 extracts file paths instead of whole tables, Phase 3.5 uses `--numstat` instead of diff bodies, Phase 4's dry-run keeps only `CONFLICT` lines, and Phase 6.5.1 reads only the acceptance-criteria section.
+
+### Added
+- **parallel-build**: `references/context-budget.md` — the orchestrator's inline-vs-delegate contract, with the safe-inline and forbidden-inline command lists.
+- **qa-validator**: documented its `parallel-build` per-story and post-merge QA modes, including the compact `QA: PASS` / `QA: FAIL` verdict contract.
+
 ## [3.3.5] — 2026-07-10
 
 ### Changed
