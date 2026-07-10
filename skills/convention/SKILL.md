@@ -23,9 +23,8 @@ by this skill: `team --regenerate` never overwrites it.
 
 ## ROUTING CHECK (do first)
 
-This skill captures **house conventions** `team` can't research, and edits/creates
-expert + guide skills. If the request is actually something else, STOP and recommend
-the better skill:
+This skill captures **house conventions** and edits/creates expert + guide skills.
+If the request is actually something else, STOP and recommend the better skill:
 
 - No expert/guide skills generated yet → `/ck-code:team` (first)
 - Generating architecture docs from a spec → `/ck-code:design`
@@ -40,8 +39,6 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 - `new expert <slug>` or `new guide <slug>` → **NEW** mode: scaffold a custom skill.
 - `adjust <slug>` → **ADJUST** mode: edit an existing expert/guide (e.g. `adjust expert-backend`).
 
----
-
 ## PHASE 0: PREREQUISITES
 
 ```
@@ -53,8 +50,6 @@ IF .claude/skills/ has no experts/ or guides/ subfolder:
 Read `docs/architecture/folder-structure.md` and `tech-stack.md` (if present) and
 any root `CLAUDE.md` for lightweight project context. Do NOT run the full
 team research pass — conventions come from you and the existing code, not context7.
-
----
 
 ## PHASE 1: CAPTURE MODE (default)
 
@@ -89,8 +84,6 @@ guide already exists, merge: keep sections the user did not change, update the
 rest. Every rule must be concrete and, where useful, paired with a short
 correct/incorrect code example.
 
----
-
 ## PHASE 2: NEW MODE (`new expert <slug>` / `new guide <slug>`)
 
 **Goal:** Scaffold a custom skill `team` would not generate, in the same
@@ -112,8 +105,6 @@ namespaces `build`/`fix` already scan.
    triggers loads automatically. Without `paths`/`keywords` it is invoke-only
    (`/expert-<slug>`). Set them unless the user wants it invoke-only.
 
----
-
 ## PHASE 3: ADJUST MODE (`adjust <slug>`)
 
 **Goal:** Refine an existing generated skill without a full `team --regenerate`.
@@ -128,16 +119,12 @@ namespaces `build`/`fix` already scan.
    and guides — durable house rules belong in `guide-conventions` (Phase 1), not
    in an adjusted expert.
 
----
-
 ## PHASE 4: REPORT
 
 Show what changed: the file path(s) written/edited, and for the conventions guide,
 the rule areas it now covers. Remind the user that `guide-conventions` auto-loads
 in `build`/`fix` and is referenced by every expert, and is safe from
 `team --regenerate`.
-
----
 
 ## RULES
 

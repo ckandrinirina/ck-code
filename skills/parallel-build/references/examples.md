@@ -78,7 +78,7 @@ a regression test + fix **on `$TARGET`**, and cycle 2 passes.
 
 ## Phase 7 — Worktree Cleanup
 
-Each `.claude/worktrees/agent-*` removed with `git worktree remove -f -f`, then
+Each `.claude/worktrees/agent-*` removed with `git worktree remove -f`, then
 `git worktree prune`. Only the main tree remains.
 
 ## Edge cases demonstrated

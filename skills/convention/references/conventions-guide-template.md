@@ -53,7 +53,6 @@ paths:
 // Incorrect — what to avoid and why
 [short counter-example]
 ```
-````
 
 ## Architectural Rules
 
@@ -74,8 +73,7 @@ paths:
 ## References
 
 - [Links to CONVENTIONS.md / STYLE.md / CLAUDE.md or other in-repo sources]
-
-```
+````
 
 ---
 
@@ -93,4 +91,3 @@ paths:
    what the user revised.
 6. **Authoritative.** State explicitly that this guide overrides generic guide/expert
    defaults on conflict.
-```

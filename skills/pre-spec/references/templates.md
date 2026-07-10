@@ -144,7 +144,7 @@ another round or proceed to writing.
 
 ---
 
-## Forgotten-details checklist (Phase C2)
+## Forgotten-details checklist (Phase 2 — conflict + forgotten-details pass)
 
 Tailor to the actual feature — don't dump irrelevant suggestions.
 
@@ -240,7 +240,7 @@ A 2-column table summarizing answers the user has already locked in. Format:
 |---|---|
 | ... | ... |
 
-This section captures Q&A outputs from Phase 3 of the skill. Skip the section
+This section captures Q&A outputs from Phase 2 of the skill. Skip the section
 entirely if no decisions were made (rare).
 
 ---
@@ -292,8 +292,7 @@ For each sub-behavior:
   60 s     : start countdown
   ```
 
-  These are NOT code blocks describing schemas; they describe a
-  human-observable timeline. Acceptable.
+  Such blocks describe a human-observable timeline, not a schema — acceptable.
 
 If a behavior has anti-detection / anti-abuse / fairness aspects, give them
 their own sub-section with a "Why X and not Y?" paragraph.
@@ -367,7 +366,7 @@ should be able to read this without knowing about environment variables.
 
 ## Section 10 — Open Considerations / Points à clarifier
 
-(Include only if Phase 3 Q&A surfaced ambiguities the user explicitly chose
+(Include only if Phase 2 Q&A surfaced ambiguities the user explicitly chose
 to defer.)
 
 Short bulleted list of topics that remain to be decided, phrased as questions

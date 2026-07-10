@@ -1,15 +1,13 @@
 # Worked TDD Walkthrough
 
-End-to-end example showing how the red-green-refactor cycle plus SOLID review
-are applied to a single story. Use this as a reference when the inline rules in
-SKILL.md are unclear.
+End-to-end example of the red-green-refactor cycle plus SOLID review applied
+to a single story. The rules in SKILL.md are authoritative.
 
 ---
 
 ## Phase 3.3 — SOLID Analysis Template
 
-Plan the implementation applying each SOLID principle. Fill this out before any
-test or code is written.
+Fill this out before any test or code is written (rule in SKILL.md 3.3).
 
 ```
 ## SOLID Analysis for This Story
@@ -65,8 +63,6 @@ implementation, QA blocked by refactor, completion blocked by QA.
 
 ## Phase 4.3 — Worked Example: Acceptance Criterion → Tests
 
-For EACH acceptance criterion in the story, write at minimum one test.
-
 ```
 Acceptance Criterion: "WebSocket server accepts connections on port 8765"
 → Test: test_server_accepts_websocket_connection_on_configured_port()
@@ -76,10 +72,7 @@ Acceptance Criterion: "Messages are serialized in MessagePack format"
 → Test: test_message_deserialization_handles_invalid_msgpack()
 ```
 
-Also add tests for:
-- **Edge cases** — empty input, boundary values, max limits
-- **Error scenarios** — invalid input, connection failures, timeouts
-- **Integration points** — if the story connects two components
+Edge cases, error scenarios, and integration points: rules in SKILL.md Phase 4.3.
 
 ---
 
@@ -109,17 +102,7 @@ D — Dependency Inversion:
   [ ] ISSUE: [module X] directly instantiates [concrete Y] → inject
 ```
 
-For each issue found:
-1. Apply the refactoring
-2. Run tests → must still pass
-3. If tests break → revert and reconsider
-
-Common refactorings:
-- Extract function/method for duplicated code
-- Rename for clarity
-- Introduce interface/trait for dependency inversion
-- Split large functions by responsibility
-- Move code to appropriate module per folder structure
+Issue handling and common refactorings: rules in SKILL.md Phase 6.2.
 
 ---
 

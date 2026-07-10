@@ -71,7 +71,7 @@ For each `tasks/<slug>/epics/*/EPIC.md`, parse the story list (table or bullet l
 
 ## PHASE 3: DIFF
 
-Compute three diff sets:
+Compute these diff sets:
 
 | Set              | Definition                                                                              | Repair                                               |
 | ---------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- |

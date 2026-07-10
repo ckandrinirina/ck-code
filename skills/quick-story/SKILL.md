@@ -12,7 +12,7 @@ Scaffold one small story directly inside an existing `tasks/` plan, without runn
 ## ROUTING CHECK (do first)
 
 This skill adds **one small story** to an existing plan. If the request is actually
-something else, STOP and recommend the better skill (details in the table below):
+something else, STOP and recommend the better skill:
 
 - A bug in already-implemented code → `/ck-code:fix`
 - A full feature spanning multiple epics/components → `/ck-code:plan`

@@ -1,6 +1,6 @@
 # Conflict Report & QA Output Formats
 
-Reference output templates for Phases 4, 5, and 6.
+Reference output templates for Phases 2 through 7.
 
 ## Phase 2.1 — Ready Stories Table
 

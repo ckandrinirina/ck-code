@@ -27,27 +27,14 @@ Closes #42
 git commit -m "$(cat <<'EOF'
 feat(realtime): live updates without refresh
 
-The app now receives live updates from the server. Logged-in users see
-new messages, notifications, and shared state appear instantly without
-needing to refresh the page.
-
-- New realtime channel for live updates
-- Compact message format reduces bandwidth on slow connections
-- Connects through the existing service layer, no extra setup needed
-
-Closes #42
+<body and footer exactly as in 2.2 above>
 EOF
 )"
 ```
 
 ### Phase 3.2 — Verify
 
-```bash
-git log --oneline -1
-git show --stat HEAD
-```
-
-Output:
+Output of the SKILL.md 3.2 commands:
 ```
 ## Committed
 
@@ -99,17 +86,7 @@ EOF
 )"
 ```
 
-Update parent checklist (parent issue #10):
-```bash
-gh issue view 10 --json body -q .body
-# Replace "- [ ] #42" with "- [x] #42" then:
-gh issue edit 10 --body "<updated body>"
-```
-
-Add label:
-```bash
-gh issue edit 42 --add-label "status/done"
-```
+Then update the parent checklist (#10: flip `- [ ] #42` to `- [x] #42` — commands in SKILL.md 5.2) and add the `status/done` label (SKILL.md 5.3).
 
 ### Phase 6 — Summary Output
 

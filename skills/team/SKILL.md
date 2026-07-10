@@ -44,7 +44,7 @@ current, version-specific, or project-specific — not well-known fundamentals. 
 **Depth flags** (how many skills to generate — see Phase 2's `Tier` column):
 
 - `--basic` — core experts (`frontend`, `backend`, `qa`, `analyst`, `qa-project`)
-  - one guide per detected language. Smallest set.
+  plus one guide per detected language. Smallest set.
 - `--standard` — **default.** Core + strongly-signalled specialists
   (`devops`, `security`, `database`) + language and major-framework guides.
 - `--max` — every applicable expert AND every guide: all specialists
@@ -136,11 +136,10 @@ in the **global** docs — not in per-feature slices. Read these:
 - `dev-guide.md` — build, run, test instructions
 
 Plus the `README.md` index to enumerate features. Do **not** read every
-`features/<slug>/index.md` in full — skim a feature doc's `## Summary` only if `folder-structure.md`
-
-- `tech-stack.md` leave a component type ambiguous. The retired layer docs
-  (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) no longer
-  exist; their content is in the feature docs and `_shared.md`.
+`features/<slug>/index.md` in full — skim a feature doc's `## Summary` only if
+`folder-structure.md` and `tech-stack.md` leave a component type ambiguous. The
+retired layer docs (`components.md`, `api-contracts.md`, `database-schema.md`,
+`data-flow.md`) no longer exist; their content is in the feature docs and `_shared.md`.
 
 Also read if available:
 
@@ -176,8 +175,7 @@ best practices for every detected technology. Full procedure lives in
 [references/context7-research.md](references/context7-research.md).
 
 Scope the research to what a guide actually needs: **current, version-specific, and
-project-relevant** practices — not well-known language fundamentals every developer
-already knows. The goal is current, project-specific guidance, never padded basics.
+project-relevant** practices — never well-known fundamentals or padded basics.
 
 Required steps:
 
@@ -199,8 +197,8 @@ missing skills), dispatch one Agent per technology per the investigation variant
 escalate a single unit to `sonnet` only when its guidance requires weighing trade-offs the
 docs fetch cannot resolve. Each agent runs steps 2–3 for its technology (context7 lookup,
 WebSearch fallback, scoped per [references/context7-research.md](references/context7-research.md))
-and returns a structured research brief (conventions, structure, patterns, anti-patterns,
-performance, error handling, testing, version notes) — it writes nothing. The orchestrator
+and returns a structured research brief covering the step-2 dimensions — it writes
+nothing. The orchestrator
 merges the briefs into the single "Best Practices Knowledge" block (step 4), keeping verbose
 doc output out of its own context, and re-runs any failed/empty unit inline before Phase 2.
 Below 4 technologies, research inline.
@@ -297,9 +295,9 @@ in libraries that are neither, so they MUST be able to earn a guide.
   1. the project's **languages**;
   2. its major **frameworks** (Next.js, NestJS, React, React-Admin, Redux Toolkit…);
   3. major **protocols** it implements (gRPC, GraphQL…);
-  4. **significant libraries with non-trivial idiom** — the category that was
-     previously dropped. A library qualifies when using it well requires conventions
-     a newcomer would not guess. Common kinds, with concrete examples:
+  4. **significant libraries with non-trivial idiom** — a library qualifies when
+     using it well requires conventions a newcomer would not guess. Common kinds,
+     with concrete examples:
      - **Styling systems** — Tailwind (utility ordering, design tokens, `@apply`
        misuse), CSS-in-JS.
      - **i18n** — i18next (namespace/key organization, interpolation, pluralization,
@@ -350,9 +348,7 @@ can load it without knowing its name in advance:
 always-relevant and loaded unconditionally by the consumers. Set `paths`/`keywords`
 on every other expert and on every guide.
 
-For the derivation worked through `TIER` and the EXPECTED-set rule (a skill enters
-EXPECTED only when a real need exists for it at the resolved tier), this metadata is
-what makes a dynamically-named expert discoverable later.
+This metadata is what makes a dynamically-named expert discoverable later.
 
 ### 2.4 Present Plan
 

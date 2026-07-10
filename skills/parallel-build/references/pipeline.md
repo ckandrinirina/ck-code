@@ -6,9 +6,8 @@ decisions; this file holds the exact commands.
 ## Phase 3.0 — Freeze the Target, Then Create the Worktrees (run before dispatch)
 
 The orchestrator creates every worktree itself, pinned to the frozen base. **Never delegate
-worktree creation to the Agent tool's `isolation: worktree`** — it cuts from a base you
-cannot choose and names the branch itself, so agents land on an arbitrary commit that may
-not even contain their story file. See *The Agent-Tool Contract* below.
+worktree creation to the Agent tool's `isolation: worktree`** (rationale: SKILL.md Phase 3.0
+and *The Agent-Tool Contract* below).
 
 ### 3.0a — Freeze the target
 
@@ -195,12 +194,7 @@ not a full test suite per round.
 All four true → ✓ COMPLETE. Any false → not complete (keep looping / flag). This is the
 only definition of "done"; the agent's final message is never used as proof.
 
-**Gate:**
-
-- ⚠️ warning (incomplete criteria, pure-deletion ratio) → proceeds to QA/merge; surface
-  in the Phase 6 summary.
-- 🚫 BLOCKED (status not updated, no implementation, unexpected deletion) → removed from
-  the merge-eligible set; keep its worktree; report under "Review needed".
+**Gate outcomes (✓ / ⚠️ / ◐ / 🚫):** defined in SKILL.md Phase 3.5.
 
 ## Phase 4 — Conflict Analysis (per successful branch)
 

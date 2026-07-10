@@ -94,13 +94,9 @@ In Feature Mode, present three options to the user (A / B / C):
 
 **If A (ADD FEATURE):**
 
-1. Read the **global** architecture docs (`overview.md`, `tech-stack.md`,
-   `folder-structure.md`, `_shared.md`) + the `README.md` index for architectural
-   context. Do NOT read every feature doc — the README index lists each feature with a
-   one-line summary; open a full `features/<slug>/index.md` only for a feature the new
-   work directly integrates with.
+1. Read the existing architecture context per Phase 1.1b step 1 (global docs + feature index only).
 2. Read `$ARGUMENTS` spec/feature file.
-3. Scan existing `tasks/` folders to understand what's already planned (avoid duplicating stories).
+3. Scan existing `tasks/` folders per Phase 1.1b step 2 (avoid duplicating stories).
 4. Ask: "What new feature do you want to plan?" (if not clear from the file).
 5. Proceed to Phase 1 with feature-scoped analysis.
 
@@ -173,7 +169,7 @@ the spec is small — Phase 2 structuring and all Phase 4 shared writes always s
 
 ### 1.3 Research Tech Stack (when beneficial)
 
-If the spec references frameworks/libraries/protocols that would benefit from current documentation lookup, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best practices, identify version-specific considerations, and understand standard project structures. Only do this for unfamiliar or rapidly-evolving technologies.
+Only for unfamiliar or rapidly-evolving frameworks/libraries/protocols the spec references, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best practices, version-specific considerations, and standard project structures.
 
 ### 1.4 Identify Dependencies & Complexity
 
@@ -223,18 +219,16 @@ Each epic should:
 
 ### 2.2 Define Stories Within Each Epic
 
-**One story = one agent dispatch.** Every story must be small enough that a single
-`build` session — or one `parallel-build` sub-agent — can implement it end-to-end
-(red → green → refactor → QA → commit) without exhausting its tool-call/token
-budget. A dispatched agent **cannot be resumed**, so an oversized story stalls
-mid-build (the `◐ incomplete` outcome in `parallel-build`) and forces a costly
-continue-in-place recovery pass. Sizing every story to one dispatch is what keeps
-the plan buildable solo and in parallel.
+**One story = one agent dispatch.** A single `build` session — or one
+`parallel-build` sub-agent — must implement it end-to-end (red → green →
+refactor → QA → commit) within its tool-call/token budget. A dispatched agent
+**cannot be resumed**: an oversized story stalls mid-build (the `◐ incomplete`
+outcome in `parallel-build`) and forces a costly continue-in-place recovery pass.
 
 Each story must:
 
 - Cover exactly one cohesive concern (a feature, a component, a vertical slice) — never mix unrelated concerns into one story.
-- Be sized **S or M only** — a self-contained concern a single dispatch finishes comfortably. Never plan an **L** or **XL** story.
+- Be sized **S or M only** (rubric below) — never plan an **L** or **XL** story.
 - Be numbered sequentially within its epic (`01`, `02`, ...) with a short descriptive slug.
 - Carry clear, testable acceptance criteria and an explicit files-to-touch list so `build` can execute it in one focused session.
 
@@ -261,10 +255,9 @@ redundancy — **never merge to the point a story would exceed one dispatch** (P
 
 ### 2.2c Break Each Story into Tasks
 
-A story stays precise only when it carries an explicit, ordered task list. For
-every story, decompose the work into concrete
-step-by-step **implementation tasks** — each task is one verifiable action that
-moves the story toward its acceptance criteria (e.g. "define the `X` interface",
+For every story, decompose the work into an ordered list of concrete
+**implementation tasks** — each task is one verifiable action that moves the
+story toward its acceptance criteria (e.g. "define the `X` interface",
 "implement `Y` against it", "wire `Y` into the handler"). These tasks populate
 the story file's `## Implementation Tasks` section.
 
@@ -339,7 +332,7 @@ If the user says ADJUST, ask what they want to change and loop back to Phase 2.
 Use today's date for `YYYY-MM-DD` (ISO 8601).
 
 - **New Project Mode:** see [references/examples.md#new-project-mode--tasks-folder-layout](references/examples.md#new-project-mode--tasks-folder-layout).
-- **Feature Mode — Add Feature:** see [references/examples.md#feature-mode--add-feature-folder-layout](references/examples.md#feature-mode--add-feature-folder-layout). `FEATURE_OVERVIEW.md` replaces `PROJECT_OVERVIEW.md` and includes feature description/motivation, affected existing components, new components introduced, and integration points with the existing system.
+- **Feature Mode — Add Feature:** see [references/examples.md#feature-mode--add-feature-folder-layout](references/examples.md#feature-mode--add-feature-folder-layout). `FEATURE_OVERVIEW.md` replaces `PROJECT_OVERVIEW.md` — contents per [references/templates.md#feature-overview-template](references/templates.md#feature-overview-template).
 - **Feature Mode — Continue:** see [references/examples.md#feature-mode--continue-existing-plan-layout](references/examples.md#feature-mode--continue-existing-plan-layout).
 
 ### 4.2 PROJECT_OVERVIEW.md Content

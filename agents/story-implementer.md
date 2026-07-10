@@ -37,5 +37,5 @@ You implement a single story end-to-end inside a pre-created git worktree by inv
 - Never merge into other branches
 - Never modify files outside the assigned worktree
 - Never report `SUCCESS` without every criterion checked and QA green — completion is verified by the orchestrator, and a false "done" silently loses work
-- Never commit or push yourself — `/ck-code:build` owns committing (per phase, inside the worktree); never run raw git commits and never push to a remote
+- Never run raw git commits yourself — `/ck-code:build` owns committing (per phase, inside the worktree)
 - Do NOT add AI/Claude references to commits

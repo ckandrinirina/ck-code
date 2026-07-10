@@ -48,7 +48,7 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
 4. Sort by epic, then story number, then size (S < M < L < XL).
 5. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with > 1 non-DONE story is a wave candidate (a partly-blocked epic is the dependency-order case wave mode exists for).
-6. **Detect the parallel-safe set:** if ≥ 2 stories are ready, build a **touched-files map** for conflict detection by extracting **only** each ready story's `Files to Create/Modify` table in a single batched Bash call — never a full `Read` of each story body, never a glob of all stories. Reading every ready story's full body just to compare file paths is the largest avoidable launch-time cost this skill incurs; the table alone is all conflict detection needs.
+6. **Detect the parallel-safe set:** if ≥ 2 stories are ready, build a **touched-files map** for conflict detection by extracting **only** each ready story's `Files to Create/Modify` table in a single batched Bash call — never a full `Read` of each story body, never a glob of all stories; the table alone is all conflict detection needs.
 
    ```bash
    for f in <ready-story paths from the index `File` column>; do
@@ -109,7 +109,7 @@ silently become no-ops.
 
 Match skills against the **selected story's touched-files set** already in context (the Phase 1.2 map / 1.3 `Files to Create/Modify` table) — prefer narrow `paths` matches over broad `keywords` matches so an unrelated expert/guide body is never `Read` into the main session on a keyword coincidence. Every skill body loaded here stays resident through Phases 5–6, so each spurious load is paid for the whole run.
 
-Otherwise, follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by each present skill's `paths`/`keywords` frontmatter, anchor table as fallback; `expert-qa` **always** loaded, `guide-conventions` always loaded when present) and guides (by their `paths` frontmatter / file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
+Otherwise, follow the full procedure in [`../../references/skill-detection.md`](../../references/skill-detection.md): read the story's **feature doc** (always `folder-structure.md` + the feature doc named in the story's `FEATURE_INDEX` `Docs` column, + `_shared.md` when the work is cross-cutting; never the retired layer docs — fall back + suggest `/ck-code:doc-optimizer sync` if it's missing), detect required experts (by each present skill's `paths`/`keywords` frontmatter, anchor table as fallback; always-loaded set per the gate above) and guides (by their `paths` frontmatter / file extension), load each (filesystem check → warn on truly-missing with `Continue without these? YES / GENERATE FIRST`, template in [references/output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to the user before Phase 3 — never load skills silently**. All arch-doc reads and skill loads inside that procedure **must be batched into parallel tool-call messages** (Steps 1 and 4b).
 
 ---
 
@@ -376,7 +376,7 @@ Story file is the source of truth. All output in English regardless of spec/stor
 
 ## NEXT
 
-After the user confirms manual testing PASS (Phase 8.7), run `/ck-code:ship <story-path>` to commit, open the PR, and update the linked GitHub Issues. If more stories remain, follow `ship` with `/ck-code:track next`.
+After the user confirms manual testing PASS (Phase 8.5), run `/ck-code:ship <story-path>` to commit, open the PR, and update the linked GitHub Issues. If more stories remain, follow `ship` with `/ck-code:track next`.
 
 **Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
 

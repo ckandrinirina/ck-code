@@ -10,15 +10,14 @@ effort: high
 Read a project specification, identify gaps through conversational questioning,
 and generate **feature-scoped** architecture documentation ready for development.
 
-The architecture is split into a few **global** docs (overview, folder-structure,
-tech-stack, `_shared.md`, configuration, dev-guide) plus one **self-contained feature
-doc** per feature in `docs/architecture/features/<slug>/index.md`. Per-increment /
-per-fix changes are journaled as dated sibling docs
+The architecture is a few **global** docs (overview, folder-structure, tech-stack,
+`_shared.md`, configuration, dev-guide) plus one **self-contained feature doc** per
+feature in `docs/architecture/features/<slug>/index.md`. Per-increment / per-fix
+changes are journaled as dated sibling docs
 (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`); `index.md` stays the canonical truth a
-later `build`/`fix` story routes to. There are no
-`components.md` / `api-contracts.md` / `database-schema.md` / `data-flow.md` files —
-that content lives inside each feature's doc so a later `build`/`fix` story reads only
-the one feature doc it needs.
+later `build`/`fix` story routes to. The retired layer docs (`components.md`,
+`api-contracts.md`, `database-schema.md`, `data-flow.md`) are not generated — their
+content lives in each feature's doc so a story reads only the one doc it needs.
 
 **Supports two modes:**
 
@@ -39,9 +38,6 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 **Reuse-first:** read the existing docs & spec first, reuse before rebuilding, and design the
 simplest thing that meets the requirement — see [`reuse-first.md`](../../references/reuse-first.md).
-
-This skill never modifies the original specification file. It reads it as the source
-of truth and produces refined documentation in `docs/architecture/`.
 
 ---
 
@@ -98,10 +94,9 @@ branch handling see [references/qna-examples.md](references/qna-examples.md).
 
 Branch summary:
 
-- **A (ADD FEATURE):** read the global docs (`overview.md`, `tech-stack.md`,
-  `folder-structure.md`, `_shared.md`) and any directly-related existing feature doc —
-  NOT every feature doc. Read spec, ask "What new feature or capability do you want to
-  add?", proceed to Phase 1 with feature-scoped analysis.
+- **A (ADD FEATURE):** read the existing architecture context per Phase 1.1b (globals +
+  README index only — NOT every feature doc), read the spec, ask "What new feature or
+  capability do you want to add?", proceed to Phase 1 with feature-scoped analysis.
 - **B (FULL REFRESH):** back up existing docs to
   `docs/architecture/backup_YYYY-MM-DD/`, proceed as New Project Mode.
 - **C:** proceed as New Project Mode.
@@ -127,7 +122,7 @@ If in Feature Mode, BEFORE assessing coverage:
 2. Read existing source code structure using Glob
 3. Build a mental model of: what exists, what the new feature needs to integrate with
 
-This context is critical — new feature docs must be consistent with existing architecture.
+New feature docs must be consistent with the existing architecture.
 
 ### 1.2 Assess Coverage
 
@@ -259,9 +254,8 @@ short `<slug>` per feature (e.g. `roles`, `customer`, `billing`) and reuse it as
 epic slug so the `FEATURE_INDEX.Docs` column lines up. Put a component/table/endpoint in
 `_shared.md` (not a feature doc) only when **two or more** features rely on it.
 
-**folder-structure.md note:** if the original spec already defines a folder
-structure, use it as the base and refine/expand. Otherwise, propose one based
-on the tech stack and best practices (research via context7/WebSearch if needed).
+**folder-structure.md note:** see the **Important** note under the folder-structure.md
+template — spec-defined structure is the base; otherwise propose one from the tech stack.
 
 ### 3.8a (New Project Mode, ≥4 features) Parallel feature-doc fan-out
 

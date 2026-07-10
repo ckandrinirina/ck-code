@@ -10,8 +10,7 @@ allowed-tools: Bash(gh *) Bash(sleep *)
 # To-Issues — Publish a Plan to GitHub Issues
 
 Reads a generated tasks/ folder and creates GitHub Issues at the granularity the
-user picks: a single feature issue, one issue per epic, or the full epic+story
-hierarchy.
+user picks — see GRANULARITY MODES below.
 
 ## ROUTING CHECK (do first)
 
@@ -29,8 +28,6 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 - The `gh` CLI must be installed and authenticated (`gh auth status`)
 - The current directory must be a git repository with a GitHub remote
 - A `tasks/` folder must exist, created by `/ck-code:plan`
-
----
 
 ## INPUT
 
@@ -50,8 +47,6 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 - If the flag is present and valid, use it (skip the mode prompt in Phase 3)
 - If absent or invalid, ask interactively in Phase 3
 
----
-
 ## GRANULARITY MODES
 
 | Mode      | Issues created                                 | Use when                                                                                                    |
@@ -60,13 +55,9 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 | `epics`   | **1 per epic** (N issues)                      | You track at epic level; stories are listed inside each epic issue as a checklist, no separate story issues |
 | `stories` | epic issues **+** 1 per story (full hierarchy) | You implement story-by-story and want linked, individually-trackable story issues                           |
 
----
-
 ## PHASE 0: VERSION GATE (hard gate)
 
 Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects, offers `/ck-code:doc-optimizer upgrade`, and stamps.
-
----
 
 ## PHASE 1: VALIDATE ENVIRONMENT
 
@@ -77,8 +68,6 @@ gh repo view --json nameWithOwner -q .nameWithOwner
 
 If either fails, stop and tell the user what to fix.
 
----
-
 ## PHASE 2: READ PLAN STRUCTURE
 
 1. Read `PROJECT_OVERVIEW.md` to extract the project name and summary
@@ -88,8 +77,6 @@ If either fails, stop and tell the user what to fix.
    acceptance criteria, sizes, dependencies, and epic-to-story relationships
 
 Build an in-memory map of the full plan structure.
-
----
 
 ## PHASE 3: SELECT MODE & CONFIRM
 
@@ -126,8 +113,6 @@ Proceed? YES / NO / DRY-RUN
 - **NO** — abort
 - **DRY-RUN** — print exactly what would be created without creating anything
 
----
-
 ## PHASE 4: CREATE LABELS
 
 Create only the labels the chosen mode needs (`--force` updates if they exist). In
@@ -141,22 +126,16 @@ gh label create "size/S" --color "C2E0C6" --description "Small story" --force
 gh label create "size/M" --color "BFDADC" --description "Medium story" --force
 ```
 
----
-
 ## PHASE 5: CREATE ISSUES
 
 Read the section for the chosen mode from
 [`references/issue-bodies.md`](references/issue-bodies.md) and follow it. `feature` and
 `epics` finish in one step; `stories` runs epics → stories → link.
 
----
-
 ## PHASE 6: SUMMARY
 
 Fill the summary shape from [`references/issue-bodies.md`](references/issue-bodies.md)
 for the mode that ran.
-
----
 
 ## ERROR HANDLING
 
@@ -183,8 +162,6 @@ anyway / **ABORT**.
 - **Never create a story issue before every epic issue exists** — story bodies cross-reference epic numbers.
 - **Always `sleep 1` between every `gh` call** — GitHub rate-limits issue creation strictly.
 - **Always preserve markdown fidelity** from the original `tasks/` files in issue bodies.
-
----
 
 ## NEXT
 

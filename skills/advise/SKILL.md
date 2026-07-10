@@ -8,11 +8,10 @@ disallowed-tools: Write, Edit, NotebookEdit
 
 # Advise — Intent-Driven Skill Router (Read-Only)
 
-The plain-language entry point for users who don't know which ck-code skill to
-run. The user describes a task in their own words; this skill maps that intent
-to the best-fit skill, names the prerequisite step if one is missing, and prints
-the exact command to run. **It never invokes another skill, writes files, or
-edits state** — it recommends and stops.
+Maps a free-text task description to the best-fit ck-code skill, names the
+prerequisite step if one is missing, and prints the exact command to run.
+**It never invokes another skill, writes files, or edits state** — it
+recommends and stops.
 
 Difference from its siblings:
 

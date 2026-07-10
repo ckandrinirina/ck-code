@@ -63,7 +63,7 @@ Story: [EE-SS] [Title]
 ### Verdict
 A) SINGLE-STORY — bug belongs to [EE-SS]. Standard fix flow.
 B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. Shared Bug ID `BUG-YYYYMMDD-NN`.
-C) NEW-FEATURE — missing functionality in [N] epic(s). Recommend `/ck-code:plan`. STOP after confirm.
+C) NEW-FEATURE — missing functionality in [N] epic(s). Recommend `/ck-code:design`. STOP after confirm.
 D) MIXED — real bug in [EE-SS] AND missing piece elsewhere. Fix here + create stubs marked `Created by fix flow on YYYY-MM-DD`.
 E) PLANNED-IN-FUTURE — TODO story [EE-SS] [Title] already plans this. Default STOP; recommend `/ck-code:build <future-story>`. Override `PROCEED ANYWAY` falls through to A/B/D.
 

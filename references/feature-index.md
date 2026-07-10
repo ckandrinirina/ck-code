@@ -4,7 +4,7 @@ A single, top-level rollup of every **feature** (= one epic) across **all** plan
 folders. It sits one layer above the per-plan `STORIES_INDEX.md`: skills read it
 FIRST to see which features exist and which are unfinished, pick one, and only
 THEN drill into that feature's story rows. One feature-index read replaces
-opening every plan's story index — that is the token saving it exists for.
+opening every plan's story index.
 
 See also: [`stories-index.md`](stories-index.md) — the per-plan, story-level index
 this sits above.
@@ -134,5 +134,5 @@ new: | 02 · Auth | 2026-06-01_myapp | DONE        | 3/3 | docs/architecture/fea
 - **Always** recompute a feature's `Status`/`Stories` rollup in the same phase a story under it changes status — after `build` and after each `parallel-build` merge, mark the feature `DONE` once its last story completes. Never leave the rollup stale after a completed build.
 - **Never** edit the index by hand — the comment header is the contract; an explicit story-ID / `--epic` argument bypasses the feature-selection gate.
 - A feature's `Description` is authored by `plan` and backfilled by `build`/`parallel-build` from `EPIC.md` when blank — it exists so `fix` has feature context without reading stories.
-- **The `Docs` column is the doc-routing key** — `build`/`fix` read the canonical feature doc it points to (`features/<slug>/index.md`) + `folder-structure.md`, + `_shared.md` when noted. Per-increment / per-fix delta docs (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) are an append-only journal and are NOT part of the routed read — `index.md` always holds current truth. A `—` cell means fall back to `folder-structure.md` + `_shared.md` and suggest `/ck-code:doc-optimizer sync`. Only `doc-optimizer` fills a `—` cell — `plan`/`build` only record a path that already exists.
+- **The `Docs` column is the doc-routing key** (full semantics in Column rules above): `build`/`fix` read the feature doc it points to + `folder-structure.md`, + `_shared.md` when noted; delta docs are never part of the routed read (`index.md` holds current truth); a `—` cell means fall back to `folder-structure.md` + `_shared.md` and suggest `/ck-code:doc-optimizer sync`; only `doc-optimizer` fills a `—` cell — `plan`/`build` only record a path that already exists.
 - **The schema is v2-only** — the [version gate](version-gate.md) guarantees a v2 index before this protocol runs; a `v1` index is converted only by `doc-optimizer upgrade`, never inline.

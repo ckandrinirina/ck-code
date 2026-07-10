@@ -11,8 +11,6 @@ disallowed-tools: Write, Edit, NotebookEdit
 Scans all stories in `tasks/` and presents a live view of project progress,
 story statuses, and recommendations for what to implement next.
 
----
-
 ## INPUT
 
 `$ARGUMENTS` determines the command:
@@ -22,8 +20,6 @@ story statuses, and recommendations for what to implement next.
 | (empty) or `status` | Full status dashboard with all stories           |
 | `next`              | Suggest the next story ready for implementation  |
 | `progress`          | Epic completion percentages and overall progress |
-
----
 
 ## PHASE 1: SCAN STORIES (index-driven)
 
@@ -59,8 +55,6 @@ For each row in the index, mark it as `ready` if `Status: TODO` AND every ID in 
 ### 1.4 Epic Aggregation (lazy)
 
 Group rows by their `Epic` column to compute per-epic completion counts (DONE / total). Only Read the per-epic `EPIC.md` files if the user requested `progress` mode and you need the epic's full title or metadata that's not in the index.
-
----
 
 ## PHASE 2: RENDER
 

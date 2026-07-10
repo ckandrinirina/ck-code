@@ -66,9 +66,8 @@ exist, say so and suggest `sync` instead.
 The converter the [version gate](../../references/version-gate.md) calls. Idempotent and
 safe (originals archived, never deleted). Run the existing phases in order, then stamp:
 
-1. **Migrate layer docs** — if any retired layer doc (`components.md`, `api-contracts.md`,
-   `database-schema.md`, `data-flow.md`) exists outside `archive/`, run **PHASE 1: MIGRATE**.
-   Skip if none exist.
+1. **Migrate layer docs** — if any legacy layer doc (Phase 0 list) exists outside
+   `archive/`, run **PHASE 1: MIGRATE**. Skip if none exist.
 2. **Migrate flat → subfolder** — run **PHASE 2: SYNC** to move any flat
    `features/<slug>.md` to `features/<slug>/index.md`, sweep loose dated deltas, scaffold
    missing docs, and rewrite the `FEATURE_INDEX` header `v1 → v2` with the `Docs` column.

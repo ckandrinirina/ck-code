@@ -121,11 +121,10 @@ it to completion in dependency order, whether its remaining stories are sequenti
 parallel. Carry the list of candidate epics into Phase 2 so **each epic is surfaced as
 its own explicit "implement whole epic NN in waves" choice** — one option per epic.
 
-**Wave mode is scoped to a single epic — never a whole feature.** A feature with several
-epics (e.g. `01_foundation`, `02_shell`, `03_surfaces`, `04_integration`) produces one
-candidate per epic; do NOT offer a "whole feature in waves" option and never merge stories
-from different epics into one wave plan. Feature-wide waves create long dependency chains
-with many sequential merge+dispatch cycles and heavy token use. Build one epic per run.
+**Wave mode is scoped to a single epic — never a whole feature.** A multi-epic feature
+produces one candidate per epic; do NOT offer a "whole feature in waves" option and never
+merge stories from different epics into one wave plan (rationale:
+[`references/wave-mode.md`](references/wave-mode.md)). Build one epic per run.
 
 ## PHASE 2: INTERACTIVE SELECTION
 
@@ -182,11 +181,10 @@ Dispatching 1 agent in an isolated worktree (skipping cross-branch conflict anal
 Entered only when `$ARGUMENTS` is `--epic NN` (or interactive selection chose "whole
 epic in waves"). Skip this phase entirely for an explicit story-ID batch.
 
-Wave mode drives **one epic to completion in dependency-ordered waves** — e.g.
-`[01-01, 01-02]` first, then `[01-03]` (which needs both), then `[01-04]`. It runs the
-Phase 3–7 pipeline **once per wave**, merging each wave into the target branch before the
-next so dependents see their dependencies `DONE`. Scope is a single epic — never a whole
-feature; after the epic completes, the operator picks the next epic (no auto-chaining).
+Wave mode drives **one epic to completion in dependency-ordered waves**, running the
+Phase 3–7 pipeline **once per wave** and merging each wave into the target branch before
+the next so dependents see their dependencies `DONE`. Scope is a single epic — never a
+whole feature; after the epic completes, the operator picks the next epic (no auto-chaining).
 
 Follow [`references/wave-mode.md`](references/wave-mode.md) in full. Key contract:
 
@@ -216,8 +214,8 @@ Create worktrees and dispatch all sub-agents in one parallel batch.
 Before any dispatch: **freeze the merge target once** (`$TARGET` = current branch,
 `$TARGET_SHA` = its HEAD; detached HEAD → stop and ask; tree must be clean), then **create
 every worktree yourself**, each cut from `$TARGET_SHA` on branch `$PREFIX$ID`. Every later
-phase uses `$TARGET` / `$TARGET_SHA` — **never a hardcoded `main`** (diffing against `main`
-while on a `docs`/feature branch is what produced the "stray commit" archaeology).
+phase uses `$TARGET` / `$TARGET_SHA` — **never a hardcoded `main`** (the operator may be on
+a `docs`, feature, or wave-target branch).
 
 **Never let the Agent tool create the worktree.** Its `isolation: worktree` cuts from a base
 you cannot choose and names the branch itself, so agents land on an arbitrary commit that may
@@ -233,10 +231,9 @@ contract: [`references/pipeline.md`](references/pipeline.md) Phase 3.0.
 
 ### 3.1 Model Selection
 
-Pick a model **tier by reasoning complexity, not by story `Size:`**. After plan
-consolidation, Size reflects scope (file count), not difficulty — a large story is
-usually broad-but-routine. **Default every story to `balanced` (Sonnet)**; escalate to
-`advanced` (Opus) only on a clear high-reasoning signal, reserve
+Pick a model **tier by reasoning complexity, not by story `Size:`** — Size reflects
+scope (file count), not difficulty. **Default every story to `balanced` (Sonnet)**;
+escalate to `advanced` (Opus) only on a clear high-reasoning signal, reserve
 `advanced-extended-context` for such a story that also needs 1M context, and use `fast`
 (Haiku) only for trivial mechanical changes — Size alone never escalates. Resolve the
 tier to a concrete model at dispatch (never hardcode versioned IDs). The complexity
@@ -326,19 +323,17 @@ recorded and no code was silently lost. Two **pre-steps run first per worktree**
 [`references/pipeline.md`](references/pipeline.md) Phase 3.5a/3.5b):
 
 1. **Preserve uncommitted work (3.5a).** The resume model needs committed state, but an
-   agent can stop with work **uncommitted** (transcript 01-01 had *no* commit — one
-   `git worktree prune` from losing it). WIP-commit every dirty worktree so it is durable
-   and rebaseable.
+   agent can stop with work **uncommitted**. WIP-commit every dirty worktree so it is
+   durable and rebaseable.
 2. **Assert the base (3.5b).** Phase 3.0c cut every branch from `$TARGET_SHA`, so its
    merge-base must still *be* `$TARGET_SHA` — branches only move forward. Verify it. A
-   mismatch is no longer routine drift to rebase away (the old `dabfb20` / `f298946`
-   archaeology); it means an agent rewrote history in its worktree or the target moved
-   under the run. Flag 🚫 BLOCKED, keep the worktree, surface it — never auto-rebase, which
-   would hide the cause and can drop commits.
+   mismatch is not routine drift; it means an agent rewrote history in its worktree or
+   the target moved under the run. Flag 🚫 BLOCKED, keep the worktree, surface it — never
+   auto-rebase, which would hide the cause and can drop commits.
 
 Then verify the worktree **story file** reads `Status: DONE` (NOT the index — sub-agents
-defer all shared-index edits in parallel mode, so the worktree's `STORIES_INDEX.md` /
-`EPIC.md` stay at pre-build status by design; not drift, reconciled post-merge) and run the
+defer shared-index edits by design, reconciled post-merge; details in
+[`references/pipeline.md`](references/pipeline.md) Phase 3.5) and run the
 code-integrity checks against `$TARGET_SHA` (empty diff, unexpected deletions, pure-deletion
 files). For any ◐ incomplete story, the status + diff check here is what separates resumable
 progress from a dead end.
@@ -410,8 +405,8 @@ Sub-Agent** prompt from [`references/agent-prompts.md`](references/agent-prompts
 that story's absolute worktree path and its concrete stack commands from 5.1. The agent `cd`s
 into the worktree, guards on `git rev-parse --show-toplevel`, runs the commands, captures any
 failing output, and returns the QA Report verdict line. **The guard is not ceremony:** an
-unguarded QA agent runs the suite in the main checkout and returns `QA: PASS` for code the
-story never wrote, greenlighting an unbuilt branch for merge. If the `ck-code:qa-validator`
+unguarded QA agent runs the suite in the main checkout and green-lights an unbuilt branch
+with a `QA: PASS` for code the story never wrote. If the `ck-code:qa-validator`
 subagent_type is not registered, **fall back** to running the 5.1 commands inline per
 worktree.
 
@@ -446,8 +441,8 @@ Final QA on the merged target catches cross-branch integration issues — **disp
 `ck-code:qa-validator` agent** (no `isolation` parameter, so it runs in the main checkout
 where the merged target lives; it guards on branch name instead of path — prompt in
 [`references/agent-prompts.md`](references/agent-prompts.md)) with the union of the merged
-stories' Phase 5.1 commands. A merge does not make `cargo test` output cheap: run inline it
-floods the orchestrator exactly as the per-story suites would have. Inline is the fallback
+stories' Phase 5.1 commands — a merge does not make test output cheap
+([`references/context-budget.md`](references/context-budget.md)). Inline is the fallback
 only when that subagent_type is unregistered.
 
 **After the merges land, reconcile the shared indexes once on the target branch** — the

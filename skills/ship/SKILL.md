@@ -176,7 +176,7 @@ EOF
 )"
 ```
 
-The original body and existing `## Updates` entries are preserved. No story IDs, no AC checkboxes, no test counts — same rules as 2.2.
+The original body and existing `## Updates` entries are preserved. Content rules: same as 2.2.
 
 ### 4.B Create New PR
 
@@ -190,7 +190,7 @@ The original body and existing `## Updates` entries are preserved. No story IDs,
 git push -u origin [branch-name]
 ```
 
-**4.B.4 Craft PR.** PR title = commit first line (under 70 chars). PR body is read by PMs, designers, and stakeholders — write it in plain language with no story IDs, no AC checkboxes, and no test-count tallies. Body templates (feature / bug fix): [references/pr-templates.md](references/pr-templates.md).
+**4.B.4 Craft PR.** PR title = commit first line (under 70 chars). PR body is plain language for non-engineers — no story IDs, AC checkboxes, or test-count tallies. Body templates (feature / bug fix) and avoid/include lists: [references/pr-templates.md](references/pr-templates.md).
 
 **4.B.5 Create PR.** Use `gh pr create --title ... --base ... --body "$(cat <<'EOF' ... EOF)"`. Exact command and post-create output block: [references/pr-templates.md](references/pr-templates.md).
 
@@ -248,8 +248,6 @@ Present a final block covering: Commit (hash/branch/message), PR (url/status), G
 - **Never open a second PR for a branch** that already has an open one (Phase 0.2).
 - **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only.
 - **Always close issues with a `Closes #X` footer**, and only when the work is complete.
-
----
 
 ## NEXT
 

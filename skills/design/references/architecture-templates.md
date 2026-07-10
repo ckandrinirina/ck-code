@@ -182,9 +182,9 @@ best practices (research via context7/WebSearch if needed).
 **File:** `docs/architecture/features/<slug>/index.md` — one per feature (= one epic).
 Self-contained: holds everything a `build`/`fix` story for this feature needs, so the
 story never opens another feature's doc. `<slug>` matches the epic folder slug so
-`FEATURE_INDEX.Docs` can route to it. Per-increment / per-fix changes are journaled as
-dated sibling docs (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`, see template below);
-`index.md` stays the canonical current truth that readers route to.
+`FEATURE_INDEX.Docs` can route to it. Dated sibling delta docs
+(`features/<slug>/YYYY-MM-DD_<id>_<short>.md`, template below) journal per-increment /
+per-fix changes; `index.md` stays the canonical current truth.
 
 > **Relative links:** `index.md` sits two levels under `docs/architecture/`, so
 > links to `_shared.md` and sibling globals use `../../` (e.g. `../../_shared.md`,

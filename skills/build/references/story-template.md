@@ -35,7 +35,7 @@ Examples:
 
 ---
 
-## Phase 8.2 — Implementation Summary (append after QA pass)
+## Phase 8.1 — Implementation Summary (append after QA pass)
 
 ```markdown
 ---
@@ -78,7 +78,7 @@ CREATED tests/ws_handler_test.rs
 
 ---
 
-## Phase 8.3 — Acceptance Criteria Checklist Update
+## Phase 8.2 — Acceptance Criteria Checklist Update
 
 Mark all acceptance criteria as checked in the story file:
 
@@ -90,7 +90,7 @@ Mark all acceptance criteria as checked in the story file:
 
 ---
 
-## Phase 8.4 — Parent EPIC.md Stories Table Row
+## Phase 8.7 — Parent EPIC.md Stories Table Row
 
 Update the row for this story in the parent epic's stories table:
 
@@ -100,11 +100,11 @@ Update the row for this story in the parent epic's stories table:
 
 ---
 
-## Phase 1.4 — Status Transitions
+## Phase 1.6 — Status Transitions
 
 Story status moves through these states. Edit the existing line in the story file.
 
-TODO → IN PROGRESS (Phase 1.4):
+TODO → IN PROGRESS (Phase 1.6):
 
 ```
 > **Status:** TODO
@@ -116,7 +116,7 @@ TODO → IN PROGRESS (Phase 1.4):
 > **Status:** IN PROGRESS
 ```
 
-IN PROGRESS → DONE (Phase 8.1, only after manual testing PASS in 8.7):
+IN PROGRESS → DONE (Phase 8.6, only after manual testing PASS in 8.5):
 
 ```
 > **Status:** IN PROGRESS

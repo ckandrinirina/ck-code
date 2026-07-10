@@ -7,12 +7,9 @@ disable-model-invocation: true
 
 # Fix — Story-Linked Bug Fix Orchestrator
 
-Diagnose and fix a bug tied to one or more stories. Auto-matches the best story by file/criteria overlap, supports multi-story scope, and creates stub stories in the correct epic when a "bug" turns out to need missing functionality. Always confirms scope before writing.
+Diagnoses and minimally fixes a story-linked bug (scope in the frontmatter description). Always confirms scope before writing.
 
-For a worked bug-fix example, see [references/examples.md](references/examples.md).
-For user-facing prompt scripts, see [references/qa-dialogue.md](references/qa-dialogue.md).
-For story-file bug section templates, see [references/bug-section-template.md](references/bug-section-template.md).
-For the index/epic sync contract, see [`../../references/stories-index.md`](../../references/stories-index.md).
+References: [examples.md](references/examples.md) (worked bug-fix walkthroughs) · [qa-dialogue.md](references/qa-dialogue.md) (user-facing prompt scripts) · [bug-section-template.md](references/bug-section-template.md) (story-file bug sections) · [`stories-index.md`](../../references/stories-index.md) (index/epic sync contract).
 
 ## ROUTING CHECK (do first)
 
@@ -300,7 +297,7 @@ Skill-specific report and escalation templates: `references/qa-dialogue.md` (Pha
 
 Fill the Resolution + Files Touched subsections under the Bug Report in **every** story file in scope. Status: `FIXED`. Template: `references/bug-section-template.md` (Phase 8.1). The Resolution block records an **Unplanned changes count** (from `## Unplanned Changes` under the Bug Report if present, else "none").
 
-**Files Touched precision rules:** for CREATED files use just the path (e.g., `CREATED tests/regression_test.rs`); for MODIFIED files use path + exact line numbers (e.g., `MODIFIED src/handler.rs:34,67-69`); use `git diff --stat` and `git diff` to collect precise lines; no descriptions — just paths and line numbers for quick reference.
+**Files Touched precision:** CREATED = path only; MODIFIED = `path:lines` collected via `git diff` — full format rules in `references/bug-section-template.md` (Files Touched format rules).
 
 ### 8.2 Update Story Status
 

@@ -131,8 +131,8 @@ Used for `STORIES_INDEX.md` at the project root (sibling to `PROJECT_OVERVIEW.md
 
 | Epic             | ID    | Title         | Status | Size | Blocked by | File                                       |
 | ---------------- | ----- | ------------- | ------ | ---- | ---------- | ------------------------------------------ |
-| 01 · [Epic Name] | 01-01 | [Story title] | TODO   | M    | -          | epics/01*<slug>/stories/01*<story-slug>.md |
-| 01 · [Epic Name] | 01-02 | [Story title] | TODO   | S    | 01-01      | epics/01*<slug>/stories/02*<story-slug>.md |
+| 01 · [Epic Name] | 01-01 | [Story title] | TODO   | M    | -          | epics/01_<slug>/stories/01_<story-slug>.md |
+| 01 · [Epic Name] | 01-02 | [Story title] | TODO   | S    | 01-01      | epics/01_<slug>/stories/02_<story-slug>.md |
 ```
 
 Rows sorted by `ID`. `Blocked by` is comma-separated story IDs or `-`. `File` is the path relative to the project root (`tasks/<slug>/`).

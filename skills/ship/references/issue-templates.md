@@ -36,29 +36,11 @@ EOF
 
 ## Epic Issue: Update Checklist
 
-Mark the completed item in the parent issue's task list:
-
-1. Read the parent issue body:
-   ```bash
-   gh issue view <epic_issue_number> --json body -q .body
-   ```
-2. Replace `- [ ] #<story_issue_number>` with `- [x] #<story_issue_number>`
-3. Update the body:
-   ```bash
-   gh issue edit <epic_issue_number> --body "<updated body>"
-   ```
+Commands live in SKILL.md Phase 5.2: read the parent body with `gh issue view`, flip `- [ ] #<story_issue_number>` to `- [x]`, write it back with `gh issue edit`.
 
 ## Status Labels
 
-Mark the issue as done:
-```bash
-gh issue edit <story_issue_number> --add-label "status/done"
-```
-
-For bug fixes:
-```bash
-gh issue edit <story_issue_number> --add-label "has-bugfix"
-```
+Commands live in SKILL.md Phase 5.3: `--add-label "status/done"`, plus `"has-bugfix"` for bug fixes.
 
 ## Things to avoid in issue comments
 

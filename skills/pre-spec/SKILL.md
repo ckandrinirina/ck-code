@@ -213,7 +213,7 @@ Once stakeholders sign off and the spec status is `ready-for-design`, run `/ck-c
 
 ## CROSS-SKILL CONVENTION — feeding /ck-code:design
 
-When the user says the spec is locked, set `status: "ready-for-design"`.
+When the user says the spec is locked, set `status: "ready-for-design"` (Phase 4).
 `/ck-code:design` looks for `.metadata.json` files with that status,
 treats the pre-spec as input, writes its output to `feature-spec.md` in
 the same folder, sets `linkedDesign` accordingly, and bumps status to

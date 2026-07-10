@@ -1,9 +1,6 @@
 # Bug Section Templates for the Story File
 
-These templates are appended to the original story file across phases. The bug
-report is written immediately after diagnosis (Phase 4.5), the Fix Plan section
-is added in Phase 5.3, and the Resolution section is filled in at completion
-(Phase 8.1).
+Templates appended to the original story file at the phase named in each heading.
 
 ---
 
@@ -30,9 +27,6 @@ is added in Phase 5.3, and the Resolution section is filled in at completion
 - **Reproduction test:** [test name]
 - **Related issues:** [count]
 ```
-
-This creates a permanent record of the bug and its diagnosis even before the
-fix begins.
 
 ### Bug ID format
 `BUG-YYYYMMDD-NN` where `NN` is a zero-padded counter starting at `01` for the
@@ -109,9 +103,8 @@ empty). Add one bullet per unplanned expansion at the moment it happens.
 - "Why" must justify the expansion as unavoidable for the minimal fix
   (e.g., "shared helper required by the patched function", "test broke
   because mocked dependency changed signature").
-- This does NOT authorize widening the fix. Drive-by fixes for OTHER bugs
-  remain forbidden — those go in the Phase 4.4 related-issues note for
-  separate `/ck-code:fix` runs.
+- Does NOT authorize widening the fix — drive-by fixes for OTHER bugs remain
+  forbidden (rule in SKILL.md Phase 6.2; they go in the Phase 4.4 related-issues note).
 - If the same file is touched again later, update its existing line in place
   rather than adding a duplicate.
 

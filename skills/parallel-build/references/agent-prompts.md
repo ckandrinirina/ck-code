@@ -1,6 +1,7 @@
 # Sub-Agent Dispatch Prompt Templates
 
-Use these templates when dispatching parallel sub-agents in Phase 3.3.
+Prompt templates for every dispatched sub-agent: Phase 3.3 build, Phase 5 QA,
+Phase 6 post-merge QA, Phase 6.5.3 bug-fix, and Phase 6 Option 3 continue.
 
 ## How the Working Directory Is Conveyed (read once, applies to every template)
 
@@ -84,8 +85,7 @@ go parallel already happened (build's Phase 1.2 selection, parallel-build's own 
 selection, or an explicit `$ARGUMENTS` ID list); do NOT add a second "press enter to
 start" confirmation. Show **Complexity → Tier (resolved model)** so the operator can
 catch a mis-resolution mid-run, and dispatch immediately in the same turn. Replace `<…>`
-placeholders with the concrete model ID the tier resolved to at runtime. Note how two
-same-Size stories can resolve differently — the driver is complexity, not Size.
+placeholders with the concrete model ID the tier resolved to at runtime.
 
 ```
 ⚡ Dispatching N agents in parallel — each runs /ck-code:build in its own worktree:
@@ -110,10 +110,7 @@ Agent results (provisional — verified objectively in Phase 3.5):
 
 The trailing `STATUS:` block is a **hint**, not the outcome of record — Phase 3.5's
 ✓ COMPLETE gate (criteria + clean tree + QA) decides. A missing block, or `SUCCESS` that
-fails the gate, is treated as ◐ incomplete.
-
-`◐ incomplete` = agent returned with no error but did not finish (typically an XL story
-that exhausted its dispatch budget). It is recovered via Phase 6 **Continue in place**
+fails the gate, is treated as ◐ incomplete: recovered via the Phase 6 **Continue in place**
 auto-continue loop (prompt below), never by reattaching to the agent (no `SendMessage`) and
 never by fresh re-dispatch into a new worktree (that discards the partial work).
 

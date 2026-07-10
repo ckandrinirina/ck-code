@@ -8,12 +8,11 @@ dependencies already `DONE`.
 Example: Epic 01 has 01-01, 01-02, 01-03 (blocked by 01-01 + 01-02), 01-04 (blocked by
 01-03). Waves: `[01-01, 01-02]` → `[01-03]` → `[01-04]`.
 
-**Scope is exactly one epic — never a whole feature.** A feature with several epics
-(e.g. `01_foundation`, `02_shell`, `03_surfaces`, `04_integration`) is built **one epic
-per `--epic` run**. Wave mode never plans waves that span more than one epic — that
-produces feature-wide chains with many sequential merge+dispatch cycles and heavy token
-use. After an epic completes, parallel-build stops and the operator picks the next epic
-(it does not auto-chain across epics).
+**Scope is exactly one epic — never a whole feature.** A multi-epic feature is built
+**one epic per `--epic` run**. Wave mode never plans waves that span more than one epic —
+that produces feature-wide chains with many sequential merge+dispatch cycles and heavy
+token use. After an epic completes, parallel-build stops and the operator picks the next
+epic (it does not auto-chain across epics).
 
 ## Entry
 
@@ -94,13 +93,12 @@ For each wave, in order:
    that `$TARGET_SHA` (Phase 3.0c): the base is pinned at launch, so each wave's stories can
    only build on the previous waves' merged code. Phase 3.5b asserts this on return.
 3. **Single-story wave** → dispatch it as a **one-agent worktree run** (SKILL.md Phase 2.5,
-   N=1), never an inline `/ck-code:build` — **the terminal wave included**. Inline build
-   would load that story's whole TDD/QA transcript into the orchestrator (taxing every later
-   wave) and could land the work on a `story/…` branch off the wave target instead of on it.
-   Even in a terminal wave, the orchestrator still has to run merge, index reconciliation,
-   the Phase 6.5 manual-test gate and cleanup afterwards — the context it would inherit is
-   not free. Skip only the cross-branch conflict analysis (Phase 4): one branch, nothing to
-   compare.
+   N=1), never an inline `/ck-code:build` — **the terminal wave included**. Even in a
+   terminal wave, the orchestrator still runs merge, index reconciliation, the Phase 6.5
+   manual-test gate and cleanup afterwards, so an inline build's transcript taxes every
+   later step (and could land work on a `story/…` branch instead of the wave target);
+   rationale: `context-budget.md` → *Why N=1 Still Uses a Worktree*. Skip only the
+   cross-branch conflict analysis (Phase 4): one branch, nothing to compare.
 4. **Run the pipeline on this wave's stories:** SKILL.md Phase 3 (dispatch) → 3.5
    (integrity) → 4 (conflict, intra-wave only) → 5 (QA).
 5. **Merge this wave** into the target branch with Phase 6 Option 1 logic — merge-eligible
@@ -111,8 +109,8 @@ For each wave, in order:
    `DONE`. Run the post-merge QA on the target **via a `ck-code:qa-validator` agent**, not
    inline — a per-wave inline suite compounds across every remaining wave.
 6. **Manual-test the merged wave** (SKILL.md Phase 6.5) on the target branch in the main
-   checkout — never in a worktree, which has no runnable environment and holds only one
-   story's code. Gate here, per wave, so the next wave never builds on unverified code. A
+   checkout — never in a worktree (no runnable environment, one story's code only).
+   Gate here, per wave, so the next wave never builds on unverified code. A
    story the operator reverts (6.5.4 option C) returns to `IN PROGRESS`, holds its
    downstream dependents, and keeps its worktree.
 7. **Cleanup this wave's worktrees** (Phase 7) before the next wave. Keep the worktrees of

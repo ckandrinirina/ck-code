@@ -10,8 +10,8 @@ disallowed-tools: Write, Edit, NotebookEdit
 
 Inspects the current project state and recommends the next skill in the
 ck-code workflow. **This skill never invokes another skill, writes files,
-or edits state.** It always prints the recommendation and stops; the user
-runs the recommended command themselves.
+or edits state.** It prints the recommendation and stops; the user runs
+the command themselves.
 
 For the full workflow graph and output locations, see
 [`../../references/workflow-map.md`](../../references/workflow-map.md).
@@ -30,7 +30,7 @@ Read `tasks/VERSION.md`. If `layout: v3` → proceed silently. Otherwise run the
 
 The read-only project-state probes are **pre-loaded** at skill start via dynamic
 context injection — read the snapshot below and do **not** re-run these `ls`/`find`/`gh`
-calls as separate tool calls (saves ~5 round-trips per invocation):
+calls as separate tool calls:
 
 !`echo "== specs =="; ls -d docs/specs/*/ 2>/dev/null | head -5; echo "== architecture =="; ls docs/architecture/*.md 2>/dev/null | head -3; echo "== generated skills =="; find .claude/skills -type f -name SKILL.md 2>/dev/null | grep -E "(experts|guides)/" | head -3; echo "== tasks =="; ls -d tasks/*/ 2>/dev/null | head -3; echo "== stories index =="; ls tasks/*/STORIES_INDEX.md 2>/dev/null | head -3; echo "== open story issues =="; gh issue list --label story --state open --json number 2>/dev/null | head -1`
 

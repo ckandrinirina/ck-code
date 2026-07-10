@@ -77,10 +77,8 @@ Use these instead of the New Project flow when in Feature Mode.
    - "Any performance, security, or compatibility requirements specific to this feature?"
    - "Does this change affect the existing folder structure?"
 
-After gathering answers, map impact into the feature's canonical doc
-`features/<slug>/index.md` (new endpoints → its `## API`, new tables → its `## Data`, new
-components → its `## Components`, new flows → its `## Flows`). Cross-cutting infra shared
-by 2+ features goes in `_shared.md`, linked from the feature doc.
+After gathering answers, map impact into `features/<slug>/index.md` as specified in
+SKILL.md Phase 2 "Question Sets" (endpoints → `## API`, tables → `## Data`, etc.).
 
 ---
 
