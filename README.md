@@ -4,7 +4,7 @@
 
 **ck-code** is an open-source [Claude Code plugin](https://www.anthropic.com/claude-code) that brings spec-driven development to AI-assisted software engineering. Feed it a project specification and it will:
 
-1. **Design** — refine your spec into a complete set of architecture documents (folder structure, components, APIs, database schema, tech stack)
+1. **Design** — refine your spec into a complete set of architecture documents (global docs like folder structure and tech stack, plus one self-contained doc per feature covering its components, APIs, and data)
 2. **Plan** — break the architecture into epics and single-dispatch stories (each sized S/M so one agent finishes it in a pass) with explicit dependencies
 3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture: it generates only the roles the project actually needs (frontend, backend, QA, security, database, DevOps, and domain-specific roles), at a depth you choose (`--basic` / `--standard` / `--max`), plus per-technology guides. Capture your own house conventions with **Convention**.
 4. **Build** — implement each story using test-driven development (TDD), SOLID principles, and a built-in dev-QA validation loop
@@ -15,7 +15,7 @@ Whether you're building a new project from scratch or adding a feature to an exi
 ## Features
 
 - **Spec-driven development workflow** — single source of truth from specification to merged PR
-- **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, components, data flow, API contracts, database schema, configuration, dev guide)
+- **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — sized stories with dependency graphs in `tasks/`
 - **GitHub Issues integration** — push your epics and stories to GitHub Issues with size labels and parent/child links
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
