@@ -211,15 +211,25 @@ worktree dispatch, never inline `/ck-code:build`, **terminal wave included**.
 
 Create worktrees and dispatch all sub-agents in one parallel batch.
 
-### 3.0 Freeze the Merge Target (base pin — do this FIRST)
+### 3.0 Freeze the Target, Then Create the Worktrees (base pin — do this FIRST)
 
-Before any dispatch, **freeze the merge target once**: `$TARGET` = current branch,
-`$TARGET_SHA` = its HEAD (detached HEAD → stop and ask); confirm a clean tree. Every later
+Before any dispatch: **freeze the merge target once** (`$TARGET` = current branch,
+`$TARGET_SHA` = its HEAD; detached HEAD → stop and ask; tree must be clean), then **create
+every worktree yourself**, each cut from `$TARGET_SHA` on branch `$PREFIX$ID`. Every later
 phase uses `$TARGET` / `$TARGET_SHA` — **never a hardcoded `main`** (diffing against `main`
 while on a `docs`/feature branch is what produced the "stray commit" archaeology).
-`isolation: worktree` won't let us pin the base at dispatch, so base correctness is
-**guaranteed on return** (Phase 3.5b normalize), not at launch. Commands:
-[`references/pipeline.md`](references/pipeline.md) Phase 3.0.
+
+**Never let the Agent tool create the worktree.** Its `isolation: worktree` cuts from a base
+you cannot choose and names the branch itself, so agents land on an arbitrary commit that may
+not contain their story file — and no after-the-fact repair helps, because the agent has
+already failed. Orchestrator-created worktrees make base correctness a **launch-time
+guarantee**, which is why Phase 3.5b is now a cheap assertion rather than a rebase.
+
+Check **every** branch name for collision before creating **any** worktree — a stale
+`story/04-04` from an unrelated feature must never be reused; on collision, ask once for a
+run-scoped `$PREFIX` (e.g. `story/conn-`) and apply it to the whole run. Then verify each
+worktree sits on `$TARGET_SHA` and contains its story file. Commands + the Agent-tool
+contract: [`references/pipeline.md`](references/pipeline.md) Phase 3.0.
 
 ### 3.1 Model Selection
 
@@ -262,21 +272,30 @@ and rely on the per-story status tables already printed in Phases 3.4 / 5 / 6.
 **CRITICAL:** You MUST dispatch ALL sub-agents in a single response message (multiple
 Agent tool calls in one turn). Do NOT dispatch them sequentially.
 
-For each story, dispatch one Agent call with `isolation: worktree`, the model from
-3.1, branch `story/XX-YY`, and the prompt template from `references/agent-prompts.md`.
-The prompt instructs the agent to read the story file and invoke `/ck-code:build` via
-the Skill tool, which handles TDD, SOLID, QA, and commit.
+For each story, dispatch one Agent call with the model from 3.1 and the prompt template from
+`references/agent-prompts.md`. The prompt instructs the agent to `cd` into its worktree, read
+the story file there, and invoke `/ck-code:build` via the Skill tool, which handles TDD,
+SOLID, QA, and commit.
+
+**Pass no `isolation` parameter** — the worktree already exists (Phase 3.0c), and the tool
+offers no way to point an agent at it. The working directory travels **in the prompt body**:
+absolute path + mandatory first `cd` + a `git rev-parse --show-toplevel` STEP-0 guard that
+aborts on mismatch. Omitting `isolation` *without* that guard silently runs the agent in the
+main checkout. Why the tool leaves no alternative:
+[`references/pipeline.md`](references/pipeline.md) → *The Agent-Tool Contract*.
 
 **Preferred subagent_type:** if available, use `ck-code:story-implementer` (defined
-in this plugin's `agents/` folder — wraps the build flow with worktree-isolation
-guarantees). If that subagent_type is not registered, fall back to a
+in this plugin's `agents/` folder — it takes the worktree path as an input and enforces the
+same STEP-0 guard). If that subagent_type is not registered, fall back to a
 `general-purpose` agent with the same prompt.
 
-Worktree isolation rules:
+Worktree rules:
 
-- Each agent runs in its own `.claude/worktrees/agent-XXXXXXXX`.
-- Agents must only modify files relevant to their story.
+- Each agent works in the `.claude/worktrees/agent-XX-YY` the orchestrator created for it.
+- Agents must only modify files relevant to their story, inside their own worktree.
 - Agents must NOT modify story files in `tasks/` (the build skill updates those).
+- Agents must NOT run `git checkout -b`, `rebase`, or `reset` — the base is pinned and
+  asserted on return (Phase 3.5b).
 - **An oversized story may exhaust its dispatch budget and stop early** (◐ incomplete in
   Phase 3.4), so `/ck-code:build` commits per phase inside the worktree.
 
@@ -310,11 +329,12 @@ recorded and no code was silently lost. Two **pre-steps run first per worktree**
    agent can stop with work **uncommitted** (transcript 01-01 had *no* commit — one
    `git worktree prune` from losing it). WIP-commit every dirty worktree so it is durable
    and rebaseable.
-2. **Normalize the base (3.5b).** If a branch's merge-base with `$TARGET_SHA` isn't
-   `$TARGET_SHA`, it was cut from a divergent point and carries foreign commits (the
-   `dabfb20` / `f298946` archaeology). Don't investigate by hand —
-   `git rebase --onto $TARGET_SHA <merge-base> story/XX-YY` replays only the story's work
-   onto the target, so the diff and merge are exactly the story.
+2. **Assert the base (3.5b).** Phase 3.0c cut every branch from `$TARGET_SHA`, so its
+   merge-base must still *be* `$TARGET_SHA` — branches only move forward. Verify it. A
+   mismatch is no longer routine drift to rebase away (the old `dabfb20` / `f298946`
+   archaeology); it means an agent rewrote history in its worktree or the target moved
+   under the run. Flag 🚫 BLOCKED, keep the worktree, surface it — never auto-rebase, which
+   would hide the cause and can drop commits.
 
 Then verify the worktree **story file** reads `Status: DONE` (NOT the index — sub-agents
 defer all shared-index edits in parallel mode, so the worktree's `STORIES_INDEX.md` /
@@ -385,10 +405,13 @@ QA command and reuse it for every story in the run.
 
 For every story that reached Phase 3.5 ✓ COMPLETE or ⚠ warning (merge-candidate set),
 dispatch one Agent in a single parallel message (like Phase 3.3) with `subagent_type:
-ck-code:qa-validator`, `isolation: none`, `cwd: <worktree>`, and the **Phase 5 QA-Validation
+ck-code:qa-validator`, **no `isolation` parameter**, and the **Phase 5 QA-Validation
 Sub-Agent** prompt from [`references/agent-prompts.md`](references/agent-prompts.md) carrying
-that story's concrete stack commands from 5.1. The agent runs the commands, captures any
-failing output, and returns the QA Report verdict line. If the `ck-code:qa-validator`
+that story's absolute worktree path and its concrete stack commands from 5.1. The agent `cd`s
+into the worktree, guards on `git rev-parse --show-toplevel`, runs the commands, captures any
+failing output, and returns the QA Report verdict line. **The guard is not ceremony:** an
+unguarded QA agent runs the suite in the main checkout and returns `QA: PASS` for code the
+story never wrote, greenlighting an unbuilt branch for merge. If the `ck-code:qa-validator`
 subagent_type is not registered, **fall back** to running the 5.1 commands inline per
 worktree.
 
@@ -420,7 +443,8 @@ Resolve and confirm the target, then merge each branch. Procedure:
 [`references/pipeline.md`](references/pipeline.md).
 
 Final QA on the merged target catches cross-branch integration issues — **dispatch it to one
-`ck-code:qa-validator` agent** (`isolation: none`, `cwd: <repo root>`, prompt in
+`ck-code:qa-validator` agent** (no `isolation` parameter, so it runs in the main checkout
+where the merged target lives; it guards on branch name instead of path — prompt in
 [`references/agent-prompts.md`](references/agent-prompts.md)) with the union of the merged
 stories' Phase 5.1 commands. A merge does not make `cargo test` output cheap: run inline it
 floods the orchestrator exactly as the per-story suites would have. Inline is the fallback
@@ -449,7 +473,9 @@ Remind the user to run Phase 6.5 then Phase 7 after merging.
 One dispatch cannot be guaranteed to finish an XL story (the per-agent budget is the
 harness's, not ours), so completion is reached by *looping*, not by hoping one retry lands.
 For each ◐ incomplete story, dispatch a fresh Continue-Incomplete agent INTO its existing
-worktree (`isolation: none`, `cwd: <worktree>`, in-worktree story path) and **repeat until
+worktree (**no `isolation` parameter** — `isolation: worktree` would hand it a new, empty
+tree and discard the partial work; the prompt carries the absolute worktree path, the `cd`,
+the STEP-0 guard, and the in-worktree story path) and **repeat until
 the Phase 3.5 ✓ COMPLETE gate passes**, capped at 3 rounds. Loop mechanics + commands:
 [`references/pipeline.md`](references/pipeline.md) Phase 6 Option 3. Three rules:
 
@@ -473,7 +499,7 @@ salvageable progress). Do NOT use this for ◐ incomplete stories — it discard
 
 Runs after the Option-1 merge, index reconciliation, and post-merge QA — **before** Phase 7
 cleanup. Manual testing never happens inside an agent worktree: a throwaway
-`.claude/worktrees/agent-XXXXXXXX` tree has no installed dependencies, dev server, env, or
+`.claude/worktrees/agent-XX-YY` tree has no installed dependencies, dev server, env, or
 DB, and holds one story's code in isolation from its siblings'. The only place the operator
 can exercise the software is the main checkout on `$TARGET`, where every merged story sits
 together. Sub-agents also cannot prompt the user, so this gate is always orchestrator-level.
@@ -489,7 +515,8 @@ story body. Ask `Result? PASS / ISSUES`.
 **6.5.2** On `PASS` → mark the story `MANUAL-TEST PASS` and its Task `completed`.
 
 **6.5.3** On `ISSUES` → capture the bug, then dispatch ONE Agent into the **main checkout on
-`$TARGET`** (`isolation: none`, `cwd: <repo root>`; prompt in `references/agent-prompts.md` —
+`$TARGET`** (no `isolation` parameter — omitting it lands the agent in the main checkout,
+which is the intent here; prompt in `references/agent-prompts.md` —
 Phase 6.5.3 Bug-Fix Sub-Agent). The story is already merged, so the fix commits to `$TARGET`
 — never to the story worktree, whose branch is no longer the source of truth. The agent
 invokes `/ck-code:build`, which re-enters at Phase 8.5.3 (regression test → fix → Refactor →
@@ -506,10 +533,10 @@ worktree cleanup — so a dependent wave never builds on code the operator has n
 ## PHASE 7: WORKTREE CLEANUP
 
 Always run after the merge and its Phase 6.5 gate. List worktrees, remove each
-`.claude/worktrees/agent-*` with double-force (`git worktree remove -f -f` — agent
-worktrees are locked by default), then `git worktree prune` and confirm only main
-remains. Commands: [`references/pipeline.md`](references/pipeline.md). Print cleanup
-confirmation (format in `references/conflict-format.md`).
+`.claude/worktrees/agent-XX-YY` with `git worktree remove -f` (orchestrator-created
+worktrees are not locked; `-f` only forces past a dirty tree), then `git worktree prune`
+and confirm only main remains. Commands: [`references/pipeline.md`](references/pipeline.md).
+Print cleanup confirmation (format in `references/conflict-format.md`).
 
 ## RULES
 
@@ -519,6 +546,9 @@ confirmation (format in `references/conflict-format.md`).
 - **Never let sub-agents edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or `EPIC.md`** — the orchestrator is their single writer, reconciling once on the target branch after each merge.
 - **Never modify story files in `tasks/` directly** — `/ck-code:build` owns them.
 - **Never hardcode `main`** — freeze `$TARGET` / `$TARGET_SHA` once (Phase 3.0) and use it for integrity, conflict, and merge.
+- **Never pass `isolation` or `cwd` to the Agent tool** — there is no `cwd`, and `isolation: none` is an invalid enum value, not an opt-out. A worktree agent is placed by prompt text: absolute path + first-call `cd` + STEP-0 `git rev-parse --show-toplevel` guard.
+- **Never reuse an existing branch name** — check every `$PREFIX$ID` for collision before creating any worktree (Phase 3.0b); on collision take a run-scoped `$PREFIX`.
+- **Never auto-rebase a drifted branch** — with a pinned base, a 3.5b assertion failure is an anomaly to surface, not drift to silently repair.
 - **Never reattach to a returned sub-agent** — the worktree is its only durable state.
 - **Never trust an agent's self-report** — completion is orchestrator-verified (Phase 3.5 gate); a zero-progress continue round is `🚫 STUCK`.
 - **Never merge** a branch that has not passed Phase 5 QA.
@@ -530,7 +560,7 @@ confirmation (format in `references/conflict-format.md`).
 - **Never run a deep wave chain silently** — the Wave Depth Guard requires `PROCEED / SPLIT` confirmation.
 - **Never dispatch a wave story whose blocker is unresolved**, and never span epics in one wave plan.
 - **Always dispatch agents in a single message** — one turn, multiple Agent calls.
-- **Always isolate** each dispatched agent in its own worktree (`isolation: worktree`).
+- **Always create the worktrees in the orchestrator** (Phase 3.0c), one per story, cut from `$TARGET_SHA`, and verify base + story-file presence before dispatch.
 - **Always WIP-commit dirty worktrees** before resume or cleanup (Phase 3.5a).
 - **Always merge a wave before dispatching the next** (wave mode).
 - **Always run final QA on the merged target** before cleanup (delegated), then delete every agent worktree.

@@ -2,31 +2,59 @@
 
 Use these templates when dispatching parallel sub-agents in Phase 3.3.
 
+## How the Working Directory Is Conveyed (read once, applies to every template)
+
+**No template below passes an `isolation` or `cwd` parameter** — the Agent tool offers
+neither a usable worktree target nor a working directory (`pipeline.md` → *The Agent-Tool
+Contract*). Omitting `isolation` lands the agent **in the main checkout**.
+
+So a worktree agent is placed by **prompt text alone**, using the same three-part pattern:
+
+1. An **absolute** worktree path, stated in the prompt.
+2. A mandatory first Bash call `cd "<abs path>"` — the Bash tool keeps that directory for
+   every later call in the agent.
+3. A **STEP 0 guard**: `git rev-parse --show-toplevel` must equal that path, else STOP and
+   report `WRONG WORKTREE`. Without the guard, a mis-placed agent finds nothing to do,
+   exits clean, and reports success — the one failure mode that silently corrupts a run.
+
+Agents that are *meant* to run in the main checkout (Phase 6 post-merge QA, Phase 6.5.3
+bug-fix) omit `isolation` deliberately and guard on the **branch** instead of the path.
+
 ## Per-Story Agent Call
 
-For each selected story, dispatch one Agent call with the following structure:
+Dispatched in Phase 3.3, into the worktree the orchestrator already created in Phase 3.0c.
 
 ```
 subagent_type: ck-code:story-implementer  # falls back to general-purpose if not registered
 model: [determined in 3.1 by reasoning complexity — balanced/Sonnet default, advanced/Opus only when the story needs deep reasoning]
-isolation: worktree
 description: "Implement story XX-YY: [story title]"
+# NO isolation parameter — the worktree already exists; the prompt places the agent in it.
 prompt: |
-  You are implementing story XX-YY.
+  You are implementing story XX-YY inside a worktree that ALREADY EXISTS.
 
-  Story file: [full path to story markdown file]
-  Branch: story/XX-YY
+  Worktree: <absolute worktree path, e.g. /repo/.claude/worktrees/agent-04-01>
+  Story file (INSIDE the worktree): <worktree path>/<relative story path>
+  Branch:   <already checked out in that worktree — never create or switch branches>
+
+  STEP 0 — PROVE YOU ARE IN THE RIGHT PLACE (mandatory, before anything else):
+  - Your FIRST Bash call must be exactly:  cd "<absolute worktree path>"
+  - Then run `git rev-parse --show-toplevel` and confirm it equals the Worktree path.
+    If it does NOT match, STOP and report "WRONG WORKTREE" — do not proceed.
+  - Read the story file from the IN-WORKTREE path above — NEVER the main checkout copy.
+    If it is missing there, STOP and report "STORY FILE NOT IN WORKTREE" — never invent it.
+  - The branch is already checked out at the correct base. Never run `git checkout -b`,
+    `git rebase`, or `git reset` — the orchestrator asserts your base on return.
 
   Your task:
   1. Invoke the /ck-code:build skill using the Skill tool:
-     Skill({ skill: "ck-code:build", args: "[full path to story markdown file]" })
+     Skill({ skill: "ck-code:build", args: "<in-worktree story path>" })
   2. Follow the /ck-code:build skill completely — it handles TDD, SOLID principles, QA, and commit.
      **Commit after every TDD cycle / phase** — if you run out of budget mid-story, the
      committed state is the only thing the orchestrator can resume from. Never leave the
      whole story uncommitted.
 
   Important:
-  - Work only on files relevant to this story
+  - Work only on files relevant to this story, inside this worktree
   - /ck-code:build updates this story's own file `Status:` — let it. But it MUST NOT
     edit the shared indexes (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) or the parent
     `EPIC.md` inside this worktree: concurrent edits to those collide at merge. Build
@@ -98,18 +126,22 @@ its own cheap context and returns only a compact verdict, keeping the orchestrat
 ```
 subagent_type: ck-code:qa-validator   # falls back to inline 5.1 commands if not registered
 model: fast (Haiku)                    # qa-validator pins model: haiku; this is the explicit default
-isolation: none                        # run inside the story's existing worktree
-cwd: <existing worktree path for this story>
 description: "QA story XX-YY: [story title]"
+# NO isolation parameter — the prompt places the agent in the story's existing worktree.
 prompt: |
   You are running QA for story XX-YY inside its EXISTING worktree. Read-only against the
   project — run the stack commands below, never edit code or any file.
 
-  STEP 0 — confirm `git rev-parse --show-toplevel` equals the worktree path below; if not,
-  STOP and report "WRONG WORKTREE". Read the story file from the in-worktree path.
-
-  Worktree:   <existing worktree path>
+  Worktree:   <absolute worktree path for this story>
   Story file (INSIDE the worktree): <worktree path>/<relative story path>
+
+  STEP 0 — PROVE YOU ARE IN THE RIGHT PLACE (mandatory):
+  - Your FIRST Bash call must be exactly:  cd "<absolute worktree path>"
+  - Then confirm `git rev-parse --show-toplevel` equals that path; if not, STOP and report
+    "WRONG WORKTREE". Running the suite in the main checkout would green-light code this
+    story never wrote — the verdict must come from the story's own tree.
+  - Read the story file from the in-worktree path.
+
   Stack QA commands (run exactly, in order, from the worktree):
     <concrete commands for this story's epic — from SKILL.md Phase 5.1>
 
@@ -136,15 +168,16 @@ and same reason as Phase 5: a merge does not make test output cheap.
 ```
 subagent_type: ck-code:qa-validator   # falls back to inline 5.1 commands if not registered
 model: fast (Haiku)
-isolation: none                        # main checkout, on the merged target branch
-cwd: <repo root>
 description: "Post-merge QA on <$TARGET> (N merged stories)"
+# NO isolation parameter — omitting it runs the agent in the main checkout, which is
+# exactly where this one belongs: the merged target is the thing under test.
 prompt: |
   You are running post-merge QA on branch <$TARGET> in the main checkout, which now
   contains the merged code for stories: <XX-YY, XX-ZZ, …>. Read-only — never edit any file.
 
   STEP 0 — confirm `git rev-parse --abbrev-ref HEAD` equals <$TARGET>; if not, STOP and
-  report "WRONG BRANCH".
+  report "WRONG BRANCH". Do not cd into any worktree — a worktree holds one story in
+  isolation, and integration failures only appear once the branches sit together.
 
   Stack QA commands (the de-duplicated union of the merged stories' Phase 5.1 commands —
   run exactly, in order, from the repo root):
@@ -173,9 +206,9 @@ the **main checkout on the target branch**, where the fix lands as a new commit.
 ```
 subagent_type: general-purpose
 model: [tier resolved by reasoning complexity — see SKILL.md 3.1; a bug-fix typically matches the story's original tier]
-isolation: none   # main checkout — the story is already merged
-cwd: <repo root>
 description: "Fix post-merge manual-test bug for story XX-YY: [bug summary]"
+# NO isolation parameter — omitting it runs the agent in the main checkout on $TARGET,
+# which is where the fix must land: the story is already merged.
 prompt: |
   You are running in the main checkout on branch <$TARGET>, which already contains the
   merged code for story XX-YY.
@@ -224,20 +257,21 @@ worktree, and do NOT try to resume the original agent (impossible: no `SendMessa
 ```
 subagent_type: ck-code:story-implementer  # falls back to general-purpose
 model: [tier resolved by reasoning complexity — see SKILL.md 3.1; usually the story's original tier]
-isolation: none   # reuse the existing worktree path — its partial progress is the carry-over
-cwd: <existing worktree path for this story>
 description: "Continue incomplete story XX-YY: [story title]"
+# NO isolation parameter — reuse the EXISTING worktree (its partial progress is the
+# carry-over). A fresh `isolation: worktree` would silently discard that work.
 prompt: |
   You are resuming story XX-YY inside its EXISTING worktree. A previous agent ran out of
   budget and stopped before finishing — its partial work is already here (committed and/or
   in the working tree). You are NOT starting over.
 
-  Worktree: <existing worktree path>
+  Worktree: <absolute worktree path for this story>
   Story file (INSIDE the worktree): <worktree path>/<relative story path>
-  Branch:   story/XX-YY
+  Branch:   <already checked out in that worktree — never create or switch branches>
 
   STEP 0 — PROVE YOU ARE IN THE RIGHT PLACE (mandatory, before anything else):
-  - Run `git rev-parse --show-toplevel` and confirm it equals the Worktree path above.
+  - Your FIRST Bash call must be exactly:  cd "<absolute worktree path>"
+  - Then run `git rev-parse --show-toplevel` and confirm it equals the Worktree path above.
     If it does NOT match, STOP and report "WRONG WORKTREE" — do not proceed. (This is the
     guard against the silent no-op: an agent in the wrong dir sees nothing to do and exits.)
   - Read the story file from the IN-WORKTREE path above — NEVER the main checkout copy.

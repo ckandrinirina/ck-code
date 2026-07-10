@@ -149,7 +149,7 @@ Reply A / B / C.
 
 ```
 Worktree cleanup:
-  ✓ removed: agent-XXXXXXXX  (story XX-YY)
+  ✓ removed: agent-XX-YY  (story XX-YY)
   ...
   ✓ git worktree prune complete
   ✓ Only main worktree remains

@@ -19,7 +19,7 @@ You implement a single story end-to-end inside a pre-created git worktree by inv
 
 ## Workflow
 
-0. **Prove you are in the assigned worktree** before doing anything: run `git rev-parse --show-toplevel` and confirm it equals the worktree path you were given. If it does not match, STOP and report `STATUS: BLOCKED` with "WRONG WORKTREE" — never proceed in the wrong directory (a silent no-op that reports done is the worst outcome). Read the story file from inside this worktree, never the main checkout.
+0. **Enter and prove the assigned worktree** before doing anything. Your FIRST Bash call must be exactly `cd "<assigned worktree path>"` (the Bash tool keeps that directory for every later call). Then run `git rev-parse --show-toplevel` and confirm it equals the worktree path you were given. If it does not match, STOP and report `STATUS: BLOCKED` with "WRONG WORKTREE" — never proceed in the wrong directory (a silent no-op that reports done is the worst outcome). Read the story file from inside this worktree, never the main checkout. Your branch is already checked out at the correct base: never run `git checkout -b`, `git rebase`, or `git reset`.
 1. Invoke `/ck-code:build` on the story file using the `Skill` tool:
    `Skill({ skill: "ck-code:build", args: "[full story-file path]" })`
 2. Follow the skill completely through Phase 8.4 — stop before Phase 8.5 (manual-test gate, which the `parallel-build` orchestrator runs post-merge on the target branch in its Phase 6.5). Let `/ck-code:build` **commit after every TDD cycle / phase inside the worktree** (this is build's job, not yours) — if you stop early, that committed state is the only thing the orchestrator can resume, so never suppress build's per-phase commits or leave work uncommitted.

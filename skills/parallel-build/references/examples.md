@@ -32,14 +32,17 @@ not apply — full parallel dispatch.
 - 02-06 (M · routine UI) → `balanced` (Sonnet)
 - 03-01 (S · novel scheduling algorithm) → `advanced` (Opus) — small, but the reasoning escalates it
 
-Three Agent calls in **one response message**, `isolation: worktree`, each on branch
-`story/XX-YY` in `.claude/worktrees/agent-XXXXXXXX`.
+The orchestrator first creates three worktrees itself — `.claude/worktrees/agent-XX-YY`, each
+on a fresh `story/XX-YY` cut from `$TARGET_SHA` (no branch-name collisions). Then three Agent
+calls in **one response message**, **no `isolation` parameter**, each prompt carrying its
+absolute worktree path and the STEP-0 guard.
 
 On return: 02-05 reports SUCCESS, 03-01 reports SUCCESS, 02-06 reports a compile error (✗ failed).
 
 ## Phase 3.5 — Integrity Verification
 
-Every worktree is WIP-committed and rebased onto `$TARGET_SHA`. The agents' self-reports
+Every worktree is WIP-committed, and each branch's base is **asserted** to be `$TARGET_SHA`
+(it was cut there at launch, so this is a check, not a rebase). The agents' self-reports
 are **not** the outcome of record: 02-05 and 03-01 are confirmed ✓ COMPLETE from their
 worktrees (story file `DONE`, all criteria `[x]`, clean tree, non-empty diff). 02-06 is ✗
 failed and excluded from the merge-candidate set.

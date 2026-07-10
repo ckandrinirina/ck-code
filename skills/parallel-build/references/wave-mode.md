@@ -90,9 +90,9 @@ For each wave, in order:
 2. **Branch base.** Freeze this wave's target (`$TARGET` / `$TARGET_SHA`, SKILL.md Phase 3.0)
    from the **merge target branch's current HEAD** — which already contains previous waves'
    merged code — NOT a stale `main`. This is what lets a dependent story (e.g. 01-03) see its
-   merged dependencies and their `DONE` index status. Phase 3.5b still normalizes each branch
-   onto this wave's `$TARGET_SHA` on return, so a divergent worktree base is corrected
-   automatically rather than polluting the wave merge.
+   merged dependencies and their `DONE` index status. Then create this wave's worktrees from
+   that `$TARGET_SHA` (Phase 3.0c): the base is pinned at launch, so each wave's stories can
+   only build on the previous waves' merged code. Phase 3.5b asserts this on return.
 3. **Single-story wave** → dispatch it as a **one-agent worktree run** (SKILL.md Phase 2.5,
    N=1), never an inline `/ck-code:build` — **the terminal wave included**. Inline build
    would load that story's whole TDD/QA transcript into the orchestrator (taxing every later
