@@ -13,11 +13,24 @@ validation and conflict analysis before any merge.
 
 References:
 
+- `references/context-budget.md` — what the orchestrator may run inline vs. must delegate
 - `references/agent-prompts.md` — sub-agent dispatch prompt template + announce/result formats
 - `references/conflict-format.md` — output formats for table, conflict report, QA, summary, cleanup
 - `references/examples.md` — full worked example of a multi-story run
 - `references/wave-mode.md` — dependency-ordered multi-wave epic builds (`--epic NN`)
 - `references/pipeline.md` — bash mechanics for model resolution, integrity, conflict, merge, cleanup
+
+## CONTEXT BUDGET (applies to every phase)
+
+This orchestrator is the **longest-lived context in the run** — everything it loads is re-paid
+on every later turn, wave, and merge, while a sub-agent's context is discarded on return. So it
+**decides and routes; it never builds, tests, or reads code.**
+
+Inline only **bounded output**: index tables, file paths, counts, statuses, SHAs. Delegate
+everything that scales with the codebase, the diff, or the test suite — story implementation
+(**at any N, including N=1**), QA (per-story *and* post-merge), conflict dry-runs, post-merge
+bug fixes. Delegation table, safe-inline commands, forbidden-inline list:
+[`references/context-budget.md`](references/context-budget.md).
 
 ## ROUTING CHECK (do first)
 
@@ -78,15 +91,16 @@ If no stories are ready: list the still-blocked `TODO` stories and which of thei
 From the ready set, recommend which stories are safe to build **at the same time** —
 i.e. their declared file scopes don't overlap, so they won't collide at merge.
 
-1. Extract **only** each ready story's `Files to Create/Modify` table in a single batched
-   Bash call (the index lacks file scopes, so this targeted extraction is allowed here,
-   unlike Phase-1 discovery) — never a full `Read` of each story body, which would load
-   every story's acceptance criteria and technical notes into the long-lived orchestrator
-   just to compare file paths:
+1. Extract **only the file paths** from each ready story's `Files to Create/Modify` table in
+   a single batched Bash call (the index lacks file scopes, so this targeted extraction is
+   allowed here, unlike Phase-1 discovery). Never a full `Read` of the story body, and never
+   the table's description column — overlap detection needs paths and nothing else:
 
    ```bash
    for f in <ready-story paths from the index `File` column>; do
-     echo "== $f"; awk '/^## Files to Create\/Modify/{p=1;next} /^## /{p=0} p' "$f"
+     echo "== $f"
+     awk '/^## Files to Create\/Modify/{p=1;next} /^## /{p=0} p' "$f" \
+       | grep -oE '`[^`]+`' | tr -d '`' | grep '/' | sort -u
    done
    ```
 2. Group stories so that no two stories in a group share a file path. The largest
@@ -136,24 +150,28 @@ syntax.** Then the batch options. Parse the choice:
 
 If invalid/empty, ask again once. If still invalid, stop.
 
-## PHASE 2.5: SINGLE-STORY SHORT-CIRCUIT
+## PHASE 2.5: SINGLE-STORY LEAN PATH (N=1 — still a worktree)
 
-Before any worktree or sub-agent setup, check the selected set size.
+Before any dispatch, check the selected set size. **A single story never builds inline in this
+orchestrator** — inlining `/ck-code:build` saves one worktree and buys that build's entire
+transcript into every later phase (see
+[`references/context-budget.md`](references/context-budget.md) → *Why N=1 Still Uses a Worktree*).
 
-**If exactly one story is in scope** (either Phase 1.2 resolved one ready story, or the user selected one in Phase 2, or `$ARGUMENTS` was a single story ID), **skip the entire parallel flow and invoke `/ck-code:build <story-path>` directly via the Skill tool.** Sub-agent dispatch with worktree isolation is pure overhead when there is nothing to run in parallel — the operator gets a faster, simpler flow, and the build skill handles TDD, SOLID, QA, and commit end-to-end.
+**If exactly one story is in scope** (Phase 1.2 resolved one ready story, the user selected
+one in Phase 2, or `$ARGUMENTS` was a single story ID), run the **normal pipeline with N=1**:
 
-Print a short notice before delegating:
+- **Phase 3** — dispatch one worktree agent, exactly as for N=8.
+- **Phase 3.5** — full integrity gate. Unchanged; this is what makes "done" objective.
+- **Phase 4** — run the branch's dry-run merge onto `$TARGET`, but **skip cross-branch
+  overlap detection**: with one branch there is nothing to compare against.
+- **Phases 5 → 7** — unchanged.
+
+Print a short notice before dispatching:
 
 ```
 Only one story ready / selected: [EE-SS] [Title]
-Switching to /ck-code:build directly (no worktree, no sub-agent).
+Dispatching 1 agent in an isolated worktree (skipping cross-branch conflict analysis).
 ```
-
-Then call `Skill("ck-code:build", "<story-file-path>")` and exit — do NOT continue to Phase 3, Phase 4, Phase 5, etc. The build skill owns the rest of the workflow.
-
-**This batch-level short-circuit does NOT apply inside wave mode.** A single-story *wave*
-keeps one-agent worktree dispatch (Phase 3, N=1) so the long-lived orchestrator stays lean
-and the work lands on the wave target — see Phase 2.7 / [`references/wave-mode.md`](references/wave-mode.md).
 
 **If two or more stories are in scope**, continue to Phase 3 with full parallel dispatch.
 
@@ -184,10 +202,8 @@ Follow [`references/wave-mode.md`](references/wave-mode.md) in full. Key contrac
    the epic is done. A story whose blocker ended up BLOCKED-from-merge is **held** and
    reported, not dispatched.
 
-A single-story wave still runs through **one-agent worktree dispatch** (Phase 3, N=1), NOT
-inline `/ck-code:build` — the long-lived orchestrator stays lean across later waves and the
-work lands on the wave target branch. Only a *terminal* single-story wave may inline. See
-[`references/wave-mode.md`](references/wave-mode.md).
+A single-story wave takes the same lean N=1 path as any single-story batch (Phase 2.5) —
+worktree dispatch, never inline `/ck-code:build`, **terminal wave included**.
 
 ---
 
@@ -340,13 +356,10 @@ conflicts → "No conflicts detected — all branches merge cleanly."
 ## PHASE 5: QA & TESTING (delegated to parallel Haiku QA agents)
 
 Validate builds, tests, and lint per story's worktree, based on its epic/component — but
-**never run the heavy commands inline in this orchestrator.** A long-lived parallel-build
-orchestrator that runs `cargo test`, `cmake --build`, `pnpm run typescript`, `vitest`, etc.
-for every story in its own context floods the most expensive session in the run with verbose
-build/test/lint output. Instead, **dispatch one `ck-code:qa-validator` agent per completed
-story** — pinned to the `fast` (Haiku) tier — so each agent runs its stack's QA commands
-**inside its own worktree and its own cheap context**, and returns only a compact PASS/FAIL
-verdict. The orchestrator stays lean and the QA passes run in parallel instead of one-by-one.
+**never run the heavy commands inline** (CONTEXT BUDGET). **Dispatch one `ck-code:qa-validator`
+agent per completed story**, pinned to the `fast` (Haiku) tier: each runs its stack's QA
+commands inside its own worktree and its own cheap context, returning a compact PASS/FAIL
+verdict. The orchestrator stays lean and the QA passes run in parallel, not one-by-one.
 
 ### 5.1 Stack QA Commands (passed to each agent)
 
@@ -403,9 +416,15 @@ Manual testing is **not** a merge gate — it runs after the merge, in Phase 6.5
 
 **Option 1** — merge QA-passing, conflict-free branches in suggested order into the
 **orchestrator's current branch** (never a hardcoded `main`; detached HEAD → stop and ask).
-Resolve and confirm the target, merge each branch, then run final QA on the merged target to
-catch cross-branch integration issues. Procedure:
+Resolve and confirm the target, then merge each branch. Procedure:
 [`references/pipeline.md`](references/pipeline.md).
+
+Final QA on the merged target catches cross-branch integration issues — **dispatch it to one
+`ck-code:qa-validator` agent** (`isolation: none`, `cwd: <repo root>`, prompt in
+[`references/agent-prompts.md`](references/agent-prompts.md)) with the union of the merged
+stories' Phase 5.1 commands. A merge does not make `cargo test` output cheap: run inline it
+floods the orchestrator exactly as the per-story suites would have. Inline is the fallback
+only when that subagent_type is unregistered.
 
 **After the merges land, reconcile the shared indexes once on the target branch** — the
 sub-agents deferred every shared-index edit, so the merged tree carries each story file at
@@ -462,7 +481,10 @@ together. Sub-agents also cannot prompt the user, so this gate is always orchest
 For each merged story, sequentially (cap 3 cycles per story):
 
 **6.5.1** Present the manual-test prompt (template in `references/conflict-format.md`) with
-scenarios from the story's acceptance criteria + one edge case. Ask `Result? PASS / ISSUES`.
+scenarios from the story's acceptance criteria + one edge case. Extract **only** the
+`## Acceptance Criteria` section (command in
+[`references/context-budget.md`](references/context-budget.md)) — never `Read` the whole
+story body. Ask `Result? PASS / ISSUES`.
 
 **6.5.2** On `PASS` → mark the story `MANUAL-TEST PASS` and its Task `completed`.
 
@@ -491,6 +513,8 @@ confirmation (format in `references/conflict-format.md`).
 
 ## RULES
 
+- **Never build inline in this orchestrator** — every story implementation is dispatched to a worktree agent, at any N, in every wave, terminal wave included (Phase 2.5).
+- **Never run unbounded output inline** — builds, test suites, lint, diff bodies, and full story or source `Read`s all belong in a sub-agent. The orchestrator sees counts, names, statuses, and SHAs only ([`references/context-budget.md`](references/context-budget.md)).
 - **Never read individual story files in Phase 1** — the index is the only discovery source; bootstrap is the sole exception.
 - **Never let sub-agents edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or `EPIC.md`** — the orchestrator is their single writer, reconciling once on the target branch after each merge.
 - **Never modify story files in `tasks/` directly** — `/ck-code:build` owns them.
@@ -502,15 +526,15 @@ confirmation (format in `references/conflict-format.md`).
 - **Never clean up worktrees before the Phase 6.5 gate settles** — a `C) revert` verdict needs the story's worktree back.
 - **Never re-dispatch a ◐ incomplete story from scratch** — continue in place (Phase 6 Option 3); fresh worktrees are only for ✗ failed / empty-diff stories.
 - **Never escalate the sub-agent model on `Size:` alone** (Phase 3.1) — tier by reasoning complexity.
-- **Never run heavy QA commands inline** — delegate to parallel `ck-code:qa-validator` (Haiku) agents; inline is the fallback when that subagent_type is unregistered.
+- **Never run heavy QA commands inline** — delegate to `ck-code:qa-validator` (Haiku) agents, per-story (Phase 5) *and* post-merge (Phase 6); inline is the fallback when that subagent_type is unregistered.
 - **Never run a deep wave chain silently** — the Wave Depth Guard requires `PROCEED / SPLIT` confirmation.
 - **Never dispatch a wave story whose blocker is unresolved**, and never span epics in one wave plan.
 - **Always dispatch agents in a single message** — one turn, multiple Agent calls.
 - **Always isolate** each dispatched agent in its own worktree (`isolation: worktree`).
 - **Always WIP-commit dirty worktrees** before resume or cleanup (Phase 3.5a).
 - **Always merge a wave before dispatching the next** (wave mode).
-- **Always run final QA on the merged target** before cleanup, then delete every agent worktree.
-- **Single-story *batches* short-circuit to `/ck-code:build`; single-story *waves* do not** (Phase 2.5 / 2.7).
+- **Always run final QA on the merged target** before cleanup (delegated), then delete every agent worktree.
+- **A single story is a lean N=1 run, not a short-circuit** — same pipeline, minus cross-branch conflict analysis (Phase 2.5).
 
 ## NEXT
 

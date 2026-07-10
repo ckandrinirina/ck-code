@@ -20,8 +20,8 @@ Phase 1.4 then extracts *only* each ready story's `Files to Create/Modify` table
 ## Phase 2 — Selection
 
 The ready table prints (format in `conflict-format.md`) and AskUserQuestion blocks. The
-user answers `all` → 02-05, 02-06, 03-01. Three stories, so Phase 2.5's single-story
-short-circuit does not apply.
+user answers `all` → 02-05, 02-06, 03-01. Three stories, so Phase 2.5's lean N=1 path does
+not apply — full parallel dispatch.
 
 ## Phase 3 — Parallel Dispatch
 
@@ -80,8 +80,9 @@ Each `.claude/worktrees/agent-*` removed with `git worktree remove -f -f`, then
 
 ## Edge cases demonstrated
 
-- **Single-story batch:** had the user picked only 02-05, Phase 2.5 would short-circuit
-  straight to `/ck-code:build` — no worktree, no dispatch, no conflict analysis.
+- **Single-story batch:** had the user picked only 02-05, Phase 2.5's lean N=1 path would
+  still dispatch one worktree agent — same pipeline, only cross-branch overlap detection
+  (Phase 4.3) is skipped. The orchestrator never builds inline.
 - **◐ incomplete (not failed):** an agent that stops mid-build without an error keeps its
   worktree and is finished by Phase 6 **Option 3** (continue in place, loop until the ✓
   COMPLETE gate passes), never re-dispatched from scratch.

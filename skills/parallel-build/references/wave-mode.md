@@ -93,15 +93,14 @@ For each wave, in order:
    merged dependencies and their `DONE` index status. Phase 3.5b still normalizes each branch
    onto this wave's `$TARGET_SHA` on return, so a divergent worktree base is corrected
    automatically rather than polluting the wave merge.
-3. **Single-story wave** → still dispatch it as a **one-agent worktree run** (Phase 3
-   with N=1), NOT an inline `/ck-code:build`. The orchestrator is long-lived across the
-   remaining waves: inline build would load that story's whole TDD/QA detail into the
-   orchestrator context (taxing every later wave) and could land the work on a
-   `story/…` branch off the wave target instead of on it. Skip only the cross-branch
-   conflict analysis (Phase 4) — with one branch there is nothing to compare. **Exception:**
-   the *terminal* wave, when it is a single story and no wave follows, may inline
-   `/ck-code:build` — there is no downstream orchestrator context to protect and it regains
-   build's interactive gates.
+3. **Single-story wave** → dispatch it as a **one-agent worktree run** (SKILL.md Phase 2.5,
+   N=1), never an inline `/ck-code:build` — **the terminal wave included**. Inline build
+   would load that story's whole TDD/QA transcript into the orchestrator (taxing every later
+   wave) and could land the work on a `story/…` branch off the wave target instead of on it.
+   Even in a terminal wave, the orchestrator still has to run merge, index reconciliation,
+   the Phase 6.5 manual-test gate and cleanup afterwards — the context it would inherit is
+   not free. Skip only the cross-branch conflict analysis (Phase 4): one branch, nothing to
+   compare.
 4. **Run the pipeline on this wave's stories:** SKILL.md Phase 3 (dispatch) → 3.5
    (integrity) → 4 (conflict, intra-wave only) → 5 (QA).
 5. **Merge this wave** into the target branch with Phase 6 Option 1 logic — merge-eligible
@@ -109,7 +108,8 @@ For each wave, in order:
    (`STORIES_INDEX.md` rows → `DONE`, each story's `EPIC.md` row → `DONE`,
    `FEATURE_INDEX.md` rollup) — sub-agents deferred these edits, and this reconciliation
    MUST land before step 9 so the next wave's re-resolve sees this wave's stories as
-   `DONE`. Run the post-merge QA on the target.
+   `DONE`. Run the post-merge QA on the target **via a `ck-code:qa-validator` agent**, not
+   inline — a per-wave inline suite compounds across every remaining wave.
 6. **Manual-test the merged wave** (SKILL.md Phase 6.5) on the target branch in the main
    checkout — never in a worktree, which has no runnable environment and holds only one
    story's code. Gate here, per wave, so the next wave never builds on unverified code. A

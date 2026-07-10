@@ -92,14 +92,18 @@ worktree's `STORIES_INDEX.md` / `EPIC.md` for sync — sub-agents defer all shar
 edits in parallel mode, so those files are intentionally at their pre-build status and a
 mismatch is expected, not drift. The orchestrator reconciles them post-merge (Phase 6).
 
-**Code integrity (relative to `$TARGET_SHA`):**
+**Code integrity (relative to `$TARGET_SHA`).** Every command below has bounded output —
+never pipe a diff **body** into the orchestrator (`references/context-budget.md`):
 
 ```bash
-git diff --stat "$TARGET_SHA"...story/XX-YY                        # empty → ⚠️ No implementation detected
-git diff "$TARGET_SHA"...story/XX-YY --diff-filter=D --name-only   # any line → ⚠️ Unexpected file deletion
-git diff "$TARGET_SHA"...story/XX-YY -- <file> | grep -c "^+"      # 0 additions with 1+ deletions
-git diff "$TARGET_SHA"...story/XX-YY -- <file> | grep -c "^-"      #   → ⚠️ Possible code loss in <file>
+git diff --shortstat "$TARGET_SHA"...story/XX-YY                    # empty → ⚠️ No implementation detected
+git diff --name-only --diff-filter=D "$TARGET_SHA"...story/XX-YY   # any line → ⚠️ Unexpected file deletion
+git diff --numstat "$TARGET_SHA"...story/XX-YY                     # "added<TAB>deleted<TAB>path" per file:
+                                                                   #   added==0 && deleted>0 → ⚠️ Possible code loss
 ```
+
+`--numstat` gives the per-file added/deleted counts that the old `grep -c "^+"` pipeline
+extracted from full diff text, at a fraction of the tokens.
 
 A deletion is acceptable only if a new file clearly supersedes the removed one; otherwise
 treat it as potential code loss.
@@ -113,8 +117,12 @@ grep -q '^Status: *DONE' "$WT/<rel-path>"
 ! grep -qE '^\s*-\s*\[ \]' "$WT/<rel-path>"
 # 3. clean tree (all work committed)
 [ -z "$(git -C "$WT" status --porcelain)" ]
-# 4. QA green — Phase 5 commands for this story's epic/component
+# 4. QA green — a `ck-code:qa-validator` agent in $WT returns `QA: PASS` (never run inline)
 ```
+
+Checks 1–3 are bounded greps the orchestrator runs itself. Check 4 is a dispatched agent —
+so a re-check inside the Option 3 loop costs the orchestrator one verdict line per round,
+not a full test suite per round.
 
 All four true → ✓ COMPLETE. Any false → not complete (keep looping / flag). This is the
 only definition of "done"; the agent's final message is never used as proof.
@@ -128,15 +136,22 @@ only definition of "done"; the agent's final message is never used as proof.
 
 ## Phase 4 — Conflict Analysis (per successful branch)
 
+Inline fallback only — prefer the `ck-code:conflict-analyzer` agent. Keep every command's
+output bounded: grep the dry-run down to its `CONFLICT` lines, never let merge hunks land in
+the orchestrator.
+
 ```bash
 git branch --list "story/*"                            # 4.1 confirm branch names
-# 4.2 dry-run merge each onto the frozen target (record CONFLICT lines):
+# 4.2 dry-run merge each onto the frozen target (record CONFLICT lines only):
 git -C "$MAIN" checkout "$TARGET"
-git -C "$MAIN" merge --no-commit --no-ff story/XX-YY 2>&1
+git -C "$MAIN" merge --no-commit --no-ff story/XX-YY 2>&1 | grep '^CONFLICT' || echo "clean"
 git -C "$MAIN" merge --abort 2>/dev/null || true
 # 4.3 cross-branch overlap (a file in 2+ branches is a potential cross-branch conflict):
 git -C "$MAIN" diff --name-only "$TARGET_SHA"...story/XX-YY
 ```
+
+**N=1 (Phase 2.5 / a single-story wave):** run 4.1 and 4.2 only. Step 4.3 compares branches
+against each other — with one branch there is nothing to compare.
 
 Report (format: `conflict-format.md`): per-branch dry-run, cross-branch overlaps,
 suggested merge order (fewest overlaps first). No conflicts → "No conflicts detected —
@@ -170,8 +185,21 @@ FEATURE_INDEX.md  →  recompute the feature's Stories count + Status rollup (DO
 ```
 
 Then `git -C <main-checkout> add` those index files and commit (e.g.
-`chore: reconcile story/feature indexes after parallel merge`). Run final QA on the merged
-target (types + tests) to catch cross-branch integration issues before Phase 7.
+`chore: reconcile story/feature indexes after parallel merge`).
+
+**Post-merge QA — delegate, do not run inline.** Cross-branch integration issues are caught
+by running the merged target's suites, and that output is exactly as large after a merge as
+before it. Dispatch ONE `ck-code:qa-validator` agent (`isolation: none`, `cwd: <main-checkout>`,
+prompt in `agent-prompts.md` → *Phase 6 — Post-Merge QA Sub-Agent*) with the **union** of the
+merged stories' Phase 5.1 stack commands, de-duplicated. It returns a single verdict line.
+
+- `QA: PASS` → proceed to Phase 6.5 (manual-test gate), then Phase 7.
+- `QA: FAIL` → do **not** clean up worktrees. Report the failing command, and treat it as a
+  cross-branch integration failure: the individual branches each passed Phase 5, so the
+  breakage is in their combination. Offer `git revert -m 1 <merge-sha>` on the last-merged
+  story, or a fix agent on `$TARGET` (Phase 6.5.3 prompt).
+
+Inline execution is the fallback only when `ck-code:qa-validator` is unregistered.
 
 ## Phase 6 Option 3 — Auto-Continue Loop (per ◐ incomplete story)
 

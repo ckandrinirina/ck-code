@@ -126,6 +126,44 @@ prompt: |
   Report PASS only if every stack command succeeded.
 ```
 
+## Phase 6 — Post-Merge QA Sub-Agent Prompt
+
+Dispatch ONE after the Option-1 merge and index reconciliation, before the Phase 6.5 gate.
+It runs on the **merged target in the main checkout**, not in a worktree — the point is to
+catch integration failures that only appear once the branches sit together. Same Haiku tier
+and same reason as Phase 5: a merge does not make test output cheap.
+
+```
+subagent_type: ck-code:qa-validator   # falls back to inline 5.1 commands if not registered
+model: fast (Haiku)
+isolation: none                        # main checkout, on the merged target branch
+cwd: <repo root>
+description: "Post-merge QA on <$TARGET> (N merged stories)"
+prompt: |
+  You are running post-merge QA on branch <$TARGET> in the main checkout, which now
+  contains the merged code for stories: <XX-YY, XX-ZZ, …>. Read-only — never edit any file.
+
+  STEP 0 — confirm `git rev-parse --abbrev-ref HEAD` equals <$TARGET>; if not, STOP and
+  report "WRONG BRANCH".
+
+  Stack QA commands (the de-duplicated union of the merged stories' Phase 5.1 commands —
+  run exactly, in order, from the repo root):
+    <concrete commands>
+
+  Your task:
+  1. Run each command. Capture the first failing command and a short excerpt of its output.
+  2. Do NOT attempt fixes — only report.
+
+  END YOUR REPLY WITH THIS EXACT VERDICT LINE (the orchestrator parses it):
+    QA: PASS
+  or, on any failure:
+    QA: FAIL — <which command failed> — <one-line excerpt>
+  Report PASS only if every command succeeded.
+```
+
+A `QA: FAIL` here is an **integration** failure by construction: each branch passed its own
+Phase 5 in isolation. Keep every worktree, do not run Phase 7.
+
 ## Phase 6.5.3 — Bug-Fix Sub-Agent Prompt
 
 Used when a Phase 6.5 **post-merge** manual test reports `ISSUES`. The story is already
