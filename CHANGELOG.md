@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.3.7] — 2026-07-10
+
+### Fixed
+- **parallel-build**: dispatched agents with `isolation: none` and `cwd:`, neither of which exists in the Agent tool schema — QA agents silently ran in the main checkout and could return `PASS` for code the story never wrote, greenlighting an unbuilt branch for merge.
+- **parallel-build**: the orchestrator now creates each worktree itself, pinned to `$TARGET_SHA` behind a branch-name collision guard, instead of delegating to `isolation: worktree` (which cut from a harness-chosen base where agents could not find their story file).
+- **parallel-build**: Phase 3.5b is now an assertion on the pinned base rather than a rebase, so a drifted branch is surfaced as `🚫 BLOCKED` instead of being silently rewritten.
+- **story-implementer**: step 0 now `cd`s into the assigned worktree before proving its location, and forbids `checkout -b` / `rebase` / `reset`.
+
 ## [3.3.6] — 2026-07-10
 
 ### Changed
