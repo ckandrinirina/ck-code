@@ -14,7 +14,7 @@ Produces two sections for the most recently implemented story or feature:
 1. **Manual verification** — exact commands to confirm it works
 2. **What was built** — learner-friendly explanation of every technology and pattern used
 
-> **Note:** Read `tasks/VERSION.md`. If `layout: v3` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v3 doc layout — run /ck-code:doc-optimizer upgrade` — and continue read-only. Never block.
+> **Note:** Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v4 layout — run /ck-code:migrate` — and continue read-only. Never block.
 
 ---
 
@@ -88,9 +88,15 @@ Explain every file, technology, and pattern that was introduced. Rules:
 
 Before generating output, read:
 
-1. **The most recently DONE story file** — for acceptance criteria and files touched
-2. **The files themselves** (use Read on each created/modified file)
-3. **git diff HEAD~1** — to see exactly what changed
+1. **The most recently completed story file** — the newest story whose frontmatter
+   `status: done` (or a `bug` story just restored to `done`) — for acceptance criteria
+   and its frontmatter `files:` list.
+2. **The files themselves** (use Read on each created/modified file).
+3. **The diff for that story's work** — prefer the story branch's diff against its merge
+   base (`git diff $(git merge-base HEAD main)...HEAD` when on a story branch); fall back
+   to `git diff HEAD~1` only when the change is known to be the last commit. `HEAD~1` is a
+   fragile "last change" heuristic — do not rely on it if `sync`/index or other commits
+   may sit between now and the story work.
 
 If the user specifies a path or concept, focus on that instead.
 

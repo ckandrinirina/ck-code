@@ -32,22 +32,22 @@ EOF
 )"
 ```
 
-### Phase 3.2 — Verify
+### Phase 4.2 — Verify
 
-Output of the SKILL.md 3.2 commands:
+Output of the SKILL.md 4.2 commands:
 ```
 ## Committed
 
 **Hash:** a1b2c3d
-**Branch:** story/01-03-server-setup
+**Branch:** story/02-01-server-setup
 **Files:** 8
 **Message:** feat(realtime): live updates without refresh
 ```
 
-### Phase 4 — Push & Create PR
+### Phase 5 — Push & Create PR
 
 ```bash
-git push -u origin story/01-03-server-setup
+git push -u origin story/02-01-server-setup
 
 gh pr create \
   --title "feat(realtime): live updates without refresh" \
@@ -72,9 +72,15 @@ EOF
 )"
 ```
 
-### Phase 5 — Update Issues
+### Phase 6 — Mark Done & Update Issues
 
-Comment on the linked issue:
+Set the story frontmatter `status: done`, then regenerate the views:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/2026-01-04_realtime-app
+```
+
+The linked issue is resolved by the story frontmatter `issue: 42` (never by title).
+Comment on it:
 ```bash
 gh issue comment 42 --body "$(cat <<'EOF'
 Implementation is complete and merged via PR #57.
@@ -86,9 +92,11 @@ EOF
 )"
 ```
 
-Then update the parent checklist (#10: flip `- [ ] #42` to `- [x] #42` — commands in SKILL.md 5.2) and add the `status/done` label (SKILL.md 5.3).
+Then update the parent epic issue — resolved by the epic's `EPIC.md` frontmatter
+`issue: 10`, flip `- [ ] #42` to `- [x] #42` (SKILL.md 6.3) — and add the `status/done`
+label (SKILL.md 6.4).
 
-### Phase 6 — Summary Output
+### Phase 7 — Summary Output
 
 ```
 ## Ship Complete
@@ -103,12 +111,12 @@ Then update the parent checklist (#10: flip `- [ ] #42` to `- [x] #42` — comma
 - **Status:** Open
 
 ### GitHub Issues Updated
-- Issue #42: commented
-- Parent #10: checklist updated
+- Issue #42 (from story `issue:`): commented
+- Epic #10 (from EPIC.md `issue:`): checklist updated
 
 ### Story File
-- **Status:** DONE
-- **Path:** tasks/01-foundation/01-03-server-setup.md
+- **Status:** done
+- **Path:** tasks/2026-01-04_realtime-app/epics/02_server/stories/01_server-setup.md
 
 ### Next Steps
 - Run /ck-code:track next to find the next item

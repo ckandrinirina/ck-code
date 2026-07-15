@@ -78,25 +78,32 @@ Guides cover idiomatic libraries too — not just languages and frameworks.
 - .claude/skills/experts/<slug>/SKILL.md  (each with paths/keywords for auto-load)
 - .claude/skills/guides/<slug>/SKILL.md
 
+Preserved (PROTECTED — no GENERATED marker, never overwritten):
+- .claude/skills/guides/conventions/SKILL.md  (from --conventions)
+
 Skipped — handled as guides under an existing expert, not as standalone experts:
 analytics, i18n, styling, API-contract (guide-over-expert rule). Skipped at this
 tier: expert-performance, expert-docs. Re-run with --max to widen the guide set.
-
-Proceed? YES / NO / ADJUST
 ```
 
-If ADJUST, let user add/remove experts/guides or customize. House conventions are
-captured separately via `/ck-code:convention` (guide-conventions is not produced here).
+Ask via **AskUserQuestion**: **Proceed** / **Adjust** / **Cancel**. On Adjust, let the
+user add/remove experts/guides or customize, then re-ask. House conventions are captured
+by `/ck-code:team --conventions` (guide-conventions is not produced here).
 
 ---
 
-## Existing-Skills Prompt (Phase 3)
+## Existing-Skills Gate (Phase 0.5 — AskUserQuestion)
+
+When existing skills are found and `MISSING` is non-empty, ask via **AskUserQuestion**
+(single question, one option each). PROTECTED files (no GENERATED marker) are never in
+scope — they are preserved whatever the choice.
 
 ```
-Existing generated skills found: [list]
-A) REGENERATE ALL — Overwrite with updated project context + fresh research
-B) SKIP EXISTING — Only create missing skills
-C) ABORT
+Existing team-owned skills found; N missing for this tier. Choose:
+A) Generate missing only — create only the [list], leave the rest
+B) Regenerate all — refresh team-owned skills with fresh research (merge-safe:
+   PROTECTED files and MANUAL fences are preserved)
+C) Abort
 ```
 
 ---
@@ -148,6 +155,9 @@ Run `/ck-code:team --regenerate` after:
 - Updating docs/architecture/ (new components, tech changes)
 - Upgrading framework versions (to refresh best practices)
 - Adding new technologies to the project
+
+Regeneration is **merge-safe**: it refreshes only team-owned skills, preserves every
+PROTECTED file (`guide-conventions`, custom `--new` skills) and every `MANUAL` fence.
 ```
 
 ---
@@ -174,18 +184,19 @@ Based on tech-stack.md, expected skills vs. current state:
 ### Language & Framework Guides
 | Guide              | Path                                         | Status                    |
 |--------------------|----------------------------------------------|---------------------------|
-| guide-typescript   | .claude/skills/guides/typescript/SKILL.md    | ✓ exists                  |
-| guide-rust         | .claude/skills/guides/rust/SKILL.md          | ✓ exists                  |
+| guide-typescript   | .claude/skills/guides/typescript/SKILL.md    | ✓ exists (owned)          |
+| guide-rust         | .claude/skills/guides/rust/SKILL.md          | ✓ exists (owned)          |
 | guide-react-native | .claude/skills/guides/react-native/SKILL.md  | ✗ missing                 |
 | guide-grpc         | .claude/skills/guides/grpc/SKILL.md          | ? extra (tech not detected) |
+| guide-conventions  | .claude/skills/guides/conventions/SKILL.md   | ● protected (--conventions) |
 
-**Summary:** 2 missing, 1 extra, 6 existing.
+**Summary:** 2 missing, 1 extra, 6 owned, 1 protected.
 
-**Missing skills detected. Choose:**
-A) Generate missing only (expert-devops, guide-react-native)
-B) Regenerate all (overwrite all 8 skills with fresh research)
-C) Abort
+Then ask via **AskUserQuestion** (see Existing-Skills Gate above):
+A) Generate missing only  B) Regenerate all (merge-safe)  C) Abort
 ```
 
-Note on `? extra`: skills for technologies no longer found in tech-stack.md.
-Never deleted automatically — the user decides.
+Legend: **owned** = carries the team GENERATED marker (refreshable on `--regenerate`).
+**protected** = no marker (`--conventions`, `--new`, or user-unmarked) — never overwritten,
+never counted as EXTRA. **? extra** = an owned skill for a technology no longer in
+tech-stack.md; never deleted automatically — the user decides.

@@ -104,3 +104,17 @@ This knowledge base serves two purposes:
 
 1. Injected into expert skills to make their advice current and accurate.
 2. Used directly as content for language/framework guide skills.
+
+## 5. Fan-out mode: return a structured brief, not prose
+
+When Phase 1.6a dispatches one agent per technology, each agent does sections 1–3 for its
+one technology and **returns a typed research brief** (not the markdown block above) with
+these keys, so the orchestrator can merge without re-parsing prose:
+
+```
+technology, version, conventions[], structure, patterns[], anti_patterns[],
+performance[], error_handling[], testing[], version_notes[], sources[]
+```
+
+The orchestrator assembles the per-technology briefs into the single "Best Practices
+Knowledge" base. The agent writes no files.

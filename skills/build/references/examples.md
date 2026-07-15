@@ -19,7 +19,7 @@ re-prompt); picking an epic hands off to `/ck-code:parallel-build --epic NN`.
 | # | Story | Epic | Size | Dependencies |
 |---|-------|------|------|-------------|
 | 1 | [01-04] Abort on SOKA reject | 01 | M | None |
-| 2 | [01-02] Paid abandon grace   | 01 | L | None |
+| 2 | [01-02] Paid abandon grace   | 01 | S | None |
 | 3 | [02-01] Free-private → 0 pts | 02 | M | None |
 
 ## ⚡ Recommended — build in parallel (isolated worktrees, one agent each)
@@ -40,17 +40,18 @@ Pick P to build the parallel set, an epic (E1/E2) for waves, or a single story (
 
 **Routing (the selection is the single confirm — the downstream skill does not re-prompt):**
 
-- **Parallel set (P)** → statuses stay `TODO` (skip SKILL.md 1.3–1.6); call `Skill("ck-code:parallel-build", "<id1> <id2> ...")` and exit. parallel-build receives explicit IDs, skips its own selection, and dispatches one worktree agent per story.
-- **Epic (E1/E2)** → statuses stay `TODO`; call `Skill("ck-code:parallel-build", "--epic NN")` and exit — parallel-build owns the wave loop.
+- **Parallel set (P)** → statuses stay `todo` (skip SKILL.md 1.3–1.6); call `Skill("ck-code:parallel-build", "<id1> <id2> ...")` and exit. parallel-build receives explicit IDs, skips its own selection, and dispatches one worktree agent per story.
+- **Epic (E1/E2)** → statuses stay `todo`; call `Skill("ck-code:parallel-build", "--epic NN")` and exit — parallel-build owns the wave loop.
 - **Single story** → proceed to SKILL.md 1.3; Phase 1.4 does NOT re-offer parallel/epic.
 
-Do NOT glob `tasks/*/epics/*/stories/*.md` — read only the ready stories' `Files to
-Create/Modify` tables, located via the index `File` column.
+Do NOT glob `tasks/*/epics/*/stories/*.md` and do NOT full-`Read` any story body — for
+conflict detection read only each ready story's frontmatter `files:` line (SKILL.md 1.2 step
+5), located via the index `File` column.
 
 If none ready:
 
 ```
-No unblocked TODO stories found. Check `tasks/` or run `/ck-code:plan` to generate stories.
+No unblocked `todo` stories found. Check `tasks/` or run `/ck-code:plan` to generate stories.
 ```
 
 ---
@@ -91,8 +92,8 @@ The manual-test bug-fix loop has run 3 times and issues remain:
   #3  Form race condition on rapid double-click → still ISSUES
 
 A) FIX MANUALLY — you apply the fix; I run Refactor + QA against it
-B) ACCEPT AS-IS — mark story DONE; #3 documented as known issue
-C) ABORT        — revert story to TODO; do not commit
-
-Reply A / B / C.
+B) ACCEPT AS-IS — set `status: done`; #3 documented as known issue
+C) ABORT        — set `status: todo`; do not commit
 ```
+
+(Delivered via `AskUserQuestion` — A / B / C are the options, not a typed reply.)

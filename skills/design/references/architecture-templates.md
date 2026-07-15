@@ -6,11 +6,12 @@ from the spec and user answers.
 
 The architecture is **feature-scoped**: global docs describe the whole system, and
 each feature owns a self-contained slice (`features/<slug>/index.md`) holding its own
-components, APIs, data, and flows. Per-increment / per-fix changes are journaled as
-dated delta docs beside it (`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) while
-`index.md` stays the canonical current truth. Cross-cutting infra lives once in `_shared.md`.
-The retired layer docs (`components.md`, `api-contracts.md`, `database-schema.md`,
-`data-flow.md`) are no longer generated — their content lives in feature docs.
+components, APIs, data, and flows. `index.md` always holds the canonical current truth —
+in v4 there are **no dated delta/journal docs and no `DESIGN_LEDGER.md`**; git is the
+history and the feature-doc `design:` frontmatter flag is the design→plan bridge.
+Cross-cutting infra lives once in `_shared.md`. The retired layer docs (`components.md`,
+`api-contracts.md`, `database-schema.md`, `data-flow.md`) are no longer generated — their
+content lives in feature docs.
 
 ---
 
@@ -49,10 +50,6 @@ Each owns a self-contained slice; `FEATURE_INDEX.Docs` routes a story to one.
 - **Original spec:** [path]
 - **Generated:** [date]
 - **Gaps remaining:** [count or "None"]
-
-## Changelog
-
-- [date] — [what feature doc was added/extended]
 ```
 
 ---
@@ -181,10 +178,14 @@ best practices (research via context7/WebSearch if needed).
 
 **File:** `docs/architecture/features/<slug>/index.md` — one per feature (= one epic).
 Self-contained: holds everything a `build`/`fix` story for this feature needs, so the
-story never opens another feature's doc. `<slug>` matches the epic folder slug so
-`FEATURE_INDEX.Docs` can route to it. Dated sibling delta docs
-(`features/<slug>/YYYY-MM-DD_<id>_<short>.md`, template below) journal per-increment /
-per-fix changes; `index.md` stays the canonical current truth.
+story never opens another feature's doc. `index.md` is the canonical current truth — v4
+writes no dated delta/journal siblings. `<slug>` matches the epic folder slug so
+`FEATURE_INDEX.Docs` can route to it.
+
+The **YAML frontmatter is mandatory** (see [`data-model.md`](../../../references/data-model.md)):
+`slug:` is the feature key; `design:` is `pending` when `design` has written/updated the doc
+but `plan` has not yet turned it into epics/stories, and `planned` once `plan` has. `design`
+always writes `pending`; only `plan` flips it to `planned`.
 
 > **Relative links:** `index.md` sits two levels under `docs/architecture/`, so
 > links to `_shared.md` and sibling globals use `../../` (e.g. `../../_shared.md`,
@@ -192,6 +193,11 @@ per-fix changes; `index.md` stays the canonical current truth.
 > `docs/architecture/`.
 
 ```markdown
+---
+slug: [slug]
+design: pending
+---
+
 # [Feature Name]
 
 > Self-contained — a story reads this (+ folder-structure.md, + \_shared.md when noted), not other feature docs.
@@ -252,123 +258,19 @@ Step 2: [Component] → [Transform] → [Output]
 do not duplicate their content here.]
 - [Auth middleware](../../_shared.md#auth--middleware)
 - [Base User entity](../../_shared.md#base-entities--core-schema)
-
-## Changelog
-[Append-only write-back deltas from build/fix — newest last. Each line links the
-dated delta doc that records the full change narrative.]
-- [date] · [story id] — [one-line: component/endpoint/table/flow added or changed] · [./YYYY-MM-DD_<id>_<short>.md](./YYYY-MM-DD_<id>_<short>.md)
 ```
 
----
-
-## features/&lt;slug&gt;/YYYY-MM-DD\_&lt;id&gt;\_&lt;short&gt;.md (Increment / Fix Delta Doc)
-
-**File:** `docs/architecture/features/<slug>/YYYY-MM-DD_<id>_<short>.md` — one per
-`build` story or `fix` that changed the feature's documented surface. Written by
-`build` (Phase 8.6b) and `fix` (Phase 8.3b) **in addition to** updating `index.md`.
-It is an append-only journal entry (the change narrative); it is NOT routed to by
-readers — `index.md` always holds the consolidated current truth. `<id>` is the story
-or bug ID; `<short>` is a 2–4 word kebab slug of the change.
-
-```markdown
-# [date] · [story/bug ID] — [short title]
-
-> Delta journal for feature **[slug]**. The consolidated state lives in
-> [index.md](./index.md); this file records what this one change added or altered.
-
-## What changed
-
-[1–3 sentences: the component/endpoint/table/flow added, changed, or removed.]
-
-## Why
-
-[1–2 sentences: the story goal or bug this addressed.]
-
-## Surface touched
-
-- **Components / API / Data / Flows:** [the matching `index.md` section(s) updated]
-- **Shared:** [`../../_shared.md` section, if cross-cutting — else "none"]
-```
-
----
-
-## features/&lt;slug&gt;/YYYY-MM-DD_design\_&lt;short&gt;.md (Design Record)
-
-**File:** `docs/architecture/features/<slug>/YYYY-MM-DD_design_<short>.md` — written by
-`design` whenever it adds a new feature or designs a change to an existing one, **in
-addition to** writing/updating `index.md`. It narrates what was designed and is the
-human-readable companion to the matching `DESIGN_LEDGER.md` row. Append-only history;
-NOT auto-read by `build`/`fix`. `<short>` is a 2–4 word kebab slug of the design.
-
-```markdown
-# [date] · design — [short title]
-
-> Design record for feature **[slug]**. Consolidated state lives in
-> [index.md](./index.md); this file records what this design pass added or changed.
-> Ledger row: `docs/architecture/DESIGN_LEDGER.md`.
-
-## Type
-
-[new | update | fix] — [new feature / change to an existing feature / design-level fix]
-
-## What was designed
-
-[2–4 sentences: the components, APIs, data, or flows this design introduces or alters.]
-
-## Why
-
-[1–2 sentences: the goal or gap this design addresses.]
-
-## Planning status
-
-Not yet planned — listed as `pending` in `DESIGN_LEDGER.md`. `/ck-code:plan` turns
-it into epics/stories and flips the ledger row to `planned`.
-```
-
----
-
-## DESIGN_LEDGER.md (Design → Plan Bridge)
-
-**File:** `docs/architecture/DESIGN_LEDGER.md` — a single chronological ledger of every
-design addition and whether it has been turned into a plan yet. `design` appends rows
-(`pending`); `plan` reads it to find unplanned work and flips rows to `planned`. It
-answers "what has been designed but not yet planned?" as a table lookup — build status
-stays in `tasks/FEATURE_INDEX.md`, not here. Schema v1. The template and the columns
-below are the single source — `plan` and `doc-optimizer` reference them, never redefine.
-
-```markdown
-# Design Ledger
-
-<!-- AUTO-GENERATED by ck-code (design, plan, doc-optimizer). DO NOT EDIT BY HAND. -->
-<!-- Schema: v1 -->
-
-| Date       | Feature | Slug    | Type   | Summary                       | Planned? | Plan ref |
-| ---------- | ------- | ------- | ------ | ----------------------------- | -------- | -------- |
-| 2026-06-01 | Auth    | auth    | new    | JWT login + refresh tokens    | planned  | 02_auth  |
-| 2026-06-10 | Billing | billing | update | add proration to plan changes | pending  | —        |
-```
-
-Column rules:
-
-- **Date** — `YYYY-MM-DD` the design pass ran (matches the design-record filename).
-- **Feature** / **Slug** — the feature display name and its `<slug>` (the feature-doc folder).
-- **Type** — `new` | `update` | `fix` (new feature / change to an existing one / design-level fix).
-- **Summary** — one line: what this design adds or changes.
-- **Planned?** — `pending` (designed, not yet planned) | `planned` (an epic/plan now covers it). Never tracks build completion — that is `FEATURE_INDEX.Status`.
-- **Plan ref** — the `tasks/<slug>` plan folder (or `NN_slug` epic) that planned it, set by `plan` when it flips the row to `planned`; `—` while `pending`.
-
-Rows are append-only and ordered oldest-first. The two HTML comments are mandatory.
-`design` appends a `pending` row per design pass; `plan` flips the matching row(s) to
-`planned` and fills `Plan ref`; `doc-optimizer upgrade` scaffolds the file if missing,
-backfilling already-built features as `planned`.
+`index.md` holds current truth only — no per-change changelog. What changed and when is
+recorded by git commits, not by the doc. `build`/`fix` in v4 write only story files, never
+back into the feature doc.
 
 ---
 
 ## \_shared.md
 
 **File:** `docs/architecture/_shared.md` — cross-cutting infrastructure used by more
-than one feature. Feature docs link here instead of duplicating it. `doc-optimizer
-optimize` hoists content that appears in multiple feature docs into this file.
+than one feature. Feature docs link here instead of duplicating it. `design`'s `optimize`
+mode hoists content that appears in multiple feature docs into this file.
 
 ```markdown
 # Shared / Cross-Cutting

@@ -6,7 +6,9 @@ Unplanned Changes, SOLID Verification, Manual-Test Reports, and Resolution.** Th
 story file is the durable hand-off between the two skills.
 
 Bug Report status flow: `DIAGNOSED` (set by `fix`) → `FIXED` (set by `build`).
-Story index status flow: `DONE → BUG` (set by `fix`) → `DONE` (restored by `build`).
+Story frontmatter status flow: `done → bug` (set by `fix`, with `prior_status` recorded)
+→ `done` (restored by `build` from `prior_status`). The indexes are generated views —
+`fix`/`build` change frontmatter and run `ck-index.sh`, never edit a cell.
 
 ---
 
@@ -20,7 +22,7 @@ Story index status flow: `DONE → BUG` (set by `fix`) → `DONE` (restored by `
 
 **Bug ID:** BUG-YYYYMMDD-NN
 **Reported:** [date]
-**Prior status:** [DONE | IN PROGRESS]   <!-- the story's Status: before this bug; build restores it -->
+**Prior status:** [done | in-progress]   <!-- human-readable note; the authoritative value is the frontmatter `prior_status`, which build restores -->
 **Status:** DIAGNOSED
 
 ### Description
@@ -53,7 +55,7 @@ above to each story file with this addition:
 ```
 
 **Missing functionality** (verdict D) is NOT recorded as a stub here — `fix`
-scaffolds a real `TODO` story through `/ck-code:quick-story` instead (SKILL.md
+scaffolds a real `todo` story through `/ck-code:plan --quick` instead (SKILL.md
 Phase 2.6). `fix` never writes stub story files or index rows itself.
 
 ---
@@ -147,7 +149,8 @@ run (no heading when empty).
 ## Phase 8.1 — Resolution + Files Touched (build — fill in at completion)
 
 Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status to
-`FIXED` and restores the story's `Prior status` in the index.
+`FIXED`, restores the story frontmatter `status` from `prior_status`, and regenerates
+the views with `ck-index.sh`.
 
 ```markdown
 ### Resolution
@@ -157,7 +160,7 @@ Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status 
 - **QA iterations:** [count]
 - **Manual-test cycles:** [count, or "none"] (count of `## Manual-Test Reports` entries; "none" if heading absent)
 - **Unplanned changes:** [count, or "none"]
-- **Status:** FIXED   <!-- story index status restored to Prior status (DONE) -->
+- **Status:** FIXED   <!-- frontmatter status restored from prior_status (done); views regenerated -->
 
 ### Files Touched
 [Precise reference of every file and line changed — no descriptions, just locations]

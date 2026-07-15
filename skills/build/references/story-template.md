@@ -1,6 +1,10 @@
 # Story File Templates
 
-Templates appended to the story markdown file at specific phases of the build skill.
+Blocks written to the story file at specific phases of the build skill. **Status lives in
+the frontmatter** (`status:`) — the only status mutation is editing that field and running
+`ck-index.sh` (SKILL.md 1.6 / 8.6). The blocks below are the free-form **body** additions
+(Unplanned Changes, Implementation Summary, checklist, Manual-Test Bugs); the body never
+records the plan or a status header.
 
 ---
 
@@ -90,43 +94,36 @@ Mark all acceptance criteria as checked in the story file:
 
 ---
 
-## Phase 8.7 — Parent EPIC.md Stories Table Row
+## Phase 1.6 / 8.6 — Status Transitions (frontmatter only)
 
-Update the row for this story in the parent epic's stories table:
+Status is a **frontmatter field** — edit the `status:` line inside the leading `---`
+fences, then regenerate the views (`"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>`)
+in the same phase. Values are lowercase `todo | in-progress | done | skip | bug`. There is no
+`EPIC.md` stories-table row and no index cell to touch — the generator recomputes both views
+from this field.
 
-```
-| 01 | [Title] | M | DONE |
-```
-
----
-
-## Phase 1.6 — Status Transitions
-
-Story status moves through these states. Edit the existing line in the story file.
-
-TODO → IN PROGRESS (Phase 1.6):
+Phase 1.6 (start):
 
 ```
-> **Status:** TODO
+status: todo
 ```
-
 →
-
 ```
-> **Status:** IN PROGRESS
-```
-
-IN PROGRESS → DONE (Phase 8.6, only after manual testing PASS in 8.5):
-
-```
-> **Status:** IN PROGRESS
+status: in-progress
 ```
 
+Phase 8.6 (complete, only after manual-test PASS in 8.5):
+
+```
+status: in-progress
+```
 →
+```
+status: done
+```
 
-```
-> **Status:** DONE
-```
+Bug-Fix Mode 8.6 restores the pre-bug status instead: `status: bug` → `status: <prior_status>`
+(then clear `prior_status`). See [bug-fix-mode.md](bug-fix-mode.md).
 
 ---
 
