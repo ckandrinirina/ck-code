@@ -22,8 +22,21 @@ Do **not** fan out sequential chains (TDD red→green→refactor), stateful/orde
 
 | Variant                       | Subagent does                                             | `model`                | `isolation`                                              | Writes?              |
 | ----------------------------- | --------------------------------------------------------- | ---------------------- | -------------------------------------------------------- | -------------------- |
-| **Investigation** (read-only) | Greps/reads/traces one slice, returns a structured report | `haiku`                | `none`                                                   | Never — reports only |
+| **Investigation** (read-only) | Greps/reads/traces one slice, returns a typed schema      | `haiku`                | `none`                                                   | Never — reports only |
 | **Artifact** (write)          | Produces ONE file in its own dedicated path               | `sonnet`               | `none` (or `worktree` only if units touch shared source) | Its own path only    |
+
+## Prefer structured-output returns (typed schema, not a prose brief)
+
+Every subagent returns a **typed schema** the orchestrator reads by field — not a text
+brief it parses with regex. Define the return shape in the dispatch prompt (e.g.
+`status`, `findings: [...]`, `path`, `remaining: [...]`) and collect fields, never
+sentences. A schema return is machine-checkable — a missing or malformed field is caught
+at collection instead of silently mis-parsed — and it keeps the orchestrator's context
+lean because it never re-reads the subagent's working prose. The v3 "return a brief the
+orchestrator scans" convention is replaced: state the schema, require the schema, read the
+schema. This applies to every registered ck-code agent too — `story-implementer` returns
+`{status, commits, remaining, criteria_met}`, `qa-validator` returns a `QA: PASS/FAIL`
+verdict line, `conflict-analyzer` returns `{order, report[]}`.
 
 ## Model tier (pass `model:` on every dispatch)
 
@@ -46,28 +59,39 @@ The orchestrator (the skill thread) — never a subagent — does all of:
 
 - **User interaction** — every prompt, confirmation, and refinement runs to completion
   _before_ dispatch and _after_ collection. Subagents get already-resolved context.
-- **Shared writes** — index files (`README.md`, `STORIES_INDEX.md`, `FEATURE_INDEX.md`,
-  `DESIGN_LEDGER.md`), `_shared.md`, `tasks/VERSION.md`, and any append-target singleton are
-  authored/merged by the orchestrator. A subagent writes only files unique to its own unit.
-- **The version gate** — runs once, in the orchestrator. Subagents never re-run or re-stamp it.
+- **Shared writes** — in v4 the story-status indexes (`STORIES_INDEX.md`,
+  `FEATURE_INDEX.md`) are **generated views**, so a shared-index write means running
+  `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` **once, in the orchestrator**, after it has
+  merged the subagents' work and the story frontmatter is settled — never a subagent editing
+  an index cell (see [`data-model.md`](data-model.md)). The stamp `tasks/VERSION.md`,
+  `_shared.md`, and any append-target singleton are likewise authored/merged only by the
+  orchestrator. A subagent writes only files unique to its own unit (its own story
+  frontmatter, its own artifact path) and never runs the generator.
+- **The version gate** — runs once, in the orchestrator (see [`version-gate.md`](version-gate.md)). Subagents never re-run or re-stamp it.
 - **Convergence** — merging reports, resolving contradictions to a single decision, and the
   final summary stay with the orchestrator.
 
 So before dispatch: finish all prompts, author every shared/global file (freeze `_shared.md`),
-then pass each subagent its slice as **read-only** context.
+then pass each subagent its slice as **read-only** context. Generated indexes are the
+exception — they are not authored up front; the orchestrator regenerates them once with
+`ck-index.sh` after convergence, when the merged story frontmatter is final.
 
 ## Dispatch shape
 
 1. **Gate** — check the skill's threshold (unit count, input size, mode). Below it → inline, no fan-out.
-2. **Freeze shared state** — author globals/`_shared.md`/indexes; finish user prompts.
+2. **Freeze shared state** — author globals/`_shared.md`; finish user prompts. (Do NOT
+   pre-author generated indexes — those are regenerated once at convergence.)
 3. **Dispatch** — one `Agent` call per unit, in a single message so they run concurrently.
    Use `subagent_type: general-purpose` unless a registered ck-code agent fits the unit, and
    set `model:` from the tier table above. Give each: its unit id, its slice of frozen
-   context, its template reference, and an explicit "write only `<your path>`; do not prompt;
-   do not touch shared files" constraint.
-4. **Collect** — gather every subagent's result; a failed/empty agent is recovered or
-   redone inline by the orchestrator, never left silently missing.
-5. **Converge** — merge into shared files, resolve conflicts, verify each unit landed, summarize.
+   context, its template reference, the **return schema** it must fill, and an explicit
+   "write only `<your path>`; do not prompt; do not touch shared files or run the generator"
+   constraint.
+4. **Collect** — gather every subagent's typed return by field; a failed/empty agent (a
+   missing or malformed schema) is recovered or redone inline by the orchestrator, never left
+   silently missing.
+5. **Converge** — merge into shared files, resolve conflicts, verify each unit landed, then
+   regenerate the indexes with `ck-index.sh` once, and summarize.
 
 ## Announce + report
 

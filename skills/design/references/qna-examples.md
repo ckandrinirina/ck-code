@@ -8,34 +8,31 @@ reaches the corresponding step.
 
 ## Mode Detection — Existing Project Prompt (Feature Mode entry)
 
-When `docs/architecture/` already exists with files, present:
+When `docs/architecture/` already exists with files, first show the list of existing docs,
+then ask via **AskUserQuestion** — "Existing architecture docs found. How do you want to
+proceed?" — with three options:
 
-```
-## Existing Project Detected
-
-I found existing architecture documentation in docs/architecture/.
-Existing docs: [list files found]
-
-How would you like to proceed?
-
-A) ADD FEATURE — Extend the architecture docs with a new feature
-   (I'll read existing docs as context and only add/update what's needed)
-
-B) FULL REFRESH — Regenerate all architecture docs from scratch
-   (Existing docs will be backed up to docs/architecture/backup_YYYY-MM-DD/)
-
-C) I'm working on a different project — treat this as new
-```
+- **ADD FEATURE** — Extend the docs with a new feature (read existing docs as context, only add/update what's needed).
+- **FULL REFRESH** — Regenerate all architecture docs from scratch (existing docs are backed up first).
+- **DIFFERENT PROJECT** — Treat this as a new project.
 
 Branching:
 
-- **A (ADD FEATURE):** Read all `docs/architecture/*.md`, read spec from `$ARGUMENTS`, ask "What new feature or capability do you want to add?", then continue Phase 1 with feature-scoped analysis.
-- **B (FULL REFRESH):** `mv docs/architecture docs/architecture/backup_YYYY-MM-DD`, proceed New Project Mode.
-- **C:** Proceed New Project Mode.
+- **ADD FEATURE:** read the global docs (`overview.md`, `tech-stack.md`,
+  `folder-structure.md`, `_shared.md`) + the `README.md` index only — NOT every feature doc
+  (token-frugal, per SKILL.md Phase 1.1b); then read the spec from `$ARGUMENTS`, ask "What
+  new feature or capability do you want to add?", and continue Phase 1 feature-scoped.
+- **FULL REFRESH:** back up to a timestamped sibling with
+  `cp -r docs/architecture "docs/architecture.backup-$(date +%Y-%m-%d)"`, then proceed as
+  New Project Mode.
+- **DIFFERENT PROJECT:** proceed as New Project Mode.
 
 ---
 
 ## Phase 1 — Coverage Assessment Presentation
+
+Show the table, then gate the next step with **AskUserQuestion** (options **Start Q&A** /
+**Skip**):
 
 ```
 ## Specification Assessment
@@ -48,13 +45,10 @@ Your spec covers [X]/12 dimensions clearly.
 | ... | PARTIAL - [what's vague] |
 | ... | MISSING |
 
-I'll ask you some questions to fill the gaps. This will take [N] rounds
-of 2-3 questions each, focused on the PARTIAL and MISSING areas.
-
-Ready to start? YES / SKIP (generate with what we have)
+I'll ask [N] rounds of 2-3 questions each, focused on the PARTIAL and MISSING areas.
 ```
 
-If user replies SKIP → jump to Phase 3, mark gaps with `[TO BE DEFINED]`.
+On **Skip** → jump to Phase 3, mark gaps with `[TO BE DEFINED]`.
 
 ---
 
@@ -126,6 +120,9 @@ SKILL.md Phase 2 "Question Sets" (endpoints → `## API`, tables → `## Data`, 
 
 ## Phase 3.1 — Pre-Generation Confirmation
 
+Show the plan block, then gate with **AskUserQuestion** (options **Proceed** / **Adjust** /
+**Cancel**).
+
 **(New Project Mode):**
 
 ```
@@ -135,8 +132,6 @@ SKILL.md Phase 2 "Question Sets" (endpoints → `## API`, tables → `## Data`, 
 **Files:** [list of files that will be created]
 
 Note: Your original specification at [path] will NOT be modified.
-
-Proceed? YES / NO / ADJUST
 ```
 
 **(Feature Mode):**
@@ -157,11 +152,8 @@ Proceed? YES / NO / ADJUST
 **Files UNCHANGED** (not affected by this feature):
 - [file.md]
 
-Note: Existing content will be preserved. New feature sections will be
-clearly marked with a "## [Feature Name]" header or appended to
-the relevant existing sections.
-
-Proceed? YES / NO / ADJUST
+Note: Existing content is preserved. New feature sections are clearly marked with a
+"## [Feature Name]" header or appended to the relevant existing sections.
 ```
 
 ---
@@ -208,10 +200,9 @@ Proceed? YES / NO / ADJUST
 
 | File | Action |
 |------|--------|
-| features/[slug]/index.md | CREATED - self-contained feature doc (components/API/data/flows) |
+| features/[slug]/index.md | CREATED - self-contained feature doc (frontmatter design: pending; components/API/data/flows) |
 | _shared.md | UPDATED - added [shared infra] (only if 2+ features reuse it) |
-| README.md | UPDATED - added feature to index + changelog |
-| README.md | UPDATED - changelog entry added |
+| README.md | UPDATED - added feature to the Feature Documents index |
 | overview.md | UNCHANGED |
 | ... | ... |
 
@@ -226,15 +217,4 @@ Proceed? YES / NO / ADJUST
 1. Review the updated docs in docs/architecture/
 2. Run `/ck-code:team` to refresh expert + guide skills for this feature's stack
 3. Then `/ck-code:plan` to generate epics and stories for this feature
-```
-
----
-
-## Feature Mode — README Changelog Entry Format
-
-When a feature update affects `docs/architecture/README.md`, append:
-
-```
-## Changelog
-- [date]: Added [feature name] — updated [list of files]
 ```

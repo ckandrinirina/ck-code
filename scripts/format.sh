@@ -20,10 +20,26 @@ fi
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# Prettier runs ONLY when the project opts into it (a config is present). Otherwise
+# skip — never impose prettier's defaults on a repo that didn't ask, and never reflow
+# hand-aligned Markdown/YAML tables the author maintains deliberately.
+prettier_opted_in() {
+  local d
+  for d in .prettierrc .prettierrc.json .prettierrc.yml .prettierrc.yaml \
+           .prettierrc.json5 .prettierrc.js .prettierrc.cjs .prettierrc.mjs \
+           .prettierrc.toml prettier.config.js prettier.config.cjs prettier.config.mjs; do
+    [ -f "$d" ] && return 0
+  done
+  [ -f package.json ] && grep -q '"prettier"[[:space:]]*:' package.json 2>/dev/null && return 0
+  return 1
+}
+
 case "$file" in
   *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.css|*.scss|*.less|*.html|*.vue|*.md|*.yaml|*.yml)
-    if have prettier; then prettier --write "$file" >/dev/null 2>&1
-    elif have npx; then npx --no-install prettier --write "$file" >/dev/null 2>&1; fi ;;
+    if prettier_opted_in; then
+      if have prettier; then prettier --write "$file" >/dev/null 2>&1
+      elif have npx; then npx --no-install prettier --write "$file" >/dev/null 2>&1; fi
+    fi ;;
   *.rs)
     have rustfmt && rustfmt "$file" >/dev/null 2>&1 ;;
   *.py)

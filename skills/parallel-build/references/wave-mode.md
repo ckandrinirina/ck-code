@@ -1,140 +1,59 @@
-# Wave Mode — Dependency-Ordered Multi-Wave Epic Builds
+# Wave Mode — Dependency-Ordered Epic Builds
 
-Wave mode turns parallel-build into a dependency-ordered orchestrator for a **single
-epic**. Instead of one batch + a single end merge, it runs the parallel pipeline once
-per **wave**, merging each wave before the next so downstream stories see their
-dependencies already `DONE`.
+Wave mode runs the parallel pipeline once per **wave** and merges each wave before the
+next, so a dependent story always sees its blockers already `done`. Entered by
+`--epic NN` or the whole-epic option in Phase 2 selection.
 
-Example: Epic 01 has 01-01, 01-02, 01-03 (blocked by 01-01 + 01-02), 01-04 (blocked by
+**Scope is exactly one epic — never a whole feature.** A multi-epic feature is built one
+epic per `--epic` run; after an epic completes, the operator picks the next (no
+auto-chaining). Never plan a wave that spans epics.
+
+Example: epic 01 has 01-01, 01-02, 01-03 (blocked by 01-01+01-02), 01-04 (blocked by
 01-03). Waves: `[01-01, 01-02]` → `[01-03]` → `[01-04]`.
 
-**Scope is exactly one epic — never a whole feature.** A multi-epic feature is built
-**one epic per `--epic` run**. Wave mode never plans waves that span more than one epic —
-that produces feature-wide chains with many sequential merge+dispatch cycles and heavy
-token use. After an epic completes, parallel-build stops and the operator picks the next
-epic (it does not auto-chain across epics).
+## Plan the waves (from the index)
 
-## Entry
+Read the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status ≠ done`.
+Order them into dependency phases by `Blocked by`:
 
-Wave mode is entered when `$ARGUMENTS` is `--epic <NN>` (or interactive selection picks
-"whole epic NN in waves"). `<NN>` is a **single** epic number as it appears in
-`STORIES_INDEX.md` story IDs (`NN-SS`). If selection offers multiple epics, exactly one
-is chosen per run.
+- **Wave 1** = stories whose every blocker is `done` (or empty).
+- **Wave k+1** = stories whose every blocker is `done` or scheduled in waves ≤ k.
 
-## Wave Computation (from the index)
+An out-of-epic blocker that is not yet `done` makes the epic un-startable — report which
+blocker is pending and stop. A story whose blocker never resolves (cycle, or a non-`done`
+out-of-scope dep) is `UNSCHEDULABLE` — exclude it and report at the end.
 
-1. Read `tasks/*/STORIES_INDEX.md`. Filter rows whose `ID` is in epic `<NN>` and
-   `Status` ≠ `DONE`. **In-scope is restricted to this single epic** — never pull in
-   stories from other epics, even if they are blockers.
-2. Topologically level by `Blocked by` (restricted to in-scope IDs):
-   - **Wave 1** = stories whose every blocker is already `DONE` (or empty).
-   - **Wave k+1** = stories whose every blocker is `DONE` or scheduled in waves ≤ k.
-3. Out-of-epic blockers must already be `DONE`; if one is not, the epic is not startable
-   — report which blocker is pending and stop.
-4. A story whose blocker never resolves (cycle, or a non-DONE out-of-scope dep) →
-   flag `UNSCHEDULABLE`, exclude it, report at the end.
+Print the wave plan table ([conflict-format.md](conflict-format.md)). A deep chain means
+many sequential merge+dispatch cycles and heavy token use — if the plan runs more than
+~3 waves, note that and let the operator re-scope. Create one Claude Task per scheduled
+story prefixed by wave (`W1 · Implement 01-01: …`) when the Task tools are available.
 
-## Wave Depth Guard (dynamic, complexity-based)
-
-The wave count equals the topological depth `D` from the step above. Before printing the
-plan, derive a **recommended ceiling** from the epic's complexity and compare:
-
-1. Let `N` = number of in-scope (non-DONE) stories, `D` = computed wave depth.
-2. Recommended ceiling (dynamic — scales with the epic, not a fixed constant):
-   - `N ≤ 2` → **1 wave** (single batch; skip wave overhead entirely).
-   - `3 ≤ N ≤ 6` → up to **3 waves**.
-   - `N > 6` → up to **4 waves**.
-3. **`D ≤ ceiling`** → proceed; state the recommendation in the plan (e.g. "5 stories →
-   3-wave ceiling; plan uses 2 ✓").
-4. **`D > ceiling`** → **WARN + CONFIRM**: print that the epic expands into `D` waves,
-   deeper than the `N`-story recommendation of `<ceiling>`, meaning `D` sequential
-   merge+dispatch cycles and high token use. Then AskUserQuestion:
-   - **PROCEED** — run all `D` waves anyway.
-   - **SPLIT** — abort and advise re-scoping the epic into smaller epics, or running an
-     explicit story-ID batch for the independent stories first.
-
-   Never silently run past the recommendation — the depth warning must be shown and
-   acknowledged.
-
-## Wave Plan Table
-
-```
-Epic 01 — Wave plan (4 stories · 3-wave ceiling · depth 3 ✓):
-
-  Wave 1  (parallel)   01-01  Login form         S
-                       01-02  Session store       M
-  Wave 2  (parallel)   01-03  Auth middleware     L   ← needs 01-01, 01-02
-  Wave 3               01-04  Audit log           S   ← needs 01-03
-
-Proceed with Wave 1? (YES / ADJUST)
-```
-
-The header line states the depth guard verdict (`N stories · <ceiling>-wave ceiling ·
-depth D ✓` when within budget, or `⚠ depth D > ceiling` when the guard tripped — see
-Wave Depth Guard).
-
-## Claude Task Plan (per story, grouped by wave)
-
-Create one Task per scheduled story up front with TaskCreate, prefixing the wave number:
-`W1 · Implement 01-01: Login form`, `W2 · Implement 01-03: Auth middleware`, …
-All start `pending`; the wave loop flips each `in_progress` at dispatch and `completed`
-at that wave's merge. This is the live board for the whole epic.
-
-## The Wave Loop
+## The wave loop
 
 For each wave, in order:
 
-1. **Confirm (confirm-each-wave gate).** Present this wave's stories and AskUserQuestion
-   `YES / SKIP STORY / ABORT`. Wave 1's confirmation is the plan-table prompt above.
-2. **Branch base.** Freeze this wave's target (`$TARGET` / `$TARGET_SHA`, SKILL.md Phase 3.0)
-   from the **merge target branch's current HEAD** — which already contains previous waves'
-   merged code — NOT a stale `main`. This is what lets a dependent story (e.g. 01-03) see its
-   merged dependencies and their `DONE` index status. Then create this wave's worktrees from
-   that `$TARGET_SHA` (Phase 3.0c): the base is pinned at launch, so each wave's stories can
-   only build on the previous waves' merged code. Phase 3.5b asserts this on return.
-3. **Single-story wave** → dispatch it as a **one-agent worktree run** (SKILL.md Phase 2.5,
-   N=1), never an inline `/ck-code:build` — **the terminal wave included**. Even in a
-   terminal wave, the orchestrator still runs merge, index reconciliation, the Phase 6.5
-   manual-test gate and cleanup afterwards, so an inline build's transcript taxes every
-   later step (and could land work on a `story/…` branch instead of the wave target);
-   rationale: `context-budget.md` → *Why N=1 Still Uses a Worktree*. Skip only the
-   cross-branch conflict analysis (Phase 4): one branch, nothing to compare.
-4. **Run the pipeline on this wave's stories:** SKILL.md Phase 3 (dispatch) → 3.5
-   (integrity) → 4 (conflict, intra-wave only) → 5 (QA).
-5. **Merge this wave** into the target branch with Phase 6 Option 1 logic — merge-eligible
-   = QA-passed + conflict-free. Then **reconcile the shared indexes on the target branch**
-   (`STORIES_INDEX.md` rows → `DONE`, each story's `EPIC.md` row → `DONE`,
-   `FEATURE_INDEX.md` rollup) — sub-agents deferred these edits, and this reconciliation
-   MUST land before step 9 so the next wave's re-resolve sees this wave's stories as
-   `DONE`. Run the post-merge QA on the target **via a `ck-code:qa-validator` agent**, not
-   inline — a per-wave inline suite compounds across every remaining wave.
-6. **Manual-test the merged wave** (SKILL.md Phase 6.5) on the target branch in the main
-   checkout — never in a worktree (no runnable environment, one story's code only).
-   Gate here, per wave, so the next wave never builds on unverified code. A
-   story the operator reverts (6.5.4 option C) returns to `IN PROGRESS`, holds its
-   downstream dependents, and keeps its worktree.
-7. **Cleanup this wave's worktrees** (Phase 7) before the next wave. Keep the worktrees of
-   BLOCKED and reverted stories.
-8. **Update Tasks.** Mark this wave's merged, manual-test-passed stories `completed`; a
-   BLOCKED or reverted story stays `in_progress` with the blocker recorded.
-9. **Re-resolve.** Re-read the index from the target branch (this wave's stories now read
-   `DONE`). Recompute the next wave's ready set — a story dispatches only when every
-   blocker is `DONE`.
-10. Loop until no scheduled stories remain.
+1. **Confirm** — AskUserQuestion `YES / SKIP STORY / ABORT` for this wave's stories.
+2. **Dispatch** this wave's stories through SKILL.md Phase 3 → 4 (integrity/resume) → 5
+   (conflict, intra-wave only) → 6 (QA). The worktrees are cut from the target branch's
+   current HEAD, which already carries prior waves' merged code. A single-story wave takes
+   the Phase 1.5 short-circuit only when it is the **whole** remaining scope; inside a
+   multi-wave run each wave still merges into the shared target, so dispatch it as a
+   one-agent worktree run (never inline) so its work lands on the target.
+3. **Merge** this wave's merge-eligible branches into the target (SKILL.md Phase 7
+   Option 1), then **regenerate the indexes** — `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
+   tasks/<Plan>` — so the next wave's re-resolve sees these stories as `done`. Run the
+   post-merge QA on the target via a `qa-validator` agent, not inline.
+4. **Verify** the merged wave on the target (SKILL.md Phase 7 post-merge check) before the
+   next wave builds on it. A reverted story returns to `todo`/`in-progress`, holds its
+   dependents, and its branch is kept.
+5. **Update Tasks** — this wave's merged, verified stories `completed`; a blocked or
+   reverted story stays open with the reason recorded.
+6. **Re-resolve** the next wave from the freshly regenerated index and loop until no
+   scheduled story remains.
 
-## Blocked Dependency Handling
+## Blocked dependencies & summary
 
-If a wave leaves a story BLOCKED from merge, every downstream story depending on it is
-**held** — it cannot dispatch because its blocker is not `DONE`. Report held stories in
-the final summary. The operator fixes the blocked story (re-run via Phase 6 Option 3),
-then re-runs `--epic <NN>` to resume from where it stalled.
-
-## Final Summary
-
-After the last wave: print per-wave merge results, any UNSCHEDULABLE / held stories, and
-confirm the epic's `STORIES_INDEX.md` + `EPIC.md` status. Then the standard NEXT
-(`/ck-code:ship` per story).
-
-**One epic per run.** When the feature has more not-DONE epics, list them and ask which
-to build next (`--epic <NN>`) — do not auto-continue into the next epic. This keeps each
-run scoped and token-bounded.
+A story left BLOCKED from merge holds every downstream story depending on it — those cannot
+dispatch (blocker not `done`). Report held and `UNSCHEDULABLE` stories in the final
+summary, then the standard NEXT (`/ck-code:ship` per story). When more not-`done` epics
+remain, list them and ask which to build next (`--epic NN`) — never auto-continue.

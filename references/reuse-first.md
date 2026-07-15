@@ -1,7 +1,7 @@
 # Reuse-First & Simplest-Viable Rule — Shared Constraint
 
 Applies to every ck-code skill that designs, plans, or implements — especially
-the upstream authoring skills (`design`, `plan`, `team`, `pre-spec`) and the build
+the upstream authoring skills (`design`, `plan`, `team`, `spec`) and the build
 skills (`build`, `fix`). It captures one ethos: read what already exists, reuse
 before you rebuild, and pick the simplest approach that satisfies the requirement.
 

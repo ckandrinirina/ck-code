@@ -4,6 +4,10 @@ Compact user-facing blocks the build skill presents on the happy path. Wording i
 adaptable; the **data shown** must match the checks performed in `SKILL.md`. Heavier
 worked dialogues (interactive selection menu, bug-fix sub-loop) live in `examples.md`.
 
+**Choices are delivered via `AskUserQuestion`, not typed replies.** Each block below is the
+*data* to present; the option labels named in it (e.g. SHIP / SKIP, PASS / ISSUES, FIX
+MANUALLY / ACCEPT AS-IS / ABORT) are the `AskUserQuestion` options, not a "type X" prompt.
+
 ---
 
 ## Phase 1.5 — Linked GitHub Issue
@@ -25,25 +29,33 @@ No linked issue found
 ```
 Missing recommended skills:
 - guide-rust (not found — run /ck-code:team to create it)
-
-Continue without these? YES / GENERATE FIRST
 ```
+
+Then `AskUserQuestion`: **Continue without these** / **Generate first**.
 
 ---
 
-## Phase 3.6 — Plan Confirmation
+## Phase 3.5 — Plan + Branch Confirmation (single gate)
+
+Present the plan data, then run `git branch --show-current` and ask **one**
+`AskUserQuestion` that confirms the plan and picks the branch:
 
 ```
 ## Implementation Plan for [Story Title]
 
 **Tests to write:** [count] (from [count] acceptance criteria)
-**Files to create:** [list]
-**Files to modify:** [list]
+**Files to create:** [list from frontmatter `files:`]
+**Files to modify:** [list from frontmatter `files:`]
 **SOLID approach:** [summary]
 **Estimated subtasks:** [count]
-
-Proceed with TDD implementation? YES / ADJUST
+**Current branch:** [name]
 ```
+
+`AskUserQuestion` options:
+
+- **New branch** — `story/<EE>-<SS>-<slug>` (`fix/…` for a bug story).
+- **Current branch `[name]`** — omit when `[name]` is `main`/`develop`.
+- **Adjust plan** — revise, then re-ask.
 
 ---
 
@@ -111,7 +123,7 @@ QA has run 3 times and issues remain:
 
 A) FIX MANUALLY  — apply specific fixes you suggest
 B) ACCEPT AS-IS  — proceed with known issues (documented)
-C) ABORT         — stop, revert to TODO
+C) ABORT         — stop; set `status: todo` in frontmatter and regenerate
 ```
 
 ---
@@ -131,11 +143,13 @@ Result? PASS / ISSUES
 
 ---
 
-## Phase 8.8 — Ship Prompt
+## Phase 8.7 — Ship Prompt
 
 ```
-Ready to ship! Options:
-
-A) SHIP — Run /ck-code:ship to commit, PR, and update GitHub Issues
-B) SKIP — Don't commit yet (run /ck-code:ship later manually)
+Ready to ship!
 ```
+
+Then `AskUserQuestion`:
+
+- **SHIP** — run `/ck-code:ship` to commit, open the PR, and update the linked GitHub Issue.
+- **SKIP** — don't commit yet (run `/ck-code:ship [story-path]` later).

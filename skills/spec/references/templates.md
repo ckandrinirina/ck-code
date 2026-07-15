@@ -1,6 +1,6 @@
-# Pre-Spec Templates & Q&A Banks
+# Spec Templates & Q&A Banks
 
-> Bulky reference content for the `pre-spec` skill: metadata schema,
+> Bulky reference content for the `spec` skill: metadata schema,
 > GitHub publishing procedure, language localization table, question
 > banks, forgotten-details checklist, and section templates.
 
@@ -23,7 +23,7 @@
     "projectUrl": "https://github.com/orgs/owner/projects/1"
   },
   "tags": ["..."],
-  "stage": "pre-spec",
+  "stage": "spec",
   "linkedDesign": null
 }
 ```
@@ -33,13 +33,13 @@ to the design output once `/ck-code:design` runs.
 
 ### Status enum
 
-| Status | Meaning |
-|---|---|
-| `draft` | Just created, may still receive substantive edits |
-| `ready-for-design` | User has locked the spec; ready for an architecture pass |
-| `design-in-progress` | `/ck-code:design` has started using it |
-| `implemented` | Code has shipped at least one increment |
-| `shipped` | Feature is live in production |
+`status` has exactly three states — no other values are ever written by this skill.
+
+| Status | Meaning | Written by |
+|---|---|---|
+| `draft` | Just created, may still receive substantive edits | `spec` |
+| `ready-for-design` | User has locked the spec; ready for an architecture pass | `spec` (readiness gate) |
+| `design-in-progress` | `/ck-code:design` has started using it | `design` |
 
 ---
 
@@ -73,8 +73,8 @@ Pick by number/title.
 
 ### Preview
 
-Show the user the title and the first ~30 lines of the generated body.
-Wait for explicit YES before creating.
+The publish gate in SKILL.md Phase 4 shows the title and the first ~30 lines of the
+generated body as a text preview, then confirms via `AskUserQuestion` before creating.
 
 ### Create
 
@@ -94,10 +94,15 @@ gh project item-add <project-number> --owner <owner> --url <issue-url>
 
 ### Re-sync (ADJUST mode)
 
+Re-fetch the remote body before editing, diff for awareness only, and never fail the
+skill on a diff/fetch error. Use a temp file from `mktemp` — never a hardcoded `/tmp` path:
+
 ```bash
-gh issue view <num> --repo <repo> --json body --jq .body > /tmp/<slug>-remote.md
-diff /tmp/<slug>-remote.md docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
-# Resolve conflicts with user if non-empty.
+remote=$(mktemp)
+gh issue view <num> --repo <repo> --json body --jq .body > "$remote" 2>/dev/null || true
+diff "$remote" docs/specs/YYYY-MM-DD_<slug>/pre-spec.md || true   # non-zero diff is informational
+rm -f "$remote"
+# If the diff showed remote-only edits, resolve with the user before overwriting.
 gh issue edit <num> --repo <repo> --body-file docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
 ```
 
@@ -139,8 +144,8 @@ description. Ask 2-3 per round, max 3-4 rounds.
    - "How would you know in 2 weeks that this works?"
    - "What metrics would you watch?"
 
-After each round, summarize what was learned in 1-2 sentences and ask if
-another round or proceed to writing.
+After each round, summarize what was learned in 1-2 sentences and gate with
+`AskUserQuestion` (Another round / Proceed to generate).
 
 ---
 
@@ -188,7 +193,7 @@ Tailor to the actual feature — don't dump irrelevant suggestions.
 
 ---
 
-# Pre-Spec Section Templates
+# Spec Section Templates
 
 ---
 
@@ -411,4 +416,4 @@ Apply consistent translations across the whole document.
 
 For other languages, ask the user once for translations of these titles
 before generating the document.
-
+</content>

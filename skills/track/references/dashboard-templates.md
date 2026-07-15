@@ -79,8 +79,7 @@ Complete the IN PROGRESS stories first, then more will unblock.
 
 ## `progress`
 
-Emit one **By Size** row per size actually present in the index (normally `S` and `M`;
-legacy plans may still carry `L`/`XL`).
+Emit one **By Size** row per size actually present in the index (`S` and `M`).
 
 ```
 ## Project Progress Report

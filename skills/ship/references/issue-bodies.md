@@ -1,14 +1,23 @@
-# To-Issues — Issue Body Templates
+# `--to-issues` — Issue Body Templates
 
-Read only the section for the mode selected in Phase 3.
+Used by PUBLISH MODE (SKILL.md Phases P5–P6). Read only the section for the selected
+mode. Bracketed values are substituted from the plan map built in Phase P2. `sleep 1`
+between every `gh` call.
 
-Bracketed values are substituted from the plan map built in Phase 2. `sleep 1` between
-every `gh` call.
+**Write-back is the v4 linkage.** After creating an issue, write its number into the
+matching frontmatter so SHIP MODE can resolve it by number:
+
+- an **epic** issue → `Edit` the epic's `EPIC.md` frontmatter `issue:` line (add it if
+  absent);
+- a **story** issue → `Edit` that story file's frontmatter `issue:` line.
+
+Then regenerate the views once (SKILL.md P5): `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>`.
 
 ## Mode `feature` — one issue
 
 Epics become sections; stories become a nested task-list under each epic. Capture the
-single issue number, then go to Phase 6.
+single issue number, then go to Phase P6. **No frontmatter write-back** (coarse tracking;
+there is no per-story or per-epic issue to link).
 
 ```bash
 gh issue create \
@@ -35,8 +44,10 @@ BODY
 
 ## Mode `epics` — one issue per epic
 
-Stories are an in-body checklist; no story issues are created. Capture every epic issue
-number, then go to Phase 6.
+Stories are an in-body checklist; no story issues are created. For each epic issue,
+write its number into that epic's `EPIC.md` frontmatter `issue:`. The story checklist
+uses the padded bracketed token `[EE-SS]` so SHIP MODE (Phase 6.3) can flip the exact
+item without collisions (`[02-01]` ≠ `[02-10]`).
 
 ```bash
 gh issue create \
@@ -63,7 +74,8 @@ BODY
 
 ### Step 1 — epic issues (all epics first)
 
-Story numbers do not exist yet, so use `#TBD` placeholders. Store `epic slug -> issue number`.
+Story issue numbers do not exist yet, so use `#TBD` placeholders. Store
+`epic slug -> issue number` and write each number into the epic's `EPIC.md` `issue:`.
 
 ```bash
 gh issue create \
@@ -88,6 +100,9 @@ BODY
 
 ### Step 2 — story issues (epic order, then story order)
 
+After each `gh issue create`, write the returned number into that story file's
+frontmatter `issue:`.
+
 ```bash
 gh issue create \
   --title "[EE-SS] [Story Title]" \
@@ -106,11 +121,11 @@ Belongs to #[epic-issue-number] - [Epic Title]
 ## Technical Notes
 [From story file]
 
-## Files to Create/Modify
-[Table from story file]
+## Files
+[From story frontmatter `files:`]
 
 ## Dependencies
-[From story file]
+[From story frontmatter `blocked_by:`]
 
 ## Size: [S/M]
 BODY
@@ -119,7 +134,7 @@ BODY
 
 ### Step 3 — link epics to stories
 
-Replace each `#TBD` with the real story issue number so GitHub tracks completion.
+Replace each `#TBD` with the real story-issue number so GitHub tracks completion.
 
 ```bash
 gh issue edit [epic-issue-number] \
@@ -134,7 +149,16 @@ Result:
 - [ ] #43 - Implement WebSocket gateway
 ```
 
-## Phase 6 summary shape
+### Step 4 — write back & regenerate
+
+Every epic `issue:` (`EPIC.md`) and every story `issue:` (story file) is now set. Run
+the generator once so the views reflect the current frontmatter:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+```
+
+## Phase P6 summary shape
 
 ```
 ## Published to GitHub Issues
@@ -142,16 +166,16 @@ Result:
 **Repository:** [owner/repo]
 **Mode:** [feature | epics | stories]
 
-[feature]  #[num] - Feature: [Project Name]
+[feature]  #[num] - Feature: [Project Name]   (no frontmatter write-back)
 
 [epics]
-- #[num] - Epic 01: [Title]
+- #[num] - Epic 01: [Title]   → EPIC.md issue: [num]
 
 [stories]
 ### Epic Issues
-- #[num] - Epic 01: [Title]
+- #[num] - Epic 01: [Title]   → EPIC.md issue: [num]
 ### Story Issues
-- #[num] - [01-01] [Title] (S) -> Epic #[num]
+- #[num] - [01-01] [Title] (S) -> Epic #[num]   → story issue: [num]
 
 ### Quick Links
 - All issues: [repo URL]/issues
@@ -159,5 +183,5 @@ Result:
 - Epics:    [repo URL]/issues?q=label:epic
 - Stories:  [repo URL]/issues?q=label:story
 
-**Total:** [count] issues created
+**Total:** [count] issues created; [k] frontmatter `issue:` fields written; views regenerated.
 ```

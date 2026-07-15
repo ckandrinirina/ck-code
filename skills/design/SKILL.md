@@ -1,37 +1,40 @@
 ---
 name: design
-description: Use to generate architecture documentation (`docs/architecture/`) from a project specification or feature description. Argument is the path to the spec file.
-argument-hint: "[path-to-spec-file]"
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet: dedup shared content into _shared.md) or `sync` (scaffold feature docs missing from FEATURE_INDEX). Argument is a spec path, or `optimize`/`sync`. Runs before `plan`.
+argument-hint: "[path-to-spec | optimize | sync]"
 effort: high
 ---
 
-# Spec Designer — Specification Refiner & Architecture Documenter
+# Design — Architecture Documenter & Maintainer
 
-Read a project specification, identify gaps through conversational questioning,
-and generate **feature-scoped** architecture documentation ready for development.
+Turn a specification into **feature-scoped** architecture documentation ready for
+development, and keep that documentation cheap to read as the project grows.
 
 The architecture is a few **global** docs (overview, folder-structure, tech-stack,
 `_shared.md`, configuration, dev-guide) plus one **self-contained feature doc** per
-feature in `docs/architecture/features/<slug>/index.md`. Per-increment / per-fix
-changes are journaled as dated sibling docs
-(`features/<slug>/YYYY-MM-DD_<id>_<short>.md`); `index.md` stays the canonical truth a
-later `build`/`fix` story routes to. The retired layer docs (`components.md`,
+feature at `docs/architecture/features/<slug>/index.md`. Each feature doc carries
+frontmatter `slug: <slug>` and `design: pending`; a later `build`/`fix` story routes to
+the one doc it needs. There are **no journal/delta docs and no `DESIGN_LEDGER.md`** in
+v4 — git is the design history, and the `design:` flag (which `plan` flips to `planned`)
+is the whole design→plan bridge. The retired layer docs (`components.md`,
 `api-contracts.md`, `database-schema.md`, `data-flow.md`) are not generated — their
-content lives in each feature's doc so a story reads only the one doc it needs.
+content lives in each feature's doc so a story reads only that doc.
 
-**Supports two modes:**
+**Four modes** (chosen by `$ARGUMENTS`):
 
-- **New Project Mode:** Generate global docs + one feature doc per feature from a project spec
-- **Feature Mode:** Add or extend a single feature doc, keeping the global docs consistent
+- **New Project** (spec path, or empty) — generate global docs + one feature doc per feature.
+- **Feature** (spec path, docs already exist) — add or extend one feature doc, globals kept consistent.
+- **optimize** (maintenance) — measure per-doc tokens, dedup repeated content into `_shared.md`.
+- **sync** (maintenance) — scaffold feature docs for features in `FEATURE_INDEX` that lack one.
 
 ## ROUTING CHECK (do first)
 
-This skill turns a spec into **architecture docs** — it runs *before* `plan`.
+This skill turns a spec into **architecture docs** (before `plan`) and maintains them.
 If the request is actually something else, STOP and recommend the better skill:
 
-- No stakeholder spec yet and you want one → `/ck-code:pre-spec` (first)
+- No stakeholder spec yet and you want one → `/ck-code:spec` (first)
 - Breaking work into epics/stories → `/ck-code:plan` (design comes first)
-- Existing architecture docs are bloated or on a stale layout → `/ck-code:doc-optimizer`
+- Project is on a pre-v4 layout (layer/flat docs, no frontmatter) → `/ck-code:migrate`
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:team`.
@@ -41,7 +44,43 @@ simplest thing that meets the requirement — see [`reuse-first.md`](../../refer
 
 ---
 
-## EFFORT SCALING
+## PHASE 0: VERSION GATE (hard gate, inline)
+
+Before reading or writing any project state, in ALL modes: read `tasks/VERSION.md`. If it
+exists and says `layout: v4` → PASS, proceed. Otherwise open the shared
+[version gate](../../references/version-gate.md) and run its Tier-2 detection: on any
+pre-v4 marker, BLOCK and offer `/ck-code:migrate` (stop until it PASSes or the user
+declines); on a clean greenfield, stamp `tasks/VERSION.md` (`mkdir -p tasks` first) and
+PASS. This runs **once, in the orchestrator** — never inside a fan-out subagent.
+
+---
+
+## MODE ROUTING
+
+Read `$ARGUMENTS`:
+
+- `optimize` → go to **PHASE O** (skip the design flow).
+- `sync` → go to **PHASE S** (skip the design flow).
+- a spec path, or empty → the **design flow** below (New Project / Feature).
+
+A maintenance mode is a hard scope — never run `optimize`/`sync` work in a design run, or
+vice versa.
+
+---
+
+## INPUT (design flow)
+
+Spec file path comes from `$ARGUMENTS`.
+
+**If empty:** look for `docs/specifications.md`, `docs/spec.md`, `SPEC.md`,
+`docs/requirements.md`. If found, confirm with the user. If not, ask whether to (A) give a
+path or (B) be guided through creating one from scratch.
+
+**If the file does not exist:** tell the user and ask for the correct path.
+
+---
+
+## EFFORT SCALING (design flow)
 
 Adapt depth to the current effort level (**${CLAUDE_EFFORT}**):
 
@@ -51,76 +90,46 @@ Adapt depth to the current effort level (**${CLAUDE_EFFORT}**):
 
 ---
 
-## INPUT
+## MODE DETECTION (New Project vs Feature)
 
-Spec file path comes from `$ARGUMENTS`.
-
-**If empty:** look for `docs/specifications.md`, `docs/spec.md`, `SPEC.md`, `docs/requirements.md`. If found, confirm with user. If not, ask whether to (A) provide a path or (B) start from scratch and be guided through creation.
-
-**If the file does not exist:** tell the user and ask for the correct path.
-
----
-
-## PHASE 0: VERSION GATE (hard gate)
-
-Before reading/writing any `docs/architecture/` doc: Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — on a pre-v3 marker it offers `/ck-code:doc-optimizer upgrade` and stops until it PASSes (or the user declines); on greenfield it stamps `tasks/VERSION.md` and passes.
-
----
-
-## MODE DETECTION
-
-**Goal:** Determine whether this is a new project or a feature addition.
-
-### Detection Steps
-
-1. Check if `docs/architecture/` already exists (Glob)
-2. Check if `tasks/` directory exists with prior epics
-3. Check the codebase for existing source files beyond just docs
-
-### Decision Logic
+1. Glob `docs/architecture/` — does it exist with files?
+2. Check `tasks/` for prior plans, and the codebase for source beyond docs.
 
 ```
-IF docs/architecture/ exists AND has files:
-  → FEATURE MODE (extending an existing project)
-ELSE:
-  → NEW PROJECT MODE (generating from scratch)
+IF docs/architecture/ exists AND has files → FEATURE MODE
+ELSE                                        → NEW PROJECT MODE
 ```
 
-### Feature Mode Activation
+**Feature Mode entry:** present the existing-project **AskUserQuestion** gate (options
+ADD FEATURE / FULL REFRESH / DIFFERENT PROJECT) from
+[references/qna-examples.md](references/qna-examples.md) and branch:
 
-When in Feature Mode, present the user with the existing-project prompt (A/B/C
-options) and follow its branching logic. For the exact wording, options, and
-branch handling see [references/qna-examples.md](references/qna-examples.md).
-
-Branch summary:
-
-- **A (ADD FEATURE):** read the existing architecture context per Phase 1.1b (globals +
-  README index only — NOT every feature doc), read the spec, ask "What new feature or
-  capability do you want to add?", proceed to Phase 1 with feature-scoped analysis.
-- **B (FULL REFRESH):** back up existing docs to
-  `docs/architecture/backup_YYYY-MM-DD/`, proceed as New Project Mode.
-- **C:** proceed as New Project Mode.
+- **ADD FEATURE:** read the architecture context per Phase 1.1b (globals + README index
+  only — NOT every feature doc), read the spec, ask what feature to add, continue Phase 1
+  feature-scoped.
+- **FULL REFRESH:** back up existing docs to a timestamped sibling
+  (`cp -r docs/architecture "docs/architecture.backup-$(date +%Y-%m-%d)"`), then proceed as
+  New Project Mode.
+- **DIFFERENT PROJECT:** proceed as New Project Mode.
 
 ---
 
 ## PHASE 1: READ & ASSESS THE SPECIFICATION
 
-**Goal:** Understand what the spec covers and identify what's missing or vague.
-
 ### 1.1 Read the Specification
 
-Read the entire file using the Read tool. If the spec is in a non-English language,
-process it in its original language but produce all output in English.
+Read the entire file. If it is non-English, process it in its original language but
+produce all output in English.
 
 ### 1.1b (Feature Mode) Read Existing Architecture Context
 
-If in Feature Mode, BEFORE assessing coverage:
+BEFORE assessing coverage, token-frugally:
 
 1. Read the global docs (`overview.md`, `tech-stack.md`, `folder-structure.md`,
-   `_shared.md`) and the `README.md` index — NOT every feature doc. From the index,
+   `_shared.md`) and the `README.md` index — **NOT** every feature doc. From the index,
    read only the feature doc(s) the new feature will integrate with.
-2. Read existing source code structure using Glob
-3. Build a mental model of: what exists, what the new feature needs to integrate with
+2. Read existing source structure with Glob.
+3. Build a model of what exists and what the new feature must integrate with.
 
 New feature docs must be consistent with the existing architecture.
 
@@ -133,70 +142,52 @@ Project vision & goals · Target users · System architecture · Folder structur
 
 ### 1.3 Present Assessment
 
-Show the user the coverage table and ask whether to start Q&A or SKIP. For the
-exact presentation block, see [references/qna-examples.md](references/qna-examples.md).
-
-If the user says SKIP, jump directly to Phase 3 and generate docs using only what's
-available, marking gaps with `[TO BE DEFINED]`.
+Show the coverage table, then ask — via **AskUserQuestion** (Start Q&A / Skip) — whether to
+begin refinement. For the exact table block see
+[references/qna-examples.md](references/qna-examples.md). On Skip, jump to Phase 3 and
+generate using only what is available, marking gaps `[TO BE DEFINED]`.
 
 ---
 
 ## PHASE 2: CONVERSATIONAL REFINEMENT
 
-**Goal:** Fill gaps and clarify ambiguities through adaptive questioning.
+Fill gaps and clarify ambiguities through adaptive questioning.
 
-### Questioning Strategy
-
-- Ask **2-3 questions per round** maximum
-- Start with the highest-impact MISSING dimensions first
-- For PARTIAL dimensions, ask targeted questions about the vague parts
-- Adapt follow-up questions based on previous answers
-- For CLEAR dimensions, do not re-ask — briefly confirm and reuse
+- Ask **2-3 questions per round** maximum; start with the highest-impact MISSING dimensions.
+- For PARTIAL dimensions, target the vague parts. For CLEAR ones, do not re-ask — confirm and reuse.
 
 ### Question Sets
 
-- **Feature Mode:** use the feature-scoped question set (Scope & Integration,
-  Architecture, Boundaries). After answers, map impact into the **single feature doc**
-  `features/<slug>/index.md` — new endpoints → its `## API`, new tables → its `## Data`, new
-  components → its `## Components`, new flows → its `## Flows`. Truly cross-cutting infra
-  (shared auth, base tables) goes in `_shared.md` and is linked from the feature doc.
-- **New Project Mode:** use the priority-ordered question bank covering
-  Architecture & Components → Tech Stack → Data Flow & APIs → Database & State →
-  Configuration → Build & Run → Non-Functional Requirements.
+- **Feature Mode:** use the feature-scoped set (Scope & Integration, Architecture,
+  Boundaries). Map impact into the **single feature doc** `features/<slug>/index.md`: new
+  endpoints → `## API`, new tables → `## Data`, new components → `## Components`, new flows
+  → `## Flows`. Truly cross-cutting infra (shared auth, base tables) goes in `_shared.md`
+  and is linked from the feature doc.
+- **New Project Mode:** use the priority-ordered bank (Architecture & Components → Tech
+  Stack → Data Flow & APIs → Database & State → Configuration → Build & Run →
+  Non-Functional).
 
-For the full wording of every question and the confirmation phrasing for CLEAR
-and PARTIAL dimensions, see [references/qna-examples.md](references/qna-examples.md).
+Full wording of every question and the CLEAR/PARTIAL confirmation phrasing:
+[references/qna-examples.md](references/qna-examples.md).
 
 ### Research During Refinement
 
-When the user mentions specific technologies, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to:
-
-- Look up current best practices for project structure
-- Verify standard folder conventions for the frameworks mentioned
-- Check for recommended configuration patterns
+When the user names specific technologies, use context7 (MCP, else `npx -y @upstash/context7`
+CLI) or WebSearch to verify current structure conventions and recommended config patterns.
 
 ### Refinement Loop
 
-After each round of questions:
-
-1. Summarize what was learned
-2. Check if remaining gaps exist
-3. If yes, ask the next round
-4. If all dimensions are CLEAR or user says "enough", move to Phase 3
-
-Maximum **5 rounds**. If gaps remain after 5 rounds, proceed to generation and
-mark remaining gaps with `[TO BE DEFINED]`.
+After each round: summarize what was learned, check remaining gaps, ask the next round if
+any. Maximum **5 rounds**; then generate, marking remaining gaps `[TO BE DEFINED]`.
 
 ---
 
 ## PHASE 3: GENERATE ARCHITECTURE DOCUMENTATION
 
-**Goal:** Create or update the split documentation files in `docs/architecture/`.
-
 ### 3.1 Confirm Before Writing
 
-Present a pre-generation confirmation block (different content for New Project
-Mode vs. Feature Mode) and wait for YES / NO / ADJUST. For the exact blocks see
+Present the pre-generation plan (New Project vs Feature content) and confirm via
+**AskUserQuestion** (Proceed / Adjust / Cancel). For the exact blocks see
 [references/qna-examples.md](references/qna-examples.md).
 
 ### 3.2 Create Directory
@@ -207,36 +198,26 @@ mkdir -p docs/architecture
 
 ### (Feature Mode) Update Strategy
 
-When adding or extending a feature in an existing project:
-
 1. **Never delete or overwrite existing content.** Only add or extend.
 2. **One feature = one doc.** Write/extend `docs/architecture/features/<slug>/index.md`
-   using the Feature Doc template (`mkdir -p` the `<slug>/` folder first). New feature →
-   Write the file; existing feature → Read it and Edit the relevant section
-   (`## Components` / `## API` / `## Data` / `## Flows`). The `<slug>` should match the
-   planned epic slug so `FEATURE_INDEX.Docs` routes to it.
-3. **Cross-cutting only** goes in `_shared.md`: if the feature introduces infra that
-   other features will reuse (shared middleware, base entities), add it to `_shared.md`
-   and link it from the feature doc's `## Shared dependencies` — never duplicate it into
-   the feature doc.
-4. **README.md index:** add the new feature doc to the Feature Documents table and
-   append a `## Changelog` entry. For the changelog format see
-   [references/qna-examples.md](references/qna-examples.md).
-5. **Append a feature-doc `## Changelog` line** noting what was added (date · source ·
-   one line), mirroring the write-back format `build`/`fix` use.
-6. **Design record + ledger row** — also run step 3.11 for this feature: write the dated
-   design record and append a `pending` row to `DESIGN_LEDGER.md`.
+   from the Feature Doc template (`mkdir -p` the `<slug>/` folder first). New feature →
+   Write the file with frontmatter `slug: <slug>` + `design: pending`; existing feature →
+   Read it, Edit the relevant section, and set its frontmatter `design: pending` (design
+   changed, so it is unplanned again until `plan` re-flips it). The `<slug>` matches the
+   planned epic slug so the generated `FEATURE_INDEX.Docs` routes to it.
+3. **Cross-cutting only** goes in `_shared.md`: infra 2+ features reuse — add it there and
+   link it from the feature doc's `## Shared dependencies`; never duplicate it into the doc.
+4. **README.md index:** add the new feature doc to the Feature Documents table.
 
 ### 3.3 – 3.10 Generate Each Architecture Document
 
-Generate the following files in `docs/architecture/`. The exact template for
-each file (markdown structure, tables, sections, placeholders) lives in
-[references/architecture-templates.md](references/architecture-templates.md).
-Use those templates verbatim, filling placeholders with project-specific
-content derived from the spec and user answers.
+Generate the files below in `docs/architecture/`. The exact template for each lives in
+[references/architecture-templates.md](references/architecture-templates.md) — use it
+verbatim, filling placeholders with project-specific content from the spec and answers.
 
-First identify the **feature list** from the spec (the same features `plan` will turn
-into epics). Each becomes one `features/<slug>/index.md`. Then generate:
+First identify the **feature list** from the spec (the same features `plan` will turn into
+epics). Each becomes one `features/<slug>/index.md` (frontmatter `slug` + `design: pending`).
+Then generate:
 
 | Step | File                                                                         | Template section                             |
 | ---- | ---------------------------------------------------------------------------- | -------------------------------------------- |
@@ -249,87 +230,140 @@ into epics). Each becomes one `features/<slug>/index.md`. Then generate:
 | 3.9  | `configuration.md`                                                           | configuration.md                             |
 | 3.10 | `dev-guide.md`                                                               | dev-guide.md                                 |
 
-**Feature list note:** derive features from the spec's capability breakdown. Pick a
-short `<slug>` per feature (e.g. `roles`, `customer`, `billing`) and reuse it as the
-epic slug so the `FEATURE_INDEX.Docs` column lines up. Put a component/table/endpoint in
-`_shared.md` (not a feature doc) only when **two or more** features rely on it.
+**Feature list note:** derive features from the spec's capability breakdown. Pick a short
+`<slug>` per feature (e.g. `roles`, `customer`, `billing`) and reuse it as the epic slug so
+`FEATURE_INDEX.Docs` lines up. Put a component/table/endpoint in `_shared.md` (not a feature
+doc) only when **two or more** features rely on it.
 
-**folder-structure.md note:** see the **Important** note under the folder-structure.md
-template — spec-defined structure is the base; otherwise propose one from the tech stack.
+**folder-structure.md note:** see the **Important** note under its template — spec-defined
+structure is the base; otherwise propose one from the tech stack.
 
 ### 3.8a (New Project Mode, ≥4 features) Parallel feature-doc fan-out
 
-Each `features/<slug>/index.md` is self-contained, so the per-feature docs parallelize. When
-this is a New Project run with **≥4 independent features**, author the globals AND `_shared.md`
-(steps 3.3–3.7) **first** so `_shared.md` is frozen, then dispatch one `general-purpose` Agent per
-feature following [../../references/subagent-fanout.md](../../references/subagent-fanout.md)
-(artifact variant). Pass each agent the frozen `_shared.md` contract, its `<slug>`, its spec slice,
-and `references/architecture-templates.md` (used verbatim — no improvising structure); it writes
-ONLY its own `features/<slug>/` directory. The orchestrator collects and writes the shared
-`README.md` index rows and `DESIGN_LEDGER.md` rows once, post-merge (never inside a subagent), and
-the Phase 0 version gate runs only in the orchestrator. Feature Mode (one doc) and specs with
-<4 features stay sequential.
+Each `features/<slug>/index.md` is self-contained, so per-feature docs parallelize. On a New
+Project run with **≥4 independent features**, author the globals AND `_shared.md`
+(steps 3.3–3.7) **first** so `_shared.md` is frozen, then dispatch one `general-purpose`
+Agent per feature following [../../references/subagent-fanout.md](../../references/subagent-fanout.md)
+(artifact variant, `model: sonnet`). Pass each agent the frozen `_shared.md`, its `<slug>`,
+its spec slice, and `references/architecture-templates.md` (used verbatim); it writes ONLY
+its own `features/<slug>/` directory, with frontmatter `slug` + `design: pending`. The
+orchestrator writes the shared `README.md` index rows once post-merge (never in a subagent).
+Feature Mode and specs with <4 features stay sequential.
 
-### 3.11 Design records + DESIGN_LEDGER (both modes)
+### 3.11 Regenerate the feature index
 
-For **each feature this run added or changed**, record the design pass so `plan` can
-later find unplanned work as a table lookup. Use today's date (`date +%Y-%m-%d`):
+After feature docs are written, regenerate the read-only views so `FEATURE_INDEX.Docs`
+picks up any doc that matches an existing epic slug:
 
-1. **Design record** — Write `docs/architecture/features/<slug>/YYYY-MM-DD_design_<short>.md`
-   from the **Design Record** template in
-   [references/architecture-templates.md](references/architecture-templates.md), where
-   `<short>` is a 2–4 word kebab slug of what was designed. Append-only history beside
-   `index.md` (not auto-read by later skills).
-2. **Ledger row** — Append one row to `docs/architecture/DESIGN_LEDGER.md` (create it from
-   the **DESIGN_LEDGER** template in the same reference if missing): `Date` = today,
-   `Feature`/`Slug`, `Type` = `new` for a new feature else `update`, `Summary` = one line,
-   `Planned?` = `pending`, `Plan ref` = `—`. Never set `planned` here — that is `plan`'s job.
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
+```
 
-These are journaled in addition to the feature doc; they never replace `index.md`.
+At greenfield time there are no epics yet, so the script exits cleanly with nothing to
+route; `plan` fills the `Docs` column when it creates the epics. In Feature Mode (epics
+already exist) it resolves the new doc's `Docs` cell immediately. Never hand-edit an index.
 
 ---
 
 ## PHASE 4: SUMMARY
 
-After all files are written (or updated), present a final summary block. The
-content differs between New Project Mode (table of created files, gaps
-remaining, next steps) and Feature Mode (table of UPDATED/CREATED/UNCHANGED
-files, impact summary, next steps).
-
-For the exact summary blocks, see
+Present a final summary block (New Project: created files, gaps remaining, next steps —
+Feature: UPDATED/CREATED/UNCHANGED files, impact, next steps). Exact blocks:
 [references/qna-examples.md](references/qna-examples.md).
 
-In both modes, the final next step is: run `/ck-code:team` to generate the expert and
-guide skills from these docs. Then `/ck-code:plan` generates epics and stories — it reads
-`DESIGN_LEDGER.md` to pick up the `pending` rows this run added and flips them to `planned`.
+The final next step is: run `/ck-code:team` to generate the expert and guide skills from
+these docs. Then `/ck-code:plan` reads each feature doc's `design: pending` flag to pick up
+the unplanned work this run added and flips it to `planned`.
+
+---
+
+## PHASE O: OPTIMIZE (maintenance)
+
+The token diet. Operates on the existing feature docs + `_shared.md` — never invents
+content, only restructures and reports. Dedup rules and the token report format live in
+[references/maintenance-playbook.md](references/maintenance-playbook.md).
+
+1. **Detect state (read-only):** Glob `docs/architecture/*.md` and
+   `docs/architecture/features/*/index.md`. If `docs/architecture/` does not exist, tell
+   the user to run `/ck-code:design` first and stop.
+2. **Measure** — report a per-doc token estimate (playbook format) and a total.
+   **Fan-out (≥8 feature docs):** dispatch one **read-only** `general-purpose` Agent per
+   `features/<slug>/index.md` (investigation variant, `model: haiku`) per
+   [../../references/subagent-fanout.md](../../references/subagent-fanout.md); each returns
+   `{token estimate, candidate shared sections}` and writes nothing. Merge here. Below ~8
+   docs, measure inline. All writes stay sequential in the orchestrator.
+3. **Dedup** — find content that appears in 2+ feature docs (shared components, base tables,
+   common middleware). Move one canonical copy to `_shared.md` under the right heading and
+   replace each occurrence with a link under `## Shared dependencies`. Keep feature-specific
+   extensions in the feature doc — hoist only the shared core.
+4. **Prune** — flag sections that are empty, stale `[TO BE DEFINED]`, or duplicate the global
+   docs; remove redundant prose, keep tables/lists. Confirm (AskUserQuestion) before deleting
+   any non-empty content.
+5. **Right-size** — if a feature doc really covers two features, propose a split; on
+   confirmation create the second doc + a note for the user to wire the new slug into `plan`.
+6. **Reindex** — if any feature doc was created/renamed, run
+   `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` and update the `README.md` index.
+7. Report before/after token totals per doc and the total saved (playbook format).
+
+---
+
+## PHASE S: SYNC (maintenance)
+
+Bring the doc set into lockstep with `FEATURE_INDEX` — the "as the project grows" pass. This
+does **not** do layout migration (flat→subfolder, legacy layer docs) — that is `/ck-code:migrate`.
+
+1. **Detect state:** read `tasks/FEATURE_INDEX.md`. If missing or lacking the generated
+   header, regenerate it (`"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"`) then read it. If
+   `docs/architecture/` does not exist, tell the user to run `/ck-code:design` and stop.
+2. For each feature (epic) in `FEATURE_INDEX`, check whether
+   `docs/architecture/features/<slug>/index.md` exists.
+3. **Missing** → `mkdir -p features/<slug>/` and scaffold `features/<slug>/index.md` from the
+   Feature Doc template (frontmatter `slug` + `design: pending`, header + section stubs + a
+   `[TO BE DEFINED]` note), using the epic's description for `## Summary`. Do NOT invent
+   component/API/data detail — leave stubs for a real `design`/`build` pass to fill.
+4. **Slug drift** → if a feature doc exists under a different slug than its epic (e.g. design
+   used `roles`, plan's epic is `role-management`), rename the `features/<slug>/` folder to
+   the epic slug and fix inbound links. Confirm (AskUserQuestion) before renaming on
+   ambiguous drift.
+5. **Reindex** — run `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` so each generated
+   `FEATURE_INDEX.Docs` cell resolves to the doc, and update the `README.md` Feature
+   Documents table.
+6. Report: docs scaffolded, renamed, and any features still lacking real design content (the
+   stubs) so the user knows what needs a `/ck-code:design` pass.
 
 ---
 
 ## CONDITIONAL CONTENT
 
-Not every section applies to every project. Within a feature doc, **omit** sections that
-don't apply rather than leaving empty placeholders:
+Within a feature doc, **omit** sections that don't apply rather than leaving empty placeholders:
 
 - **`## Data`** — omit if the feature touches no tables/entities.
-- **`## API`** — omit if the feature exposes no endpoints (e.g., a pure CLI feature).
+- **`## API`** — omit if the feature exposes no endpoints (e.g. a pure CLI feature).
 - **`## Flows`** — omit if there is no non-trivial flow to document.
 
 For global docs:
 
-- **`configuration.md`** — Skip if the project has no configuration files.
-- **`_shared.md`** — Always create it (even if thin); it is the link target for feature
-  docs and the destination for `doc-optimizer`'s dedup pass.
+- **`configuration.md`** — skip if the project has no configuration files.
+- **`_shared.md`** — always create it (even if thin); it is the link target for feature docs
+  and the destination for the `optimize` dedup pass.
 
-When skipping a **global** file, still list it in `README.md` with a note: "Not
-applicable for this project."
+When skipping a **global** file, still list it in `README.md` with a note: "Not applicable
+for this project."
 
 ---
 
 ## RULES
 
 - **Never modify the original specification file** — it is read-only input.
-- **Never invent information** — mark anything undetermined `[TO BE DEFINED]`.
-- **Never mark a ledger row `planned`** from `design`; every added/changed feature leaves a `pending` row (Phase 3.11) — that is how `plan` knows what remains.
+- **Never invent information** — mark anything undetermined `[TO BE DEFINED]`; `sync`
+  scaffolds stubs only, it does not author technical detail.
+- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v4 has
+  none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
+  writes or updates is left `design: pending`; `plan` flips it to `planned`.
+- **Never hand-edit a generated view** (`FEATURE_INDEX.md`, `STORIES_INDEX.md`) — change the
+  feature docs / story frontmatter and regenerate with `ck-index.sh`.
+- **Never delete non-empty content in a maintenance run** without confirming first; `optimize`
+  restructures and measures, it does not silently drop content.
 - **Never hardcode** — derive everything from the spec and the user's answers.
-- **Always write project-specific content**, not generic prose; each file self-contained, cross-referenced where relevant.
+- **Always write project-specific content**, each file self-contained and cross-referenced.
 - **Always output in English**, regardless of the spec's language.

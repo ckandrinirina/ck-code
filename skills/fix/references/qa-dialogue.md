@@ -1,6 +1,6 @@
 # QA & User Dialogue Scripts
 
-User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim or with minor wording adjustments so the workflow stays predictable. Phase branching logic lives in `SKILL.md`; this file is templates only.
+User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim or with minor wording adjustments so the workflow stays predictable. Phase branching logic lives in `SKILL.md`; this file is templates only. Confirmation gates are asked via `AskUserQuestion` — the report body below is the context; the trailing options map to the question's choices.
 
 `fix` diagnoses and routes — it never implements. The implement / QA / manual-test / ship prompts live in `build` (Bug-Fix Mode), not here.
 
@@ -13,10 +13,10 @@ User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim o
 
 | # | Story | Epic | Status |
 |---|-------|------|--------|
-| 1 | [01-01] Setup server scaffold | Foundation | DONE |
-| 2 | [01-02] gRPC service definition | Foundation | DONE |
-| 3 | [01-03] WebSocket gateway | Foundation | IN PROGRESS |
-| 4 | [02-01] Login form | Auth | BUG |
+| 1 | [01-01] Setup server scaffold | Foundation | done |
+| 2 | [01-02] gRPC service definition | Foundation | done |
+| 3 | [01-03] WebSocket gateway | Foundation | in-progress |
+| 4 | [02-01] Login form | Auth | bug |
 
 Which story has the bug? (number, path, AUTO, or NONE)
 ```
@@ -52,13 +52,13 @@ Story: [EE-SS] [Title]
 **Bug summary:** [1-line]
 **Verdict:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED | PLANNED-IN-FUTURE]
 
-### Best matches (DONE / IN PROGRESS / BUG)
+### Best matches (done / in-progress / bug)
 | Score | Story | Why |
 |-------|-------|-----|
 | 0.92 | [01-03] WebSocket gateway | overlaps `src/ws/handler.rs` (criterion #2) |
 | 0.41 | [02-01] Login form | shares 1 file but unrelated symptom |
 
-### Future coverage (TODO — only when any score ≥ 0.5)
+### Future coverage (todo — only when any score ≥ 0.5)
 | Score | Story | Why |
 |-------|-------|-----|
 | 0.91 | [04-02] Validate profile fields | criterion match + file overlap |
@@ -67,10 +67,10 @@ Story: [EE-SS] [Title]
 A) SINGLE-STORY — bug belongs to [EE-SS]. Diagnose + record + route.
 B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. Shared Bug ID `BUG-YYYYMMDD-NN`. Manual build hand-off.
 C) NEW-FEATURE — missing functionality, no epic covers it. Recommend `/ck-code:design`. STOP after confirm.
-D) MIXED — real bug in [EE-SS] AND a missing piece elsewhere. Diagnose the bug + create the missing story via `/ck-code:quick-story`. Manual build hand-off.
-E) PLANNED-IN-FUTURE — TODO story [EE-SS] [Title] already plans this. Default STOP; recommend `/ck-code:build <future-story>`. Override `PROCEED ANYWAY` falls through to A/B/D.
+D) MIXED — real bug in [EE-SS] AND a missing piece elsewhere. Diagnose the bug + create the missing story via `/ck-code:plan --quick`. Manual build hand-off.
+E) PLANNED-IN-FUTURE — todo story [EE-SS] [Title] already plans this. Default STOP; recommend `/ck-code:build <future-story>`. Override `PROCEED ANYWAY` falls through to A/B/D.
 
-Confirm verdict? YES / ADJUST / ABORT
+Confirm verdict? (AskUserQuestion: Confirm verdict / Adjust / Abort)
 ```
 
 ### Verdict A — Combined Prompt (fast-path, replaces Phase 2.5.5 gate)
@@ -80,10 +80,10 @@ When the verdict is A (single-story), append this block to the scope report inst
 ```
 **Scope:** single-story `[EE-SS] [Title]` (no new stories to create, one status flip).
 
-Proceed with diagnosis on this story? YES / ADJUST / ABORT
+Proceed with diagnosis on this story? (AskUserQuestion: Proceed / Adjust / Abort)
 ```
 
-On `YES`: go directly to Phase 3 (no Phase 2.5.5 gate). On `ADJUST`: re-score with overrides and re-present. Verdicts B / D continue to use Phase 2.5.5 separately.
+On `Proceed`: go directly to Phase 3 (no Phase 2.5.5 gate). On `Adjust`: re-score with overrides and re-present. Verdicts B / D continue to use Phase 2.5.5 separately.
 
 ---
 
@@ -99,10 +99,10 @@ Suggested next step:
 
 `design` produces the architecture docs that `plan` later turns into epics and stories.
 
-Proceed anyway? NO (recommended — stop) / YES (force fix flow, treat as MIXED)
+Proceed anyway? (AskUserQuestion: Stop — run design (recommended) / Force fix flow — treat as MIXED)
 ```
 
-Default to NO. On YES: fall through to verdict D handling.
+Default to stop. On force: fall through to verdict D handling.
 
 ---
 
@@ -121,10 +121,10 @@ Suggested next step:
 
 That run implements the fix as part of the planned story.
 
-Proceed anyway? NO (recommended) / PROCEED ANYWAY (force fix now)
+Proceed anyway? (AskUserQuestion: Defer to build (recommended) / Proceed anyway — force fix now)
 ```
 
-Default to NO. On PROCEED ANYWAY: fall through to the A/B/D verdict from `active_scores`. Never create stories under verdict E.
+Default to defer. On proceed anyway: fall through to the A/B/D verdict from `active_scores`. Never create stories under verdict E.
 
 ---
 
@@ -135,20 +135,20 @@ Default to NO. On PROCEED ANYWAY: fall through to the A/B/D verdict from `active
 
 **Bug ID:** BUG-YYYYMMDD-NN
 
-### Will UPDATE (append Bug Report, flip status → BUG)
-- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]  (DONE → BUG)
-- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]  (DONE → BUG)
+### Will UPDATE (append Bug Report, flip frontmatter status → bug)
+- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]  (done → bug)
+- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]  (done → bug)
 
-### Will CREATE via /ck-code:quick-story (verdict D — missing functionality, stays TODO)
+### Will CREATE via /ck-code:plan --quick (verdict D — missing functionality, stays todo)
 - epic 03 · Mobile   — "show device IP on settings screen"   (size: S)
 - epic 04 · Desktop  — "persist device IP to config"          (size: S)
 
-These new stories are real feature work (TODO), NOT part of this bug's BUG set. `quick-story` keeps the index, EPIC.md, and FEATURE_INDEX.md in sync.
+These new stories are real feature work (todo), NOT part of this bug's bug set. `plan --quick` writes each story's frontmatter and regenerates the indexes.
 
 ### Routing
 Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` (or `/ck-code:parallel-build`) per story.
 
-Proceed? YES / ADJUST / ABORT
+Proceed? (AskUserQuestion: Proceed / Adjust / Abort)
 ```
 
 ---
@@ -158,7 +158,7 @@ Proceed? YES / ADJUST / ABORT
 ```
 ## Bug Diagnosis Report
 
-**Story:** [EE-SS] [Title]  (Prior status: DONE)
+**Story:** [EE-SS] [Title]  (prior status: done)
 **Bug:** [1-line summary]
 **Root cause:** [explanation]
 **Location:** [file:line]
@@ -172,7 +172,7 @@ Proceed? YES / ADJUST / ABORT
 - [ ] [Criterion X] — BROKEN by this bug
 - [x] [Criterion Y] — Still working
 
-Confirm diagnosis and proceed to the Fix Plan? YES / INVESTIGATE MORE
+Confirm diagnosis and proceed to the Fix Plan? (AskUserQuestion: Confirm & continue / Investigate more)
 ```
 
 ---
@@ -188,7 +188,7 @@ Confirm diagnosis and proceed to the Fix Plan? YES / INVESTIGATE MORE
 **Test target:** [reproduction test name] must go GREEN
 **Risk:** [LOW / MEDIUM / HIGH]
 
-Record this plan into the story and route? YES / ADJUST / ABORT
+Record this plan into the story and route? (AskUserQuestion: Record & route / Adjust / Abort)
 ```
 
 ---
@@ -200,13 +200,13 @@ Printed when the Auto-Build Eligibility Gate passes (verdict A, single confirmed
 ```
 ## Fix Recorded — Auto-Building
 
-**Story:** [EE-SS] [Title]  →  status BUG (was DONE)
+**Story:** [EE-SS] [Title]  →  status bug (was done; prior_status recorded)
 **Bug ID:** BUG-YYYYMMDD-NN
 **Fix Plan + failing test:** recorded in the story.
 
 Easy fix — invoking /ck-code:build now to implement it (Bug-Fix Mode).
 build will take the reproduction test RED → GREEN, run SOLID + QA + manual test,
-ship, and restore the story to DONE.
+ship, and restore the story to its prior status (done).
 ```
 
 Then invoke `/ck-code:build <story-path>` via the Skill tool.
@@ -223,9 +223,9 @@ Printed when the Auto-Build Eligibility Gate fails (multi-story, high-risk, larg
 This fix is complex, so it's recorded but NOT auto-built:
   reason: [multi-story | high-risk | >3 files | uncertain root cause]
 
-**Stories flipped to BUG:**
-- [01-03] WebSocket gateway   (DONE → BUG)
-- [02-01] Login form          (DONE → BUG)
+**Stories flipped to bug:**
+- [01-03] WebSocket gateway   (done → bug)
+- [02-01] Login form          (done → bug)
 
 Each carries its Bug Report, failing reproduction test, and Fix Plan.
 
@@ -233,7 +233,7 @@ Run when ready:
   /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md      # one story
   /ck-code:parallel-build 01-03 02-01                              # several at once
 
-build enters Bug-Fix Mode, implements the recorded Fix Plan, and restores each story's prior status.
+build enters Bug-Fix Mode, implements the recorded Fix Plan, and restores each story's prior_status.
 ```
 
 STOP after printing — do not implement the fix inside `fix`.

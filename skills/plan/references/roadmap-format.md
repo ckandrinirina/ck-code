@@ -1,12 +1,14 @@
 # Plan Skill — Roadmap & Presentation Formats
 
-Formatting templates for plan presentation, the generated `ROADMAP.md`, and the post-generation summaries shown to the user.
+Formatting templates for the plan-confirmation view, the generated `ROADMAP.md`, and the
+post-generation summaries.
 
 ---
 
-## Phase 3 Plan Confirmation Format
+## Phase 4 Plan Confirmation Format
 
-Shown to the user before any files are written. Wait for explicit YES / NO / ADJUST.
+Shown to the user before any files are written. Present this text, then gate with
+`AskUserQuestion` (**Proceed** / **Adjust** / **Cancel**).
 
 ```
 ## Project Plan: [Project Name]
@@ -19,10 +21,10 @@ Shown to the user before any files are written. Wait for explicit YES / NO / ADJ
   ...
 
 **Epic 02: [Name]** ([story count] stories)
-  - 01: [Story title] (Size) [blocked by Epic 01]
+  - 01: [Story title] (Size) [blocked by 01-...]
   ...
 
-[... all epics ...]
+[... all epics, including the final NN_integration-e2e epic ...]
 
 ### Suggested Implementation Order
 1. [Epic/story] - [reason]
@@ -31,9 +33,10 @@ Shown to the user before any files are written. Wait for explicit YES / NO / ADJ
 
 ### Output Location
 tasks/YYYY-MM-DD_[project-slug]/
-
-Proceed with generating the full plan? YES / NO / ADJUST
 ```
+
+`AskUserQuestion` — "Proceed with generating this plan?" → **Proceed** (Phase 5) /
+**Adjust** (ask what to change, loop to Phase 3) / **Cancel** (stop, write nothing).
 
 ---
 
@@ -56,7 +59,6 @@ Proceed with generating the full plan? YES / NO / ADJUST
    - [Why this comes first]
 2. **[Epic/Story ID]** - [Title] ([Size])
    - [Dependency or reason]
-     ...
 
 ### Phase 2: [Phase Name]
 
@@ -77,7 +79,6 @@ The longest sequential chain is:
 | Risk     | Impact            | Mitigation        |
 | -------- | ----------------- | ----------------- |
 | [Risk 1] | [High/Medium/Low] | [How to mitigate] |
-| [Risk 2] | ...               | ...               |
 
 ## Milestones
 
@@ -89,7 +90,7 @@ The longest sequential chain is:
 
 ---
 
-## Phase 5 Summary Formats
+## Phase 6 Summary Formats
 
 ### New Project Mode Summary
 
@@ -105,13 +106,13 @@ The longest sequential chain is:
 - S stories: [count]
 - M stories: [count]
 
-(Every story is sized S/M — single-dispatch. If any L/XL appears, split it before building.)
+(Every story is sized S/M — single-dispatch. Indexes regenerated from frontmatter.)
 
 ### Next Steps
 1. Review the generated plan in tasks/
 2. Adjust stories or sizing as needed
-3. Use `/ck-code:to-issues` to publish to GitHub Issues (optional)
-4. Start implementation with the first story in the roadmap
+3. Use `/ck-code:ship` to publish to GitHub Issues (optional)
+4. Start with `/ck-code:build` (or `/ck-code:parallel-build` for independent stories)
 ```
 
 ### Feature Mode — Add Feature Summary
@@ -134,12 +135,10 @@ The longest sequential chain is:
 - S stories: [count]
 - M stories: [count]
 
-(Every story is sized S/M — single-dispatch. If any L/XL appears, split it before building.)
-
 ### Next Steps
 1. Review the feature plan in tasks/
-2. Use `/ck-code:to-issues tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
-3. Start with the first story in the feature roadmap
+2. Use `/ck-code:ship tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
+3. Start with `/ck-code:build` on the first story in the feature roadmap
 ```
 
 ### Feature Mode — Continue Existing Plan Summary
@@ -160,5 +159,5 @@ The longest sequential chain is:
 ### Next Steps
 1. Review the new epics in tasks/[existing-folder]/epics/
 2. ROADMAP.md has been updated with the new epics
-3. Use `/ck-code:to-issues` to publish new epics to GitHub Issues
+3. Use `/ck-code:ship` to publish the new epics to GitHub Issues
 ```

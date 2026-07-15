@@ -1,71 +1,85 @@
 ---
 name: ship
-description: Use to commit work, open a PR, and update linked GitHub Issues after a story or fix is complete. Argument is an optional story file path. Also works for any standalone commit.
-argument-hint: "[path-to-story.md]"
+description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). Issue work needs `gh` authenticated.
+argument-hint: "[path-to-story.md] | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 disable-model-invocation: false
-allowed-tools: Bash(git *) Bash(gh *) Bash(sleep *)
 ---
 
-# Ship — Commit, PR & Issue Management
+# Ship — Commit, PR, Issue Update & Plan Publishing
 
-Commit changes, optionally create a PR, and update linked GitHub Issues. Detects story context to link everything.
+Ship delivers finished code (commit + PR + issue updates), and — in `--to-issues`
+mode — publishes a `tasks/` plan to GitHub Issues. GitHub-issue linkage is by the
+story/epic frontmatter `issue:` number (see [`data-model.md`](../../references/data-model.md)),
+never by matching issue titles.
 
-**CRITICAL RULE — No AI references in any artefact.** Full rule in [`../../references/no-ai-references.md`](../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
+**CRITICAL RULE — No AI references in any artefact.** Full rule in [`no-ai-references.md`](../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
+
+References: [examples.md](references/examples.md) (worked ship walkthrough) · [pr-templates.md](references/pr-templates.md) (PR bodies + commands) · [issue-templates.md](references/issue-templates.md) (issue comment/close/checklist) · [issue-bodies.md](references/issue-bodies.md) (`--to-issues` issue-body templates per mode).
 
 ## ROUTING CHECK (do first)
 
-This skill **delivers finished code** (commit + PR + issue updates). If the request
-is actually something else, STOP and recommend the better skill:
-
-- The story isn't implemented yet → `/ck-code:build` or `/ck-code:fix` (first)
-- Mirroring the *plan* (not code) into GitHub Issues → `/ck-code:to-issues`
+- The story isn't implemented yet → `/ck-code:build` or `/ck-code:fix` first.
+- Publishing the *plan* (not code) into GitHub Issues → this skill's `--to-issues` mode.
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:track next` or `/ck-code:explain`.
 
-## INPUT
+## INPUT & MODE
 
-`$ARGUMENTS` is an optional path to a story file.
+Parse `$ARGUMENTS`:
 
-- **Provided:** read the story for issue links and context.
-- **Empty:** detect context from branch name or recent git activity. If none, run as standalone commit.
+- Contains `--to-issues` → **PUBLISH MODE** (bottom half of this file). Also parse an
+  optional `tasks/<slug>/` path and `--mode feature|epics|stories` (any order).
+- Otherwise → **SHIP MODE** (default). `$ARGUMENTS` may be a story-file path:
+  - **Provided** → read the story for its frontmatter `issue:` and context.
+  - **Empty** → detect context from branch name or recent git activity; if none, run as a standalone commit (STANDALONE MODE).
 
-## PHASE 0: BRANCH & PR CHECK
+## PHASE 0: VERSION GATE (hard gate — both modes)
+
+Read `tasks/VERSION.md`. If it exists and `layout: v4` → **PASS**, proceed. If missing
+or not `v4` → open the shared [version gate](../../references/version-gate.md) and run
+Tier 2 (HARD GATE): it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps.
+**Exception:** a SHIP-MODE standalone commit in a repo with **no `tasks/` directory** is
+not a ck-code project — skip the gate and do not stamp; just commit.
+
+---
+
+# SHIP MODE (default) — commit, PR, issue updates
+
+## PHASE 1: BRANCH & PR CHECK
 
 **Goal:** ensure work is on a feature branch and detect any existing PR — never commit directly to `main` or `develop`.
 
-### 0.0 Version Gate (hard gate)
-
-Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects, offers `/ck-code:doc-optimizer upgrade`, and stamps.
-
-### 0.1 Resolve Current Branch
+### 1.1 Resolve current branch
 
 ```bash
 git branch --show-current
 ```
 
-- **Feature branch** (`story/01-03-*`, `fix/02-01-*`, etc.): continue to 0.2.
-- **Protected branch (`main`, `develop`, …):** STOP before staging. Propose a name (`story/[EE]-[SS]-[slug]`, `fix/[EE]-[SS]-[slug]`, or `[type]/[slug]`) and offer A) CREATE, B) RENAME, C) SKIP (warn, not recommended). On A/B: `git checkout -b [branch-name]`.
+- **Feature branch** (`story/02-01-*`, `fix/02-01-*`, `feat/*`, …): continue to 1.2.
+- **Protected branch (`main`, `develop`, …):** STOP before staging. AskUserQuestion —
+  "You are on a protected branch. How to proceed?" with options **Create branch**
+  (propose `story/EE-SS-<slug>`, `fix/EE-SS-<slug>`, or `<type>/<slug>`), **Rename**
+  (move current commits onto a new branch), **Commit here** (warn: not recommended).
+  On create/rename: `git checkout -b <branch-name>`. Applies to standalone commits too.
 
-This applies to standalone commits too — always offer a feature branch on protected branches.
-
-### 0.2 Detect Existing PR for Current Branch
+### 1.2 Detect existing PR for current branch
 
 ```bash
 gh pr list --head "$(git branch --show-current)" --state open --json number,url,title,body
 ```
 
-Store the result as `existing_pr`:
+Store as `existing_pr`:
 
-- **One open PR found:** record `number`, `url`, `title`, and `body`. Phase 4 will reuse this PR (push + update description) instead of creating a new one.
-- **No open PR:** Phase 4 will run the standard create-PR flow.
-- **Multiple open PRs (rare):** show the list and ask the user which to update, or `NONE` to open a new one.
+- **One open PR** → record `number,url,title,body`; Phase 5 reuses it (push + update).
+- **No open PR** → Phase 5 runs the create flow.
+- **Multiple** (rare) → show the list, ask which to update (or `NONE` to open new).
 
 If `gh` is missing or unauthenticated, treat as "no existing PR" and continue.
 
-## PHASE 1: GATHER CONTEXT
+## PHASE 2: GATHER CONTEXT
 
-### 1.1 Check Git State
+### 2.1 Check git state
 
 ```bash
 git status
@@ -76,62 +90,72 @@ git log --oneline -5
 
 If clean and nothing staged: "Nothing to commit. Working tree is clean." → STOP.
 
-### 1.2 Detect Story Context
+### 2.2 Detect story context
 
 Find the linked story in this order:
 
-1. **`$ARGUMENTS`:** read the story file if a path was given.
-2. **Branch name:** parse `story/[EE]-[SS]-*` or `fix/[EE]-[SS]-*`.
-3. **Recent files:** match modified files against any story's "Files to Create/Modify".
+1. **`$ARGUMENTS`** — read the story file if a path was given.
+2. **Branch name** — parse `story/EE-SS-*` or `fix/EE-SS-*`, then locate the story at
+   `tasks/<slug>/epics/NN_*/stories/SS_*.md` (`NN`=`EE`, `SS`=story number).
+3. **Recent files** — match modified files against story frontmatter `files:` lists.
 
-If found, extract: title, epic, ID (EE-SS), status (DONE / IN PROGRESS), acceptance criteria, Implementation Summary or Bug Resolution, Files Touched.
+If found, extract from frontmatter: `id` (EE-SS), `title`, `epic`, `status`, `issue`,
+and the plan root `tasks/<slug>/`. From the body: acceptance criteria and the
+Implementation Summary / Bug Resolution for the plain-language commit copy.
 
-### 1.3 Detect Linked GitHub Issues
+### 2.3 Resolve linked GitHub issues (by number — never by title)
 
-If a story is found:
+- **Story issue:** the story frontmatter `issue:` number. Empty → no story issue linked;
+  do commit + PR only and say so. Never search the repo by issue title.
+- **Epic issue:** read the parent epic's `tasks/<slug>/epics/NN_*/EPIC.md` frontmatter
+  `issue:` number. Empty → no epic checklist to update.
 
-1. Scan the story file for `#123`, `GH-123`, etc.
-2. Story issue: `gh issue list --label "story" --state open --json number,title | jq '.[] | select(.title | contains("[EE-SS]"))'`
-3. Parent epic: `gh issue list --label "epic" --state open --json number,title | jq '.[] | select(.title | contains("Epic [NN]"))'`
+Store `story_issue` and `epic_issue` (both may be empty).
 
-Store `story_issue` and `epic_issue`.
+### 2.4 Read commit style
 
-### 1.4 Read Commit Style
+`git log --oneline -10` — match the repo's existing commit-message style.
 
-`git log --oneline -10` — match the repo's existing commit message style.
+## PHASE 3: PREPARE COMMIT
 
-## PHASE 2: PREPARE COMMIT
+### 3.1 Stage files
 
-### 2.1 Stage Files
+Run `git status`. **Auto-stage** the story's modified/new source files, test files, and
+the story-file frontmatter change. **Never stage** `.env`, credentials, secrets,
+`.DS_Store`, or IDE configs. Present grouped lists (Source / Tests / Docs / Excluded),
+then AskUserQuestion — "Stage these files?" options **Stage all**, **Adjust** (let the
+user drop/add specific files).
 
-Run `git status`. **Auto-stage** modified/new source files for the story, test files, and story file updates. **Never stage** `.env`, credentials, secrets, `.DS_Store`, IDE configs. Present grouped lists (Source / Tests / Documentation / Excluded) and ask: "Stage these files? YES / ADJUST".
+### 3.2 Craft commit message
 
-### 2.2 Craft Commit Message
-
-Subject line stays in **conventional commits** format (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`). Body is plain language readable by non-engineers.
+Subject stays in **conventional commits** (`feat`, `fix`, `refactor`, `test`, `docs`,
+`chore`, `style`, `perf`). Body is plain language for non-engineers.
 
 - **Subject:** `<type>(<scope>): <imperative summary, ≤70 chars>`
-- **Body:** describe what users can now do, see, or notice. No story IDs, no epic names, no acceptance-criteria counts, no test-count tallies. No class names, function names, or file paths.
-- **Footer:** `Closes #<issue_number>` if linked.
+- **Body:** what users can now do, see, or notice. No story IDs, epic names, AC counts,
+  test tallies, class/function names, or file paths.
+- **Footer:** `Closes #<story_issue>` when a story issue is linked.
 
-Full message templates: [references/examples.md](references/examples.md).
+Full templates: [examples.md](references/examples.md).
 
-### 2.3 Confirm Commit
+### 3.3 Confirm commit
 
-Show preview (Branch / Files staged / full Message / Linked issues) and ask: "Commit? YES / EDIT MESSAGE / ABORT". On EDIT, let the user modify, then re-confirm.
+Show a preview (Branch / Files staged / full Message / Linked issues), then
+AskUserQuestion — "Commit this?" options **Commit**, **Edit message** (user revises, then
+re-confirm), **Abort**.
 
-## PHASE 3: COMMIT
+## PHASE 4: COMMIT
 
-### 3.1 Execute Commit
+### 4.1 Execute
 
 ```bash
-git add [specific files]
-git commit -m "[message]"
+git add <specific files>
+git commit -m "<message>"
 ```
 
-Use a HEREDOC for multi-line messages — see [references/examples.md](references/examples.md).
+Multi-line messages use a HEREDOC — see [examples.md](references/examples.md).
 
-### 3.2 Verify Commit
+### 4.2 Verify
 
 ```bash
 git log --oneline -1
@@ -140,117 +164,214 @@ git show --stat HEAD
 
 Present hash, branch, file count, first message line.
 
-## PHASE 4: PR (Create or Update)
+## PHASE 5: PR (CREATE OR UPDATE)
 
-### 4.1 Route by Existing-PR Detection
+### 5.1 Route by existing-PR detection
 
-Use `existing_pr` from Phase 0.2:
+Use `existing_pr` from Phase 1.2: found → **5.A** (push + update); none → **5.B** (create).
 
-- **Existing PR found** → go to **4.A** (push to current branch, update PR description).
-- **No existing PR** → go to **4.B** (ask about creating one).
+### 5.A Update existing PR
 
-### 4.A Update Existing PR
+1. AskUserQuestion — show PR (number, title, URL): "Push to `<branch>` and update PR
+   #`<n>`?" options **Update PR**, **Skip push** (→ Phase 6), **New PR** (→ 5.B).
+2. `git push origin "$(git branch --show-current)"`.
+3. Read `existing_pr.body` and append under a `## Updates` section (create it if absent):
+   `- <YYYY-MM-DD>: <commit subject> — <one-line plain-language summary>`. Write the
+   **merged** body back — never overwrite prior content:
+   ```bash
+   gh pr edit <pr-number> --body "$(cat <<'EOF'
+   <merged body>
+   EOF
+   )"
+   ```
+   Content rules identical to 3.2.
 
-**4.A.1 Confirm with user.** Show the PR (number, title, URL) and ask: `Push to <branch> and update PR #<n> description with this commit? YES / SKIP / NEW PR`. On `SKIP` → Phase 5 (no push). On `NEW PR` → go to 4.B.
+### 5.B Create new PR
 
-**4.A.2 Push to current branch.**
+1. AskUserQuestion — "Open a PR?" options **Yes** (create now), **Commit only** (→ Phase 6),
+   **Push, PR later** (push branch, skip PR → Phase 6).
+2. AskUserQuestion — "PR target?" options **main**, **develop**, **Other** (specify).
+3. `git push -u origin <branch-name>`.
+4. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
+   — no story IDs, AC checkboxes, or test tallies. Bodies (feature / bug fix) + the exact
+   `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
 
-```bash
-git push origin "$(git branch --show-current)"
-```
+## PHASE 6: MARK DONE & UPDATE ISSUES
 
-**4.A.3 Update PR description.** Read the existing PR body (`existing_pr.body` from 0.2). Append a new entry under a `## Updates` section (create the section if absent):
+### 6.1 Mark the story done (frontmatter is the source of truth)
 
-```markdown
-## Updates
-
-- <YYYY-MM-DD>: <commit subject line> — <one-line plain-language summary of what users can now do or notice>
-```
-
-Then write the merged body back:
-
-```bash
-gh pr edit <pr-number> --body "$(cat <<'EOF'
-<merged body>
-EOF
-)"
-```
-
-The original body and existing `## Updates` entries are preserved. Content rules: same as 2.2.
-
-### 4.B Create New PR
-
-**4.B.1 Ask about PR.** A) YES (create now), B) NO (commit only → Phase 5), C) LATER (push branch, skip PR → Phase 5).
-
-**4.B.2 Determine PR target.** A) `main` (default), B) `develop`, C) other (specify).
-
-**4.B.3 Push branch.**
+If this ship completes the story's work: set the story frontmatter `status: done` (Edit
+the `status:` line — do **not** cell-edit any index or flip an EPIC checkbox), then
+regenerate views once:
 
 ```bash
-git push -u origin [branch-name]
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
 ```
 
-**4.B.4 Craft PR.** PR title = commit first line (under 70 chars). PR body is plain language for non-engineers — no story IDs, AC checkboxes, or test-count tallies. Body templates (feature / bug fix) and avoid/include lists: [references/pr-templates.md](references/pr-templates.md).
+If the story is not yet fully done, leave `status` as is and skip issue-close steps.
 
-**4.B.5 Create PR.** Use `gh pr create --title ... --base ... --body "$(cat <<'EOF' ... EOF)"`. Exact command and post-create output block: [references/pr-templates.md](references/pr-templates.md).
+### 6.2 Update the story issue (only if `story_issue` is set)
 
-## PHASE 5: UPDATE GITHUB ISSUES
+Resolve by the `story_issue` number from 2.3. Templates: [issue-templates.md](references/issue-templates.md).
 
-### 5.1 Update Story Issue
+- **New PR (5.B):** `gh issue comment <story_issue>` with the PR number + a 1–2 sentence
+  plain-language summary. No AC lists, no test counts.
+- **Existing PR updated (5.A):** `gh issue comment <story_issue>` noting the new commit
+  hash + summary; don't repeat the PR number if already posted.
+- **Commit-only on a protected branch:** `gh issue close <story_issue>` with the commit
+  hash + summary.
 
-- **New PR created (4.B):** comment on the linked issue with the PR number and a 1–2 sentence plain-language summary of what users can now do or notice. No AC lists, no test counts.
-- **Existing PR updated (4.A):** comment on the linked issue noting the new commit hash and a 1–2 sentence plain-language summary. Do not duplicate the PR number if it was already posted earlier in the thread.
-- **Commit only on protected branch:** close the issue with the commit hash and the same plain-language summary.
+### 6.3 Update the epic issue checklist (only if `epic_issue` is set)
 
-Exact `gh issue comment` / `gh issue close` templates: [references/issue-templates.md](references/issue-templates.md).
-
-### 5.2 Update Epic Issue
-
-If an epic issue is linked, mark the completed story in its checklist:
-
-1. `gh issue view [epic_issue_number] --json body -q .body`
-2. Replace `- [ ] #[story_issue_number]` with `- [x] #[story_issue_number]`
-3. `gh issue edit [epic_issue_number] --body "[updated body]"`
-
-### 5.3 Add Labels
+Resolve the epic issue by the `epic_issue` number from 2.3 (never by title):
 
 ```bash
-gh issue edit [story_issue_number] --add-label "status/done"
-# bug fix:
-gh issue edit [story_issue_number] --add-label "has-bugfix"
+gh issue view <epic_issue> --json body -q .body
 ```
 
-## PHASE 6: SUMMARY
+Flip this story's checklist item to `[x]`, then `gh issue edit <epic_issue> --body "<updated>"`.
+Match the item exactly: `#<story_issue>` when a story issue exists, else the bracketed
+padded token `[EE-SS]` (e.g. `[02-01]`, which never collides with `[02-10]`).
 
-Present a final block covering: Commit (hash/branch/message), PR (url/status), GitHub Issues Updated (story / epic), Story File (status/path), and Next Steps. Worked summary: [references/examples.md](references/examples.md).
+### 6.4 Labels (only if `story_issue` is set)
 
-**Hand-off rules / Next Steps:**
+```bash
+gh issue edit <story_issue> --add-label "status/done"
+gh issue edit <story_issue> --add-label "has-bugfix"   # bug fix only
+```
 
-- More stories remain: suggest `/ck-code:track next` then `/ck-code:build`.
-- Epic complete: note the epic issue can be closed manually or will auto-close once all checkboxes are checked.
+## PHASE 7: SUMMARY
 
-## STANDALONE MODE (No Story)
+Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
+Story (status/path), Next steps. Worked shape: [examples.md](references/examples.md).
+
+- More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.
+- Epic complete → note the epic issue can be closed manually or auto-closes once all its
+  checkboxes are checked.
+
+## STANDALONE MODE (no story)
 
 1. Show `git diff --stat` and `git status`.
-2. Ask the user the change type (feat/fix/refactor/etc.).
+2. AskUserQuestion — change type (feat/fix/refactor/…).
 3. Ask for a brief description.
-4. Craft a conventional commit message.
-5. Commit, optionally PR.
-6. No issue updates (no story to link).
+4. Craft a conventional commit message (plain-language body).
+5. Commit, optionally PR (Phase 5).
+6. No issue updates and no frontmatter/index changes (no story to link).
+
+---
+
+# PUBLISH MODE (`--to-issues`) — plan → GitHub Issues
+
+Publishes a generated `tasks/<slug>/` plan to GitHub Issues at the chosen granularity,
+then **writes each new issue number back into frontmatter** (`issue:`) so SHIP MODE can
+later resolve issues by number.
+
+**Resolve the plan path.** If a `tasks/<slug>/` path was given, use it. Else
+`Glob "tasks/*/PROJECT_OVERVIEW.md"` (or `FEATURE_OVERVIEW.md`): one → use it (confirm);
+several → ask which; none → tell the user to run `/ck-code:plan` first.
+
+| Mode | Issues created | Frontmatter write-back |
+|---|---|---|
+| `feature` | **1** whole-feature issue (epics + stories as nested checklists) | none (coarse tracking; no per-story issue) |
+| `epics` | **1 per epic** (stories are an in-body checklist) | epic issue → each `EPIC.md` `issue:` |
+| `stories` | epic issues **+** 1 per story (full hierarchy) | epic issue → `EPIC.md` `issue:`; story issue → story `issue:` |
+
+## PHASE P1: VALIDATE ENVIRONMENT
+
+```bash
+gh auth status
+gh repo view --json nameWithOwner -q .nameWithOwner
+```
+
+If either fails, stop and tell the user what to fix.
+
+## PHASE P2: READ PLAN STRUCTURE
+
+1. Read `PROJECT_OVERVIEW.md` (or `FEATURE_OVERVIEW.md`) for the project name and summary.
+2. `Glob "tasks/<slug>/epics/*/EPIC.md"` — each epic (folder `NN_<slug>`, `EPIC.md` frontmatter).
+3. Per epic, `Glob "tasks/<slug>/epics/NN_*/stories/*.md"` — each story
+   (`SS_<slug>.md`, frontmatter `id,title,epic,size,blocked_by,issue`).
+4. Read each `EPIC.md` and story to extract titles, descriptions, acceptance criteria,
+   sizes, and dependencies. Build an in-memory map of the plan (keep each file's path so
+   Phase P5 can write `issue:` back).
+
+## PHASE P3: SELECT MODE & CONFIRM
+
+**Mode:** if `--mode` was passed, use it; else AskUserQuestion — "How to publish this
+plan?" options **feature** (1 issue), **epics** (1 per epic), **stories** (epics + one
+per story).
+
+**Duplicate check** before proposing: `gh issue list --label "epic" --state all --json title,number`
+(and `feature`/`story` for the mode). If matches exist, fold **Skip duplicates /
+Proceed anyway / Abort** into the confirm prompt below.
+
+**Confirm:** present the repo, project name, mode, labels to create, and the issue count
+(`feature`=1; `epics`=N; `stories`=N epics + M stories). AskUserQuestion — "Proceed?"
+options **Create**, **Dry-run** (print exactly what would be created, create nothing),
+**Abort**.
+
+## PHASE P4: CREATE LABELS
+
+Create only the labels the chosen mode needs (`--force` updates existing). In `stories`
+mode add one `size/<S>` label per size actually present.
+
+```bash
+gh label create "feature" --color "0E8A16" --description "Whole-feature tracking issue" --force
+gh label create "epic" --color "6F42C1" --description "Epic-level issue" --force
+gh label create "story" --color "0075CA" --description "Implementation story" --force
+gh label create "size/S" --color "C2E0C6" --description "Small story" --force
+gh label create "size/M" --color "BFDADC" --description "Medium story" --force
+```
+
+## PHASE P5: CREATE ISSUES & WRITE BACK
+
+Follow the chosen mode's section in [issue-bodies.md](references/issue-bodies.md). `sleep 1`
+between every `gh` call (GitHub rate-limits issue creation strictly).
+
+- **`feature`** — create the one issue. No frontmatter write-back.
+- **`epics`** — create each epic issue; for each, Edit its `EPIC.md` frontmatter `issue:`
+  to the new number (add the line if absent).
+- **`stories`** — create all epic issues first (record epic-slug → issue number and write
+  each into `EPIC.md` `issue:`), then create each story issue and Edit that story's
+  frontmatter `issue:` to the new number, then replace the `#TBD` placeholders in each
+  epic body with the real story-issue numbers.
+
+After all write-backs, regenerate the views once (frontmatter changed):
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+```
+
+If a single `gh issue create` fails, report it and continue; list all failures at the end.
+
+## PHASE P6: SUMMARY
+
+Fill the summary shape from [issue-bodies.md](references/issue-bodies.md) for the mode
+that ran (created issue numbers, quick links, total). Note which stories/epics got an
+`issue:` written back.
+
+---
 
 ## RULES
 
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
-- **Never commit directly to `main` or `develop`** (Phase 0).
-- **Never `git add -A` or `git add .`** — stage files by name, and never stage secrets or env files.
-- **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language and read by non-engineers.
+- **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
+- **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index.sh`; never cell-edit an index or flip an EPIC checkbox for status.
+- **Always run `ck-index.sh` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
+- **Never commit directly to `main` or `develop`** (Phase 1).
+- **Never `git add -A` or `git add .`** — stage files by name; never stage secrets or env files.
+- **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language, read by non-engineers.
 - **Never overwrite a PR description** — append beneath the existing body and prior `## Updates` entries.
-- **Never open a second PR for a branch** that already has an open one (Phase 0.2).
+- **Never open a second PR for a branch** that already has an open one (Phase 1.2).
 - **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only.
+- **Never create issues outside the chosen `--to-issues` mode** — `feature`=1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
+- **Never create a story issue before every epic issue exists** — story bodies cross-reference epic numbers.
+- **Always `sleep 1` between every `gh` call** in `--to-issues` mode — GitHub rate-limits strictly.
 - **Always close issues with a `Closes #X` footer**, and only when the work is complete.
 
 ## NEXT
 
-If more stories are ready, run `/ck-code:track next`. To explain what was just built (verification commands + walkthrough), run `/ck-code:explain`.
-
-For a deeper pre-PR pass, the native `/code-review` (or `/code-review --fix`) reviews the diff before this skill opens the PR. See [native-commands.md](../../references/native-commands.md).
+If more stories are ready, run `/ck-code:track next`. To explain what was just built
+(verification commands + walkthrough), run `/ck-code:explain`. For a deeper pre-PR pass,
+native `/code-review` (or `/code-review --fix`) reviews the diff before this skill opens
+the PR — see [native-commands.md](../../references/native-commands.md).

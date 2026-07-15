@@ -1,420 +1,443 @@
 ---
 name: plan
-description: Use to break a project specification or feature description into epics, stories, and a roadmap under `tasks/`. Argument is the path to the spec file.
-argument-hint: "<path-to-spec-file>"
+description: Use when breaking a project spec or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle; redirects to full planning when no epic exists. Argument is the spec-file path, or the `--quick` flags.
+argument-hint: "<path-to-spec> | --quick [brief] [--epic NN]"
 effort: high
 ---
 
-# Project Architect — Specification to Epic/Story Planner
+# Project Architect — Spec to Epics/Stories (+ Quick Single-Story)
 
-Transform a project specification document into a fully structured implementation plan
-with epics, stories, dependencies, and a recommended roadmap.
+Transform a specification into a structured implementation plan — epics, stories,
+dependencies, roadmap — under `tasks/`, or add one small story to an existing epic.
 
-**Supports two modes:**
+**Two operating modes:**
 
-- **New Project Mode:** Generate a full project plan from a specification
-- **Feature Mode:** Generate scoped epics/stories for a new feature, aware of existing architecture
+- **Full plan** (default) — a spec/feature becomes epics, stories, and a roadmap.
+  Sub-modes: New Project, Add Feature, Continue Existing Plan.
+- **Quick** (`--quick`) — one small story dropped into an existing epic, no full cycle.
 
-**Hand-off rules:**
+Story state lives in **story-file frontmatter**; `STORIES_INDEX.md` and
+`FEATURE_INDEX.md` are **generated** by `scripts/ck-index.sh` — never hand-written
+(see [`data-model.md`](../../references/data-model.md)).
 
-- Requires `/ck-code:design` (architecture docs in `docs/architecture/`), then `/ck-code:team`
-  (expert + guide skills). If `.claude/skills/experts/` is absent, say so and recommend
-  `/ck-code:team` before continuing — `build` relies on those skills.
-- Hands off to `/ck-code:build` (or `/ck-code:to-issues` then `/ck-code:build`) once the plan is generated.
+**Hand-off:** requires `/ck-code:design` (architecture docs in `docs/architecture/`),
+then `/ck-code:team` (expert + guide skills). If `.claude/skills/experts/` is absent,
+say so and recommend `/ck-code:team` before continuing — `build` relies on it. Hands
+off to `/ck-code:build` / `/ck-code:parallel-build` (or `/ck-code:ship` to publish
+issues first).
+
+## HARD GATES
+
+- [Version gate](../../references/version-gate.md) — inlined in Phase 0. BLOCK halts the skill.
 
 ## ROUTING CHECK (do first)
 
-This skill breaks a spec into a **full epic/story plan**.
-If the request is actually something else, STOP and recommend the better skill:
+This skill builds a **full epic/story plan** (or, with `--quick`, adds one story to an
+existing epic). If the request is something else, STOP and recommend the better skill:
 
-- One small addition to an existing plan → `/ck-code:quick-story`
 - No architecture docs yet → `/ck-code:design` (first)
-- A stakeholder-facing spec, not a task breakdown → `/ck-code:pre-spec`
+- A stakeholder-facing spec, not a task breakdown → `/ck-code:spec`
+- A bug in already-implemented code → `/ck-code:fix`
+- `--quick` but no `tasks/` plan or target epic exists → fall through to full plan (Phase 1.2)
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
-**Next step after this skill:** `/ck-code:to-issues` *(optional)* or `/ck-code:track next`.
 
-**Reuse-first:** plan from the design docs and existing `tasks/` — reuse settled architecture
-instead of re-deriving it, and pick the simplest viable epic/story structure. See
-[`reuse-first.md`](../../references/reuse-first.md).
+**Reuse-first:** plan from the design docs and existing `tasks/` — reuse settled
+architecture instead of re-deriving it, and pick the simplest viable epic/story
+structure. See [`reuse-first.md`](../../references/reuse-first.md).
 
 ## EFFORT SCALING
 
-**Effort** controls **depth per story**, never story count or story size. Adapt to the
-current effort level (**${CLAUDE_EFFORT}**):
+**Effort** (**${CLAUDE_EFFORT}**) controls **depth per story**, never story count or size:
 
 - **low** — Minimal acceptance criteria; terse technical notes.
-- **medium** (default) — Each story is a complete feature slice with clear acceptance criteria and dependencies.
-- **high / xhigh / max** — Add detailed acceptance criteria, edge cases, test notes, a finer-grained `## Implementation Tasks` breakdown per story, and an explicit dependency graph in the roadmap. Do **not** make stories larger to spend the effort — add task and criteria depth instead.
-
-## INPUT
-
-The user provides a path to a specification file or feature description via `$ARGUMENTS`.
-
-**If `$ARGUMENTS` is empty or the file does not exist:**
-
-- Ask the user: "Please provide the path to your project specification file (e.g., `docs/specifications.md`)."
-- Validate the file exists using Read before proceeding.
-- If the file is empty or trivially short (< 50 words), warn the user and ask if they want to continue.
+- **medium** (default) — Each story is a complete slice with clear criteria and dependencies.
+- **high / xhigh / max** — Add edge cases, test notes, a finer `## Implementation Tasks`
+  breakdown per story, and an explicit dependency graph in the roadmap. Do **not** make
+  stories larger to spend effort — add task and criteria depth instead.
 
 ---
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Read `tasks/VERSION.md`. If `layout: v3` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects, offers `/ck-code:doc-optimizer upgrade`, and stamps.
+Read `tasks/VERSION.md`. If it exists AND `layout: v4` → **PASS**, proceed. Otherwise
+run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects
+a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write project
+state before this PASSes.
 
 ---
 
-## MODE DETECTION
+## PHASE 1: INPUT & MODE
 
-**Goal:** Determine whether this is a new project or a feature addition.
+### 1.1 Route quick vs full
 
-### Detection Steps
+If `$ARGUMENTS` contains `--quick` → **QUICK MODE**: go to [PHASE Q](#phase-q-quick-single-story-mode).
+Otherwise continue with **FULL PLAN MODE** (Phases 2–6).
 
-1. Check if `docs/architecture/` exists with architecture docs
-2. Check if `tasks/` directory exists with prior generated plans
-3. Check the codebase for existing source files
+**Full-plan input:** `$ARGUMENTS` is a path to a spec/feature file.
 
-### Decision Logic
+- Empty or missing file → ask: "Please provide the path to your project specification
+  file (e.g., `docs/specifications.md`)." Validate with Read before proceeding.
+- File empty or < 50 words → warn and ask whether to continue.
+
+### 1.2 Full-plan sub-mode
+
+Detect existing context, then pick the sub-mode with `AskUserQuestion`:
 
 ```
-IF docs/architecture/ exists OR tasks/ has prior plans:
-  → FEATURE MODE (adding to an existing project)
-ELSE:
-  → NEW PROJECT MODE (planning from scratch)
+IF docs/architecture/ exists OR tasks/ has prior plans → offer FEATURE-mode choice:
+ELSE → NEW PROJECT MODE (plan from scratch, no prompt).
 ```
 
-### Feature Mode Activation
+`AskUserQuestion` — "This project already has architecture/plans. How should I plan?"
+Options:
 
-In Feature Mode, present three options to the user (A / B / C):
-
-- **A) ADD FEATURE** — Plan epics/stories for a new feature; read existing architecture and prior plans as context.
-- **B) FULL PROJECT PLAN** — Replan the entire project from scratch (new dated folder, existing plans untouched).
-- **C) CONTINUE EXISTING PLAN** — Add more epics/stories to a prior plan (user picks which `tasks/` folder to extend).
-
-**If A (ADD FEATURE):**
-
-1. Read the existing architecture context per Phase 1.1b step 1 (global docs + feature index only).
-2. Read `$ARGUMENTS` spec/feature file.
-3. Scan existing `tasks/` folders per Phase 1.1b step 2 (avoid duplicating stories).
-4. Ask: "What new feature do you want to plan?" (if not clear from the file).
-5. Proceed to Phase 1 with feature-scoped analysis.
-
-**If B (FULL PROJECT PLAN):**
-
-1. Proceed as New Project Mode (new dated folder, no conflict).
-
-**If C (CONTINUE EXISTING PLAN):**
-
-1. List existing `tasks/*/` folders, ask user to pick one.
-2. Read that plan's existing epics and stories.
-3. Ask: "What additional scope do you want to add?"
-4. Generate new epics/stories that continue the numbering from the existing plan
-   (e.g., if the last epic was 04, new ones start at 05).
-5. Write new files into the SAME folder structure.
-6. Update `ROADMAP.md` to include the new epics.
+- **Add Feature** — plan epics/stories for a new feature, reading existing architecture
+  and prior plans as context. New dated folder `tasks/YYYY-MM-DD_feature-<slug>/`,
+  numbering restarts at `01`; `FEATURE_OVERVIEW.md` instead of `PROJECT_OVERVIEW.md`.
+- **Full Project Plan** — replan the whole project from scratch (new dated folder;
+  existing plans untouched).
+- **Continue Existing Plan** — append epics/stories to a prior plan. List `tasks/*/`
+  folders, ask which to extend, continue epic numbering from the last epic, write into
+  the SAME folder, update `ROADMAP.md`.
 
 ---
 
-## PHASE 1: DEEP ANALYSIS
+## PHASE 2: DEEP ANALYSIS
 
-**Goal:** Build a comprehensive mental model of the project before generating any output.
+**Goal:** a full mental model before generating any output.
 
-### 1.1 Read the Specification
+### 2.1 Read the specification
 
-Read the entire specification file provided in `$ARGUMENTS` using the Read tool.
+Read the entire `$ARGUMENTS` file.
 
-### 1.1b (Feature/Continue Mode) Read Existing Context
+### 2.2 (Feature / Continue) read existing context
 
-Before extracting dimensions:
+1. **Global architecture + feature docs** — `overview.md`, `tech-stack.md`,
+   `folder-structure.md`, `_shared.md`, and the feature index. Open a full
+   `features/<slug>/index.md` only for a feature the new work directly integrates with.
+2. **Existing plans** — read `ROADMAP.md` and `EPIC.md` files to learn what is planned
+   and what numbering to continue from.
+3. **The codebase** — Glob to see which planned components already exist as source, so
+   you plan only what is not built.
 
-1. **Read the global architecture docs + feature index** — `overview.md`, `tech-stack.md`, `folder-structure.md`, `_shared.md`, and the `README.md` index (which lists every feature with a one-line summary). Open a full `features/<slug>/index.md` only for a feature the new work directly integrates with — not the whole set.
-2. **Scan existing plans** in `tasks/` — read `ROADMAP.md` and `EPIC.md` files to understand what's already planned and what numbering to continue from.
-3. **Scan the actual codebase** — use Glob to check which planned components already exist as source files. This tells you what's built vs. what's only planned.
+This prevents duplicating stories, planning already-implemented work, or conflicting
+with the existing architecture.
 
-This context prevents: duplicating existing stories, planning already-implemented work, creating epics that conflict with the existing architecture, or proposing folder structures that contradict what's already in place.
+### 2.3 Find unplanned design work (replaces the design ledger)
 
-### 1.1c Read the Design Ledger (both modes)
+Read the feature docs' frontmatter to find work that has been **designed but not yet
+planned**: a `docs/architecture/features/<slug>/index.md` whose frontmatter carries
+`design: pending`. Those are the authoritative features to plan in this run — each
+`slug` points to the feature doc to plan from. In Phase 5.5 you flip them to
+`design: planned`. If no feature docs exist (design has not run), fall back to the
+spec / feature index.
 
-Read `docs/architecture/DESIGN_LEDGER.md` (format: [`architecture-templates.md`](../design/references/architecture-templates.md#design_ledgermd-design--plan-bridge)).
-Its **`pending` rows are the design additions that have been designed but not yet planned** —
-the authoritative work-to-plan list, so you don't diff feature docs to find what's new.
-Each `pending` row's `Slug` points to the feature doc to plan from. Plan those features in
-this run; in Phase 4.5c you will flip their rows to `planned`. If the ledger is missing
-(older v3 project, or design hasn't run), fall back to the feature index / spec as before.
+```bash
+grep -rl 'design: pending' docs/architecture/features/*/index.md 2>/dev/null
+```
 
-### 1.2 Extract Core Dimensions
+### 2.4 Extract core dimensions
 
-Use extended thinking (ultrathink) to reason through **genuine** ambiguities only — where the
-spec or `docs/architecture/` already answers something, reuse that answer rather than
-re-deriving it. Extract:
+Use extended thinking (ultrathink) for **genuine** ambiguities only — where the spec or
+`docs/architecture/` already answers something, reuse that answer. Extract:
 
-- **PROJECT IDENTITY** — name (slug: lowercase, hyphens, no spaces), one-line description, problem solved, target users.
-- **ARCHITECTURE** — system architecture (monolith, microservices, client-server, etc.), major components/sub-systems, data flow, external integrations.
-- **TECH STACK** — languages/frameworks/runtimes per component, build tools, package managers, databases, message queues, protocols, deployment targets.
-- **FEATURES & REQUIREMENTS** — functional (explicit and implied), non-functional (performance, security, latency), user-facing vs. infrastructure, API surface (REST, WebSocket, gRPC, etc.).
-- **PHASES / ROADMAP** (if specified) — phased rollout, MVP vs. future scope, priority indicators.
+- **PROJECT IDENTITY** — name (slug: lowercase, hyphens), one-line description, problem, users.
+- **ARCHITECTURE** — system shape, components/sub-systems, data flow, external integrations.
+- **TECH STACK** — languages/frameworks per component, build tools, package managers, datastores, protocols, deploy targets.
+- **FEATURES & REQUIREMENTS** — functional (explicit + implied), non-functional (perf, security, latency), API surface.
+- **PHASES / ROADMAP** (if specified) — phased rollout, MVP vs. future scope, priorities.
 
-### 1.2b (Optional) Parallel domain analysis (fan-out — large multi-component specs)
+### 2.5 (Optional) parallel domain analysis (fan-out)
 
-If 1.2 surfaced **≥4 genuinely independent components** and the spec is large, dispatch one
-**read-only** `general-purpose` Agent per component following the investigation variant in
-[../../references/subagent-fanout.md](../../references/subagent-fanout.md). Each returns an
-analysis brief (its features, requirements, tech stack, intra-domain deps) — no writes to
-`tasks/`. Fix PROJECT IDENTITY (1.2) before dispatch so slugs stay consistent, then merge the
-briefs here and do **all** cross-domain dependency mapping yourself in 1.4 (subagents see only
-their slice and would miss integration points). Skip when components are few, tightly coupled, or
-the spec is small — Phase 2 structuring and all Phase 4 shared writes always stay sequential
-(story files may fan out per Phase 4.4b).
+If 2.4 surfaced **≥4 genuinely independent components** and the spec is large, dispatch
+one **read-only** `general-purpose` Agent per component following the investigation
+variant in [`subagent-fanout.md`](../../references/subagent-fanout.md). Each returns an
+analysis brief (features, requirements, tech stack, intra-domain deps) — no writes to
+`tasks/`. Fix PROJECT IDENTITY (2.4) before dispatch so slugs stay consistent, then
+merge the briefs here and do **all** cross-domain dependency mapping yourself in 2.7.
+Skip when components are few, tightly coupled, or the spec is small.
 
-### 1.3 Research Tech Stack (when beneficial)
+### 2.6 Research tech stack (when beneficial)
 
-Only for unfamiliar or rapidly-evolving frameworks/libraries/protocols the spec references, use context7 (MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best practices, version-specific considerations, and standard project structures.
+Only for unfamiliar or rapidly-evolving frameworks the spec references, use context7
+(MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best
+practices, version considerations, and standard project structures.
 
-### 1.4 Identify Dependencies & Complexity
+### 2.7 Identify dependencies & complexity
 
-Map out:
-
-- Which components depend on which (build order)
-- Shared artifacts (proto files, shared types, config schemas)
-- Integration points requiring multiple components working together
-- High-risk / high-complexity areas
+Map: which components depend on which (build order); shared artifacts (proto files,
+shared types, config schemas); integration points needing multiple components; and
+high-risk / high-complexity areas.
 
 ---
 
-## PHASE 2: EPIC & STORY STRUCTURING
+## PHASE 3: EPIC & STORY STRUCTURING
 
-**Goal:** Organize the analysis into a clean epic/story hierarchy.
+### 3.1 Define epics
 
-### 2.1 Define Epics
+Open a new epic only for a **distinct milestone or a hard dependency boundary** — the
+fewest epics that cleanly separate deliverables. Group cohesive work that shares a
+milestone under one epic; never create an epic that marks neither a milestone nor a
+boundary — fold it into an existing one.
 
-Open a new epic only for a **distinct milestone or a hard dependency boundary** —
-aim for the fewest epics that cleanly separate deliverables. Group cohesive work
-that shares a milestone under one epic. Never create an epic that marks neither a
-distinct milestone nor a dependency boundary — fold such work into an existing epic.
+Each epic: a coherent deliverable chunk, numbered sequentially (`01`, `02`, …), a short
+descriptive slug. **Set the epic slug to match its feature-doc slug** so the generated
+`FEATURE_INDEX.md` links its `Docs` cell.
 
-Each epic should:
+- **Continue mode:** continue numbering from the last epic (last was `04` → new start `05`).
+- **Add Feature mode:** start at `01` in the new `tasks/YYYY-MM-DD_feature-<slug>/` folder.
+- **Cross-references:** when a story depends on existing plan/code, reference it
+  explicitly (e.g. `blocked_by` an existing story ID, or a note citing the source file).
 
-- Represent a coherent, deliverable chunk of work
-- Be numbered sequentially (`01`, `02`, `03`, ...)
-- Have a short, descriptive slug (e.g., `foundation-server`, `midi-arranger`, `mobile-ui`)
-- Map roughly to a milestone or phase
+**Ordering:** infrastructure/foundation first; no-dependency epics before dependents;
+respect spec phases; within a phase — shared/core code, then feature code, then
+integration. The plan's **last** epic is always the mandatory Integration & E2E epic (3.6).
 
-**(Feature Mode) Numbering:**
+### 3.2 Define stories
 
-- **Continue Mode:** continue numbering from the last epic in the existing plan (e.g., last was 04 → new ones start at 05).
-- **Add Feature Mode:** start at `01` within the new dated folder. Prefix the folder slug with `feature-` (e.g., `tasks/YYYY-MM-DD_feature-<feature-name>/`).
+**One story = one agent dispatch.** A single `build` session — or one `parallel-build`
+sub-agent — implements it end-to-end (red → green → refactor → QA → commit) within its
+budget. An oversized story stalls mid-build and forces a costly recovery pass.
 
-**(Feature Mode) Cross-references:**
+Each story: exactly one cohesive concern (a feature, component, or vertical slice);
+sized **S or M only**; numbered sequentially within its epic (`01`, `02`, …) with a
+short slug; clear testable acceptance criteria and a `files` list.
 
-- When stories depend on components from the existing plan or codebase, reference them explicitly — e.g., `Depends on: existing server/src/ws/handlers.rs (already implemented)` or `Depends on: Epic 02 Story 03 from tasks/2026-04-01_project-name/`.
+**Sizing rubric (S or M only, single-dispatch):**
 
-**Epic ordering principles:**
+- **M** — a self-contained concern (one feature, component, or vertical slice with real logic). The default.
+- **S** — a small focused change. Fold a trivial S (a lone config or type file) into the M story that consumes it.
+- **L / XL** — never plan one. Split at a natural seam (interface vs. implementation,
+  per-endpoint, per-component) **even when the parts are coupled**, and order the pieces
+  with `blocked_by`. `## Implementation Tasks` (3.4) carries the precision a bigger story
+  would have held.
 
-- Infrastructure and foundation epics come first
-- Epics with no dependencies on other epics come before those that depend on them
-- If the spec defines phases, respect that ordering
-- Within a phase: shared/core code first, then feature code, then integration
-- The plan's **last** epic is always the mandatory Integration & E2E epic (Phase 2.4)
+**Always split** when the work exceeds one dispatch, **or** the pieces are independent
+and parallelizable, **or** there is a hard dependency boundary (one part must merge and
+stabilize before the next), **or** the concerns are unrelated.
 
-### 2.2 Define Stories Within Each Epic
+### 3.3 Consolidation pass
 
-**One story = one agent dispatch.** A single `build` session — or one
-`parallel-build` sub-agent — must implement it end-to-end (red → green →
-refactor → QA → commit) within its tool-call/token budget. A dispatched agent
-**cannot be resumed**: an oversized story stalls mid-build (the `◐ incomplete`
-outcome in `parallel-build`) and forces a costly continue-in-place recovery pass.
+Before presenting, merge only genuine redundancy — **never merge past one dispatch** (3.2):
 
-Each story must:
+- Standalone **S** stories → fold into the story that consumes them.
+- Two stories that are truly the same concern on the same files → merge **only if the
+  result still fits one dispatch**; else keep them split.
+- An epic left with a single story → fold it upward and drop the epic, unless it marks a
+  distinct milestone or dependency boundary.
 
-- Cover exactly one cohesive concern (a feature, a component, a vertical slice) — never mix unrelated concerns into one story.
-- Be sized **S or M only** (rubric below) — never plan an **L** or **XL** story.
-- Be numbered sequentially within its epic (`01`, `02`, ...) with a short descriptive slug.
-- Carry clear, testable acceptance criteria and an explicit files-to-touch list so `build` can execute it in one focused session.
+### 3.4 Break each story into tasks
 
-**Story sizing rubric** (target: every story S or M, single-dispatch):
+Decompose every story into an ordered list of concrete **implementation tasks** — each
+one verifiable action toward its acceptance criteria (e.g. "define the `X` interface",
+"implement `Y` against it", "wire `Y` into the handler"). These populate the story's
+`## Implementation Tasks` section.
 
-- **M:** A self-contained concern — one feature, one component, or one vertical slice with real logic. The default target.
-- **S:** A small, focused change. Fold a trivial S (a lone config or type file) into the M story that consumes it rather than leaving it standalone.
-- **L / XL:** Never plan one — they overflow a single dispatch. Split the work at a natural seam (interface vs. implementation, per-endpoint, per-component) **even when the parts are coupled**, and order the pieces with `Blocked by` dependencies. The split pieces stay coherent through their shared epic and dependency graph, and `## Implementation Tasks` (Phase 2.2c) carries the precision a single larger story would have held.
+- Tasks are **story-specific**, never generic TDD phases (not "write tests / implement / refactor / QA").
+- Order so each builds on the previous; the final task completes the last acceptance criterion.
+- Right altitude: a handful of meaningful steps. **> ~8 tasks means the story is too big — split it** (3.2).
+- Every acceptance criterion must be reachable by following the task list end to end.
 
-**Always split a story** when it would exceed one dispatch, **or** when one of these holds:
+### 3.5 Map story dependencies
 
-- The pieces are independent and can be built in parallel by different agents/people, or
-- There is a hard dependency boundary (one part must merge and stabilize before the next can start), or
-- The concerns are genuinely unrelated.
+For each story, identify blockers (must-complete-first story IDs → `blocked_by`),
+parallel-safe siblings, and cross-epic dependencies.
 
-### 2.2b Consolidation Pass
+### 3.6 Mandatory final Integration & E2E epic
 
-Before presenting the plan, review the draft story list and merge only genuine
-redundancy — **never merge to the point a story would exceed one dispatch** (Phase 2.2):
+**Every plan run ends with a dedicated final epic that validates the whole feature (or
+project) end-to-end** — no plan is complete without it. Add it as the **last** (highest-
+numbered) epic, regardless of mode:
 
-- Standalone **S** stories → fold into the related story that consumes them.
-- Two stories that are truly the same concern on the same files → merge **only if the result still fits one dispatch**; otherwise keep them split.
-- An epic left with a single story → fold the story upward and drop the epic, unless that epic marks a distinct milestone or dependency boundary.
-
-### 2.2c Break Each Story into Tasks
-
-For every story, decompose the work into an ordered list of concrete
-**implementation tasks** — each task is one verifiable action that moves the
-story toward its acceptance criteria (e.g. "define the `X` interface",
-"implement `Y` against it", "wire `Y` into the handler"). These tasks populate
-the story file's `## Implementation Tasks` section.
+- **New Project:** covers the whole project end-to-end.
+- **Add Feature:** covers the whole feature end-to-end, including its integration points.
+- **Continue:** a new final Integration & E2E epic for the appended scope only; do not
+  touch the prior plan's epics.
 
 Rules:
 
-- Tasks are **story-specific**, not generic TDD phases — never write "write tests / implement / refactor / QA" as the task list; that is build's runtime concern.
-- Order tasks so each one builds on the previous; the final task completes the last acceptance criterion.
-- Keep tasks at the right altitude: a handful of meaningful steps, not one line per file edit. **If a story needs more than ~8 tasks, it is too big for one dispatch — split it** (Phase 2.2). The task count is the practical size guardrail.
-- Every acceptance criterion must be reachable by following the task list end to end.
+- Slug it `integration-e2e` (`NN_integration-e2e`); its Goal states the end-to-end behavior proved.
+- `blocked_by` every prior epic's terminal stories — it runs only after the pieces exist,
+  so it is last in the roadmap and never a `parallel-build` candidate alongside the work it verifies.
+- Its stories **exercise real user journeys through actual entry points** (API, CLI, UI,
+  message bus), asserting cross-component behavior and the seams from 2.7 — not more unit tests.
+- **Each E2E story is still S or M, one dispatch** (3.2). When coverage exceeds one
+  dispatch, split by journey (happy-path, error/edge, each integration point) — never one oversized E2E story.
+- Give each an ordered `## Implementation Tasks` list: set up fixtures → drive the flow → assert observable outcomes.
 
-### 2.3 Map Story Dependencies
-
-For each story, identify:
-
-- Which other stories must be completed first (blockers)
-- Which stories can run in parallel
-- Cross-epic dependencies
-
-### 2.4 Mandatory Final Integration & E2E Epic
-
-**Every plan run ends with a dedicated final epic that validates the whole feature (or
-project) end-to-end** — no plan is complete without it. Individual feature stories prove
-their own slice; this epic proves the slices work together through real entry points.
-
-Add it as the **last** epic (highest number), regardless of mode:
-
-- **New Project Mode:** the final epic covers the whole project end-to-end.
-- **Feature / Add Feature Mode:** the final epic covers the whole feature end-to-end,
-  including its integration points with the existing system (from `FEATURE_OVERVIEW.md`).
-- **Continue Mode:** add a new final Integration & E2E epic for the appended scope only;
-  do not touch the prior plan's existing epics.
-
-Rules for this epic:
-
-- Title/slug it `integration-e2e` (e.g. `NN_integration-e2e`); Goal states what end-to-end
-  behavior it proves.
-- **`Blocked by` every prior epic** in this plan — it runs only after the pieces exist, so
-  it is always last in the roadmap and never a `parallel-build` candidate alongside the work
-  it verifies.
-- Its stories **exercise real user journeys / flows through actual entry points** (API,
-  CLI, UI, message bus — whatever the spec defines), asserting cross-component behavior and
-  the integration seams identified in Phase 1.4. Not more unit tests.
-- **Each E2E story is still S or M, one dispatch** (Phase 2.2). When full coverage exceeds
-  one dispatch, split by user-journey / flow (happy-path, error/edge, each major
-  integration point) into multiple stories under this epic — never one oversized E2E story.
-- Give each story an ordered `## Implementation Tasks` list like any other (Phase 2.2c):
-  set up fixtures/environment → drive the flow → assert observable outcomes.
-
-Do not fold this coverage into a feature epic and do not skip it because "the stories
-already have tests" — those are per-slice; this epic is the whole-feature guarantee.
+Do not fold this into a feature epic, and do not skip it because "the stories already
+have tests" — those are per-slice; this epic is the whole-feature guarantee.
 
 ---
 
-## PHASE 3: PRESENT PLAN FOR CONFIRMATION
+## PHASE 4: CONFIRM
 
-**Goal:** Show the user the planned structure before writing any files.
+Present the planned structure (no files written yet) using
+[roadmap-format.md#phase-4-plan-confirmation-format](references/roadmap-format.md#phase-4-plan-confirmation-format),
+then gate with `AskUserQuestion` — "Proceed with generating this plan?" Options:
+**Proceed** / **Adjust** / **Cancel**.
 
-Present a summary using the format in [references/roadmap-format.md#phase-3-plan-confirmation-format](references/roadmap-format.md#phase-3-plan-confirmation-format).
-
-**Wait for explicit user confirmation before proceeding to Phase 4.**
-
-If the user says ADJUST, ask what they want to change and loop back to Phase 2.
-
----
-
-## PHASE 4: GENERATE OUTPUT FILES
-
-**Goal:** Create the full folder structure with detailed content.
-
-### 4.1 Create Directory Structure
-
-Use today's date for `YYYY-MM-DD` (ISO 8601).
-
-- **New Project Mode:** see [references/examples.md#new-project-mode--tasks-folder-layout](references/examples.md#new-project-mode--tasks-folder-layout).
-- **Feature Mode — Add Feature:** see [references/examples.md#feature-mode--add-feature-folder-layout](references/examples.md#feature-mode--add-feature-folder-layout). `FEATURE_OVERVIEW.md` replaces `PROJECT_OVERVIEW.md` — contents per [references/templates.md#feature-overview-template](references/templates.md#feature-overview-template).
-- **Feature Mode — Continue:** see [references/examples.md#feature-mode--continue-existing-plan-layout](references/examples.md#feature-mode--continue-existing-plan-layout).
-
-### 4.2 PROJECT_OVERVIEW.md Content
-
-For the project overview template (and the `FEATURE_OVERVIEW.md` variant for Add Feature mode), see [references/templates.md#project-overview-template](references/templates.md#project-overview-template).
-
-### 4.3 EPIC.md Content (per epic)
-
-For the epic template, see [references/templates.md#epic-template](references/templates.md#epic-template).
-
-### 4.4 Story File Content (per story)
-
-For the story file template, see [references/templates.md#story-template](references/templates.md#story-template).
-
-### 4.4b Parallel story-file generation (fan-out — when ≥8 stories)
-
-Each story file is one independent artifact at its own path, fully decided in Phase 2 and
-confirmed in Phase 3. When the confirmed plan has **≥8 stories**, dispatch one
-`general-purpose` Agent per story per the artifact variant in
-[../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: sonnet`,
-since each agent fills the frozen story template from an already-resolved slice. Give each:
-its story's full Phase 2 breakdown (title, size, acceptance criteria, `## Implementation
-Tasks` list, `Blocked by` dependencies, files-to-touch), the template reference
-([templates.md#story-template](references/templates.md#story-template)), and its exact output
-path; it writes exactly one `stories/SS_<slug>.md` and nothing else. The orchestrator itself
-writes `PROJECT_OVERVIEW.md`, every `EPIC.md`, and all of 4.5–4.6 (indexes, ledger, roadmap)
-— shared files never go to a subagent, and 4.5 generates the index from the Phase 2 in-memory
-story list, not by re-reading the fanned-out files. On collection, verify every story file
-landed; rewrite any missing/failed unit inline. Below 8 stories, write inline.
-
-### 4.5 STORIES_INDEX.md Content
-
-After all story files are written, generate `tasks/<slug>/STORIES_INDEX.md` from the in-memory list of stories you just authored. Format and mutation protocol: see [`ck-code/references/stories-index.md`](../../references/stories-index.md). Template: [references/templates.md#stories-index-template](references/templates.md#stories-index-template).
-
-This index is the single source of truth that downstream skills (`build`, `parallel-build`, `track`) read to find ready stories — they will NOT scan individual story files for status. Every row must be present and correctly populated here.
-
-**Continue Mode:** read the existing `STORIES_INDEX.md`, insert new rows for the appended stories in `ID` order, then write the merged file. Do not regenerate from scratch — preserve any current `Status` values for unchanged rows.
-
-### 4.5b FEATURE_INDEX.md Content (top-level, one row per epic)
-
-After the story index is written, update the project-wide `tasks/FEATURE_INDEX.md` — the top-level rollup that `build`/`parallel-build` read FIRST to pick a feature before opening any story index. Format and mutation protocol: see [`ck-code/references/feature-index.md`](../../references/feature-index.md).
-
-Add one row per NEW epic from this plan: `Feature` = `NN · Display Name`, `Plan` = this plan's `tasks/<slug>` folder name, `Status` = `TODO`, `Stories` = `0/<story count>`, `Docs` = `docs/architecture/features/<slug>/index.md` if that feature doc exists (it usually does when `design` ran first, matching the epic slug) else `—`, `Description` = the epic's one-line Goal from its `EPIC.md`. If `tasks/FEATURE_INDEX.md` does not exist yet, create it first (schema-v2 header with the `Docs` column). The index is always schema v2 here — the version gate (Phase 0) guarantees it. Continue/Add-Feature mode: insert the new epic rows and leave all existing rows untouched. Any feature left `—` should be scaffolded with `/ck-code:doc-optimizer sync`.
-
-### 4.5c DESIGN_LEDGER.md Update (flip pending → planned)
-
-For each feature this plan now covers, update its row in `docs/architecture/DESIGN_LEDGER.md`
-(format: [`architecture-templates.md`](../design/references/architecture-templates.md#design_ledgermd-design--plan-bridge)):
-set `Planned?` from `pending` to `planned` and fill `Plan ref` with this plan's
-`tasks/<slug>` folder (or the specific `NN_slug` epic). Match rows by `Slug`. Leave rows
-for features not planned in this run untouched. Skip silently if the ledger does not exist.
-This is what makes "what still needs planning?" a cheap ledger lookup for the next run.
-
-### 4.6 ROADMAP.md Content
-
-For the roadmap template, see [references/roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).
+- **Adjust** → ask what to change, loop back to Phase 3.
+- **Cancel** → stop, write nothing.
+- **Proceed** → Phase 5.
 
 ---
 
-## PHASE 5: SUMMARY
+## PHASE 5: GENERATE FILES
 
-After all files are created, present a summary tailored to the mode. For each summary template:
+### 5.1 Directory structure
 
-- **New Project Mode:** see [references/roadmap-format.md#new-project-mode-summary](references/roadmap-format.md#new-project-mode-summary).
-- **Feature Mode — Add Feature:** see [references/roadmap-format.md#feature-mode--add-feature-summary](references/roadmap-format.md#feature-mode--add-feature-summary).
-- **Feature Mode — Continue Existing Plan:** see [references/roadmap-format.md#feature-mode--continue-existing-plan-summary](references/roadmap-format.md#feature-mode--continue-existing-plan-summary).
+Use today's date for `YYYY-MM-DD` (ISO 8601). Layouts per mode:
+[examples.md](references/examples.md) (New Project / Add Feature / Continue).
+
+### 5.2 Overview
+
+Write `PROJECT_OVERVIEW.md` (New/Full) or `FEATURE_OVERVIEW.md` (Add Feature) —
+templates in [templates.md](references/templates.md#project-overview-template).
+
+### 5.3 EPIC.md (per epic) — with frontmatter, no story table
+
+Write `epics/NN_<slug>/EPIC.md` from
+[templates.md#epic-template](references/templates.md#epic-template). It carries
+frontmatter (`epic`, `slug`, `title`, `description`) — the generator reads `description`
+for the `FEATURE_INDEX.md` cell — and has **no `## Stories` table**: the story list is
+generated into `STORIES_INDEX.md`.
+
+### 5.4 Story files (per story) — with frontmatter + Implementation Tasks
+
+Write `epics/NN_<slug>/stories/SS_<story-slug>.md` from
+[templates.md#story-template](references/templates.md#story-template). Frontmatter is the
+source of truth: `id`, `title`, `epic`, `status: todo`, `size` (`S`/`M`), `blocked_by`
+(inline `[…]` or `[]`), `files` (inline `[…]` or `[]`), `issue:` empty, `prior_status:`
+empty. Body keeps `## Description`, `## Acceptance Criteria`, `## Implementation Tasks`,
+`## Technical Notes`.
+
+### 5.4b Parallel story-file generation (fan-out — ≥8 stories)
+
+Each story file is one independent artifact, fully decided in Phase 3. When the confirmed
+plan has **≥8 stories**, dispatch one `general-purpose` Agent per story per the artifact
+variant in [`subagent-fanout.md`](../../references/subagent-fanout.md) (`model: sonnet`).
+Give each: its full Phase 3 breakdown (title, size, criteria, tasks, `blocked_by`,
+`files`), the template reference, and its exact output path; it writes exactly one
+`stories/SS_<slug>.md`. The orchestrator writes the overview and every `EPIC.md`, runs
+5.5–5.7, and on collection verifies every story landed (rewriting any missing unit
+inline). Below 8 stories, write inline.
+
+### 5.5 Flip design flag (pending → planned)
+
+For each feature this plan now covers, set its feature-doc frontmatter from
+`design: pending` to `design: planned` (Edit `docs/architecture/features/<slug>/index.md`).
+Match by `slug`. Leave unplanned features untouched. Skip silently if no feature doc
+exists. This is what makes "what still needs planning?" a cheap frontmatter lookup next run.
+
+### 5.6 ROADMAP.md
+
+Write from [roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).
+Continue mode: update the existing roadmap to include the new epics.
+
+### 5.7 Regenerate the indexes (never hand-write)
+
+After all story + epic files are written, regenerate `STORIES_INDEX.md` and
+`FEATURE_INDEX.md` from frontmatter — never write or cell-edit them by hand:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
+```
+
+The script reads only frontmatter, so the views cannot disagree with the stories. It
+picks up the new plan, the epic descriptions, and the `Docs` cells automatically.
+
+---
+
+## PHASE 6: SUMMARY
+
+Present a mode-tailored summary from
+[roadmap-format.md#phase-6-summary-formats](references/roadmap-format.md#phase-6-summary-formats)
+(New Project / Add Feature / Continue).
+
+---
+
+## PHASE Q: QUICK SINGLE-STORY MODE
+
+Adds one small story to an **existing epic**, no full cycle. (Phase 0 already gated.)
+
+### Q.1 Locate plan & target epic
+
+1. `Glob "tasks/*/PROJECT_OVERVIEW.md"` and `Glob "tasks/*/FEATURE_OVERVIEW.md"`; take
+   the most recent. **No plan → redirect:** "No `tasks/` plan found. Run
+   `/ck-code:plan <spec>` first." Stop. Multiple plans → ask which.
+2. List epic folders `tasks/<slug>/epics/NN_<slug>/`, each with its highest existing `SS`.
+   **No epic exists → redirect to full plan** (there is nothing to add to). If `--epic NN`
+   was given, validate the folder; on mismatch show the list and re-prompt. Else ask which epic.
+
+### Q.2 Capture intent
+
+- **Brief** — a non-flag positional argument is the brief seed; else ask "What should
+  this story do? (one or two sentences)". Reject empty.
+- **Size** — S or M only. Default **S**. If the work is larger than M, stop and recommend
+  `/ck-code:plan` — quick stories are by definition small.
+
+### Q.3 Draft & confirm
+
+Compute the ID: `EE-SS` where `EE` is the epic number and `SS = max(existing SS in epic) + 1`,
+zero-padded; empty epic ⇒ `01`. Slug = kebab-case of the brief, ≤ 5 words.
+
+Draft the full story from [templates.md#story-template](references/templates.md#story-template):
+title (title-case one-liner), description (1–2 sentences), 1–3 concrete testable
+acceptance criteria, an ordered `## Implementation Tasks` list, 1–3 technical notes, and
+the `files` frontmatter (best guess; `[]` if unknown — `build` fills it). Show the draft,
+then gate with `AskUserQuestion` — "Add this story?" Options: **Confirm** / **Edit** /
+**Cancel**. Loop on **Edit** (ask which section) until Confirm or Cancel. Write nothing
+before Confirm.
+
+### Q.4 Write the story file
+
+Path `tasks/<slug>/epics/NN_<epic-slug>/stories/SS_<story-slug>.md`, frontmatter
+(`status: todo`, `size` S/M, `blocked_by` `[]` unless a dependency was named, `files`,
+`issue:`/`prior_status:` empty) + body with `## Implementation Tasks`.
+
+### Q.5 Regenerate the indexes
+
+Never cell-edit an index and never touch `EPIC.md` — the story list is generated:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+```
+
+Print the created path and confirm the index regenerated (row `EE-SS`).
+
+### Q.6 Hand-off
+
+Print suggestions; never auto-launch:
+
+```
+Next steps (pick one):
+  /ck-code:build   <story-path>   # implement now (TDD + QA)
+  /ck-code:ship    <story-path>   # publish as a GitHub Issue
+  /ck-code:track   next           # see the updated dashboard
+```
+
+---
 
 ## NEXT
 
-Run `/ck-code:to-issues` to push the epics and stories to GitHub Issues, **or** skip publishing and run `/ck-code:track next` to find the first story to implement.
-
-An epic of independent stories is a natural fit for `/ck-code:parallel-build`.
+Run `/ck-code:ship` to publish the epics and stories to GitHub Issues, **or** skip
+publishing and run `/ck-code:track next` to find the first story to implement. An epic of
+independent stories is a natural fit for `/ck-code:parallel-build`.
 
 ---
 
 ## RULES
 
-- **Never plan an L/XL story** (Phase 2.2) — split at a natural seam and connect with `Blocked by`.
-- **Never skip the final Integration & E2E epic** (Phase 2.4), and never fold it into a feature epic.
-- **Never leave a planned feature `pending`** in `DESIGN_LEDGER.md` (Phase 4.5c).
-- **Never delegate shared writes to a subagent** (Phase 4.4b) — overview, epics, indexes, ledger, and roadmap are orchestrator-owned; subagents write only their own story file.
+- **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
+- **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
+- **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index.sh` (5.7, Q.5).
+- **Never write an `EPIC.md` `## Stories` table** — the story list is generated.
+- **Never leave a planned feature `design: pending`** — flip it to `planned` (5.5).
+- **Never create a new epic in `--quick` mode** — redirect to full plan when no epic exists.
+- **Never delegate shared writes to a subagent** (5.4b) — overview, epics, indexes, roadmap are orchestrator-owned; subagents write only their own story file.
 - **Never hardcode** project names, technologies, or paths — derive everything from the spec.
 - **Always cover every functional requirement** with at least one story; flag vague ones for clarification.
-- **Always preserve the spec's technical terms** in story titles and descriptions.
-- **Always use ISO 8601** (`YYYY-MM-DD`) for the folder name, and output in English.
+- **Always keep frontmatter generator-readable** — one `key: value` per line, inline `[…]` lists, no block scalars.
+- **Always use ISO 8601** (`YYYY-MM-DD`) for folder names, and output in English.

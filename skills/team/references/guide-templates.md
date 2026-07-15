@@ -25,6 +25,8 @@ paths:
   - "[optional extra globs, e.g. **/Cargo.toml or **/package.json]"
 ---
 
+<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --regenerate. Delete this line to protect manual edits. -->
+
 # [Language/Framework] Best Practices Guide
 
 > Auto-generated from official documentation via context7.
@@ -149,3 +151,90 @@ paths:
 
 7. **Cross-reference experts.** Each guide should note: "This guide is used by
    /expert-[role] for [language]-specific guidance."
+
+8. **GENERATED marker.** Emit the `<!-- ck-code:team GENERATED … -->` line as the first
+   body line so `--regenerate` may refresh it (see THE MERGE RULE in `SKILL.md`). The
+   conventions guide below is the one exception — it never carries the marker.
+
+---
+
+## guide-conventions-template
+
+For `--conventions` (CAPTURE) mode only. `.claude/skills/guides/conventions/SKILL.md` is a
+**PROTECTED** file: it never carries the GENERATED marker, so `--regenerate` never touches
+it. Every rule must come from the user or from demonstrable code patterns — never generic
+advice. Leave a section out entirely if the project has no rule for it; never pad it.
+
+````markdown
+---
+name: guide-conventions
+description: >
+  Project house rules for [project-name] — code structure, naming, style, and
+  architectural conventions specific to this codebase. The authoritative source of
+  "how we write code here". Use whenever writing or reviewing code in this project.
+user-invocable: false
+paths:
+  - "**/*"
+---
+
+# [project-name] House Conventions
+
+> Hand-authored project conventions. These override generic language/framework defaults.
+> When a generated guide or expert conflicts with this file, this file wins.
+> Last updated: [date]
+
+## Naming
+
+- [Variable / function / type / file naming rules, with the exact case style]
+- [Domain-specific patterns, e.g. handlers end in `Handler`, hooks start with `use`]
+
+## File & Folder Structure
+
+- [Where each kind of file lives — from folder-structure.md + the user's rules]
+- [Module boundaries: what may import what]
+- [Co-location / barrel-file / index conventions]
+
+## Code Style
+
+- [Formatting rules not covered by the formatter, or formatter config to honor]
+- [Comment and documentation conventions; preferred constructs and idioms]
+
+```[primary-language]
+// Correct — follows the house style
+[short example]
+
+// Incorrect — what to avoid and why
+[short counter-example]
+```
+
+## Architectural Rules
+
+- [Layering / dependency-direction rules]
+- [Patterns that are mandatory; boundaries that must not be crossed]
+
+## Preferred & Banned
+
+- **Prefer:** [libraries, utilities, patterns the project standardizes on]
+- **Avoid / banned:** [libraries or patterns not allowed, with the reason]
+
+## Must / Never
+
+- **Always:** [project-specific hard rules]
+- **Never:** [absolute prohibitions]
+
+## References
+
+- [Links to CONVENTIONS.md / STYLE.md / CLAUDE.md or other in-repo sources]
+````
+
+**Conventions generation rules:**
+
+1. **User/code-sourced only.** Every line traces to a stated rule or an observed pattern.
+   No generic best practices — those live in the language guides.
+2. **Concrete over abstract.** Pair non-obvious rules with a short correct/incorrect
+   example in the project's primary language.
+3. **Omit empty sections** rather than inventing a rule to fill them.
+4. **`user-invocable: false` + `paths: ["**/*"]`** so it loads on every file.
+5. **Merge, don't clobber.** On re-run, preserve unchanged sections; update only what the
+   user revised. **No GENERATED marker** — this file is protected from `--regenerate`.
+6. **Authoritative.** State explicitly that it overrides generic guide/expert defaults on conflict.
