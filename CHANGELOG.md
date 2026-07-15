@@ -5,6 +5,55 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.0.0] — 2026-07-15
+
+Major release. **One writable source of truth for story state — the story-file YAML
+frontmatter — with every index regenerated from it.** This removes the drift the v3
+data model created (status stored in the story file *and* `STORIES_INDEX.md` *and*
+`FEATURE_INDEX.md` *and* `EPIC.md`), and the machinery that existed only to repair or
+work around that drift. 18 skills consolidate to 12.
+
+### Migrating from v3
+
+Run `/ck-code:migrate` once per project — it is a one-shot, idempotent, safe converter
+(refuses a dirty tree; lands all conversions in a single revertable commit). Every
+change-producing skill's version gate now keys on `layout: v4` and **blocks** a pre-v4
+project until you migrate; the `SessionStart` hook also surfaces a migrate notice.
+Pre-v3 projects are handled too (the converter chains the older layout conversions).
+
+### Added
+- **data model** (`references/data-model.md`): story frontmatter (`id, title, epic,
+  status, size, blocked_by, files, issue, prior_status`) is the single source of truth;
+  `STORIES_INDEX.md` / `FEATURE_INDEX.md` are generated read-only views.
+- **`scripts/ck-index.sh`**: regenerates both indexes from frontmatter (bash 3.2-safe,
+  awk rollup). Skills run it after any frontmatter change — views cannot drift.
+- **migrate**: the v3(and older)→v4 converter (replaces `doc-optimizer upgrade`).
+- **guide**: one arg-aware router replacing `start` + `advise` + `help` (no arg → next
+  step from state; free text → best-fit skill; `--command` → syntax).
+
+### Changed
+- **build / fix / parallel-build / plan / ship / design**: mutate story frontmatter and
+  regenerate views instead of cell-editing indexes. `parallel-build` rebuilt on native
+  worktree isolation + `SendMessage` resume + structured-output returns (1639→542 lines).
+- **plan** absorbs `quick-story` as `--quick`; **team** absorbs `convention` (marker-based
+  non-destructive regeneration); **design** absorbs `doc-optimizer` optimize/sync;
+  **ship** absorbs `to-issues` as `--to-issues` and links issues by frontmatter `issue:`
+  number (not title-substring); **pre-spec** → **spec**.
+- **team**: `expert-templates.md` refactored 988→227 lines (one base template + per-role
+  deltas); tier semantics stated once.
+- All YES/NO/ADJUST gates now use `AskUserQuestion`; `DESIGN_LEDGER.md` replaced by a
+  `design:` frontmatter flag; dated journal/delta docs no longer written (git is history).
+- **hooks**: `session-start.sh` gains a pre-v4 migrate notice, jq-free JSON escaping, and
+  multi-plan aggregation; `format.sh` runs prettier only when a project config is present.
+
+### Removed
+- **BREAKING**: the v3 layout (prose `Status:` headers, hand-maintained `Schema: v1/v2`
+  indexes, `EPIC.md` story tables, `DESIGN_LEDGER.md`, `L`/`XL` sizes). v4 reads only the
+  v4 layout; run `/ck-code:migrate` to convert.
+- Skills `sync`, `quick-story`, `convention`, `doc-optimizer`, `to-issues`, `pre-spec`,
+  `start`, `advise`, `help` (folded into the skills above or deleted). `sync` is gone
+  entirely — generated views cannot drift, so there is nothing to reconcile.
+
 ## [3.5.0] — 2026-07-15
 
 Reshapes `fix` from an end-to-end fixer into a **bug triage + routing** orchestrator that records the fix into the backlog for `build` to implement.

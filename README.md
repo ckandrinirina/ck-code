@@ -6,27 +6,35 @@
 
 1. **Design** — refine your spec into a complete set of architecture documents (global docs like folder structure and tech stack, plus one self-contained doc per feature covering its components, APIs, and data)
 2. **Plan** — break the architecture into epics and single-dispatch stories (each sized S/M so one agent finishes it in a pass) with explicit dependencies
-3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture: it generates only the roles the project actually needs (frontend, backend, QA, security, database, DevOps, and domain-specific roles), at a depth you choose (`--basic` / `--standard` / `--max`), plus per-technology guides. Capture your own house conventions with **Convention**.
+3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture, generating only the roles the project needs, at a depth you choose (`--basic` / `--standard` / `--max`), and capture your own house conventions (`--conventions`)
 4. **Build** — implement each story using test-driven development (TDD), SOLID principles, and a built-in dev-QA validation loop
 5. **Ship** — commit with conventional commits, open a pull request, and auto-update linked GitHub Issues
 
 Whether you're building a new project from scratch or adding a feature to an existing codebase, ck-code keeps the architecture, plan, and implementation in lock-step — so AI-generated code stays grounded in your real design.
 
+## One source of truth (v4)
+
+In v4, a story's state lives in **one** place: the YAML frontmatter of its story file
+(`id, title, epic, status, size, blocked_by, files, issue, prior_status`). The
+`STORIES_INDEX.md` and `FEATURE_INDEX.md` you see are **generated read-only views**,
+regenerated from that frontmatter by `scripts/ck-index.sh`. Because a view is a pure
+function of the frontmatter, it can never drift — so v4 has no reconciler skill and no
+hand-edited index tables. To change a story's status, a skill edits the frontmatter and
+regenerates; that's it.
+
 ## Features
 
 - **Spec-driven development workflow** — single source of truth from specification to merged PR
+- **Frontmatter-driven story state** — one writable location per story; indexes are generated, never hand-maintained
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
-- **Epic and story planning** — sized stories with dependency graphs in `tasks/`
-- **GitHub Issues integration** — push your epics and stories to GitHub Issues with size labels and parent/child links
+- **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
+- **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues; the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching)
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
-- **SOLID principle checks** — every implementation is reviewed against single-responsibility, open/closed, Liskov, interface segregation, and dependency inversion
-- **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com) for up-to-date best practices
-- **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees with conflict analysis before merge
-- **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, and flips it to `BUG`; an easy single-story fix auto-runs `build`, while a complex one is recorded for a manual `build`/`parallel-build` (Bug-Fix Mode) — so bugs live in the same TDD/QA pipeline as stories
-- **Automatic story-to-PR linking** — branches, commits, PRs, and Issues stay connected end-to-end
-- **Capability-tier model selection** — agents pick the right Claude tier (fast / balanced / advanced) per story size, no hardcoded model IDs
-- **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status, auto-format edits), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, and `/fast` pairings documented in `references/native-commands.md`
-- **Token-lean by default** — per-skill `effort` tuning, read-only tool hardening, and dynamic context injection cut tokens and round-trips. `/fast` (`/fast` or `"fastMode": true`) is recommended for small stories and kept off for `L`/`XL` work — toggled by you, since a plugin cannot set it
+- **SOLID principle checks** — every implementation is reviewed against the five principles
+- **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
+- **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge
+- **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build`/`parallel-build`
+- **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
 
 ## Install
 
@@ -38,11 +46,9 @@ Whether you're building a new project from scratch or adding a feature to an exi
 /plugin install ck-code@ck-marketplace
 ```
 
-That's it — restart your Claude Code session and the `/ck-code:*` commands are available.
+Restart your Claude Code session and the `/ck-code:*` commands are available.
 
 ## Update
-
-To update the plugin to the latest version:
 
 ```bash
 /plugin update ck-code@ck-marketplace
@@ -50,16 +56,23 @@ To update the plugin to the latest version:
 
 Then restart your Claude Code session for the updated commands to take effect.
 
-> **Note:** If the update command is not available in your Claude Code version, you can reinstall manually:
->
-> ```bash
-> /plugin uninstall ck-code@ck-marketplace
-> /plugin install ck-code@ck-marketplace
-> ```
+## Upgrading a v3 project to v4
+
+v4 changes how story state is stored (frontmatter, not hand-maintained index tables), so
+it is a **breaking** layout change. Existing projects upgrade in one step:
+
+```bash
+/ck-code:migrate
+```
+
+`migrate` is one-shot, idempotent, and safe: it refuses a dirty tree and lands every
+conversion in a single revertable commit. Every change-producing skill blocks a pre-v4
+project until you run it, and the session-start hook reminds you. Pre-v3 projects are
+handled too — the converter chains the older layout migrations first.
 
 ## Per-project opt-in
 
-Installation alone does not activate the plugin in every project. Enable it explicitly per project by adding to that project's `.claude/settings.json`:
+Enable the plugin explicitly per project in that project's `.claude/settings.json`:
 
 ```json
 {
@@ -69,71 +82,56 @@ Installation alone does not activate the plugin in every project. Enable it expl
 }
 ```
 
-Without this entry the plugin stays dormant in that project — no slash commands, no auto-loaded behaviour. This keeps unrelated repositories free of the workflow.
+Without this entry the plugin stays dormant in that project.
 
 ## Quick start — first-time setup in a new project
 
 ```bash
-/ck-code:design   docs/specifications.md   # 1. Generate architecture docs
-/ck-code:team                              # 2. Create project-tailored experts + guides
-/ck-code:plan     docs/specifications.md   # 3. Generate epics and stories
-/ck-code:to-issues                           # 4. (Optional) push to GitHub Issues
-/ck-code:track    next                     # 5. Find the first story to implement
-/ck-code:build                             # 6. Start building (TDD + QA)
-/ck-code:ship                              # 7. Commit, PR, close Issue
+/ck-code:spec     docs/notes.md            # 1. (Optional) stakeholder-ready feature spec
+/ck-code:design   docs/specifications.md   # 2. Generate architecture docs
+/ck-code:team                              # 3. Create project-tailored experts + guides
+/ck-code:plan     docs/specifications.md   # 4. Generate epics and stories
+/ck-code:ship --to-issues                  # 5. (Optional) push the plan to GitHub Issues
+/ck-code:track    next                     # 6. Find the first story to implement
+/ck-code:build                             # 7. Start building (TDD + QA)
+/ck-code:ship                              # 8. Commit, PR, close Issue
 ```
 
-After `/ck-code:team` runs, your project's `.claude/skills/` will contain:
-
-- `experts/{frontend,backend,qa,analyst,devops,qa-project}/SKILL.md` — invoked as `/expert-frontend`, `/expert-backend`, etc.
-- `guides/{rust,axum,react-native,...}/SKILL.md` — auto-loaded by Claude when relevant files are touched.
-
-These generated skills are project-level (not plugin-namespaced) and are intentionally tailored to the architecture you fed into `/ck-code:design`.
+Not sure what to run? `/ck-code:guide` recommends the next step from project state,
+`/ck-code:guide "add a login screen"` routes a plain-language task to the right skill, and
+`/ck-code:guide --command build` prints a command's syntax.
 
 ## The full workflow
 
 ```
-/ck-code:pre-spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:to-issues  →  /ck-code:track
-   (optional)                                                                                          ↓
-                                                                                            /ck-code:build  →  /ck-code:ship
-                                                                                                       ↑
-                                        /ck-code:fix  (diagnose bug → BUG status)  ─────────────────────┘
-                                        (easy fix auto-runs build; complex hands off to build/parallel-build)
+/ck-code:spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:ship --to-issues  →  /ck-code:track
+  (optional)                                                                                  ↓
+                                                                              /ck-code:build  →  /ck-code:ship
+                                                                                         ↑
+                              /ck-code:fix  (diagnose bug → bug status)  ─────────────────┘
+                              (easy fix auto-runs build; complex hands off to build/parallel-build)
 ```
 
-| Skill                     | Purpose                                                                                                                                                                                                                                                                          | Input                                       | Output                                                          |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
-| `/ck-code:pre-spec`       | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon)                                                                                                                                                                                               | feature description or notes file           | `docs/pre-specs/` and/or GitHub issue                           |
-| `/ck-code:design`         | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`)                                                                                                                                                                          | spec file                                   | `docs/architecture/`                                            |
-| `/ck-code:doc-optimizer`  | One-shot `upgrade` migrates a pre-v3 project to the v3 layout (layer docs → per-feature docs, flat docs → `features/<slug>/index.md`, index → v2, scaffold `DESIGN_LEDGER.md`, stamp `tasks/VERSION.md`); also `migrate` / `sync` / `optimize` for ongoing upkeep and token diet | `upgrade` / `migrate` / `sync` / `optimize` | v3 `docs/architecture/` + `FEATURE_INDEX` `Docs` + `VERSION.md` |
-| `/ck-code:team`           | Derive per-project expert + guide skills from the architecture — few broad experts, plus a guide per idiomatic technology (languages, frameworks, libraries); only what the project needs; depth `--basic` / `--standard` / `--max`                                              | `docs/architecture/`                        | `.claude/skills/experts/`, `.claude/skills/guides/`             |
-| `/ck-code:convention`     | Capture your conventions (code structure, naming, style, architecture) into a `guide-conventions` skill every expert reads; also create custom experts/guides or adjust generated ones                                                                                           | conventions / `new` / `adjust`              | `.claude/skills/guides/conventions/`, custom skills             |
-| `/ck-code:plan`           | Create epics, single-dispatch stories (each S/M so one `build`/`parallel-build` agent finishes it in a pass — larger work is split at a natural seam), a mandatory final Integration & E2E epic that proves the whole feature end-to-end, and a roadmap                          | spec file                                   | `tasks/YYYY-MM-DD_<project>/` + `tasks/FEATURE_INDEX.md` rows   |
-| `/ck-code:quick-story`    | Add a single small story to an existing epic without the full `plan` cycle (e.g. add a DB column, tweak a config)                                                                                                                                                                | one-line brief + epic                       | story file + `STORIES_INDEX.md` row + `EPIC.md` row             |
-| `/ck-code:to-issues`      | Push a plan to GitHub Issues at a chosen granularity: one feature issue, one per epic, or the full epic+story hierarchy (`--mode feature\|epics\|stories`)                                                                                                                       | tasks folder                                | GitHub Issues                                                   |
-| `/ck-code:track`          | Progress dashboard                                                                                                                                                                                                                                                               | —                                           | status, next story, completion %                                |
-| `/ck-code:build`          | Implement a story (TDD + QA); interactive runs read `tasks/FEATURE_INDEX.md` first and ask which feature to build when more than two are unfinished. A `BUG`-status story (handed off by `fix`) runs in **Bug-Fix Mode** — implements the recorded Fix Plan and restores the story to `DONE`                                    | story file                                  | source code + tests                                             |
-| `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees, or a whole epic in dependency-ordered waves (`--epic NN`); picks a feature from `tasks/FEATURE_INDEX.md` first when more than two are unfinished                                                                         | — / story IDs / `--epic NN`                 | parallel results + conflict report                              |
-| `/ck-code:fix`            | Diagnose a bug tied to a story, write a failing test + Fix Plan into it, flip it to `BUG` — then route: auto-run `build` for an easy single-story fix, or hand off to `build`/`parallel-build` when complex. Defers to `design` (no epic) or `quick-story` (missing story). Never writes the source fix itself — `build` does | story file (optional)                       | failing test + Bug Report + `BUG` status → `build`              |
-| `/ck-code:sync`           | Reconcile `STORIES_INDEX.md`, `EPIC.md` story lists, and story files when they drift apart                                                                                                                                                                                       | tasks plan path or `--all`                  | repaired index + epic lists                                     |
-| `/ck-code:ship`           | Commit, PR, update GitHub Issues                                                                                                                                                                                                                                                 | story file (optional)                       | commit + PR + issue updates                                     |
-| `/ck-code:advise`         | Don't know which command to run? Describe the task in plain language and get the best-fit skill recommended (read-only router; routes by intent, names any missing prerequisite)                                                                                                  | plain-language task                         | recommended command + prerequisite + next step                  |
-| `/ck-code:explain`        | Explain what was just implemented                                                                                                                                                                                                                                                | —                                           | walkthrough + verification steps                                |
-| `/ck-code:help`           | Quick reference for all commands                                                                                                                                                                                                                                                 | —                                           | this table                                                      |
+| Skill | Purpose | Input | Output |
+| --- | --- | --- | --- |
+| `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes | feature description or notes file | `docs/specs/` and/or GitHub issue |
+| `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes | spec file | `docs/architecture/` |
+| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); `--conventions` captures house rules; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
+| `/ck-code:plan` | Create epics, single-dispatch S/M stories, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
+| `/ck-code:build` | Implement a story (TDD + QA); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`) | story file | source code + tests; regenerated index views |
+| `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees, or a whole epic in dependency-ordered waves (`--epic NN`) | — / story IDs / `--epic NN` | parallel results + conflict report |
+| `/ck-code:fix` | Diagnose a bug tied to a story, write a failing test + Fix Plan, flip it to `bug` — then auto-run `build` for an easy fix or hand off when complex. Never writes the source fix itself | story file (optional) | failing test + Bug Report + `bug` status → `build` |
+| `/ck-code:ship` | Commit, PR, update GitHub Issues. `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter | story file (optional) | commit + PR + issue updates |
+| `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
+| `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
+| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v4 project to the v4 layout (frontmatter + generated indexes); stamps `tasks/VERSION.md` | — | converted project (one commit) |
+| `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
 
 ## Why ck-code?
 
-If you've used Claude Code on a real project, you've felt the friction: the AI works at file-level but humans plan at architecture-level, and the two drift apart. Specs go stale. Stories get re-implemented. Tests are skipped under deadline pressure. PRs end up loosely related to the original requirements.
+If you've used Claude Code on a real project, you've felt the friction: the AI works at file-level but humans plan at architecture-level, and the two drift apart. Specs go stale. Stories get re-implemented. Tests are skipped under deadline pressure.
 
-ck-code closes that gap. The architecture docs, the story plan, the expert skills, and the implementation are all generated from the same spec — and the build loop refuses to ship code without a failing test, a SOLID check, and an explicit story status update. The result is AI-assisted software engineering that produces code your team can actually own.
-
-## Use cases
-
-- **Greenfield projects** — go from a one-page spec to a complete tasks/ plan with architecture docs and a per-project expert team in a single session
-- **Feature additions** — extend an existing codebase: ck-code reads your current architecture, scopes the feature, and generates only the new epics and stories
-- **Disciplined AI coding** — enforce TDD and SOLID even in long autonomous sessions
-- **Multi-developer parallel builds** — fan out unblocked stories across worktrees and let agents implement them in parallel, with automatic conflict analysis before merge
-- **GitHub-integrated planning** — turn your story plan into a labelled, linked Issue tree with a single command
+ck-code closes that gap. The architecture docs, the story plan, the expert skills, and the implementation are all generated from the same spec — and the build loop refuses to ship code without a failing test, a SOLID check, and an explicit story status update. In v4, that status lives in exactly one place, so the plan you read is always the plan that's true.
 
 ## Layout
 
@@ -146,62 +144,55 @@ ck-code/
 │   ├── qa-validator.md
 │   ├── conflict-analyzer.md
 │   └── story-implementer.md
+├── scripts/
+│   ├── ck-index.sh                # regenerate the index views from story frontmatter
+│   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
+│   ├── format.sh                  # PostToolUse auto-format (config-gated)
+│   └── subagent-statusline.sh
 ├── skills/
-│   ├── pre-spec/                  # stakeholder-ready feature spec (create + adjust)
-│   ├── design/                    # spec → feature-scoped architecture docs
-│   ├── doc-optimizer/             # migrate/scaffold/prune feature docs to cut read tokens
-│   ├── plan/                      # architecture → epics/stories
-│   ├── quick-story/                # add one small story to an existing epic without the full plan cycle
-│   ├── team/                      # derive per-project experts + guides (tiered)
-│   ├── convention/                # capture house conventions + custom/adjusted skills
-│   ├── to-issues/                 # push tasks/ → GitHub Issues (batch)
-│   ├── track/                     # progress dashboard
+│   ├── spec/                      # stakeholder-ready feature spec (create + adjust)
+│   ├── design/                    # spec → feature-scoped architecture docs (+ optimize/sync)
+│   ├── team/                      # derive per-project experts + guides (+ conventions)
+│   ├── plan/                      # architecture → epics/stories (+ --quick single story)
 │   ├── build/                     # TDD story implementation
 │   ├── parallel-build/            # parallel worktree builds
-│   ├── ship/                      # commit + PR + Issue updates
-│   ├── fix/                       # multi-story bug fixes (auto-matches scope, can create stub stories in the right epic)
-│   ├── sync/                      # reconcile STORIES_INDEX.md / EPIC.md / story files when they drift
-│   ├── advise/                   # plain-language task → best-fit skill (read-only router)
-│   ├── explain/                   # post-implementation walkthrough
-│   └── help/                      # command reference
+│   ├── fix/                       # bug triage → hands off to build
+│   ├── ship/                      # commit + PR + Issue updates (+ --to-issues)
+│   ├── track/                     # progress dashboard
+│   ├── guide/                     # state/intent/command router
+│   ├── migrate/                   # pre-v4 → v4 layout converter
+│   └── explain/                   # post-implementation walkthrough
 └── README.md
 ```
 
-## Per-feature spec folder
+Each skill folder is self-contained: the main `SKILL.md` is the entry point, and any bulky templates or examples live in a `references/` subfolder that loads on demand.
 
-Pre-specs and downstream design output share a single folder per feature so
-they stay adjacent throughout the lifecycle:
+## Per-feature spec folder
 
 ```
 docs/specs/YYYY-MM-DD_<slug>/
-├── pre-spec.md            # Stakeholder-friendly version (from /ck-code:pre-spec)
+├── pre-spec.md            # Stakeholder-friendly version (from /ck-code:spec)
 ├── .metadata.json         # Slug, GitHub issue link, status, language
 └── feature-spec.md        # (later, optional) Design-pass output
 ```
 
-`/ck-code:pre-spec` creates these on first run and re-uses them on
-subsequent invocations to apply adjustments — keeping the local file and
-the linked GitHub issue in sync.
-
-Each skill folder is self-contained: the main `SKILL.md` is the entry point, and any bulky templates or examples live alongside it in a `references/` subfolder that loads on demand.
+`/ck-code:spec` creates these on first run and re-uses them on subsequent invocations to
+apply adjustments — keeping the local file and the linked GitHub issue in sync.
 
 ## Compatibility
 
-> **v3 — breaking.** ck-code v3 reads only the v3 architecture-doc layout
-> (`docs/architecture/features/<slug>/index.md`, a schema-v2 `FEATURE_INDEX`). It no
-> longer reads the pre-v3 layouts (flat `features/<slug>.md`, the retired
-> `components.md`/`api-contracts.md`/`database-schema.md`/`data-flow.md` layer docs, or a
-> `v1` index). Every change-producing skill runs a **version gate** first: on a pre-v3
-> project it blocks and offers `/ck-code:doc-optimizer upgrade`, a one-shot migration that
-> converts the layout, scaffolds `DESIGN_LEDGER.md`, and stamps `tasks/VERSION.md` (a fast-
-> path marker so later sessions skip the scan). Run `upgrade` once and your project is v3.
+> **v4 — breaking.** ck-code v4 stores story state in story-file frontmatter and generates
+> its `STORIES_INDEX.md` / `FEATURE_INDEX.md` views. It no longer reads the v3 layout
+> (prose `Status:` headers, hand-maintained `Schema: v1/v2` index tables, `EPIC.md` story
+> tables, `DESIGN_LEDGER.md`, `L`/`XL` sizes). Every change-producing skill runs a **version
+> gate** first: on a pre-v4 project it blocks and offers `/ck-code:migrate`, a one-shot,
+> idempotent converter that rewrites the layout and stamps `tasks/VERSION.md`. Run it once
+> and your project is v4.
 
 - **Claude Code** — required (CLI, IDE extension, or desktop app)
-- **gh CLI** — required for `/ck-code:to-issues` and `/ck-code:ship` GitHub Issue features
-- **git** — required for `/ck-code:parallel-build` (uses worktrees)
-- **[context7](https://context7.com)** — recommended for `/ck-code:team`, `/ck-code:design`, `/ck-code:plan`, and `/ck-code:build` to fetch up-to-date framework documentation. Either form works:
-  - **MCP server** — install once into Claude Code; tools auto-discovered
-  - **`ctx7` CLI** — `npx -y @upstash/context7 setup` (one-time auth), then commands run inline via Bash. Recommended when MCP isn't configured or for parallel sub-agents that don't inherit the MCP host
+- **gh CLI** — required for `ship --to-issues` and `ship` GitHub Issue features
+- **git** — required for `parallel-build` (uses worktrees)
+- **[context7](https://context7.com)** — recommended for `team`, `design`, `plan`, and `build` to fetch up-to-date framework documentation. Either the MCP server or the `ctx7` CLI (`npx -y @upstash/context7 setup`) works.
 
 ## Contributing
 
