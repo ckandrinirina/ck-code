@@ -1,40 +1,38 @@
 # ck-code Workflow Map — Single Source of Truth
 
-The full lifecycle, from spec to ship. Skills cross-reference this file
-instead of duplicating the workflow graph.
+The full lifecycle, from spec to ship. Skills cross-reference this file instead of
+duplicating the workflow graph.
 
 ## Workflow order
 
 ```
-0. /ck-code:start        Active entry-point — inspects state, recommends next step
+0. /ck-code:guide        Active entry-point — no arg: state → next step; free-text: intent → skill; --command: syntax
 
-1. /ck-code:pre-spec     (Optional) Stakeholder-friendly feature spec
-2. /ck-code:design       Spec → architecture docs (docs/architecture/)
-3. /ck-code:team         Architecture → expert + guide skills (.claude/skills/)
-4. /ck-code:plan         Architecture → epics, stories, roadmap (tasks/)
-5. /ck-code:to-issues      (Optional) Push tasks/ → GitHub Issues
+1. /ck-code:spec         (Optional) Stakeholder-friendly feature spec
+2. /ck-code:design       Spec → architecture docs (docs/architecture/); also sync/optimize maintenance
+3. /ck-code:team         Architecture → expert + guide skills (.claude/skills/); also captures house conventions
+4. /ck-code:plan         Architecture → epics, stories, roadmap (tasks/); --quick adds one story
+5. /ck-code:ship --to-issues   (Optional) Push tasks/ → GitHub Issues
 6. /ck-code:track        Show progress / find next ready story
 
-7. /ck-code:build        TDD-implement one story (story → DONE), or a BUG story's recorded fix (Bug-Fix Mode)
-   /ck-code:parallel-build  TDD-implement multiple stories (or BUG fixes) in worktrees
-   /ck-code:fix          Diagnose a bug, record it to its story (→ BUG), route the fix
+7. /ck-code:build        TDD-implement one story (story → done), or a bug story's recorded fix (Bug-Fix Mode)
+   /ck-code:parallel-build  TDD-implement multiple stories (or bug fixes) in worktrees
+   /ck-code:fix          Diagnose a bug, record it to its story (→ bug), route the fix
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues
 
-   /ck-code:advise       (Anytime) Describe a task in words → best-fit skill
+   /ck-code:migrate      (One-shot) Upgrade a pre-v4 project to the v4 layout
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
-   /ck-code:help         (Anytime) Static reference for commands and flow
 ```
 
 ## Hand-offs
 
 | After running … | Recommended next step |
 |---|---|
-| `pre-spec` | `/ck-code:design` |
+| `spec` | `/ck-code:design` |
 | `design` | `/ck-code:team` |
 | `team` | `/ck-code:plan` |
-| `plan` | `/ck-code:to-issues` *(optional)* or `/ck-code:track next` |
-| `to-issues` | `/ck-code:track next` |
+| `plan` | `/ck-code:ship --to-issues` *(optional)* or `/ck-code:track next` |
 | `track next` | `/ck-code:build [path]` |
 | `build` | `/ck-code:ship` |
 | `parallel-build` | `/ck-code:ship` (per branch) |
@@ -49,81 +47,70 @@ instead of duplicating the workflow graph.
 | Single story, sequential, deepest-quality TDD | `build` | `parallel-build` |
 | Multiple unrelated stories, independent files | `parallel-build` | `build` |
 | Bug in already-implemented code | `fix` | `build` |
-| Push tasks to GitHub for tracking | `to-issues` (creates issues) | `ship` |
-| Deliver code (commit + PR + close issues) | `ship` (artefact: code) | `to-issues` |
+| Push the plan to GitHub for tracking | `ship --to-issues` | `ship` (default) |
+| Deliver code (commit + PR + close issues) | `ship` | `ship --to-issues` |
 
-`to-issues` and `ship` are **sequential, not alternatives**: `to-issues`
-mirrors the *plan* to GitHub Issues so anyone can see what's coming;
-`ship` mirrors the *implementation* (commit, PR, issue close) once a
-story is done. Most projects run both.
+`ship --to-issues` (mirror the *plan* to GitHub Issues) and `ship` (mirror the
+*implementation*: commit, PR, issue close) are **sequential, not alternatives**. Most
+projects run both.
 
 ## Misuse redirects — "am I the right skill?"
 
-Single source of truth for the `## ROUTING CHECK` block every action skill
-runs first. If an invoked skill matches a row's *actual task*, it STOPs and
-recommends the skill in the last column instead.
+Single source of truth for the `## ROUTING CHECK` block every action skill runs first.
+If an invoked skill matches a row's *actual task*, it STOPs and recommends the skill in
+the last column instead.
 
 | Invoked | …but the task is actually | Use instead |
 |---|---|---|
-| `pre-spec` | a spec already exists / ready for technical design | `design` |
-| `pre-spec` | one tiny tweak to an existing plan | `quick-story` |
-| `design` | no stakeholder spec yet and you want one | `pre-spec` (first) |
+| `spec` | a spec already exists / ready for technical design | `design` |
+| `spec` | one tiny tweak to an existing plan | `plan --quick` |
+| `design` | no stakeholder spec yet and you want one | `spec` (first) |
 | `design` | breaking work into epics/stories | `plan` (design runs *before* plan) |
-| `design` | existing architecture docs are bloated / stale layout | `doc-optimizer` |
 | `team` | no `docs/architecture/` exists yet | `design` (first) |
-| `team` | capturing *house* conventions team can't research | `convention` |
-| `plan` | one small addition to an existing plan | `quick-story` |
+| `plan` | one small addition to an existing plan | `plan --quick` |
 | `plan` | no architecture docs yet | `design` (first) |
-| `plan` | stakeholder-facing spec, not a task breakdown | `pre-spec` |
-| `to-issues` | committing/PR-ing implemented code | `ship` (sequential, not either/or) |
-| `to-issues` | no `tasks/` plan exists yet | `plan` (first) |
-| `build` | an **un-triaged** bug in already-implemented code | `fix` (first — a `BUG`-status story is already triaged and stays in `build` Bug-Fix Mode) |
-| `build` | 3+ independent ready stories, no `Blocked by` | `parallel-build` |
-| `build` | no story exists for the work | `quick-story` or `plan` |
-| `parallel-build` | one story, or stories with `Blocked by` deps | `build` |
+| `plan` | stakeholder-facing spec, not a task breakdown | `spec` |
+| `build` | an **un-triaged** bug in already-implemented code | `fix` (first — a `bug`-status story is already triaged and stays in `build` Bug-Fix Mode) |
+| `build` | 3+ independent ready stories, no `blocked_by` | `parallel-build` |
+| `build` | no story exists for the work | `plan --quick` or `plan` |
+| `parallel-build` | one story, or stories with `blocked_by` deps | `build` |
 | `parallel-build` | a bug in implemented code | `fix` |
-| `fix` | new functionality / new acceptance criteria (not a bug) | `quick-story` then `build` |
+| `fix` | new functionality / new acceptance criteria (not a bug) | `plan --quick` then `build` |
 | `fix` | just committing a finished change | `ship` |
-| `fix` | implementing a fix already diagnosed (story at `BUG`) | `build` (Bug-Fix Mode) |
-| `quick-story` | a bug in implemented code | `fix` |
-| `quick-story` | a full feature spanning multiple epics/components | `plan` |
-| `quick-story` | the story already exists and you want to code it | `build` |
+| `fix` | implementing a fix already diagnosed (story at `bug`) | `build` (Bug-Fix Mode) |
 | `ship` | the story isn't implemented yet | `build` / `fix` (first) |
-| `ship` | mirroring the *plan* (not code) to GitHub | `to-issues` |
-| `sync` | adding a new story | `quick-story` |
-| `sync` | just viewing progress | `track` |
-| `convention` | no expert/guide skills generated yet | `team` (first) |
-| `doc-optimizer` | generating *new* architecture docs from a spec | `design` |
+| `migrate` | generating *new* architecture docs from a spec | `design` |
 
-When the user is simply unsure which skill to run (no work invoked yet),
-route them, never redirect: `/ck-code:advise "<task>"` maps a plain-language
-task to a skill, `/ck-code:start` recommends from project state, and
-`/ck-code:help` is the static command reference.
+When the user is simply unsure which skill to run (no work invoked yet), route them:
+`/ck-code:guide "<task>"` maps a plain-language task to a skill, `/ck-code:guide` (no arg)
+recommends from project state, and `/ck-code:guide --command <name>` is the static
+command reference.
 
 ## Output locations
 
 | Skill | Writes to |
 |---|---|
-| `pre-spec` | `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ `.metadata.json`), optional GitHub issue |
-| `design` | `docs/architecture/*.md` |
-| `team` | `.claude/skills/experts/*/SKILL.md`, `.claude/skills/guides/*/SKILL.md` |
-| `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/, stories/, STORIES_INDEX.md, ROADMAP.md) |
-| `to-issues` | GitHub Issues only (no local writes) |
-| `build` | Source + tests in repo, story file (status, plan, summary; Bug Report Resolution in Bug-Fix Mode), `STORIES_INDEX.md` + `FEATURE_INDEX.md` (status cells) |
-| `parallel-build` | Per-story branches in `.claude/worktrees/agent-*`, each with the same outputs as `build` |
-| `fix` | Failing reproduction test, story file (Bug Report + Fix Plan), `STORIES_INDEX.md` + `FEATURE_INDEX.md` (status → `BUG`). Auto-invokes `build` for an easy fix; never writes the source fix itself. |
-| `ship` | Git commit, PR, GitHub Issue updates (no local-file writes outside git) |
-| `track`, `explain`, `help`, `start` | Read-only |
+| `spec` | `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ `.metadata.json`), optional GitHub issue |
+| `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`) |
+| `team` | `.claude/skills/experts/*/SKILL.md`, `.claude/skills/guides/*/SKILL.md` (incl. `guides/conventions/`) |
+| `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/ with EPIC.md, stories/ with frontmatter, ROADMAP.md); flips feature doc to `design: planned`; regenerates the index views |
+| `build` | Source + tests in repo; the story file only (frontmatter `status`, plan, summary; Bug Report Resolution in Bug-Fix Mode); regenerates the index views |
+| `parallel-build` | Per-story branches in native worktrees, each with the same story-file outputs as `build`; orchestrator regenerates the index views once on the target branch after merges |
+| `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`); regenerates the views. Auto-invokes `build` for an easy fix; never writes the source fix itself |
+| `ship` | Git commit, PR, GitHub Issue updates; writes the created issue number back to story frontmatter `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
+| `migrate` | Converts a pre-v4 project in place (one commit); stamps `tasks/VERSION.md`; regenerates the views |
+| `track`, `explain`, `guide` | Read-only |
 
-## State conventions
+## State conventions (v4)
 
-- **Story status flow:** `TODO → IN PROGRESS → DONE` (set by `build`).
-- **Bug status flow:** `DONE → BUG` (set by `fix` when it diagnoses a bug on a
-  shipped story) `→ DONE` (restored by `build` Bug-Fix Mode when the recorded fix
-  lands). `fix` records the story's original status as `Prior status` in the Bug
-  Report so `build` restores it exactly. A `BUG` story is actionable work — `track`
-  and `build`/`parallel-build` surface it for fixing.
-- **Bug Report sub-status** lives inside the story file (`DIAGNOSED` → `FIXED`); it
-  is finer-grained than the index `BUG` cell and never mutates the index on its own.
-- **`STORIES_INDEX.md`** is the single source of truth for selection /
-  dependency resolution. Full protocol: `references/stories-index.md`.
+- **Story status** lives ONLY in the story-file frontmatter `status:`
+  (`todo → in-progress → done`, lowercase). Every index is a generated view of it —
+  see [`data-model.md`](data-model.md).
+- **Bug flow:** `done → bug` (set by `fix` when it diagnoses a bug on a shipped story,
+  recording the previous status in frontmatter `prior_status:`) `→ done` (restored by
+  `build` Bug-Fix Mode when the recorded fix lands). A `bug` story is actionable work —
+  `track` and `build`/`parallel-build` surface it.
+- **Bug Report sub-status** (`DIAGNOSED` → `FIXED`) lives in the story body only; it is
+  narrative and does not affect the frontmatter `status:`.
+- **Indexes are generated, never hand-edited.** To change status, edit the frontmatter
+  and run `scripts/ck-index.sh`. There is no reconciler — the views cannot drift.

@@ -8,18 +8,18 @@ the files a story or bug touches.
 
 Architecture docs are **feature-scoped**: each feature owns a self-contained
 `docs/architecture/features/<slug>/index.md` with its components, APIs, data, and
-flows. A story reads its **own feature's doc**, not the whole architecture. The dated
-per-increment / per-fix delta docs beside `index.md`
-(`features/<slug>/YYYY-MM-DD_<id>_<short>.md`) are a history journal — do NOT read
-them; `index.md` always carries current truth.
+flows. A story reads its **own feature's doc**, not the whole architecture. v4 writes no
+dated delta/journal docs (git is the history); if a pre-v4 project left some beside
+`index.md`, they are inert — `index.md` always carries current truth.
 
 Read, in a **single parallel tool-call message** (sequential reads here are the
 largest avoidable latency in `build`/`fix` Phase 2):
 
 1. **`docs/architecture/folder-structure.md`** — always (small, universally useful).
-2. **The story's feature doc.** The caller already read `tasks/FEATURE_INDEX.md` during
-   selection; the story's epic `NN` maps to one feature row. Read the path in that row's
-   **`Docs`** column (`docs/architecture/features/<slug>/index.md`).
+2. **The story's feature doc.** The caller already read the generated
+   `tasks/FEATURE_INDEX.md` during selection; the story's epic `NN` maps to one feature
+   row. Read the path in that row's **`Docs`** column
+   (`docs/architecture/features/<slug>/index.md`).
 3. **`docs/architecture/_shared.md`** — only when the work touches cross-cutting infra:
    the feature doc's `## Shared dependencies` section links into it, OR the story's
    Technical Notes / touched paths involve shared concerns (auth, base entities,
@@ -31,10 +31,10 @@ largest avoidable latency in `build`/`fix` Phase 2):
 
 **Fallback when the feature doc is unavailable** — the `Docs` cell is `—` or the file
 is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run
-`/ck-code:doc-optimizer sync` to scaffold the missing feature doc. The retired layer
-docs (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) do not
-exist in a v3 project — the version gate migrates any pre-v3 project before this runs,
-and migrated originals live under `docs/architecture/archive/`. Never read them.
+`/ck-code:design sync` to scaffold the missing feature doc. The retired layer docs
+(`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) do not exist
+in a v4 project — the version gate migrates any pre-v4 project before this runs, and
+migrated originals live under `docs/architecture/archive/`. Never read them.
 
 Skip files absent on disk. Do NOT read `ROADMAP.md` here — it is loaded
 only when the story's technical notes reference it.
@@ -48,7 +48,7 @@ frontmatter. Match those, not a hardcoded table.
 
 For each expert present on disk (from Step 4a), read its frontmatter and load it when:
 
-- any `paths:` glob matches a file the story/bug **touches** (its `Files to Create/Modify` set — the precise signal; prefer this), OR
+- any `paths:` glob matches a file the story/bug **touches** (the story frontmatter's `files:` list — the precise signal; prefer this), OR
 - any `keywords:` entry appears in the story's **title or Technical Notes**.
 
 A `paths` match is authoritative; treat a `keywords`-only match as the weaker fallback signal — when a skill matches on neither the touched files nor a title/Technical-Notes keyword, do not load its body.
@@ -168,8 +168,9 @@ blocking step — once it returns, every present skill is read in parallel.
 **4c. Report missing skills and gate:**
 
 Compute `missing = (detected_in_steps_2_3 ∪ qa-always-set) − present_in_4a`.
-`guide-conventions` is **optional** — it is owned by `/ck-code:convention`, not
-`team`. Load it when present, but never list it as `missing` when absent.
+`guide-conventions` is **optional** — it is authored by `/ck-code:team` (house-rules
+capture), but a project may not have it. Load it when present, but never list it as
+`missing` when absent.
 
 - `missing` is empty → continue to the caller's next phase.
 - `missing` is non-empty → print one line per missing skill (full

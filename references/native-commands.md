@@ -13,8 +13,8 @@ until a fast/cheap verifier model confirms it holds — no manual re-prompting. 
 | ck-code phase | Suggested `/goal` |
 |---|---|
 | `build` QA / manual-test loop (Phase 7–8) | `/goal "all acceptance criteria in <story> pass and the full test suite is green"` |
-| `fix` regression loop | `/goal "the new regression test passes and the full suite stays green"` |
-| `parallel-build` wave | `/goal "every story in epic NN reaches DONE with green tests"` |
+| `build` Bug-Fix Mode (a `bug` story's recorded fix) | `/goal "the fix-written reproduction test passes and the full suite stays green"` |
+| `parallel-build` wave | `/goal "every story in epic NN reaches done with green tests"` |
 
 Token note: the verifier runs on a cheap model, so `/goal` is *cheaper* than re-prompting
 each turn yourself. One goal per session; run `/goal` with no argument to see turns/tokens spent.
@@ -27,8 +27,8 @@ Use it intelligently:
 
 | Situation | `/fast`? |
 |---|---|
-| Small / mechanical: size `S` story, simple `fix`, `quick-story`, `track`, `help`, `explain` | ✅ **On** — deliberation not needed |
-| Big / complex: `design`, `plan`, `pre-spec`, size `L`/`XL`, SOLID-heavy `build`, architecture | 🧠 **Off** — keep full reasoning |
+| Small / mechanical: size `S` story, simple `fix`, `plan --quick`, `track`, `guide`, `explain` | ✅ **On** — deliberation not needed |
+| Big / complex: `design`, `plan`, `spec`, size `M` SOLID-heavy `build`, architecture | 🧠 **Off** — keep full reasoning |
 
 The skill-side levers that *are* automatic: `effort:` and `model:` frontmatter.
 
