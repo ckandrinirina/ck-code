@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [3.5.0] — 2026-07-15
+
+Reshapes `fix` from an end-to-end fixer into a **bug triage + routing** orchestrator that records the fix into the backlog for `build` to implement.
+
+### Added
+- **fix**: diagnoses a bug, writes a failing reproduction test + Fix Plan into the story, and flips it to a new `BUG` status (story file + `STORIES_INDEX.md` + `FEATURE_INDEX.md`). An Auto-Build Eligibility Gate (verdict A + single confirmed cause + ≤3 files + LOW risk) auto-runs `/ck-code:build`; anything complex (multi-story, high-risk, uncertain) is recorded and handed off to a manual `build`/`parallel-build`.
+- **build**: **Bug-Fix Mode** (`references/bug-fix-mode.md`) — a `BUG`-status story implements only its recorded Fix Plan, takes the `fix`-written reproduction test RED→GREEN, fills the Bug Report Resolution, and restores the story's `Prior status`.
+- **BUG status**: added to `stories-index.md`, `feature-index.md` (counts as not-done; rolls the feature to `IN PROGRESS`), and surfaced as actionable work by `track`, `sync`, and `parallel-build`.
+
+### Changed
+- **fix**: missing functionality (verdict D) now scaffolds real `TODO` stories through `/ck-code:quick-story` instead of writing inline stubs; verdict C still defers to `/ck-code:design`.
+- **fix**: no longer writes the source fix, runs QA, or ships — those move to `build` (Bug-Fix Mode). Bug Report sub-status simplified to `DIAGNOSED` → `FIXED`.
+- **workflow-map / README / help**: updated hand-offs, state conventions (`DONE → BUG → DONE`), and skill descriptions for the new flow.
+
 ## [3.4.0] — 2026-07-10
 
 LTS release of the v3 line — stabilization and optimization only, preparing the ground for v4. No logic, workflow, command, or template-field changes.
