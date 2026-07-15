@@ -1,6 +1,6 @@
 ---
 name: build
-description: Use to implement a single story from `tasks/` end-to-end. Argument is an optional story file path; if omitted, picks the next ready story interactively.
+description: Use to implement a single story from `tasks/` end-to-end, or to implement a `BUG`-status story's recorded fix (Bug-Fix Mode, handed off by `/ck-code:fix`). Argument is an optional story file path; if omitted, picks the next ready story or open bug interactively.
 argument-hint: "[path-to-story.md]"
 ---
 
@@ -8,8 +8,9 @@ argument-hint: "[path-to-story.md]"
 
 Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
 and automated QA validation. Cycle: plan → test → implement → refactor → QA → commit.
+A `BUG`-status story handed off by `/ck-code:fix` runs in **Bug-Fix Mode** (Phase 1.3.5).
 
-References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-file blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
 
 **Read each reference at most once per run.** `output-blocks.md` and `tdd-walkthrough.md` are cited from many phases — load each once, keep it in working context, and reuse it for every later phase. Never re-`Read` a reference for a block you already loaded this run.
 
@@ -18,7 +19,7 @@ References: [output-blocks.md](references/output-blocks.md) (compact per-phase p
 This skill TDD-implements **one new story**. If the request is actually something
 else, STOP and recommend the better skill:
 
-- A bug in already-implemented code → `/ck-code:fix` (keeps the story, adds a regression test)
+- An **un-triaged** bug in already-implemented code → `/ck-code:fix` first (it diagnoses, writes the failing test + Fix Plan, and flips the story to `BUG`). A story **already at `BUG` status** is a triaged bug — implement it here in Bug-Fix Mode (Phase 1.3.5).
 - 3+ independent ready stories with no `Blocked by` → `/ck-code:parallel-build`
 - No story exists for the work yet → `/ck-code:quick-story` or `/ck-code:plan` (first)
 
@@ -45,7 +46,7 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 
 1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN` (the project-level index — one Read covers every story).
 2. **Bootstrap check:** if the index is missing or its header is not `<!-- Schema: v1 -->`, follow the bootstrap procedure in [`../../references/stories-index.md`](../../references/stories-index.md), then re-read.
-3. Filter to `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table.
+3. Filter to actionable rows: `Status: TODO` whose every `Blocked by` ID resolves to `Status: DONE`, **plus every `Status: BUG` row** (a triaged bug from `/ck-code:fix`, always actionable — it routes to Bug-Fix Mode). Surface `BUG` rows first with a 🐛 marker — an open bug in shipped code outranks new work.
 4. Sort by epic, then story number, then size (S < M < L < XL).
 5. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with > 1 non-DONE story is a wave candidate (a partly-blocked epic is the dependency-order case wave mode exists for).
 6. **Detect the parallel-safe set:** if ≥ 2 stories are ready, build a **touched-files map** for conflict detection by extracting **only** each ready story's `Files to Create/Modify` table in a single batched Bash call — never a full `Read` of each story body, never a glob of all stories; the table alone is all conflict detection needs.
@@ -62,6 +63,13 @@ description, acceptance criteria, status). If invalid or missing, tell the user 
 ### 1.3 Load Story Context
 
 Once a story is selected, **batch the story file and parent `EPIC.md` in a single parallel tool-call message** — the index row's `File` column already encodes the epic folder, so EPIC.md is computable without reading the story first. This is the **only** full story-body `Read` of the run. From the story file extract: **Title**, **Description**, **Acceptance Criteria**, **Technical Notes**, **Files to Create/Modify** (the touched-files set Phase 2 matches skills against — from the 1.2 map if it ran, else parsed here), **Implementation Tasks** (if present), **Dependencies**, **Epic**, **Size**. Read `ROADMAP.md` ONLY if the story's Technical Notes reference it explicitly — otherwise skip (separate read, after parsing).
+
+### 1.3.5 Mode Detection — Story vs Bug-Fix
+
+After loading context, detect the mode:
+
+- **Bug-Fix Mode** — the story's `Status:` is `BUG`, **or** it has a `## Bug Report` with `Status: DIAGNOSED` (Fix Plan present, no Resolution). Follow [references/bug-fix-mode.md](references/bug-fix-mode.md) for the per-phase deltas: the recorded **Fix Plan** (not the acceptance criteria) is the work; the failing reproduction test `fix` left is the RED target; completion fills the Bug Report **Resolution** and restores the story's `Prior status` instead of writing an Implementation Summary. If the story is `BUG` but has no `DIAGNOSED` Bug Report, STOP — tell the user to run `/ck-code:fix <story>` or `/ck-code:sync` (drift). Skip the epic-wave offer (1.4).
+- **Story Mode** — normal fresh-story implementation. Continue below.
 
 ### 1.4 Epic-Wave Offer (explicit-path only, before status mutation)
 
@@ -83,6 +91,8 @@ gh issue list --label "epic"  --state open --json number,title
 Present the linked issue (or "No linked issue found").
 
 ### 1.6 Update Story Status (story file + index, same phase)
+
+**Bug-Fix Mode:** skip this phase — the story stays `BUG` through the fix and is restored to its `Prior status` at Phase 8 (see [references/bug-fix-mode.md](references/bug-fix-mode.md)). Do NOT flip `BUG → IN PROGRESS`.
 
 Edit the story file: `Status: TODO` → `Status: IN PROGRESS`. See [references/story-template.md](references/story-template.md) for the exact transition.
 
@@ -298,6 +308,8 @@ loop: fix each issue → re-run Phase 6 (refactor) → re-run this phase with a 
 
 ### 8.1 Update Story File — Implementation Summary
 
+**Bug-Fix Mode:** do NOT append an Implementation Summary. Instead fill the Bug Report `### Resolution` + `### Files Touched` and flip its `Status: DIAGNOSED → FIXED` (templates in [../fix/references/bug-section-template.md](../fix/references/bug-section-template.md) Phase 8.1). Then continue to 8.6 for the status restore. Full deltas: [references/bug-fix-mode.md](references/bug-fix-mode.md).
+
 Append the Implementation Summary block (template in
 [references/story-template.md](references/story-template.md)) to the story file. Required
 fields and the **mandatory Files Touched precision** (CREATED = path; MODIFIED =
@@ -334,6 +346,8 @@ ACCEPT AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never
 
 ### 8.6 Update Story File — Status DONE (story file + index, same phase)
 
+**Bug-Fix Mode:** restore the story's `Prior status` (from the Bug Report — normally `DONE`) instead of the transitions below: story file `Status: BUG → <prior>`, then (non-worktree only) `STORIES_INDEX.md` status cell `BUG → <prior>`, and recompute `FEATURE_INDEX.md` (a feature with no remaining `BUG`/`IN PROGRESS`/`TODO` story rolls back to `DONE`). Then 8.7/8.8 as usual (`fix/` branch, Bug ID in commit).
+
 Edit the story file: `Status: IN PROGRESS` → `Status: DONE`.
 
 **Parallel-worktree guard applies (see 1.6).** In a parallel-build worktree, stop here — the story file is the only update; `STORIES_INDEX.md` and `FEATURE_INDEX.md` are reconciled by the orchestrator post-merge. Skip the two index edits below.
@@ -369,6 +383,7 @@ Each gate is enforced inside its phase; this is the orchestrator's checklist.
 - **Phase 5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
 - **Phase 7** — QA iteration cap = 3, then escalate.
 - **Phase 8.5** — manual-test gate, bug-fix loop cap = 3.
+- **Phase 1.3.5 (Bug-Fix Mode)** — a `BUG`-status story implements only its recorded Fix Plan; the failing repro test is the RED target; completion fills the Bug Report Resolution and restores `Prior status` (never an Implementation Summary). A `BUG` story without a `DIAGNOSED` Bug Report → STOP (run `/ck-code:fix` or `/ck-code:sync`).
 
 Story file is the source of truth. All output in English regardless of spec/story language.
 

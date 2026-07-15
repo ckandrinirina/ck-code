@@ -28,7 +28,7 @@ Column rules:
 - **Epic** — `NN · Display Name` (matches the epic folder name with `_` → ` · `)
 - **ID** — `EE-SS` (epic + story number, zero-padded)
 - **Title** — story title without the `Story EE-SS:` prefix
-- **Status** — one of `TODO`, `IN PROGRESS`, `DONE`, `SKIP` (bug-fix sub-states like `DIAGNOSING`/`FIXING`/`FIXED` live inside the story file's Bug Report section, not here — see Mutation Protocol)
+- **Status** — one of `TODO`, `IN PROGRESS`, `DONE`, `SKIP`, `BUG`. `BUG` marks a diagnosed, not-yet-fixed bug on a shipped story (set by `fix`, cleared by `build` Bug-Fix Mode — see Mutation Protocol). The Bug Report's own sub-status (`DIAGNOSED` → `FIXED`) lives inside the story file, not here.
 - **Size** — `S` / `M` / `L` / `XL`
 - **Blocked by** — comma-separated story IDs, or `-` for none
 - **File** — path relative to the project root (the `tasks/<slug>/` folder)
@@ -79,12 +79,14 @@ Mutator responsibilities:
 | `build` (Phase 8.6) | `IN PROGRESS → DONE` | Status cell — **skipped when build runs inside a parallel-build worktree** (deferred to `parallel-build`) |
 | `parallel-build` (Phase 6, after each merge) | Merged stories flip to `DONE` | Flip each merged story's row to `DONE` on the target branch — the single-writer reconciliation that replaces the deferred per-worktree edits |
 | `plan` (Continue mode) | New stories appended | Insert new rows in `ID` order |
-| `fix` (Phase 2.6) | Stub stories created (verdicts B/D) | Insert new rows in `ID` order |
+| `fix` (Phase 6.1) | Bug diagnosed on a shipped story | Flip that story's `Status` cell `DONE`/`IN PROGRESS` → `BUG` |
+| `build` (Bug-Fix Mode, Phase 8.6) | Recorded fix completed | Flip the story's `Status` cell `BUG` → its `Prior status` (normally `DONE`) |
+| `quick-story` | New story scaffolded (also for `fix` verdict D missing functionality) | Insert a new `TODO` row in `ID` order |
 | `sync` (any phase) | Index drifted from story files | Rewrite mismatched rows / add orphan rows / remove rows for deleted files |
 
-`fix` does NOT mutate the index for **status changes** on existing stories — per fix Phase 8.2, a story's main `Status:` is unchanged by a bug fix (a `DONE` story stays `DONE`), and the bug sub-states (`DIAGNOSING` / `FIXING` / `FIXED`) are recorded inside the story's Bug Report section only. Selection skills don't need to know about in-flight bug fixes.
+`fix` **flips a shipped story to `BUG`** (Phase 6.1) when it diagnoses a bug: the story file `Status:` and its index cell both move `DONE`/`IN PROGRESS` → `BUG` in the same phase, and the story's original status is recorded as `Prior status` in the Bug Report. Selection skills surface `BUG` rows as actionable work. `build` Bug-Fix Mode later restores the `Prior status` (`BUG` → `DONE`) when the recorded fix lands. The Bug Report's finer sub-status (`DIAGNOSED` → `FIXED`) stays inside the story file only.
 
-`fix` DOES mutate the index when it creates new stub stories (multi-story or mixed-scope bugs that surface missing functionality) — it inserts one row per stub in `ID` order with `Status: TODO`, the best-guess `Size`, and `Blocked by: -`. The matching `EPIC.md` story list is also updated in the same phase.
+`fix` does **not** create stories itself — missing functionality surfaced during scope analysis (verdict D) is scaffolded through `/ck-code:quick-story`, which inserts the new `TODO` row and syncs the `EPIC.md` story list. `fix` never writes stub story files or index rows directly.
 
 ## Rules
 

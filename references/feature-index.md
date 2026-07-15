@@ -62,11 +62,11 @@ anymore — that rewrite happens **only** inside `doc-optimizer`.
 
 Derive each feature's `Status` from its stories in the matching `STORIES_INDEX.md`:
 
-- **DONE** — every non-SKIP story in the epic is `DONE`.
-- **IN PROGRESS** — at least one story is `IN PROGRESS`, OR some (but not all) non-SKIP stories are `DONE`.
+- **DONE** — every non-SKIP story in the epic is `DONE` (no `BUG` story open).
+- **IN PROGRESS** — at least one story is `IN PROGRESS` **or `BUG`**, OR some (but not all) non-SKIP stories are `DONE`.
 - **TODO** — no story has started (all `TODO`, ignoring SKIP).
 
-An epic whose every story is `SKIP` is `DONE` (nothing left to build).
+A `BUG` story (a diagnosed, not-yet-fixed bug set by `/ck-code:fix`) counts as **not-done** in the `Stories` `done/total` numerator and rolls its feature to `IN PROGRESS` — a shipped feature with an open bug is not `DONE` until `build` clears the `BUG`. An epic whose every story is `SKIP` is `DONE` (nothing left to build).
 
 ## Read Protocol
 
@@ -115,7 +115,9 @@ the index in the SAME phase as the underlying change — never leave it stale.
 | `build` (Phase 8, on story DONE)                     | A story flips to `DONE`                        | Recompute the feature's `Stories` count and `Status` (→ `IN PROGRESS`, or → `DONE` when its last story completes). **Skipped inside a parallel-build worktree** — `parallel-build` reconciles post-merge.                                                                                                                           |
 | `build` (Phase 1.6, first story of a feature starts) | `TODO → IN PROGRESS` on the feature            | Status cell `TODO` → `IN PROGRESS`. **Skipped inside a parallel-build worktree** — deferred to `parallel-build`.                                                                                                                                                                                                                   |
 | `parallel-build` (Phase 6, after each merge)         | Each merged story flips to `DONE`              | Recompute that feature's `Stories` count and `Status`; mark the feature `DONE` once its last story is merged.                                                                                                                                                                                                                      |
-| `fix` (stub story created)                           | A new stub story is added to an epic           | Recompute that feature's `Stories` total (and `Status` if it was `DONE`).                                                                                                                                                                                                                                                          |
+| `fix` (Phase 6.1, bug diagnosed)                     | A shipped story flips to `BUG`                 | Recompute the feature's `Status` (any `BUG` story → `IN PROGRESS`) and `Stories` count (`BUG` counts as not-done). A `DONE` feature rolls back to `IN PROGRESS`.                                                                                                                                                                    |
+| `build` (Bug-Fix Mode, Phase 8.6, fix landed)        | A `BUG` story restored to its `Prior status`   | Recompute the feature's `Status`/`Stories`; the feature rolls back to `DONE` once no `BUG`/`IN PROGRESS`/`TODO` story remains.                                                                                                                                                                                                      |
+| `quick-story` (new story scaffolded)                 | A new `TODO` story is added to an epic         | Recompute that feature's `Stories` total (and `Status` if it was `DONE`).                                                                                                                                                                                                                                                          |
 
 Edit pattern (cell-only replacement — preserves table layout), e.g. on the last
 story of a feature completing:

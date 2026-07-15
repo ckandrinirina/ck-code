@@ -80,7 +80,7 @@ The table contains `ID`, `Title`, `Status`, `Size`, `Blocked by`, and `File` col
 
 ### 1.2 Resolve Ready Set
 
-A story is **ready** if its `Status` is `TODO` AND every ID in its `Blocked by` cell resolves to `Status: DONE` in the same table (empty `Blocked by` is always ready). Build the ready list directly from the index rows.
+A story is **ready** if its `Status` is `TODO` AND every ID in its `Blocked by` cell resolves to `Status: DONE` in the same table (empty `Blocked by` is always ready), **or if its `Status` is `BUG`** (a triaged bug from `/ck-code:fix` — the dispatched `/ck-code:build` enters Bug-Fix Mode and implements its recorded Fix Plan on a `fix/` branch). Build the ready list directly from the index rows. Multiple `BUG` stories sharing one `Bug ID` fix in parallel like any other independent stories.
 
 ### 1.3 Handle Empty Result
 
@@ -450,7 +450,9 @@ sub-agents deferred every shared-index edit, so the merged tree carries each sto
 `Status: DONE` while the indexes still show the pre-build status. The orchestrator is the
 sole writer here, so these edits never conflict. In one pass:
 
-1. `tasks/<slug>/STORIES_INDEX.md` — flip each merged story's `Status` cell to `DONE`
+1. `tasks/<slug>/STORIES_INDEX.md` — flip each merged story's `Status` cell to match its
+   merged story file: `DONE` for a normal story, or the restored `Prior status` for a
+   Bug-Fix Mode story (its worktree `build` already moved the story file `BUG → DONE`)
    (mutation protocol: [`../../references/stories-index.md`](../../references/stories-index.md)).
 2. Each merged story's parent `EPIC.md` — set its row in the stories table to `DONE`.
 3. `tasks/FEATURE_INDEX.md` — recompute the built feature's `Stories` count and roll up its

@@ -32,9 +32,9 @@ If `$ARGUMENTS` names a command, print only that row plus its examples.
 | `quick-story` | `[brief] [--epic NN]` | Add one small story to an existing plan | story + indexes |
 | `to-issues` | `[tasks-path] [--mode feature\|epics\|stories]` | Publish the plan to GitHub Issues | GitHub only |
 | `track` | `[status\|next\|progress]` | Progress dashboard / next ready story | read-only |
-| `build` | `[story-path]` | TDD-implement one story end-to-end | source, tests, story |
-| `parallel-build` | `[story-ids...] \| --epic NN` | Implement several ready stories in worktrees | branches per story |
-| `fix` | `[story-path]` | Diagnose + minimally fix a bug, with a regression test | source, tests, story |
+| `build` | `[story-path]` | TDD-implement one story end-to-end, or a `BUG` story's recorded fix (Bug-Fix Mode) | source, tests, story |
+| `parallel-build` | `[story-ids...] \| --epic NN` | Implement several ready stories (or `BUG` fixes) in worktrees | branches per story |
+| `fix` | `[story-path]` | Diagnose a bug, record it to its story (→ `BUG`), auto-build if easy or hand off to `build` | failing test, Bug Report, status |
 | `ship` | `[story-path]` | Commit, open PR, update linked Issues | git + GitHub |
 | `sync` | `[tasks/<slug> \| --all]` | Reconcile indexes and epics with story files | indexes |
 | `doc-optimizer` | `[upgrade\|migrate\|sync\|optimize]` | Migrate or slim architecture docs | `docs/architecture/` |

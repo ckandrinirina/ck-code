@@ -15,9 +15,9 @@ instead of duplicating the workflow graph.
 5. /ck-code:to-issues      (Optional) Push tasks/ → GitHub Issues
 6. /ck-code:track        Show progress / find next ready story
 
-7. /ck-code:build        TDD-implement one story (story → DONE)
-   /ck-code:parallel-build  TDD-implement multiple stories in worktrees
-   /ck-code:fix          Diagnose + minimally fix a bug tied to a story
+7. /ck-code:build        TDD-implement one story (story → DONE), or a BUG story's recorded fix (Bug-Fix Mode)
+   /ck-code:parallel-build  TDD-implement multiple stories (or BUG fixes) in worktrees
+   /ck-code:fix          Diagnose a bug, record it to its story (→ BUG), route the fix
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues
 
@@ -38,7 +38,8 @@ instead of duplicating the workflow graph.
 | `track next` | `/ck-code:build [path]` |
 | `build` | `/ck-code:ship` |
 | `parallel-build` | `/ck-code:ship` (per branch) |
-| `fix` | `/ck-code:ship` |
+| `fix` (easy) | auto-runs `/ck-code:build` → `/ck-code:ship` |
+| `fix` (complex) | `/ck-code:build <story>` or `/ck-code:parallel-build <ids>` (Bug-Fix Mode) |
 | `ship` | `/ck-code:track next` (more stories) or `/ck-code:explain` |
 
 ## When to use which
@@ -76,13 +77,14 @@ recommends the skill in the last column instead.
 | `plan` | stakeholder-facing spec, not a task breakdown | `pre-spec` |
 | `to-issues` | committing/PR-ing implemented code | `ship` (sequential, not either/or) |
 | `to-issues` | no `tasks/` plan exists yet | `plan` (first) |
-| `build` | a bug in already-implemented code | `fix` |
+| `build` | an **un-triaged** bug in already-implemented code | `fix` (first — a `BUG`-status story is already triaged and stays in `build` Bug-Fix Mode) |
 | `build` | 3+ independent ready stories, no `Blocked by` | `parallel-build` |
 | `build` | no story exists for the work | `quick-story` or `plan` |
 | `parallel-build` | one story, or stories with `Blocked by` deps | `build` |
 | `parallel-build` | a bug in implemented code | `fix` |
-| `fix` | new functionality / new acceptance criteria (not a bug) | `build` (add story via `quick-story`) |
+| `fix` | new functionality / new acceptance criteria (not a bug) | `quick-story` then `build` |
 | `fix` | just committing a finished change | `ship` |
+| `fix` | implementing a fix already diagnosed (story at `BUG`) | `build` (Bug-Fix Mode) |
 | `quick-story` | a bug in implemented code | `fix` |
 | `quick-story` | a full feature spanning multiple epics/components | `plan` |
 | `quick-story` | the story already exists and you want to code it | `build` |
@@ -107,17 +109,21 @@ task to a skill, `/ck-code:start` recommends from project state, and
 | `team` | `.claude/skills/experts/*/SKILL.md`, `.claude/skills/guides/*/SKILL.md` |
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/, stories/, STORIES_INDEX.md, ROADMAP.md) |
 | `to-issues` | GitHub Issues only (no local writes) |
-| `build` | Source + tests in repo, story file (status, plan, summary), `STORIES_INDEX.md` (status cell) |
+| `build` | Source + tests in repo, story file (status, plan, summary; Bug Report Resolution in Bug-Fix Mode), `STORIES_INDEX.md` + `FEATURE_INDEX.md` (status cells) |
 | `parallel-build` | Per-story branches in `.claude/worktrees/agent-*`, each with the same outputs as `build` |
-| `fix` | Source + tests, story file (Bug Report section), regression test |
+| `fix` | Failing reproduction test, story file (Bug Report + Fix Plan), `STORIES_INDEX.md` + `FEATURE_INDEX.md` (status → `BUG`). Auto-invokes `build` for an easy fix; never writes the source fix itself. |
 | `ship` | Git commit, PR, GitHub Issue updates (no local-file writes outside git) |
 | `track`, `explain`, `help`, `start` | Read-only |
 
 ## State conventions
 
 - **Story status flow:** `TODO → IN PROGRESS → DONE` (set by `build`).
-- **Bug sub-states** live inside the story file's Bug Report section
-  (`DIAGNOSING → FIXING → FIXED`); they do NOT change the story's main
-  `Status:` and do NOT mutate `STORIES_INDEX.md`.
+- **Bug status flow:** `DONE → BUG` (set by `fix` when it diagnoses a bug on a
+  shipped story) `→ DONE` (restored by `build` Bug-Fix Mode when the recorded fix
+  lands). `fix` records the story's original status as `Prior status` in the Bug
+  Report so `build` restores it exactly. A `BUG` story is actionable work — `track`
+  and `build`/`parallel-build` surface it for fixing.
+- **Bug Report sub-status** lives inside the story file (`DIAGNOSED` → `FIXED`); it
+  is finer-grained than the index `BUG` cell and never mutates the index on its own.
 - **`STORIES_INDEX.md`** is the single source of truth for selection /
   dependency resolution. Full protocol: `references/stories-index.md`.

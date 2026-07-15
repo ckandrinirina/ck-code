@@ -50,7 +50,7 @@ Do NOT glob `tasks/*/epics/*/stories/*.md`. The index is the source of truth for
 
 ### 1.3 Build Dependency Graph
 
-For each row in the index, mark it as `ready` if `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table. Mark as `blocked` otherwise.
+For each row in the index, mark it as `ready` if `Status: TODO` AND every ID in `Blocked by` resolves to `Status: DONE` in the same table, **or if `Status: BUG`** (a triaged bug from `/ck-code:fix` is always actionable — `build` implements its recorded fix). Mark as `blocked` otherwise. A `BUG` row is `ready`-with-a-🐛 — surface it distinctly.
 
 ### 1.4 Epic Aggregation (lazy)
 
@@ -66,12 +66,13 @@ from the Phase 1 scan. Multiple task plans → render each separately (template 
 
 Filter to ready stories (Phase 1.3), then order by:
 
-1. **Epic order** — lower epic number first (foundation before features)
-2. **Story order** — lower story number within the epic
-3. **Size** — smaller first (`S` before `M`)
-4. **Unblocking potential** — prefer stories that unblock the most others
+1. **Open bugs first** — `Status: BUG` rows outrank all `TODO` work; a diagnosed bug in shipped code should be fixed before new stories (recommend `/ck-code:build <path>`, which enters Bug-Fix Mode).
+2. **Epic order** — lower epic number first (foundation before features)
+3. **Story order** — lower story number within the epic
+4. **Size** — smaller first (`S` before `M`)
+5. **Unblocking potential** — prefer stories that unblock the most others
 
-Present the top story; list the rest under *Also Ready*.
+Present the top story (a 🐛 bug if any is open); list the rest under *Also Ready*.
 
 ## RULES
 

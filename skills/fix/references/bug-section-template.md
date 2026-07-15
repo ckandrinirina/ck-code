@@ -1,10 +1,16 @@
 # Bug Section Templates for the Story File
 
-Templates appended to the original story file at the phase named in each heading.
+Templates appended to the story file across the bug's lifecycle. **`fix` fills the
+Bug Report + Fix Plan (Phases 4.5 / 5.2); `build` (Bug-Fix Mode) fills the
+Unplanned Changes, SOLID Verification, Manual-Test Reports, and Resolution.** The
+story file is the durable hand-off between the two skills.
+
+Bug Report status flow: `DIAGNOSED` (set by `fix`) → `FIXED` (set by `build`).
+Story index status flow: `DONE → BUG` (set by `fix`) → `DONE` (restored by `build`).
 
 ---
 
-## Phase 4.5 — Bug Report (append after diagnosis, before fix planning)
+## Phase 4.5 — Bug Report (fix — append after diagnosis)
 
 ```markdown
 
@@ -14,7 +20,8 @@ Templates appended to the original story file at the phase named in each heading
 
 **Bug ID:** BUG-YYYYMMDD-NN
 **Reported:** [date]
-**Status:** DIAGNOSING
+**Prior status:** [DONE | IN PROGRESS]   <!-- the story's Status: before this bug; build restores it -->
+**Status:** DIAGNOSED
 
 ### Description
 - **Expected:** [expected behavior]
@@ -24,7 +31,7 @@ Templates appended to the original story file at the phase named in each heading
 ### Diagnosis
 - **Root cause:** [explanation]
 - **Location:** [file:line]
-- **Reproduction test:** [test name]
+- **Reproduction test:** [test name — written and FAILING, the RED target build inherits]
 - **Related issues:** [count]
 ```
 
@@ -39,59 +46,40 @@ cross-referenced.
 ## Phase 4.5b — Multi-Story Bug Report (verdict B / D)
 
 When a bug spans multiple existing stories, append the same Bug Report block
-above to each story file with these additions:
+above to each story file with this addition:
 
 ```markdown
 **Scope:** MULTI-STORY (also appears in: [02-01], [03-04])
 ```
 
-For stub stories created from a fix-flow scope (verdict D), use the **stub
-story template** below instead of the full epic-derived template — the
-acceptance criteria and tech notes will be filled in later by the user (or by
-`/ck-code:plan` Continue mode).
-
-### Stub story template
-```markdown
-# Story EE-SS: [Title]
-
-**Status:** TODO
-**Size:** [S | M | L | XL — best guess from scope analysis]
-**Created by:** /ck-code:fix on YYYY-MM-DD (bug BUG-YYYYMMDD-NN)
-**Parent epic:** [epic display name]
-
-## Context
-This story was created as part of fixing BUG-YYYYMMDD-NN, which surfaced
-missing functionality in this epic. See the linked stories for the full bug
-context: [01-03], [02-01].
-
-## Acceptance Criteria (TODO — enrich via `/ck-code:plan` continue)
-- [ ] [Best-guess criterion 1 from bug description]
-- [ ] [Best-guess criterion 2]
-
-## Technical Notes
-TODO — enrich during planning.
-
-## Dependencies
-[List of story IDs that must complete first, or `-`]
-```
+**Missing functionality** (verdict D) is NOT recorded as a stub here — `fix`
+scaffolds a real `TODO` story through `/ck-code:quick-story` instead (SKILL.md
+Phase 2.6). `fix` never writes stub story files or index rows itself.
 
 ---
 
-## Phase 5.3 — Fix Plan (append to the Bug Report section)
+## Phase 5.2 — Fix Plan (fix — append to the Bug Report section)
+
+The build contract. `build` (Bug-Fix Mode) implements this verbatim, so it must be
+concrete enough to execute without re-diagnosing.
 
 ```markdown
 ### Fix Plan
-- **Strategy:** [minimal fix description]
-- **Files to modify:** [list]
-- **Status:** FIXING
+- **Strategy:** [minimal change and why it fixes the root cause]
+- **Files to modify:** [exact paths — minimal]
+- **Test target:** [the Phase 4.5 reproduction test that must go GREEN]
+- **Risk:** [LOW | MEDIUM | HIGH]
+- **SOLID note:** [none, or the smallest abstraction if the minimal fix bends a principle]
 ```
+
+Bug Report status stays `DIAGNOSED` — `fix` does not apply the fix.
 
 ---
 
-## Phase 6.2 — Unplanned Changes (append under Bug Report on first deviation)
+## Phase 6.2 — Unplanned Changes (build — append under Bug Report on first deviation)
 
-Appended via Edit. Skip entirely on a clean run (no heading written when
-empty). Add one bullet per unplanned expansion at the moment it happens.
+Written by `build` (Bug-Fix Mode) if applying the Fix Plan forces a touch outside
+its `Files to modify` list. Skipped on a clean run (no heading when empty).
 
 ```markdown
 ## Unplanned Changes
@@ -104,7 +92,7 @@ empty). Add one bullet per unplanned expansion at the moment it happens.
   (e.g., "shared helper required by the patched function", "test broke
   because mocked dependency changed signature").
 - Does NOT authorize widening the fix — drive-by fixes for OTHER bugs remain
-  forbidden (rule in SKILL.md Phase 6.2; they go in the Phase 4.4 related-issues note).
+  forbidden; those go in the `fix` Phase 4.4 related-issues note for a separate run.
 - If the same file is touched again later, update its existing line in place
   rather than adding a duplicate.
 
@@ -113,11 +101,10 @@ Example:
 
 ---
 
-## Phase 6.4 — SOLID Verification (append under Bug Report after Refactor pass)
+## Phase 6.4 — SOLID Verification (build — append under Bug Report after Refactor pass)
 
-Appended once per code-touch cycle (initial fix and every Phase 8.6 manual-test
-loop). Bounded to the diff produced by Phase 6.2 — does not authorize widening
-the fix.
+Written by `build` (Bug-Fix Mode) once per code-touch cycle. Bounded to the diff —
+does not authorize widening the fix.
 
 ```markdown
 ### SOLID Verification (cycle [N])
@@ -130,16 +117,15 @@ the fix.
 ```
 
 If any principle was FAIL on first check, the entry records the post-refactor
-state (must be all PASS to leave Phase 6.4). Cycle 1 = initial fix; later
-cycles correspond to Phase 8.6 manual-test loops.
+state (must be all PASS to leave the refactor phase). Cycle 1 = initial fix; later
+cycles correspond to manual-test loops.
 
 ---
 
-## Phase 8.6 — Manual-Test Reports (append on STILL BROKEN, then per-cycle)
+## Phase 8.6 — Manual-Test Reports (build — append on STILL BROKEN, then per-cycle)
 
-Appended via Edit. Skip entirely on a clean run (no heading written when
-empty). Add one entry per manual-test cycle that returned `STILL BROKEN`,
-then update the same entry once `RESOLVED`.
+Written by `build` (Bug-Fix Mode) during its manual-test loop. Skipped on a clean
+run (no heading when empty).
 
 ```markdown
 ### Manual-Test Reports
@@ -151,14 +137,17 @@ then update the same entry once `RESOLVED`.
 ```
 
 **Format rules:**
-- Status starts at `OPEN` and flips to `RESOLVED` only after Phase 8.6.3 steps 3–5 (Phase 4.2 → Phase 6 → Phase 6.4 → Phase 7) all complete.
+- Status starts at `OPEN` and flips to `RESOLVED` only after the fix + Refactor + QA re-run all complete.
 - "Files" follows the same `path:line[,line]` precision as the Resolution block's Files Touched.
 - One entry per cycle; the same Bug ID accumulates entries across cycles.
 - Empty section = omit the heading (consistent with `## Unplanned Changes`).
 
 ---
 
-## Phase 8.1 — Resolution + Files Touched (fill in at completion)
+## Phase 8.1 — Resolution + Files Touched (build — fill in at completion)
+
+Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status to
+`FIXED` and restores the story's `Prior status` in the index.
 
 ```markdown
 ### Resolution
@@ -168,7 +157,7 @@ then update the same entry once `RESOLVED`.
 - **QA iterations:** [count]
 - **Manual-test cycles:** [count, or "none"] (count of `## Manual-Test Reports` entries; "none" if heading absent)
 - **Unplanned changes:** [count, or "none"]
-- **Status:** FIXED
+- **Status:** FIXED   <!-- story index status restored to Prior status (DONE) -->
 
 ### Files Touched
 [Precise reference of every file and line changed — no descriptions, just locations]

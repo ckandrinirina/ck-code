@@ -1,155 +1,95 @@
-# Worked Bug-Fix Walkthroughs
+# Worked Triage Walkthroughs
 
-End-to-end examples of the `/ck-code:fix` workflow. These illustrate the
-decision points but the rules in `SKILL.md` are authoritative — when in doubt,
-follow `SKILL.md`.
+End-to-end examples of the `/ck-code:fix` workflow. `fix` diagnoses and routes — it
+never writes the source fix; `build` (Bug-Fix Mode) does. These illustrate the
+decision points but the rules in `SKILL.md` are authoritative.
 
 ---
 
-## Example 1: Off-by-one in WebSocket message handler
+## Example 1: Off-by-one in WebSocket handler (easy → AUTO-BUILD)
 
 ### Phase 1 — Story Selection
 - User runs `/ck-code:fix tasks/foundation/epics/01-foundation/stories/01-03-websocket-gateway.md`
-- Story status: `DONE`
-- Story implementation summary lists `src/server/ws/handler.rs` and tests.
+- Story status: `DONE`. Implementation summary lists `src/server/ws/handler.rs`.
 
 ### Phase 2 — Bug Description
-- Expected: When a client sends 10 messages, the server logs 10 `received` events.
-- Actual: Server logs only 9.
-- Repro: Send 10 messages back-to-back via WebSocket client.
-- Started: After the merge of story 01-03 (regression).
+- Expected: 10 messages → 10 `received` log events. Actual: 9. Regression after story 01-03.
 
-### Phase 3 — Skill Detection
-- Files in `server/` → `expert-backend`.
-- `.rs` extension → `guide-rust`.
-- `expert-qa` and `expert-analyst` always loaded.
+### Phase 2.5 — Scope
+- Only 01-03 scores ≥ 0.7. **Verdict A (single-story).** Combined prompt → `YES`.
 
-### Phase 4 — QA Reproduction & Diagnosis
+### Phase 3–4 — Diagnosis
+- Locate `for i in 0..msgs.len() - 1` — off-by-one.
+- **4.2 Reproduce:** write `test_logs_all_messages_when_batch_sent` (sends 10, asserts 10). Runs → FAILS (count 9). This failing test stays in the tree — it's the RED target build inherits.
+- **4.5 Story update:** append Bug Report, `Prior status: DONE`, `Status: DIAGNOSED`.
+- **4.6** User confirms diagnosis → `YES`.
 
-**4.1 Locate code.** Read `src/server/ws/handler.rs`. Found loop:
+### Phase 5 — Fix Plan
+- Strategy: change `0..msgs.len() - 1` to `0..msgs.len()`. Files: `src/server/ws/handler.rs`. Test target: the repro test. Risk: LOW. SOLID note: none.
+- **5.2** Fix Plan recorded (status stays `DIAGNOSED`). **5.3** User confirms → `YES`.
 
-```rust
-for i in 0..msgs.len() - 1 {  // off-by-one
-    log::info!("received: {:?}", msgs[i]);
-}
-```
+### Phase 6 — Set BUG & Route
+- **6.1** `01-03`: story file `DONE → BUG`; `STORIES_INDEX.md` status cell → `BUG`; `FEATURE_INDEX.md` Foundation rolls `DONE → IN PROGRESS`.
+- **6.2 Auto-Build Eligibility Gate:** verdict A ✓, single cause ✓, 1 file ✓, LOW risk ✓, no new story ✓ → **AUTO-BUILD.**
+- **6.3** Announce, then invoke `/ck-code:build tasks/.../01-03-websocket-gateway.md`.
+  - `build` sees `Status: BUG`, enters Bug-Fix Mode, runs the repro test RED → applies the 1-line fix → GREEN → SOLID + QA + manual-test → ships (`fix/` branch, Bug ID in commit) → restores `01-03` to `DONE` and Foundation to `DONE`.
 
-**4.2 Reproduce.** Existing tests passed because they only sent 1 message.
-Wrote new test `test_logs_all_messages_when_batch_sent` that sends 10 and
-asserts log count == 10. Test FAILS with actual count = 9. Bug confirmed.
-
-**4.3 Root cause.** `0..msgs.len() - 1` should be `0..msgs.len()` (or
-`msgs.iter()`). Off-by-one error.
-
-**4.4 Related patterns.** Grep for `len() - 1` in `src/server/`. Found one
-similar pattern in `src/server/grpc/stream.rs:88` — flagged but NOT fixed
-(separate scope; tell user to run `/ck-code:fix` on that story separately).
-
-**4.5 Story update.** Append `Bug Report` section with status `DIAGNOSING`
-(see `references/bug-section-template.md`).
-
-**4.6 User confirms diagnosis.** Replies `YES`.
-
-### Phase 5 — Fix Planning
-
-**5.0 TDD gate.** Failing test exists. Test asserts log count == 10. Fix will
-make ONLY that test pass. Gate passes.
-
-**5.1 Minimal fix.** Change `0..msgs.len() - 1` to `0..msgs.len()`.
-**5.2 Subtasks** created. **5.3 Story updated** with Fix Plan. **5.4 User
-confirms.**
-
-### Phase 6 — TDD Fix
-
-- **RED.** Run repro test → fails (count=9).
-- Apply 1-line fix.
-- **GREEN.** Run repro test → passes. Run all tests → all pass.
-- **Refactor.** None needed; consider replacing index loop with `for msg in &msgs`
-  but that's a refactor — log says: skipped (out of fix scope).
-
-### Phase 7 — QA Validation
-- Full suite passes. All acceptance criteria still pass. Lint/type/format pass.
-- Diff is 1 line. Minimalism PASS. Verdict: PASS.
-
-### Phase 8 — Completion
-- Append `Resolution` section to story (see template).
-- `Files Touched`:
-  ```
-  MODIFIED src/server/ws/handler.rs:42
-  CREATED  tests/ws_handler_batch_log_test.rs
-  ```
-- Story status stays `DONE`. User manual test PASS. Ship via `/ck-code:ship`.
+### Key takeaway
+`fix` never touched `handler.rs`. It proved the bug with a failing test and handed `build` an exact plan; the user experienced one continuous run.
 
 ---
 
-## Example 2: Missing null-check causes intermittent panic
+## Example 2: Intermittent panic, uncertain cause (→ MANUAL BUILD)
 
 ### Phase 2 — Bug
-- Intermittent panic in mobile app when opening profile screen.
-- Repro: ~1 in 5 logins. Stack trace shows `unwrap on None` in `profile_loader.rs:55`.
+- Intermittent panic opening the profile screen (~1 in 5 logins). Stack trace points at `profile_loader.rs:55`, but a second suspect path exists in `avatar_cache.rs`.
 
 ### Phase 4 — Diagnosis
-- Code does `user.avatar_url.unwrap()`. Avatar may be `None` for new users.
-- Reproduction test: create user without avatar, open profile → panics.
-- Root cause: missing `Option` handling, not a flaky test.
+- **4.1.5** Two competing hypotheses → dispatch 2 read-only investigators. One confirms `user.avatar_url.unwrap()` on `None`; the other (`avatar_cache`) is refuted but leaves low residual uncertainty.
+- **4.2** Reproduction test: new user without avatar → panic. Written, FAILS.
+- **4.5** Bug Report recorded, `Prior status: DONE`, `Status: DIAGNOSED`.
 
-### Phase 5 — Minimal Fix
-- Replace `unwrap()` with `unwrap_or_default()` (or render placeholder).
-- DO NOT refactor surrounding `ProfileLoader` even though it has other smells —
-  out of scope. Document smells; don't touch them.
-
-### Phase 6/7 — Fix + QA
-- Test goes RED → GREEN. No regressions. Diff: 1 line + 1 new test.
+### Phase 5–6 — Plan & Route
+- Fix Plan: replace `unwrap()` with `unwrap_or_default()`. Files: 1. Risk: **MEDIUM** (intermittent, hard to fully reproduce).
+- **6.1** `Status: DONE → BUG` across story file + both indexes.
+- **6.2 Gate:** Risk = MEDIUM fails a box → **MANUAL hand-off.**
+- **6.3** Print the manual-build prompt: recommend `/ck-code:build tasks/.../profile-screen.md`. STOP.
 
 ### Key takeaway
-Even when surrounding code is messy, the fix stays minimal. Smells go into
-follow-up bug notes, never into this fix's diff.
+A `MEDIUM`/`HIGH` risk or a lingering competing cause stops the auto-build so the user reviews before implementing. Everything is recorded; the fix resumes with one `build` call.
 
 ---
 
 ## Example 3: Bug already planned in TODO story 04-02 (verdict E)
 
-### Phase 1–2 — Setup
-- User runs `/ck-code:fix` (no args).
-- Bug description: profile form lets users submit blank `email` and `phone`,
-  causing a 500 server error. File involved: `src/profile/profile_form.tsx`.
-
-### Phase 2.5.1 — Scoring (both passes)
-
-**Pass 1 (DONE / IN PROGRESS):**
-| Score | Story | Why |
-|---|---|---|
-| 0.62 | [01-03] Profile screen scaffold | shares `profile_form.tsx`; no criterion mentions validation |
-
-**Pass 2 (TODO — `future_coverage_matches`):**
-| Score | Story | Why |
-|---|---|---|
-| 0.91 | [04-02] Validate profile fields before submit | criterion "validate email and phone before submit" + same file |
-
-`future_coverage_matches = [04-02]` → verdict E (PLANNED-IN-FUTURE) takes
-precedence over what would otherwise be a single-story (A) verdict on 01-03.
-
-### Phase 2.5.4 — Verdict E deferral
-Skill prints the Phase 2.5e prompt listing 04-02 as the planned coverage and
-suggests `/ck-code:build tasks/<slug>/epics/04_profile/stories/02_validate-profile.md`.
-
-User answers `NO` → fix flow STOPS. No code change, no story write.
+- User runs `/ck-code:fix` (no args). Bug: profile form accepts blank `email`/`phone` → 500. File: `src/profile/profile_form.tsx`.
+- **Pass 1 (active):** `[01-03] Profile screen scaffold` 0.62. **Pass 2 (TODO):** `[04-02] Validate profile fields` 0.91 → `future_coverage_matches = [04-02]`.
+- **Verdict E** takes precedence. Print the Phase 2.5e prompt recommending `/ck-code:build tasks/.../04-02-validate-profile.md`.
+- User answers `NO` → fix STOPS. No story write, no status flip.
 
 ### Key takeaway
-Without verdict E the fix would have created a one-line patch in 01-03 that
-04-02 would later have to merge or duplicate. Deferring keeps the planned
-story authoritative and the bug log clean.
+Deferring keeps the planned story authoritative and the bug log clean — no duplicate one-line patch in 01-03.
 
 ---
 
-## Anti-pattern: opportunistic refactor (DO NOT DO THIS)
+## Example 4: Mixed — real bug + missing feature (verdict D)
 
-> "While I'm in `handler.rs` fixing the off-by-one, I'll also rename
-> `msgs` to `messages` and extract a helper function."
+- Bug: settings screen shows a stale device IP. Diagnosis pins a real bug in `[03-01] Settings screen` (DONE) AND surfaces that "persist IP to config" was never built (no story in epic 04).
+- **Verdict D.** Phase 2.5c confirmation: UPDATE `[03-01]` (→ BUG); CREATE one story via `/ck-code:quick-story "persist device IP to config" --epic 04` (stays TODO).
+- **Phase 2.6** `quick-story` scaffolds the new story + syncs all indexes. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01] → BUG`.
+- **6.2 Gate:** verdict D → **MANUAL hand-off.** Recommend `/ck-code:build tasks/.../03-01-settings-screen.md` for the bug; the new epic-04 story is normal `build` work later.
 
-Wrong. Two reasons:
-1. The diff is no longer minimal — reviewers can't tell what fixed the bug.
-2. A rename or extraction could introduce a NEW regression that the
-   reproduction test won't catch.
+### Key takeaway
+`fix` never scaffolds stories itself — missing functionality goes through `quick-story` (existing epic) or `design` (no epic, verdict C). The real bug and the missing feature stay cleanly separated.
 
-Stay focused. Open a separate refactor task if cleanup is warranted.
+---
+
+## Anti-pattern: fix implements the source fix (DO NOT DO THIS)
+
+> "The off-by-one is one character — I'll just edit `handler.rs` and skip build."
+
+Wrong. `fix` diagnoses and routes; `build` (Bug-Fix Mode) owns the TDD red→green, SOLID, QA, manual-test, and ship. Skipping build:
+1. Bypasses the SOLID + QA + manual-test gates the fix must pass.
+2. Leaves the `BUG` status stuck — nothing restores it to `DONE`.
+
+Record the Fix Plan and let `build` execute it. The only code `fix` writes is the failing reproduction test.

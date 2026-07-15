@@ -53,7 +53,7 @@ Glob `tasks/<slug>/epics/*/stories/*.md`. For each story, extract:
 
 - ID (from `# Story EE-SS:` header)
 - Title
-- Status (`TODO` / `IN PROGRESS` / `DONE` / `SKIP`)
+- Status (`TODO` / `IN PROGRESS` / `DONE` / `SKIP` / `BUG`)
 - Size (`S` / `M` / `L` / `XL`)
 - Blocked by (from `## Dependencies` section, or `-`)
 - Parent epic display name (from parent folder name, `NN_slug` → `NN · Slug Title-Cased`)

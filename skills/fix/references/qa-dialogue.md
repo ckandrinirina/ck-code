@@ -2,6 +2,8 @@
 
 User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim or with minor wording adjustments so the workflow stays predictable. Phase branching logic lives in `SKILL.md`; this file is templates only.
 
+`fix` diagnoses and routes — it never implements. The implement / QA / manual-test / ship prompts live in `build` (Bug-Fix Mode), not here.
+
 ---
 
 ## Phase 1.2 — Story Selection (no path provided)
@@ -14,6 +16,7 @@ User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim o
 | 1 | [01-01] Setup server scaffold | Foundation | DONE |
 | 2 | [01-02] gRPC service definition | Foundation | DONE |
 | 3 | [01-03] WebSocket gateway | Foundation | IN PROGRESS |
+| 4 | [02-01] Login form | Auth | BUG |
 
 Which story has the bug? (number, path, AUTO, or NONE)
 ```
@@ -49,7 +52,7 @@ Story: [EE-SS] [Title]
 **Bug summary:** [1-line]
 **Verdict:** [SINGLE-STORY | MULTI-STORY | NEW-FEATURE | MIXED | PLANNED-IN-FUTURE]
 
-### Best matches (DONE / IN PROGRESS)
+### Best matches (DONE / IN PROGRESS / BUG)
 | Score | Story | Why |
 |-------|-------|-----|
 | 0.92 | [01-03] WebSocket gateway | overlaps `src/ws/handler.rs` (criterion #2) |
@@ -61,10 +64,10 @@ Story: [EE-SS] [Title]
 | 0.91 | [04-02] Validate profile fields | criterion match + file overlap |
 
 ### Verdict
-A) SINGLE-STORY — bug belongs to [EE-SS]. Standard fix flow.
-B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. Shared Bug ID `BUG-YYYYMMDD-NN`.
-C) NEW-FEATURE — missing functionality in [N] epic(s). Recommend `/ck-code:design`. STOP after confirm.
-D) MIXED — real bug in [EE-SS] AND missing piece elsewhere. Fix here + create stubs marked `Created by fix flow on YYYY-MM-DD`.
+A) SINGLE-STORY — bug belongs to [EE-SS]. Diagnose + record + route.
+B) MULTI-STORY — bug spans [EE-SS], [EE-SS], …. Shared Bug ID `BUG-YYYYMMDD-NN`. Manual build hand-off.
+C) NEW-FEATURE — missing functionality, no epic covers it. Recommend `/ck-code:design`. STOP after confirm.
+D) MIXED — real bug in [EE-SS] AND a missing piece elsewhere. Diagnose the bug + create the missing story via `/ck-code:quick-story`. Manual build hand-off.
 E) PLANNED-IN-FUTURE — TODO story [EE-SS] [Title] already plans this. Default STOP; recommend `/ck-code:build <future-story>`. Override `PROCEED ANYWAY` falls through to A/B/D.
 
 Confirm verdict? YES / ADJUST / ABORT
@@ -75,9 +78,9 @@ Confirm verdict? YES / ADJUST / ABORT
 When the verdict is A (single-story), append this block to the scope report instead of the generic verdict prompt above — it folds the verdict confirmation and the (trivial) story-set confirmation into one gate:
 
 ```
-**Scope:** single-story `[EE-SS] [Title]` (no stubs to create, no index/epic sync needed).
+**Scope:** single-story `[EE-SS] [Title]` (no new stories to create, one status flip).
 
-Proceed with fix on this story? YES / ADJUST / ABORT
+Proceed with diagnosis on this story? YES / ADJUST / ABORT
 ```
 
 On `YES`: go directly to Phase 3 (no Phase 2.5.5 gate). On `ADJUST`: re-score with overrides and re-present. Verdicts B / D continue to use Phase 2.5.5 separately.
@@ -89,14 +92,14 @@ On `YES`: go directly to Phase 3 (no Phase 2.5.5 gate). On `ADJUST`: re-score wi
 ```
 ## Stop — This Looks Like a New Feature, Not a Bug
 
-What you described isn't a regression — it's behavior that was never built. A new feature goes through the normal flow, which starts with architecture: `design` → `team` → `plan`. Don't skip straight to story planning.
+What you described isn't a regression — it's behavior that was never built, and no epic covers it. A new feature goes through the normal flow, which starts with architecture: `design` → `team` → `plan`. Don't skip straight to story planning.
 
 Suggested next step:
   /ck-code:design <path-to-spec-or-feature-description>
 
 `design` produces the architecture docs that `plan` later turns into epics and stories.
 
-Proceed anyway? NO (recommended — stop) / YES (force fix flow with stub stories)
+Proceed anyway? NO (recommended — stop) / YES (force fix flow, treat as MIXED)
 ```
 
 Default to NO. On YES: fall through to verdict D handling.
@@ -121,29 +124,29 @@ That run implements the fix as part of the planned story.
 Proceed anyway? NO (recommended) / PROCEED ANYWAY (force fix now)
 ```
 
-Default to NO. On PROCEED ANYWAY: fall through to the A/B/D verdict from `done_in_progress_scores`. Never create stub stories under verdict E.
+Default to NO. On PROCEED ANYWAY: fall through to the A/B/D verdict from `active_scores`. Never create stories under verdict E.
 
 ---
 
-## Phase 2.5c — Multi-Story / Stub-Story Confirmation (verdicts B / D)
+## Phase 2.5c — Multi-Story / Missing-Story Confirmation (verdicts B / D)
 
 ```
 ## Story Set for This Fix
 
 **Bug ID:** BUG-YYYYMMDD-NN
 
-### Will UPDATE (append Bug Report)
-- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]
-- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]
+### Will UPDATE (append Bug Report, flip status → BUG)
+- tasks/<slug>/epics/01_foundation/stories/03_websocket-gateway.md  [01-03]  (DONE → BUG)
+- tasks/<slug>/epics/02_auth/stories/01_login-form.md                [02-01]  (DONE → BUG)
 
-### Will CREATE (new stub story — TODO criteria)
-- tasks/<slug>/epics/03_mobile/stories/04_show-ip.md   [03-04]  (size: S)
-- tasks/<slug>/epics/04_desktop/stories/02_write-ip.md [04-02]  (size: S)
+### Will CREATE via /ck-code:quick-story (verdict D — missing functionality, stays TODO)
+- epic 03 · Mobile   — "show device IP on settings screen"   (size: S)
+- epic 04 · Desktop  — "persist device IP to config"          (size: S)
 
-### Will SYNC
-- tasks/<slug>/STORIES_INDEX.md  (+2 rows)
-- tasks/<slug>/epics/03_mobile/EPIC.md  (add 03-04 to story list)
-- tasks/<slug>/epics/04_desktop/EPIC.md  (add 04-02 to story list)
+These new stories are real feature work (TODO), NOT part of this bug's BUG set. `quick-story` keeps the index, EPIC.md, and FEATURE_INDEX.md in sync.
+
+### Routing
+Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` (or `/ck-code:parallel-build`) per story.
 
 Proceed? YES / ADJUST / ABORT
 ```
@@ -155,138 +158,82 @@ Proceed? YES / ADJUST / ABORT
 ```
 ## Bug Diagnosis Report
 
-**Story:** [EE-SS] [Title]
+**Story:** [EE-SS] [Title]  (Prior status: DONE)
 **Bug:** [1-line summary]
 **Root cause:** [explanation]
 **Location:** [file:line]
-**Reproduction test:** Written and FAILING (confirms the bug)
-**Story:** Updated with bug details
+**Reproduction test:** Written and FAILING (the RED target build will take to GREEN)
+**Story:** Updated with Bug Report (status DIAGNOSED)
 
 ### Related Issues
-- [count] similar patterns found
+- [count] similar patterns found (documented for separate /ck-code:fix runs)
 
 ### Affected Acceptance Criteria
 - [ ] [Criterion X] — BROKEN by this bug
 - [x] [Criterion Y] — Still working
 
-Confirm and proceed to fix? YES / INVESTIGATE MORE
+Confirm diagnosis and proceed to the Fix Plan? YES / INVESTIGATE MORE
 ```
 
 ---
 
-## Phase 5.4 — Fix Plan Confirmation
+## Phase 5.3 — Fix Plan Confirmation
 
 ```
-## Proposed Fix
+## Proposed Fix Plan (build will implement this — fix does not)
 
 **Root cause:** [1-line]
-**Fix:** [1-line]
-**Files to touch:** [count]
+**Strategy:** [1-line — what build changes and why it fixes the root cause]
+**Files to modify:** [exact paths]
+**Test target:** [reproduction test name] must go GREEN
 **Risk:** [LOW / MEDIUM / HIGH]
 
-Proceed? YES / ADJUST / ABORT
+Record this plan into the story and route? YES / ADJUST / ABORT
 ```
 
 ---
 
-## Phase 6.4 — Fix Applied Status
+## Phase 6 — Auto-Build (easy fix)
+
+Printed when the Auto-Build Eligibility Gate passes (verdict A, single confirmed cause, ≤ 3 files, LOW risk, no new story/design).
 
 ```
-## Fix Applied
+## Fix Recorded — Auto-Building
 
-**Reproduction test:** NOW PASSING
-**All tests:** [X]/[X] passing
-**Files changed:** [count]
-**Lines changed:** [count]
-**Refactor applied:** YES (describe) / NO
+**Story:** [EE-SS] [Title]  →  status BUG (was DONE)
+**Bug ID:** BUG-YYYYMMDD-NN
+**Fix Plan + failing test:** recorded in the story.
 
-Moving to QA validation.
+Easy fix — invoking /ck-code:build now to implement it (Bug-Fix Mode).
+build will take the reproduction test RED → GREEN, run SOLID + QA + manual test,
+ship, and restore the story to DONE.
 ```
+
+Then invoke `/ck-code:build <story-path>` via the Skill tool.
 
 ---
 
-## Phase 7.5 — QA Report
+## Phase 6 — Manual Build Hand-off (complex fix)
+
+Printed when the Auto-Build Eligibility Gate fails (multi-story, high-risk, large diff, uncertain cause, or a new story/design was needed).
 
 ```
-## QA Report: Bug Fix for [Story Title]
+## Fix Recorded — Manual Build Needed
 
-### Bug Fix Verification
-- [x] Reproduction test passes
-- [x] Root cause addressed
-- [x] Related patterns checked
+This fix is complex, so it's recorded but NOT auto-built:
+  reason: [multi-story | high-risk | >3 files | uncertain root cause]
 
-### Regression Check
-- All tests: [X]/[X] passing
-- New regressions: [count]
+**Stories flipped to BUG:**
+- [01-03] WebSocket gateway   (DONE → BUG)
+- [02-01] Login form          (DONE → BUG)
 
-### Acceptance Criteria (full re-check)
-- [x] Criterion 1 — PASS
-- [x] Criterion 2 — PASS (was broken, now fixed)
+Each carries its Bug Report, failing reproduction test, and Fix Plan.
 
-### Code Quality
-- Type checking / Linting / Formatting: PASS / FAIL
+Run when ready:
+  /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md      # one story
+  /ck-code:parallel-build 01-03 02-01                              # several at once
 
-### Fix Minimalism: PASS / FAIL
-[Notes on any unnecessary changes]
-
-### Verdict: PASS / NEEDS FIXES
+build enters Bug-Fix Mode, implements the recorded Fix Plan, and restores each story's prior status.
 ```
 
-### Phase 7.6 — Escalation (after 3 failed iterations)
-
-```
-Fix has been attempted 3 times. Remaining issues:
-[list]
-
-A) MANUAL FIX — apply specific fixes you suggest
-B) ACCEPT     — proceed with known limitations
-C) REVERT     — undo all changes, keep bug documented
-```
-
----
-
-## Phase 8.5 — User Manual Testing
-
-```
-Bug fix complete!
-
-Please verify:
-1. Original bug is fixed: [reproduction steps]
-2. Feature still works: [acceptance criteria summary]
-3. No new issues introduced
-
-Result? PASS / STILL BROKEN / NEW ISSUE
-```
-
----
-
-## Phase 8.6 — Manual-Test Escalation (after 3 cycles)
-
-```
-The manual-test bug-fix loop has run 3 times for BUG-YYYYMMDD-NN and issues remain:
-
-Cycles:
-  #1  <residual symptom>  → RESOLVED (cycle 1)
-  #2  <residual symptom>  → RESOLVED (cycle 2)
-  #3  <residual symptom>  → still STILL BROKEN
-
-A) MANUAL FIX — you apply the fix; I re-run Refactor + QA against it
-B) ACCEPT     — mark fix DONE; cycle #3 documented as known limitation
-C) REVERT     — undo all changes; bug stays documented, unfixed
-
-Reply A / B / C.
-```
-
----
-
-## Phase 8.7 — Ship
-
-```
-Ready to ship the fix! Options:
-
-A) SHIP — Run /ck-code:ship to commit, PR, and update GitHub Issues
-B) SKIP — Don't commit yet (run /ck-code:ship later manually)
-```
-
-On `SHIP`: invoke `/ck-code:ship` with the story file path (handles `fix/` branch, staging, commit, PR, issue updates).
-On `SKIP`: remind the user they can run `/ck-code:ship [story-path]` later.
+STOP after printing — do not implement the fix inside `fix`.
