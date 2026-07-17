@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.0.2] — 2026-07-17
+
+### Fixed
+- **story-implementer**: the agent now inherits the full tool set instead of a
+  read-only-style `tools:` allowlist, so a story that needs `DesignSync` or any other
+  unlisted tool can actually be built rather than forcing `parallel-build` to fall back
+  to a generic agent; the worktree and push boundaries stay enforced by its Constraints.
+
 ## [4.0.1] — 2026-07-17
 
 ### Changed
