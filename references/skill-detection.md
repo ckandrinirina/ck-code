@@ -123,8 +123,35 @@ The output is the **only** authoritative set of loadable skills. A CLAUDE.md or
 doc note saying `/ck-code:team` is "deferred", "not yet run", or that skills are
 absent is **not evidence** — such notes go stale; the `ls` output overrides them
 in every case. Only an empty `ls` result means the project has no skills — go
-straight to 4c. Never conclude "no skills exist" without running this command in
-this flow.
+straight to the 4a.1 team gate. Never conclude "no skills exist" without running this
+command in this flow.
+
+**4a.1. Team gate — empty `ls` (mandatory, blocking):**
+
+An empty 4a result means `/ck-code:team` has never run for this project: there are no
+experts and no guides, so the phases that say "follow the loaded skills" have nothing to
+follow and the build falls back to generic, un-tailored code. **Never proceed silently.**
+Warn, then ask (`AskUserQuestion`, single-select):
+
+```
+⚠️  No project skills found — /ck-code:team has not run for this project.
+    team generates the expert + guide skills (architecture, stack conventions,
+    QA rules) that shape TDD, SOLID review, and QA for THIS codebase.
+    Building without them produces generic, lower-quality results.
+
+  → RUN TEAM FIRST (recommended)
+    CONTINUE WITHOUT SKILLS
+```
+
+- **RUN TEAM FIRST** → `Skill({ skill: "ck-code:team" })`. When it returns, re-run 4a
+  from the top and continue this procedure with the generated skills. Never hand-write a
+  skill file here as a substitute.
+- **CONTINUE WITHOUT SKILLS** → proceed to Step 5 and report the empty set. The user
+  accepted the trade-off; do not re-ask later in the same run.
+
+**Non-interactive callers** (a dispatched sub-agent — no user to ask): skip the question,
+state the warning in the returned report, and continue. The orchestrator gates instead —
+it runs this check once before dispatching.
 
 **4a.2. Build the detection manifest (when slugs are not all recognized):**
 
@@ -205,6 +232,8 @@ Skills loaded for this implementation:
 ## Rules
 
 - **Never** skip the 4a `ls` before loading or warning.
+- **Never** proceed past an empty 4a without the 4a.1 team gate — an interactive caller
+  always warns and asks; a sub-agent always warns in its report.
 - **Never** treat a CLAUDE.md or doc note as evidence that skills are absent — only 4a decides.
 - **Never** infer skill names from training data, or assume the anchor list is the real set.
 - **Never** use the `Skill` tool here — project-local `Read` only.

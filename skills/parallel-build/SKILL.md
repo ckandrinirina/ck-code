@@ -113,6 +113,22 @@ the resolved set is one story, drop to Phase 1.5.
 
 ## PHASE 3: PARALLEL DISPATCH
 
+### 3.0 Team gate (before any dispatch)
+
+The dispatched agents have no user to ask, so the orchestrator asks **once** for the whole
+batch:
+
+```bash
+ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md 2>/dev/null
+```
+
+Empty → `/ck-code:team` has never run; every agent would build generic code with no project
+experts, guides, or QA rules. Warn and ask (`AskUserQuestion`) per
+[`skill-detection.md`](../../references/skill-detection.md) § 4a.1: **RUN TEAM FIRST**
+(recommended) → `Skill({ skill: "ck-code:team" })`, then dispatch with the generated skills
+in place; **CONTINUE WITHOUT SKILLS** → dispatch as-is. Never dispatch without asking.
+Non-empty → dispatch (each agent's `build` Phase 2 loads its own per-story subset).
+
 Dispatch every story in a **single message** — one `Agent` call each, all in one turn, so
 they run concurrently. Per story (full contract + prompt: [agent-prompts.md](references/agent-prompts.md)):
 
@@ -247,6 +263,8 @@ already auto-cleaned).
 
 - **Never build inline in the orchestrator** — every story implementation is a sub-agent in
   its own worktree; a single story short-circuits to `/ck-code:build` (Phase 1.5).
+- **Never dispatch with zero project skills without asking** — sub-agents cannot prompt, so
+  the orchestrator runs the Phase 3.0 team gate once for the batch.
 - **Never run unbounded output inline** — builds, test suites, lint, diff *bodies*, full
   story/source `Read`s belong in a sub-agent. The orchestrator sees counts, names,
   statuses, SHAs, and structured returns only.

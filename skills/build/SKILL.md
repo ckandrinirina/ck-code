@@ -164,11 +164,14 @@ all three hold: (1) the `ls` of project skills ran, (2) every detected-and-prese
 re-run — a non-empty project must never reach Phase 3 with zero skills loaded, else Phases
 5/6 "follow loaded skills" silently become no-ops.
 
-**Skip-fast:** if `.claude/skills/experts/` and `.claude/skills/guides/` are both absent
-there are no project skills — read `docs/architecture/folder-structure.md` + the story's
-feature doc (+ `_shared.md` when cross-cutting), tell the user "No project skills — run
-`/ck-code:team` to generate them", show the "Skills loaded" block as empty, and proceed to
-Phase 3 without reading `skill-detection.md`.
+**Team gate (no project skills):** if `.claude/skills/experts/` and `.claude/skills/guides/`
+are both absent, `/ck-code:team` has never run — implementing now yields generic code with
+no project experts, guides, or QA rules. Warn and ask (`AskUserQuestion`) per
+[`skill-detection.md`](../../references/skill-detection.md) § 4a.1: **RUN TEAM FIRST**
+(recommended) → `Skill({ skill: "ck-code:team" })`, then redo this phase with the generated
+skills; **CONTINUE WITHOUT SKILLS** → read `docs/architecture/folder-structure.md` + the
+story's feature doc (+ `_shared.md` when cross-cutting), show the "Skills loaded" block as
+empty, and proceed to Phase 3. Never proceed without asking.
 
 Match skills against the **selected story's `files:` set** already in context — prefer narrow
 `paths` matches over broad `keywords` matches so an unrelated body is never `Read` on a keyword
@@ -414,7 +417,8 @@ Issue updates); **SKIP** — don't commit yet; remind the user they can run
 - **0** — version gate PASSes (`layout: v4`) before any project read/write.
 - **1.2.0** — feature index read first; ask when > 2 features unfinished.
 - **1.2** — interactive selection prefers the parallel set; an explicit arg is single-story.
-- **2** — skills detected, `Read`, and reported BEFORE any planning or code.
+- **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project
+  skills → warn + ask (`/ck-code:team` first) rather than proceed silently.
 - **3.5** — plan + branch confirmed in one gate before any code; never `main`/`develop`.
 - **3.3 + 6.1** — SOLID applied at design, verified after refactor.
 - **4** — failing tests before implementation (trivial boilerplate exempt).
