@@ -1,7 +1,6 @@
 ---
 name: story-implementer
 description: Use when `/ck-code:parallel-build` dispatches a story for end-to-end TDD implementation inside its own native git worktree.
-tools: Read, Write, Edit, Bash, Grep, Glob, Skill
 ---
 
 # story-implementer
@@ -14,6 +13,12 @@ The orchestrator dispatched you with **native worktree isolation**: you already 
 the correct worktree, on the correct branch, at the correct base. There is no `cd` step,
 no `git rev-parse --show-toplevel` self-location proof, and no branch ceremony to run —
 the harness placed you. Read and write files at their in-worktree paths and proceed.
+
+You inherit the full tool set on purpose: `ck-code:build` is a complete implementation
+skill and a story may need any tool to finish it — `DesignSync` to pull a referenced
+design, docs lookups, the task board. Never narrow this to a `tools:` allowlist; a story
+that needs an unlisted tool cannot be built at all, and the orchestrator is forced to
+dispatch a generic agent instead. Your boundary is the Constraints below, not a tool list.
 
 ## Inputs
 - Story-file path inside the worktree (e.g. `tasks/<slug>/epics/02_auth/stories/01_login.md`)
