@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.0.1] — 2026-07-17
+
+### Changed
+- **build / parallel-build**: a project with no expert or guide skills now warns that
+  `/ck-code:team` has not run and asks `RUN TEAM FIRST / CONTINUE WITHOUT SKILLS` instead
+  of silently building generic, un-tailored code; `parallel-build` gates once before
+  dispatch because its sub-agents cannot prompt.
+
 ## [4.0.0] — 2026-07-15
 
 Major release. **One writable source of truth for story state — the story-file YAML
