@@ -6,7 +6,7 @@
 
 1. **Design** — refine your spec into a complete set of architecture documents (global docs like folder structure and tech stack, plus one self-contained doc per feature covering its components, APIs, and data)
 2. **Plan** — break the architecture into epics and single-dispatch stories (each sized S/M so one agent finishes it in a pass) with explicit dependencies
-3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture, generating only the roles the project needs, at a depth you choose (`--basic` / `--standard` / `--max`), and capture your own house conventions (`--conventions`)
+3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture, generating only the roles the project needs, at a depth you choose (`--basic` / `--standard` / `--max`), and capture your own house conventions in the same run (offered at the plan prompt — no second command)
 4. **Build** — implement each story using test-driven development (TDD), SOLID principles, and a built-in dev-QA validation loop
 5. **Ship** — commit with conventional commits, open a pull request, and auto-update linked GitHub Issues
 
@@ -116,7 +116,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | --- | --- | --- | --- |
 | `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes | feature description or notes file | `docs/specs/` and/or GitHub issue |
 | `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes | spec file | `docs/architecture/` |
-| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); `--conventions` captures house rules; `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
+| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline at the plan prompt (`--conventions` re-runs it alone); `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
 | `/ck-code:plan` | Create epics, single-dispatch S/M stories, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
 | `/ck-code:build` | Implement a story (TDD + QA); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`) | story file | source code + tests; regenerated index views |
 | `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees, or a whole epic in dependency-ordered waves (`--epic NN`) | — / story IDs / `--epic NN` | parallel results + conflict report |
