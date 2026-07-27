@@ -5,6 +5,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.0.3] — 2026-07-27
+
+### Added
+- **build**: a size-driven effort route (Phase 1.7). A `size: S` story (and Bug-Fix Mode,
+  whose scope is already the recorded Fix Plan) takes the LEAN route — a 2–4 line SOLID note
+  instead of the full template, a 3-task chain instead of 6, and a targeted SOLID spot-check
+  instead of the full compliance review. `size: M` keeps the full ceremony. The route scales
+  ceremony only: the version gate, skill detection, RED-before-GREEN, the `## Unplanned
+  Changes` log, QA delegation with its cap, and the manual-test gate are identical on both
+  routes, and a LEAN story that outgrows its size escalates to FULL. This is the dynamic
+  half of effort control — `build` intentionally declares no `effort:` frontmatter so your
+  `/effort` and `/fast` toggles still apply on top.
+
+### Changed
+- **ship / parallel-build / fix**: added the missing `effort:` frontmatter — `ship` and
+  `parallel-build` run at `medium` (mechanical git/`gh` work and pure orchestration) and
+  `fix` at `high` (root-cause diagnosis). Previously all three inherited the session
+  effort, so a commit-message write could run at `xhigh`. `build` deliberately keeps no
+  `effort:` so the user's `/effort` and `/fast` toggles still scale it per story size.
+- **ship**: the file-set and commit-message confirmations are now one batched
+  `AskUserQuestion` call instead of two sequential prompts, and the PR base branch is read
+  from `gh repo view --json defaultBranchRef` instead of being asked for. A happy-path
+  ship costs 2 user round-trips instead of 4.
+- **build**: the manual-test gate (8.5) and the ship choice (8.7) are asked in one batched
+  call — the ship answer is already known at 8.5, so asking it separately cost a needless
+  round-trip on every story.
+- **build**: the RED/GREEN/REFACTOR phase reports are one line each instead of three
+  heading blocks; a full block is now reserved for off-nominal results (a test passing
+  during RED, a refactor breaking green).
+- **build**: Phase 2 no longer restates the `skill-detection.md` team gate it already
+  reads — it delegates to that procedure and keeps only the two build-specific bindings.
+- **story-implementer**: sets `model: opus` explicitly with a stated rationale, satisfying
+  `subagent-fanout.md`'s "never omit `model:`" rule; the tier is unchanged from the
+  previous implicit inheritance, so there is no quality change.
+
+### Fixed
+- **scripts/ck-index.sh**: `emit_plan`'s awk pass over every story file ran twice per plan
+  (once for `STORIES_INDEX.md`, once for the `FEATURE_INDEX.md` rollup). Both consumers now
+  share one memoized pass, halving the per-plan story scan. Output is byte-identical.
+- **references/skill-detection.md**: the legacy anchor-mapping tables moved to
+  `skill-detection-fallbacks.md`, read only when a project has an expert or guide whose
+  frontmatter declares no `paths:`/`keywords:`. Trims ~1.3 KB from every `build` and `fix`
+  Phase 2 on current projects.
+
 ## [4.0.2] — 2026-07-17
 
 ### Fixed
