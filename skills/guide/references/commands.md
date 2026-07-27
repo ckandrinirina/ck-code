@@ -15,7 +15,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `guide` | `[task description] \| --command [name]` | Recommend the next step, route a task to a skill, or look up syntax | read-only |
 | `spec` | `[description \| notes-file \| slug \| issue-url]` | Draft or adjust a stakeholder-facing spec | `docs/specs/` (+ issue) |
 | `design` | `<spec-file> \| [optimize\|sync]` | Spec → architecture docs; `optimize`/`sync` slim or refresh existing docs | `docs/architecture/` |
-| `team` | `[--basic\|--standard\|--max] [--check\|--regenerate]` | Architecture → expert + guide skills, incl. house conventions | `.claude/skills/` |
+| `team` | `[--basic\|--standard\|--max] [--check\|--regenerate]` | Architecture → expert + guide skills; offers house-conventions capture in the same run | `.claude/skills/` |
 | `plan` | `<spec-file> \| --quick [brief] [--epic NN]` | Architecture → epics, stories, roadmap; `--quick` adds one small story | `tasks/` (+ regenerated views) |
 | `track` | `[status\|next\|progress]` | Progress dashboard / next ready story (regenerates missing views) | read-only |
 | `build` | `[story-path]` | TDD-implement one story end-to-end, or a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter + views |
@@ -66,4 +66,5 @@ read that rather than restating it here. This file is the per-command syntax onl
 `/ck-code:team` derives the expert and guide set **from your architecture** — there is
 no fixed list. Experts are invoked directly (e.g. `/expert-backend`); guides
 (`guide-rust`, `guide-axum`, …) auto-load when their technology is in scope. `team` also
-owns `guide-conventions`, which captures the project's house rules.
+owns `guide-conventions`, which captures the project's house rules — it is offered at the
+plan prompt of a normal run, so `--conventions` is only needed to (re)capture it on its own.

@@ -15,7 +15,7 @@ aware of the project's tech stack, patterns, folder structure, and conventions.
 
 - `experts/<role>/SKILL.md` — expert-persona skills, invoked as `/expert-<role>`
 - `guides/<tech>/SKILL.md` — language/framework/library guides, auto-loaded by Claude
-- `guides/conventions/SKILL.md` — the project's house-rules guide (`--conventions` mode)
+- `guides/conventions/SKILL.md` — the project's house-rules guide (offered inline at [2.4](#24-present-the-plan-and-settle-house-conventions); also `--conventions` alone)
 
 **Auto-loaded by:** `/ck-code:build` and `/ck-code:fix`. Re-run with `--regenerate`
 after architecture or framework changes to refresh context and research — regeneration
@@ -64,9 +64,9 @@ Both axes below are gated by **real detection**: TIER gates *breadth*, detection
 ### Mode flags
 
 - (none) → **GENERATE** the derived skill set (merge-safe: existing skills are handled per [THE MERGE RULE](#the-merge-rule)).
-- `--check` → audit which skills are missing/present **for the resolved tier**, then STOP (no generation).
+- `--check` → audit which skills are missing/present **for the resolved tier**, then STOP (report only — never prompts).
 - `--regenerate` → refresh all team-owned skills with fresh context + research, **merge-safe** (see below).
-- `--conventions` → **CAPTURE** the project's house rules into `guides/conventions` → [PHASE C](#phase-c-conventions-capture).
+- `--conventions` → run **only** the house-rules capture → [PHASE C](#phase-c-conventions-capture). Not needed for a normal run: generation and `--regenerate` already offer it inline at [2.4](#24-present-the-plan-and-settle-house-conventions).
 - `--new expert <slug>` / `--new guide <slug>` → scaffold a custom skill → [PHASE N](#phase-n-new-custom-skill).
 - `--adjust <slug>` → edit one existing generated skill → [PHASE A](#phase-a-adjust).
 
@@ -82,7 +82,8 @@ enforced schemas, scripted retry, resume — when their ≥8 thresholds and the 
 - `--conventions` → [PHASE C](#phase-c-conventions-capture), then STOP.
 - `--new …` → [PHASE N](#phase-n-new-custom-skill), then STOP.
 - `--adjust …` → [PHASE A](#phase-a-adjust), then STOP.
-- otherwise → the generation pipeline (Phase 0.5 → Phase 4).
+- otherwise → the generation pipeline (Phase 0.5 → Phase 4), which settles house conventions
+  inline at [2.4](#24-present-the-plan-and-settle-house-conventions)/[2.5](#25-capture-house-conventions-inline).
 
 ## THE MERGE RULE
 
@@ -288,8 +289,8 @@ owned by the expert whose code uses it — never a reason to mint a new expert (
 guide content comes from Phase 1.6 research; template:
 [`references/guide-templates.md`](references/guide-templates.md).
 
-`guides/conventions` is **not** produced here — it is captured by
-[`--conventions`](#phase-c-conventions-capture) and is a PROTECTED file (THE MERGE RULE).
+`guides/conventions` is **not** derived here — it is captured at
+[2.5](#25-capture-house-conventions-inline) and is a PROTECTED file (THE MERGE RULE).
 
 ### 2.3 Self-describing detection metadata (enables dynamic auto-load)
 
@@ -305,13 +306,28 @@ without knowing its name:
 `expert-qa`, `expert-analyst`, `expert-qa-project` set **no** triggers (always loaded).
 Set `paths`/`keywords` on every other expert and every guide.
 
-### 2.4 Present the plan
+### 2.4 Present the plan (and settle house conventions)
 
 Show every skill to be generated (MISSING-ONLY: only missing ones), the trigger reason and
-output path for each, plus which existing files are PROTECTED and will be preserved. Ask via
-**AskUserQuestion**: **Proceed** / **Adjust** / **Cancel**. On Adjust, let the user
-add/remove/customize, then re-ask. Layout:
+output path for each, plus which existing files are PROTECTED and will be preserved.
+
+Probe `guides/conventions/SKILL.md` — reuse the Phase 0.5 state-table row when 0.5 ran, probe
+directly when it was skipped. Then ask **both** questions in ONE **AskUserQuestion** call:
+
+1. **Plan** — **Proceed** / **Adjust** / **Cancel**.
+2. **House conventions** — options depend on the probe:
+   - absent → **Capture now** (recommended) / **Skip**
+   - present → **Keep as-is** (default) / **Refresh & merge**
+
+On **Adjust**, let the user add/remove/customize, then re-ask question 1 only — carry the
+conventions answer forward. On **Cancel**, STOP; nothing is captured. Layout:
 [examples.md#plan-presentation-phase-24](references/examples.md#plan-presentation-phase-24).
+
+### 2.5 Capture house conventions (inline)
+
+**Capture now** / **Refresh & merge** → run [PHASE C](#phase-c-conventions-capture) here, before
+any file is written, so every prompt is front-loaded and Phase 3 runs unattended.
+**Skip** / **Keep as-is** → straight to Phase 3; record the choice for the 4.2 summary.
 
 ---
 
@@ -344,13 +360,13 @@ Each skill is one independent `SKILL.md`. When ≥4 skills remain to write, disp
 (each fills a frozen template from a resolved research slice). Give each: its resolved
 PROJECT CONTEXT BLOCK, its Phase 1.6 research slice, its template + per-role delta, and the
 GENERATED-marker instruction; it writes exactly one file and nothing else. All prompts
-(0.5, 2.4) and the merge-rule decision stay with the orchestrator, before dispatch; Phase 4.1
-verifies centrally. Below 4, write inline.
+(0.5, 2.4), the 2.5 capture, and the merge-rule decision stay with the orchestrator, before
+dispatch; Phase 4.1 verifies centrally. Below 4, write inline.
 
 **Workflow path (≥8 skills + `--workflow`).** Same gate as 1.6a, using
 [`references/generate.workflow.md`](references/generate.workflow.md) with `args = {projectContext,
 skills}` — `skills` carries only paths the merge rule already cleared. Necessarily a **second,
-separate** `Workflow` call: the 2.4 gate sits between the two and a script can never prompt.
+separate** `Workflow` call: the 2.4/2.5 block sits between the two and a script can never prompt.
 Regenerate every slug in the returned `missing` inline.
 
 ## PHASE 3b: GENERATE GUIDE SKILLS
@@ -380,7 +396,9 @@ planned path it does not show.
 
 Show every generated/refreshed expert and guide (tech focus/version, research source, sample
 prompts), list any PROTECTED files that were preserved, note that guides auto-load while
-experts are invoked directly, and close with: re-run `/ck-code:team --regenerate` after
+experts are invoked directly, and state the 2.5 house-conventions outcome on its own line —
+*captured* / *refreshed* / *preserved unchanged* / *skipped* (only when skipped, point at
+`/ck-code:team --conventions`). Close with: re-run `/ck-code:team --regenerate` after
 architecture changes, framework upgrades, or new tech — regeneration is merge-safe. Layout:
 [examples.md#post-generation-summary-phase-42](references/examples.md#post-generation-summary-phase-42).
 
@@ -392,11 +410,17 @@ architecture changes, framework upgrades, or new tech — regeneration is merge-
 rules — the conventions research cannot supply. This file is PROTECTED: it never carries the
 GENERATED marker, so `--regenerate` never touches it.
 
+**Two entry points, never both in one run.** *Standalone* (`--conventions`) runs steps 1–4 in
+full, then STOPs. *Inline* (from [2.5](#25-capture-house-conventions-inline)) applies the two
+deltas marked below and continues to Phase 3.
+
 1. **Infer from the code first** (so questions are concrete): sample 3–6 representative
    files per primary language (naming case, file/folder layout, import ordering, error
    style, comment density); read lint/format configs (`.eslintrc`, `rustfmt.toml`,
    `.prettierrc`, `ruff.toml`, `.editorconfig`) and any `CONVENTIONS.md`/`STYLE.md`/`CLAUDE.md`;
    note the architectural shape (layering, module boundaries).
+   **Inline delta:** Phase 1.3 already located the source files, test layout, and lint/format
+   configs — open only the sampled files and convention docs not yet read. Never re-scan.
 2. **Confirm and fill gaps with the user.** Present what you inferred as a draft, then have
    the user confirm/correct and add rules the code cannot reveal. Cover: naming; file &
    folder structure; code style/formatting; architectural rules (layering, allowed/forbidden
@@ -409,6 +433,7 @@ GENERATED marker, so `--regenerate` never touches it.
    with a short correct/incorrect example where useful.
 4. Report the rule areas covered; remind the user it auto-loads in `build`/`fix`, is read by
    every expert, and is safe from `--regenerate`.
+   **Inline delta:** skip this report — Phase 4.2 states the outcome once.
 
 ## PHASE N: NEW CUSTOM SKILL
 
@@ -444,9 +469,9 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 
 ## NEXT
 
-- `/ck-code:team --conventions` — capture your project's own code structure, naming, style,
-  and architectural rules into `guide-conventions` (read by every expert).
 - `/ck-code:plan <spec-file>` — break the architecture into epics, stories, and a roadmap.
+- `/ck-code:team --conventions` — **only if 2.4 skipped it** — capture your project's own code
+  structure, naming, style, and architectural rules into `guide-conventions`.
 
 ---
 
@@ -457,6 +482,7 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 - **Regeneration is merge-safe** — refresh only team-owned files, and re-insert every `MANUAL` fence verbatim. Never clobber user edits.
 - **Never mark a `--conventions` or `--new` file GENERATED** — those outputs are permanent.
 - **Never invent conventions** — CAPTURE records only rules the user states or the code demonstrably follows; an empty area stays empty.
+- **Never enter PHASE C twice in one run** — inline (2.5) and standalone (`--conventions`) are mutually exclusive entry points; inline never re-scans what Phase 1.3 already read, and no skill file is written until the 2.4 gate and 2.5 have both resolved.
 - **Never ship a skill whose detection signal is absent**, whatever the tier: tier gates breadth, detection gates relevance.
 - **Never leave a `[bracketed placeholder]`** or an unresolved `[PROJECT CONTEXT BLOCK]` in a generated skill.
 - **Never run a `Workflow` without the full opt-in gate** — tool present, explicit `--workflow` signal, and the phase's threshold met. Missing any one → the `Agent` path. The workflow path is never the only way a phase can execute.

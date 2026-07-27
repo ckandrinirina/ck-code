@@ -79,16 +79,27 @@ Guides cover idiomatic libraries too — not just languages and frameworks.
 - .claude/skills/guides/<slug>/SKILL.md
 
 Preserved (PROTECTED — no GENERATED marker, never overwritten):
-- .claude/skills/guides/conventions/SKILL.md  (from --conventions)
+- .claude/skills/guides/conventions/SKILL.md  (hand-authored house rules)
 
 Skipped — handled as guides under an existing expert, not as standalone experts:
 analytics, i18n, styling, API-contract (guide-over-expert rule). Skipped at this
 tier: expert-performance, expert-docs. Re-run with --max to widen the guide set.
+
+House conventions: FOUND (protected)      ← or: NOT CAPTURED YET
 ```
 
-Ask via **AskUserQuestion**: **Proceed** / **Adjust** / **Cancel**. On Adjust, let the
-user add/remove experts/guides or customize, then re-ask. House conventions are captured
-by `/ck-code:team --conventions` (guide-conventions is not produced here).
+Both questions go in ONE **AskUserQuestion** call; Q2's options depend on the probe:
+
+```
+Q1 — Plan
+  ( ) Proceed          generate the skills above
+  ( ) Adjust           add/remove/customize first
+  ( ) Cancel
+
+Q2 — House conventions            [NOT captured yet]      [already exists — protected]
+  ( ) Capture now  ← recommended    |  ( ) Keep as-is  ← default
+  ( ) Skip                          |  ( ) Refresh & merge
+```
 
 ---
 
@@ -133,6 +144,16 @@ C) Abort
 | [Language] | /guide-[slug] | [ver] | context7 |
 | [Framework] | /guide-[slug] | [ver] | context7 + WebSearch |
 | ... | ... | ... | ... |
+
+### House Conventions
+
+**guide-conventions:** captured — naming, file/folder structure, code style,
+architectural rules. PROTECTED: `--regenerate` never touches it.
+
+<!-- other outcomes, one line, pick the one that happened:
+     refreshed — merged with your existing rules; untouched sections kept
+     preserved unchanged — existing guide left as-is
+     skipped — run `/ck-code:team --conventions` to capture them later  -->
 
 ### How to Use
 
@@ -188,7 +209,7 @@ Based on tech-stack.md, expected skills vs. current state:
 | guide-rust         | .claude/skills/guides/rust/SKILL.md          | ✓ exists (owned)          |
 | guide-react-native | .claude/skills/guides/react-native/SKILL.md  | ✗ missing                 |
 | guide-grpc         | .claude/skills/guides/grpc/SKILL.md          | ? extra (tech not detected) |
-| guide-conventions  | .claude/skills/guides/conventions/SKILL.md   | ● protected (--conventions) |
+| guide-conventions  | .claude/skills/guides/conventions/SKILL.md   | ● protected (house rules)   |
 
 **Summary:** 2 missing, 1 extra, 6 owned, 1 protected.
 
