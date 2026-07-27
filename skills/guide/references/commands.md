@@ -22,7 +22,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `parallel-build` | `[story-ids...] \| --epic NN` | Implement several ready stories (or `bug` fixes) in worktrees | branch per story |
 | `fix` | `[story-path]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
 | `ship` | `[story-path] [--issues]` | Commit, open PR, mirror plan/implementation to GitHub Issues | git + GitHub |
-| `migrate` | — | Upgrade a pre-v4 project to the v4 frontmatter layout, then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `VERSION.md` |
+| `migrate` | — | Upgrade a pre-v4 **or ck-code-lite** project to the v4 frontmatter layout, then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `VERSION.md` |
 | `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
 
 ## Examples
@@ -59,6 +59,9 @@ read that rather than restating it here. This file is the per-command syntax onl
 
 # Upgrading an older project
 /ck-code:migrate    # converts a pre-v4 layout, regenerates indexes, stamps VERSION.md
+
+# Moving up from ck-code-lite
+/ck-code:migrate    # tasks/PLAN.md → epics/stories, docs/ARCHITECTURE.md → docs/architecture/
 ```
 
 ## Generated skills

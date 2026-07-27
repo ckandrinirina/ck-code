@@ -21,7 +21,7 @@ duplicating the workflow graph.
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues
 
-   /ck-code:migrate      (One-shot) Upgrade a pre-v4 project to the v4 layout
+   /ck-code:migrate      (One-shot) Upgrade a pre-v4 or ck-code-lite project to the v4 layout
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
 ```
 
@@ -80,6 +80,7 @@ the last column instead.
 | `fix` | implementing a fix already diagnosed (story at `bug`) | `build` (Bug-Fix Mode) |
 | `ship` | the story isn't implemented yet | `build` / `fix` (first) |
 | `migrate` | generating *new* architecture docs from a spec | `design` |
+| `design` / `plan` / `build` | the project is a ck-code-lite one (`tasks/PLAN.md`) | `migrate` (first — it converts the flat plan into epics/stories) |
 
 When the user is simply unsure which skill to run (no work invoked yet), route them:
 `/ck-code:guide "<task>"` maps a plain-language task to a skill, `/ck-code:guide` (no arg)
@@ -98,7 +99,7 @@ command reference.
 | `parallel-build` | Per-story branches in native worktrees, each with the same story-file outputs as `build`; orchestrator regenerates the index views once on the target branch after merges |
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`); regenerates the views. Auto-invokes `build` for an easy fix; never writes the source fix itself |
 | `ship` | Git commit, PR, GitHub Issue updates; writes the created issue number back to story frontmatter `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
-| `migrate` | Converts a pre-v4 project in place (one commit); stamps `tasks/VERSION.md`; regenerates the views |
+| `migrate` | Converts a pre-v4 project in place (one commit); or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
 | `track`, `explain`, `guide` | Read-only |
 
 ## State conventions (v4)
