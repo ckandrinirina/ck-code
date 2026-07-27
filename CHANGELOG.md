@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.2.0] — 2026-07-27
+
+### Added
+- **migrate**: converts a **ck-code-lite** project to the v4 layout. A new PHASE L turns the
+  flat `tasks/PLAN.md` into epics and stories — proposing a grouping (inferred from task
+  titles and `files:` paths) that you confirm before anything is written — and splits
+  `docs/ARCHITECTURE.md` into `docs/architecture/`. Statuses, acceptance criteria and ticked
+  checkboxes carry over, so finished work stays finished; `blocked` becomes `todo` (v4 has no
+  such status) and every re-triaged task is listed in the report along with the full
+  `T-NN → EE-SS` ID map. Feature docs are written as stubs — `/ck-code:design` fills them.
+  The lite artifacts are marked superseded, never deleted, and the whole conversion lands in
+  one revertable commit. New mapping reference: `skills/migrate/references/lite-migration.md`.
+
+### Fixed
+- **version-gate**: a ck-code-lite project tripped none of the pre-v4 markers, so the gate
+  stamped it `layout: v4` and every skill then planned straight past a `tasks/PLAN.md` it had
+  never read. A `LITE` marker now blocks and routes it to `/ck-code:migrate`, which renames
+  `PLAN.md` on its way out so the marker cannot re-fire.
+
 ## [4.1.2] — 2026-07-27
 
 ### Fixed
