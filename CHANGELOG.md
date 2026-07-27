@@ -5,6 +5,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.1.0] — 2026-07-27
+
+### Added
+- **team**: an opt-in `--workflow` flag that runs the two largest fan-outs — Phase 1.6a
+  per-technology research and Phase 3.1a per-skill generation — as scripted `Workflow` runs
+  instead of a one-message `Agent` dispatch. This buys three things the `Agent` path cannot
+  give: schemas enforced at the tool layer instead of hoped for in prose, a scripted
+  retry-until-dry loop over units that came back empty, and `resumeFromRunId` so a run that
+  dies at skill 7 of 12 replays the cached prefix instead of re-paying it. Scripts live as
+  reviewable markdown at `skills/team/references/{research,generate}.workflow.md`.
+- **references/dynamic-workflows.md**: the shared contract for this, sibling to
+  `subagent-fanout.md`. `Workflow` is positioned strictly as an execution *backend* for a
+  fan-out `subagent-fanout.md` already sanctions — never a new fan-out, since a single message
+  of `Agent` calls is already concurrent. Covers the three-part opt-in gate (tool present +
+  explicit user signal + a threshold above the skill's inline one), the hint-line-not-a-prompt
+  rule that makes a silent 15-agent fan-out impossible, the mandatory inline fallback, the
+  script sandbox rules, and two verified environment facts: `$CLAUDE_PLUGIN_ROOT` is **empty**
+  inside a workflow subagent, and `WebSearch`/`mcp__*` tools are deferred there and must be
+  loaded with `ToolSearch` before use.
+
+### Changed
+- **team**: Phase 4.1's `ls` is now explicitly the proof of what was written. A resumed
+  workflow replays cached results *without* re-writing, so a returned manifest can claim a
+  file that no longer exists on disk — measured, not assumed.
+
 ## [4.0.3] — 2026-07-27
 
 ### Added
