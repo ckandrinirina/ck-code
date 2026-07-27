@@ -226,7 +226,7 @@ Then generate:
 | 3.5  | `folder-structure.md`                                                        | folder-structure.md                          |
 | 3.6  | `tech-stack.md`                                                              | tech-stack.md                                |
 | 3.7  | `_shared.md` (cross-cutting infra)                                           | \_shared.md                                  |
-| 3.8  | `features/<slug>/index.md` — **one per feature** (components/API/data/flows) | features/&lt;slug&gt;/index.md (Feature Doc) |
+| 3.8  | `features/<slug>/index.md` — **one per feature**; take the [3.8a](#38a-feature-doc-dispatch-decision-new-project-mode--decide-before-writing-step-38) dispatch decision **first** | features/&lt;slug&gt;/index.md (Feature Doc) |
 | 3.9  | `configuration.md`                                                           | configuration.md                             |
 | 3.10 | `dev-guide.md`                                                               | dev-guide.md                                 |
 
@@ -238,17 +238,23 @@ doc) only when **two or more** features rely on it.
 **folder-structure.md note:** see the **Important** note under its template — spec-defined
 structure is the base; otherwise propose one from the tech stack.
 
-### 3.8a (New Project Mode, ≥4 features) Parallel feature-doc fan-out
+### 3.8a Feature-doc dispatch decision (New Project Mode — decide before writing step 3.8)
 
 Each `features/<slug>/index.md` is self-contained, so per-feature docs parallelize. On a New
-Project run with **≥4 independent features**, author the globals AND `_shared.md`
-(steps 3.3–3.7) **first** so `_shared.md` is frozen, then dispatch one `general-purpose`
-Agent per feature following [../../references/subagent-fanout.md](../../references/subagent-fanout.md)
-(artifact variant, `model: sonnet`). Pass each agent the frozen `_shared.md`, its `<slug>`,
-its spec slice, and `references/architecture-templates.md` (used verbatim); it writes ONLY
-its own `features/<slug>/` directory, with frontmatter `slug` + `design: pending`. The
-orchestrator writes the shared `README.md` index rows once post-merge (never in a subagent).
-Feature Mode and specs with <4 features stay sequential.
+Project run, author the globals AND `_shared.md` (steps 3.3–3.7) **first** so `_shared.md` is
+frozen, then count the feature list and announce the branch **before writing any feature
+doc** (`Fan-out: 5 features ≥ 3 → dispatching 5 agents.`):
+
+- **≥3 independent features** → dispatch one `general-purpose` Agent per feature following
+  [../../references/subagent-fanout.md](../../references/subagent-fanout.md) (artifact
+  variant, `model: sonnet`), all in a single message. Pass each agent the frozen
+  `_shared.md`, its `<slug>`, its spec slice, and `references/architecture-templates.md`
+  (used verbatim); it writes ONLY its own `features/<slug>/` directory, with frontmatter
+  `slug` + `design: pending`.
+- **<3 features** → write them inline; say so in one line.
+
+The orchestrator writes the shared `README.md` index rows once post-merge (never in a
+subagent). Feature Mode extends one doc, so it always stays sequential.
 
 ### 3.11 Regenerate the feature index
 
@@ -286,11 +292,12 @@ content, only restructures and reports. Dedup rules and the token report format 
 1. **Detect state (read-only):** Glob `docs/architecture/*.md` and
    `docs/architecture/features/*/index.md`. If `docs/architecture/` does not exist, tell
    the user to run `/ck-code:design` first and stop.
-2. **Measure** — report a per-doc token estimate (playbook format) and a total.
-   **Fan-out (≥8 feature docs):** dispatch one **read-only** `general-purpose` Agent per
+2. **Measure** — report a per-doc token estimate (playbook format) and a total. Count the
+   feature docs from step 1 and announce the branch **before measuring the first one**:
+   at **≥3 feature docs**, dispatch one **read-only** `general-purpose` Agent per
    `features/<slug>/index.md` (investigation variant, `model: haiku`) per
    [../../references/subagent-fanout.md](../../references/subagent-fanout.md); each returns
-   `{token estimate, candidate shared sections}` and writes nothing. Merge here. Below ~8
+   `{token estimate, candidate shared sections}` and writes nothing. Merge here. Below 3
    docs, measure inline. All writes stay sequential in the orchestrator.
 3. **Dedup** — find content that appears in 2+ feature docs (shared components, base tables,
    common middleware). Move one canonical copy to `_shared.md` under the right heading and
@@ -355,6 +362,9 @@ for this project."
 ## RULES
 
 - **Never modify the original specification file** — it is read-only input.
+- **Never write the feature docs inline when ≥3 features are in scope** (3.8a) — count and
+  announce the dispatch decision before the first doc, never after the last. Same rule for
+  the `optimize` measurement pass (PHASE O step 2).
 - **Never invent information** — mark anything undetermined `[TO BE DEFINED]`; `sync`
   scaffolds stubs only, it does not author technical detail.
 - **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v4 has

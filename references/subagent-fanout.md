@@ -14,12 +14,25 @@ opt-in only, and never a new fan-out: see [`dynamic-workflows.md`](dynamic-workf
 Fan out only when **all** of these hold:
 
 - **Independent** — units do not read each other's in-progress output; order doesn't matter.
-- **Numerous** — enough units that parallel wall-clock beats dispatch overhead (each skill
-  sets its own threshold; below it, stay sequential).
+- **Numerous** — at or above the skill's threshold. **The default threshold is 3 units**;
+  a skill states its own only when it differs. Below it, stay sequential.
 - **Non-interactive** — the unit's work needs no user prompt (subagents cannot ask the user).
 
 Do **not** fan out sequential chains (TDD red→green→refactor), stateful/ordered writes
 (git, GitHub issue links, numbered epics), cheap reads, or any step that prompts the user.
+
+## The decision-first rule (non-negotiable)
+
+**The dispatch decision is made BEFORE the first unit is produced, never after.** A step that
+produces N independent units opens by counting them and branching — dispatch or inline — and
+only then does any work. A fan-out described as a follow-on sub-step to an inline "write each
+one" instruction is dead on arrival: read top to bottom, everything is already written by the
+time the fan-out is reached, and it applies to zero remaining units.
+
+So write the step as **count → branch → produce**, and never as **produce → (also, you could
+have parallelized)**. Any skill hosting a fan-out states it in that order and names the
+fan-out in its HARD GATES or RULES, so a silent skip is a gate failure rather than an
+invisible one.
 
 ## The two variants
 
@@ -81,7 +94,8 @@ exception — they are not authored up front; the orchestrator regenerates them 
 
 ## Dispatch shape
 
-1. **Gate** — check the skill's threshold (unit count, input size, mode). Below it → inline, no fan-out.
+1. **Gate** — count the units and check the skill's threshold (default 3; also unit size and
+   mode). Decide here, before producing anything. Below the threshold → inline, no fan-out.
 2. **Freeze shared state** — author globals/`_shared.md`; finish user prompts. (Do NOT
    pre-author generated indexes — those are regenerated once at convergence.)
 3. **Dispatch** — one `Agent` call per unit, in a single message so they run concurrently.
@@ -98,9 +112,17 @@ exception — they are not authored up front; the orchestrator regenerates them 
 
 ## Announce + report
 
-Print a one-line-per-unit launch announcement (informational, not a second gate — the
+**Announcing the decision is mandatory, in both directions.** Print one line stating the
+count, the threshold, and the branch taken — before any unit is produced:
+
+```
+Fan-out: 6 units ≥ 3 → dispatching 6 agents.      # or
+Fan-out: 2 units < 3 → writing inline.
+```
+
+Then a one-line-per-unit launch announcement (informational, not a second gate — the
 decision already happened at the skill's own confirmation step) and a result roster on
 collection, mirroring
 [`parallel-build/references/agent-prompts.md`](../skills/parallel-build/references/agent-prompts.md).
-If fan-out was skipped because the input was below threshold, say so — never silently
-imply the whole set was parallelized.
+Never silently imply the whole set was parallelized, and never let a below-threshold run
+pass without saying so — an unannounced decision is indistinguishable from a forgotten one.

@@ -29,6 +29,8 @@ issues first).
 ## HARD GATES
 
 - [Version gate](../../references/version-gate.md) — inlined in Phase 0. BLOCK halts the skill.
+- **Fan-out decision announced before producing units** (2.5, 5.4) — count, compare to the
+  threshold of 3, print the branch taken. Deciding after the units exist is a gate failure.
 
 ## ROUTING CHECK (do first)
 
@@ -148,15 +150,19 @@ Use extended thinking (ultrathink) for **genuine** ambiguities only — where th
 - **FEATURES & REQUIREMENTS** — functional (explicit + implied), non-functional (perf, security, latency), API surface.
 - **PHASES / ROADMAP** (if specified) — phased rollout, MVP vs. future scope, priorities.
 
-### 2.5 (Optional) parallel domain analysis (fan-out)
+### 2.5 Parallel domain analysis (fan-out decision — make it before analysing)
 
-If 2.4 surfaced **≥4 genuinely independent components** and the spec is large, dispatch
-one **read-only** `general-purpose` Agent per component following the investigation
-variant in [`subagent-fanout.md`](../../references/subagent-fanout.md). Each returns an
-analysis brief (features, requirements, tech stack, intra-domain deps) — no writes to
-`tasks/`. Fix PROJECT IDENTITY (2.4) before dispatch so slugs stay consistent, then
-merge the briefs here and do **all** cross-domain dependency mapping yourself in 2.7.
-Skip when components are few, tightly coupled, or the spec is small.
+Count the genuinely independent components 2.4 surfaced, then announce the branch:
+
+- **≥3 independent components** → fix PROJECT IDENTITY (2.4) first so slugs stay
+  consistent, then dispatch one **read-only** `general-purpose` Agent per component
+  following the investigation variant in
+  [`subagent-fanout.md`](../../references/subagent-fanout.md) (`model: haiku`). Each
+  returns an analysis brief (features, requirements, tech stack, intra-domain deps) and
+  writes nothing to `tasks/`. Merge the briefs here.
+- **<3, or components tightly coupled** → analyse inline; say so in one line.
+
+Either way, **all** cross-domain dependency mapping stays yours in 2.7 — never a subagent's.
 
 ### 2.6 Research tech stack (when beneficial)
 
@@ -306,23 +312,27 @@ generated into `STORIES_INDEX.md`.
 
 ### 5.4 Story files (per story) — with frontmatter + Implementation Tasks
 
-Write `epics/NN_<slug>/stories/SS_<story-slug>.md` from
-[templates.md#story-template](references/templates.md#story-template). Frontmatter is the
-source of truth: `id`, `title`, `epic`, `status: todo`, `size` (`S`/`M`), `blocked_by`
+Each story file is one independent artifact, fully decided in Phase 3, so **count the
+confirmed stories and pick the branch before writing the first one** — announce it in one
+line (`Fan-out: 6 stories ≥ 3 → dispatching 6 agents.`):
+
+- **≥3 stories** → dispatch one `general-purpose` Agent per story per the artifact variant
+  in [`subagent-fanout.md`](../../references/subagent-fanout.md) (`model: sonnet`), all in
+  a single message. Give each: its full Phase 3 breakdown (title, size, criteria, tasks,
+  `blocked_by`, `files`), the template reference, and its exact output path; it writes
+  exactly one `stories/SS_<slug>.md` and nothing else. On collection verify every story
+  landed, rewriting any missing unit inline.
+- **<3 stories** → write them inline.
+
+The content is identical on both branches: `epics/NN_<slug>/stories/SS_<story-slug>.md`
+from [templates.md#story-template](references/templates.md#story-template). Frontmatter is
+the source of truth: `id`, `title`, `epic`, `status: todo`, `size` (`S`/`M`), `blocked_by`
 (inline `[…]` or `[]`), `files` (inline `[…]` or `[]`), `issue:` empty, `prior_status:`
 empty. Body keeps `## Description`, `## Acceptance Criteria`, `## Implementation Tasks`,
 `## Technical Notes`.
 
-### 5.4b Parallel story-file generation (fan-out — ≥8 stories)
-
-Each story file is one independent artifact, fully decided in Phase 3. When the confirmed
-plan has **≥8 stories**, dispatch one `general-purpose` Agent per story per the artifact
-variant in [`subagent-fanout.md`](../../references/subagent-fanout.md) (`model: sonnet`).
-Give each: its full Phase 3 breakdown (title, size, criteria, tasks, `blocked_by`,
-`files`), the template reference, and its exact output path; it writes exactly one
-`stories/SS_<slug>.md`. The orchestrator writes the overview and every `EPIC.md`, runs
-5.5–5.7, and on collection verifies every story landed (rewriting any missing unit
-inline). Below 8 stories, write inline.
+The overview (5.2) and every `EPIC.md` (5.3) are orchestrator-owned and already written
+before dispatch; 5.5–5.7 also stay with the orchestrator, after collection.
 
 ### 5.5 Flip design flag (pending → planned)
 
@@ -436,7 +446,8 @@ independent stories is a natural fit for `/ck-code:parallel-build`.
 - **Never write an `EPIC.md` `## Stories` table** — the story list is generated.
 - **Never leave a planned feature `design: pending`** — flip it to `planned` (5.5).
 - **Never create a new epic in `--quick` mode** — redirect to full plan when no epic exists.
-- **Never delegate shared writes to a subagent** (5.4b) — overview, epics, indexes, roadmap are orchestrator-owned; subagents write only their own story file.
+- **Never write story files inline when ≥3 are confirmed** (5.4) — the dispatch decision happens before the first file, never after the last.
+- **Never delegate shared writes to a subagent** (5.4) — overview, epics, indexes, roadmap are orchestrator-owned; subagents write only their own story file.
 - **Never hardcode** project names, technologies, or paths — derive everything from the spec.
 - **Always cover every functional requirement** with at least one story; flag vague ones for clarification.
 - **Always keep frontmatter generator-readable** — one `key: value` per line, inline `[…]` lists, no block scalars.

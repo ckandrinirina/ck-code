@@ -24,6 +24,8 @@ is **merge-safe** (see [THE MERGE RULE](#the-merge-rule)); it never clobbers you
 ## HARD GATES
 
 - **PHASE 0 version gate** — inline below; BLOCK halts the skill.
+- **Fan-out decision announced before producing units** (1.6a, 3.1) — count, compare to the
+  threshold of 3, print the branch taken. Deciding after the units exist is a gate failure.
 
 ## PHASE 0: VERSION GATE
 
@@ -73,7 +75,7 @@ Both axes below are gated by **real detection**: TIER gates *breadth*, detection
 A depth flag combines with `--check`/`--regenerate` (e.g. `--max --check`). `--conventions`,
 `--new`, and `--adjust` route to their own phase and ignore the depth flag.
 
-`--workflow` is orthogonal (opt-in): it runs the Phase 1.6a and 3.1a fan-outs as `Workflow` scripts —
+`--workflow` is orthogonal (opt-in): it runs the Phase 1.6a and 3.1 fan-outs as `Workflow` scripts —
 enforced schemas, scripted retry, resume — when their ≥8 thresholds and the gate in
 [`dynamic-workflows.md`](../../references/dynamic-workflows.md) are met; otherwise ignored.
 
@@ -132,7 +134,7 @@ in ALL mode. Otherwise:
    - **C) Abort** → STOP.
 
 **MISSING-ONLY mode** carries through Phases 1–3: Phase 1.6 researches only the tech the
-missing skills need; Phase 2.4 plans only missing skills; Phase 3/3b generates only those.
+missing skills need; Phase 2.4 plans only missing skills; Phase 3 generates only those.
 
 ---
 
@@ -184,10 +186,11 @@ never padded basics. Full procedure: [references/context7-research.md](reference
 4. Compile into a "Best Practices Knowledge" block feeding both experts (current advice)
    and guides (their content).
 
-### 1.6a Parallel research (fan-out — when ≥4 technologies)
+### 1.6a Parallel research (fan-out decision — make it before researching anything)
 
-Each technology's research is independent, read-only, non-interactive. When step 1 lists
-**≥4 technologies** (MISSING-ONLY: count only those the missing skills need), dispatch one
+Each technology's research is independent, read-only, non-interactive. Count the step-1
+technologies (MISSING-ONLY: only those the missing skills need) and announce the branch
+before fetching a single doc. Below 3, research inline and say so. At **≥3**, dispatch one
 Agent per technology per the **investigation** variant in
 [../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: haiku`
 (escalate one unit to `sonnet` only when its guidance needs a trade-off the docs fetch
@@ -201,7 +204,7 @@ performance[], error_handling[], testing[], version_notes[], sources[]
 
 The orchestrator merges the briefs into the single "Best Practices Knowledge" block (step
 4), keeps verbose doc output out of its own context, and re-runs any failed/empty unit
-inline before Phase 2. Below 4 technologies, research inline.
+inline before Phase 2.
 
 **Workflow path (≥8 technologies + `--workflow`).** When the gate in
 [`dynamic-workflows.md`](../../references/dynamic-workflows.md) passes, run this fan-out with the
@@ -333,13 +336,42 @@ any file is written, so every prompt is front-loaded and Phase 3 runs unattended
 
 ## PHASE 3: GENERATE ALL SKILLS
 
+Experts and guides are generated in **one** pass — both are independent `SKILL.md` files, so
+they share the single dispatch decision at 3.1.
+
+### 3.0 Resolve the merge rule (orchestrator, before any write)
+
 Apply [THE MERGE RULE](#the-merge-rule) to **every** target path — absent files are written,
 PROTECTED files are preserved, team-owned files are refreshed only under `--regenerate`
-(preserving MANUAL fences). MISSING-ONLY writes only the planned missing skills.
+(preserving MANUAL fences). MISSING-ONLY writes only the planned missing skills. What
+survives this filter is the **write set**: every expert from 2.1 plus every guide from 2.2
+that the rule cleared.
 
-### 3.1 Generate each expert
+### 3.1 Dispatch decision (count the write set BEFORE writing anything)
 
-For every expert in the Phase 2 set, write `experts/<role>/SKILL.md` from the
+Count the write set from 3.0 and announce the branch in one line
+(`Fan-out: 9 skills ≥ 3 → dispatching 9 agents.`):
+
+- **≥3 skills** → dispatch one `general-purpose` Agent per skill per the **artifact** variant
+  in [../../references/subagent-fanout.md](../../references/subagent-fanout.md) —
+  `model: sonnet` (each fills a frozen template from an already-resolved research slice) —
+  experts and guides together, all in a single message. Give each: its resolved PROJECT
+  CONTEXT BLOCK, its Phase 1.6 research slice, its template (3.2 for an expert, 3.3 for a
+  guide), and the GENERATED-marker instruction; it writes exactly one file and nothing else.
+- **<3 skills** → write them inline, following the same 3.2/3.3 contracts.
+
+All prompts (0.5, 2.4), the 2.5 capture, and the 3.0 merge-rule resolution stay with the
+orchestrator and are complete before dispatch; Phase 4.1 verifies centrally.
+
+**Workflow path (≥8 skills + `--workflow`).** Same gate as 1.6a, using
+[`references/generate.workflow.md`](references/generate.workflow.md) with `args = {projectContext,
+skills}` — `skills` carries only paths the merge rule already cleared. Necessarily a **second,
+separate** `Workflow` call: the 2.4/2.5 block sits between the two and a script can never prompt.
+Regenerate every slug in the returned `missing` inline.
+
+### 3.2 Expert content contract
+
+Write `experts/<role>/SKILL.md` from the
 [base template](references/expert-templates.md#the-base-expert-template) filled with the
 role's [per-role delta](references/expert-templates.md#per-role-deltas) (anchor) or from
 project context (derived). For each file:
@@ -352,26 +384,9 @@ project context (derived). For each file:
 4. Reference `/guide-conventions` in the standards section so house rules override defaults.
 5. Emit the GENERATED marker as the first body line (THE MERGE RULE).
 
-### 3.1a Parallel generation (fan-out — when ≥4 skills remain)
+### 3.3 Guide content contract
 
-Each skill is one independent `SKILL.md`. When ≥4 skills remain to write, dispatch one
-`general-purpose` Agent per skill per the **artifact** variant in
-[../../references/subagent-fanout.md](../../references/subagent-fanout.md) — `model: sonnet`
-(each fills a frozen template from a resolved research slice). Give each: its resolved
-PROJECT CONTEXT BLOCK, its Phase 1.6 research slice, its template + per-role delta, and the
-GENERATED-marker instruction; it writes exactly one file and nothing else. All prompts
-(0.5, 2.4), the 2.5 capture, and the merge-rule decision stay with the orchestrator, before
-dispatch; Phase 4.1 verifies centrally. Below 4, write inline.
-
-**Workflow path (≥8 skills + `--workflow`).** Same gate as 1.6a, using
-[`references/generate.workflow.md`](references/generate.workflow.md) with `args = {projectContext,
-skills}` — `skills` carries only paths the merge rule already cleared. Necessarily a **second,
-separate** `Workflow` call: the 2.4/2.5 block sits between the two and a script can never prompt.
-Regenerate every slug in the returned `missing` inline.
-
-## PHASE 3b: GENERATE GUIDE SKILLS
-
-For each guide, write `guides/<tech>/SKILL.md` from
+Write `guides/<tech>/SKILL.md` from
 [references/guide-templates.md](references/guide-templates.md). Every section's content MUST
 come from Phase 1.6 research (context7 or WebSearch) — if a section has no research data, run
 WebSearch to fill it before writing. Resolve every placeholder, inject the real project
@@ -478,6 +493,7 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 ## RULES
 
 - **Never generate a skill without Phase 1.6 research** — no stale or generic knowledge.
+- **Never write the skill set inline when the 3.0 write set holds ≥3 files** — experts and guides share one dispatch decision (3.1), taken before the first file is written, never after the experts are already done.
 - **Never overwrite a PROTECTED file** — one lacking the team GENERATED marker (`guide-conventions`, every `--new` skill, any file the user un-marked) is off-limits, even on `--regenerate`.
 - **Regeneration is merge-safe** — refresh only team-owned files, and re-insert every `MANUAL` fence verbatim. Never clobber user edits.
 - **Never mark a `--conventions` or `--new` file GENERATED** — those outputs are permanent.

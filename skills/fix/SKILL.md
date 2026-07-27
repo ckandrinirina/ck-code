@@ -151,9 +151,9 @@ orchestrator. Do the steps below inline **only** when that subagent_type is unre
 
 Identify likely source files (Grep + the story's `files` list), read source + existing tests, trace the execution path that triggers the bug.
 
-### 4.1.5 Parallel hypothesis investigation (fan-out — verdict B/D or ≥2 competing causes only)
+### 4.1.5 Parallel hypothesis investigation (fan-out decision — take it before tracing)
 
-When diagnosis spans multiple subsystems (Phase 2.5 verdict **B**/MULTI-STORY or **D**/MIXED) or Phase 3.2 produced **≥2 plausible competing root causes**, dispatch one **read-only** investigator per hypothesis (cap 2–4) following the investigation variant in [subagent-fanout.md](../../references/subagent-fanout.md) — `model: haiku`, since tracing a suspect path is mechanical. Each agent traces ONE suspect path and returns `{hypothesis, confidence, file:line evidence, confirm/refute}` — no edits. The orchestrator converges the reports to the **single** highest-confidence root cause before 4.2 (never carry two forward). Skip entirely for verdict A or any obvious single-cause bug — go straight to 4.2. **A leftover competing root cause is a complexity signal** — it forces the manual hand-off at Phase 6.2.
+Decide and announce this branch in one line before tracing any suspect path. When diagnosis spans multiple subsystems (Phase 2.5 verdict **B**/MULTI-STORY or **D**/MIXED) or Phase 3.2 produced **≥2 plausible competing root causes**, dispatch one **read-only** investigator per hypothesis (cap 2–4) following the investigation variant in [subagent-fanout.md](../../references/subagent-fanout.md) — `model: haiku`, since tracing a suspect path is mechanical. Each agent traces ONE suspect path and returns `{hypothesis, confidence, file:line evidence, confirm/refute}` — no edits. The orchestrator converges the reports to the **single** highest-confidence root cause before 4.2 (never carry two forward). Skip entirely for verdict A or any obvious single-cause bug — go straight to 4.2. **A leftover competing root cause is a complexity signal** — it forces the manual hand-off at Phase 6.2.
 
 ### 4.2 Reproduce the Bug — write a FAILING test (the fix→build contract)
 

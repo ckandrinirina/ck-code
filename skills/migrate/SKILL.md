@@ -47,7 +47,16 @@ Report the detected source layout before converting.
 ## PHASE 2: CONVERT STORIES
 
 For every `tasks/*/epics/NN_<slug>/stories/*.md`, prepend v4 frontmatter derived from
-the v3 prose, then leave the body intact. Use the mapping in
+the v3 prose, then leave the body intact.
+
+**Dispatch decision first.** Count the story files and announce the branch **before
+converting any of them**: at **≥3 epics' worth of stories**, fan out per the
+[subagent-fanout contract](../../references/subagent-fanout.md) — one investigation agent
+per epic (`model: haiku`) returns each story's extracted frontmatter as structured data,
+and the **orchestrator** writes every file. Any story an agent cannot parse comes back in
+an `unparsed` list and is handled inline. Below that, convert inline and say so.
+
+Use the mapping in
 [references/migration-map.md](references/migration-map.md#story-fields). Key rules:
 
 - `status`: `TODO`→`todo`, `IN PROGRESS`→`in-progress`, `DONE`→`done`, `SKIP`→`skip`,
@@ -59,12 +68,6 @@ the v3 prose, then leave the body intact. Use the mapping in
 - `issue`: a `#NNN` reference found in the story, else empty. When `gh` is available and
   the story has no `#NNN`, best-effort match a GitHub issue by the `[EE-SS]` title tag
   and record its number (this replaces v3's title-substring rediscovery permanently).
-
-**Large projects (≥8 stories):** fan out per the
-[subagent-fanout contract](../../references/subagent-fanout.md) — one investigation
-agent per epic returns each story's extracted frontmatter as structured data; the
-orchestrator writes the files. Any story the agent cannot parse is returned in an
-`unparsed` list and handled inline.
 
 Prepend the frontmatter block; never rewrite the body prose (acceptance criteria,
 notes, implementation summaries stay as-is).

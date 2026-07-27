@@ -1,4 +1,4 @@
-# Phase 3.1a/3b generation workflow script
+# Phase 3.1 generation workflow script
 
 Passed verbatim as the `Workflow` tool's inline `script`, with
 `args = { projectContext: "<resolved Phase 1.5 block>", skills: [{ slug, path, kind, template, research, triggers }, …] }`.
@@ -13,7 +13,7 @@ cached results without re-writing, so a manifest entry can outlive its file.
 ```js
 export const meta = {
   name: 'team-generate',
-  description: 'Per-skill SKILL.md generation for /ck-code:team Phase 3.1a and 3b',
+  description: 'Per-skill SKILL.md generation for /ck-code:team Phase 3.1',
   phases: [{ title: 'Generate', detail: 'one agent per SKILL.md' }],
 }
 
