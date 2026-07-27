@@ -3,6 +3,7 @@ name: fix
 description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Argument is an optional story-file path.
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
+effort: high
 ---
 
 # Fix — Bug Triage & Routing Orchestrator

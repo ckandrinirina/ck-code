@@ -56,16 +56,11 @@ tell the user and stop.
 
 ### 1.2 If No Story Path (Interactive — index-driven)
 
-**1.2.0 Feature gate (read `tasks/FEATURE_INDEX.md` FIRST).** Before any story index,
-Read `tasks/FEATURE_INDEX.md` and apply the feature-selection gate in
-[`feature-index.md`](../../references/feature-index.md): regenerate it with
-`"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` if missing or lacking the `GENERATED` header;
-compute the unfinished set (`Status` ≠ `DONE`); **0** → all features done, suggest
-`/ck-code:plan`, stop; **1** → auto-select and announce it; **2** → fall through (no
-prompt); **> 2** → `AskUserQuestion` "Which feature do you want to build?" (single-select,
-one option per unfinished feature; each row's `Docs` column routes its feature doc). The
-chosen feature's `Plan` + `NN` scope the story index read below. Interactive mode only —
-an explicit `$ARGUMENTS` path skips this.
+**1.2.0 Feature gate (read `tasks/FEATURE_INDEX.md` FIRST).** Before any story index, run
+the feature-selection gate in [`feature-index.md`](../../references/feature-index.md) — it
+owns the regenerate condition, the unfinished-set rule, and the 0/1/2/>2 branches; do not
+restate them here. The chosen feature's `Plan` + `NN` scope the story index read below.
+Interactive mode only — an explicit `$ARGUMENTS` path skips this.
 
 1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN`.
    Regenerate first if it is missing or lacks the `GENERATED` header
@@ -152,6 +147,25 @@ That is the whole mutation — the generator recomputes every view from frontmat
 is no index cell, `EPIC.md`, or rollup to touch, and no per-worktree special-casing (a
 `parallel-build` agent edits only its own frontmatter; the orchestrator regenerates on merge).
 
+### 1.7 Effort Route (from frontmatter `size:`)
+
+Scale the *ceremony* to the story, never the guarantees. Read `size:` and fix the route now
+— it governs Phases 3.3, 3.4, and 6.1 only:
+
+| `size:` | Route | 3.3 SOLID | 3.4 Subtasks | 6.1 SOLID review |
+|---|---|---|---|---|
+| `S` | **LEAN** | 2–4 line note, only the principles actually in play | 3-task chain: tests → implement → QA | targeted spot-check of the principles named in 3.3 |
+| `M` (or absent) | **FULL** | full SOLID Analysis template | full 6-task breakdown | full SOLID Compliance Check template |
+
+**Bug-Fix Mode always uses LEAN** — its scope is the recorded Fix Plan, which is already
+narrow. Announce the route in one line (`Route: LEAN (size S)`) so the user can override by
+saying so; an explicit user request for a full pass wins over the table.
+
+**The route NEVER skips:** the version gate (0), skill detection + report (2), the
+plan+branch gate (3.5), failing-tests-before-implementation (4), the `## Unplanned Changes`
+log (5.2/6.2), QA delegation and its cap (7), or the manual-test gate (8.5). A LEAN story
+that grows past its `size:` during Phase 5 switches to FULL for 6.1 — say so when it happens.
+
 ---
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING (BLOCKING GATE)
@@ -164,27 +178,19 @@ all three hold: (1) the `ls` of project skills ran, (2) every detected-and-prese
 re-run — a non-empty project must never reach Phase 3 with zero skills loaded, else Phases
 5/6 "follow loaded skills" silently become no-ops.
 
-**Team gate (no project skills):** if `.claude/skills/experts/` and `.claude/skills/guides/`
-are both absent, `/ck-code:team` has never run — implementing now yields generic code with
-no project experts, guides, or QA rules. Warn and ask (`AskUserQuestion`) per
-[`skill-detection.md`](../../references/skill-detection.md) § 4a.1: **RUN TEAM FIRST**
-(recommended) → `Skill({ skill: "ck-code:team" })`, then redo this phase with the generated
-skills; **CONTINUE WITHOUT SKILLS** → read `docs/architecture/folder-structure.md` + the
-story's feature doc (+ `_shared.md` when cross-cutting), show the "Skills loaded" block as
-empty, and proceed to Phase 3. Never proceed without asking.
+Follow [`skill-detection.md`](../../references/skill-detection.md) end to end — it owns this
+phase: the arch-doc reads (Step 1), manifest-driven detection (Steps 2–3), the `ls` +
+**team gate** for a project with no skills (Step 4a / 4a.1 — `RUN TEAM FIRST` invokes
+`Skill({ skill: "ck-code:team" })`, then redo this phase), the `Read`-only loading (Step 4b),
+and the mandatory "Skills loaded" report (Step 5). Do not restate its gates here; run them.
 
-Match skills against the **selected story's `files:` set** already in context — prefer narrow
-`paths` matches over broad `keywords` matches so an unrelated body is never `Read` on a keyword
-coincidence (every body loaded here stays resident through Phases 5–6).
+Two build-specific bindings on top of that procedure:
 
-Otherwise, follow [`skill-detection.md`](../../references/skill-detection.md): read the
-story's **feature doc** (`folder-structure.md` + the feature doc named in the
-`FEATURE_INDEX` `Docs` column, + `_shared.md` when cross-cutting; if the doc is missing, fall
-back and suggest `/ck-code:design`), detect required experts and guides, load each
-(filesystem check → warn on truly-missing, template in
-[output-blocks.md](references/output-blocks.md)), and **report the loaded experts/guides to
-the user before Phase 3 — never load skills silently**. Batch all arch-doc reads and skill
-loads into parallel tool-call messages.
+- **Match against the selected story's `files:` set** already in context — prefer narrow
+  `paths` matches over broad `keywords` matches so an unrelated body is never `Read` on a
+  keyword coincidence (every body loaded here stays resident through Phases 5–6).
+- **Batch every arch-doc read and skill load into parallel tool-call messages** — sequential
+  reads are the largest avoidable latency in this phase.
 
 ---
 
@@ -204,19 +210,22 @@ things already clear in the story or architecture docs.
 
 ### 3.3 Design with SOLID
 
-Plan the implementation applying each SOLID principle (S, O, L, I, D). Fill out the SOLID
-Analysis template in [tdd-walkthrough.md](references/tdd-walkthrough.md): single
-responsibility per file/class, open/closed extension points, Liskov-substitutable new types,
-focused interfaces, dependency inversion via injection. Every principle addressed before
-moving on.
+Plan the implementation applying SOLID. Per the 1.7 route: **FULL** fills the SOLID Analysis
+template in [tdd-walkthrough.md](references/tdd-walkthrough.md) — single responsibility per
+file/class, open/closed extension points, Liskov-substitutable new types, focused interfaces,
+dependency inversion via injection, every principle addressed before moving on. **LEAN**
+writes a 2–4 line note naming only the principles actually at stake in this story and how
+each is satisfied; principles with nothing to decide are stated as such, never silently
+dropped. Either way the reasoning is explicit before any test is written.
 
 ### 3.4 Create Subtasks
 
 **Seed from the story's `## Implementation Tasks` section when present** (authored by
 `plan`) — fold those ordered tasks in rather than inventing generic ones; if absent, use the
-default breakdown. Track subtasks on **Claude Tasks** (TaskCreate; template in
-[tdd-walkthrough.md](references/tdd-walkthrough.md)), each blocked by the previous: tests →
-implementation → refactor → QA → completion. If Task tools are unavailable, fall back to an
+default breakdown. Track subtasks on **Claude Tasks** (TaskCreate; templates in
+[tdd-walkthrough.md](references/tdd-walkthrough.md)), each blocked by the previous — **FULL**:
+tests → implementation → refactor → QA → completion; **LEAN**: tests → implementation → QA
+(refactor and completion fold into their phases). If Task tools are unavailable, fall back to an
 in-session checklist (never written to the story file) — never skip the breakdown.
 **Never persist the plan itself to the story file** — the file records only frontmatter
 status, the final summary, and unplanned changes.
@@ -263,7 +272,7 @@ and **integration points** when the story connects two components.
 
 Run the suite. **Expected: ALL new tests FAIL.** If a new test passes without implementation,
 it is likely wrong (testing something that already exists or is trivially true) — fix it.
-Present the RED Phase Complete block (output-blocks). Mark the test task `completed`.
+Report RED as **one line** (output-blocks). Mark the test task `completed`.
 
 ---
 
@@ -291,8 +300,8 @@ omit the heading.
 ### 5.3 Run Tests — Confirm GREEN
 
 Run the full suite. **Expected: ALL tests PASS.** If tests fail, read the output and fix the
-implementation (NOT the tests, unless a test itself has a bug). Re-run until green. Present the
-GREEN Phase Complete block (output-blocks). Mark implementation task(s) `completed`.
+implementation (NOT the tests, unless a test itself has a bug). Re-run until green. Report
+GREEN as **one line** (output-blocks). Mark implementation task(s) `completed`.
 
 ---
 
@@ -302,9 +311,11 @@ Improve quality without changing behavior. **Tests stay green throughout.**
 
 ### 6.1 SOLID Review
 
-Review all new/modified code against SOLID using the SOLID Compliance Check template in
-[tdd-walkthrough.md](references/tdd-walkthrough.md). Every principle checked. Record any
-violation as an ISSUE to fix in 6.2.
+Per the 1.7 route: **FULL** reviews all new/modified code with the SOLID Compliance Check
+template in [tdd-walkthrough.md](references/tdd-walkthrough.md), every principle checked.
+**LEAN** spot-checks the principles named in the 3.3 note plus any the diff newly put at
+stake. Either way, record every violation as an ISSUE to fix in 6.2 — a LEAN review that
+uncovers a structural problem escalates to the FULL template before continuing.
 
 ### 6.2 Apply Refactorings
 
@@ -316,7 +327,7 @@ dependency inversion, split large functions, move code to the correct module per
 
 ### 6.3 Final Green Check
 
-Run the full suite once more; present the REFACTOR Phase Complete block (output-blocks).
+Run the full suite once more; report REFACTOR as **one line** (output-blocks).
 
 ---
 
@@ -375,9 +386,17 @@ Story stays `in-progress` until the user confirms PASS here. Never set `done` be
 
 **8.5.1** Present the manual-testing prompt (template in
 [output-blocks.md](references/output-blocks.md)) — scenarios from acceptance criteria + an
-edge case. Ask via `AskUserQuestion`: `PASS / ISSUES`.
+edge case. Then ask **both** gate questions in a **single `AskUserQuestion` call** (the 8.7
+ship choice is already known here, so asking it separately costs a needless round-trip):
 
-**8.5.2** On `PASS` → proceed to 8.6.
+1. "Manual test result?" → `PASS` / `ISSUES`.
+2. "If it passes, ship now?" → `SHIP` / `SKIP`.
+
+Q2's answer is **used only when Q1 is `PASS`** — on `ISSUES` discard it and go to 8.5.3
+(re-ask both after the fix loop). This is the only place the two gates merge; never
+pre-ask a gate whose outcome could change the work in between.
+
+**8.5.2** On `PASS` → proceed to 8.6, then apply the Q2 answer at 8.7 without re-asking.
 
 **8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop (eight ordered steps in
 [completion.md](references/completion.md) § 8.5.3): regression test (red) → minimum fix
@@ -405,10 +424,11 @@ No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exi
 
 ### 8.7 Ship (Commit + PR + Issue Updates)
 
-Present the ship options (output-blocks) via `AskUserQuestion`: **SHIP** — invoke
-`/ck-code:ship` with the story file path (handles branch, staging, commit, PR, and GitHub
-Issue updates); **SKIP** — don't commit yet; remind the user they can run
-`/ck-code:ship [story-path]` later.
+Apply the ship answer already collected at 8.5.1 Q2 — **do not ask again**: **SHIP** —
+invoke `/ck-code:ship` with the story file path (handles branch, staging, commit, PR, and
+GitHub Issue updates); **SKIP** — don't commit yet; remind the user they can run
+`/ck-code:ship [story-path]` later. Only ask here if 8.5.1 ran without Q2 (e.g. a
+non-interactive caller).
 
 ---
 
@@ -419,8 +439,10 @@ Issue updates); **SKIP** — don't commit yet; remind the user they can run
 - **1.2** — interactive selection prefers the parallel set; an explicit arg is single-story.
 - **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project
   skills → warn + ask (`/ck-code:team` first) rather than proceed silently.
+- **1.7** — effort route fixed from `size:` and announced; it scales ceremony only, never a
+  guarantee, and escalates LEAN → FULL when the work outgrows its size.
 - **3.5** — plan + branch confirmed in one gate before any code; never `main`/`develop`.
-- **3.3 + 6.1** — SOLID applied at design, verified after refactor.
+- **3.3 + 6.1** — SOLID applied at design, verified after refactor (lean or full per 1.7).
 - **4** — failing tests before implementation (trivial boilerplate exempt).
 - **5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
 - **7** — QA delegated to `qa-validator`; iteration cap = 3, then escalate.
@@ -438,6 +460,7 @@ Issue updates); **SKIP** — don't commit yet; remind the user they can run
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
 - **Never plan or write code before Phase 2 loads and reports the project skills.**
+- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. RED-before-GREEN, QA delegation, and the manual-test gate run identically on both routes.
 - **Never write failing implementation before RED**, and never edit a test to force GREEN.
 - **Never implement on `main` or `develop`.**
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).

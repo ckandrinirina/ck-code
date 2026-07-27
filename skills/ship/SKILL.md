@@ -3,6 +3,7 @@ name: ship
 description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 disable-model-invocation: false
+effort: medium
 ---
 
 # Ship — Commit, PR, Issue Update & Plan Publishing
@@ -118,13 +119,12 @@ Store `story_issue` and `epic_issue` (both may be empty).
 
 ## PHASE 3: PREPARE COMMIT
 
-### 3.1 Stage files
+### 3.1 Select files to stage (no prompt yet)
 
-Run `git status`. **Auto-stage** the story's modified/new source files, test files, and
+Run `git status`. **Auto-select** the story's modified/new source files, test files, and
 the story-file frontmatter change. **Never stage** `.env`, credentials, secrets,
-`.DS_Store`, or IDE configs. Present grouped lists (Source / Tests / Docs / Excluded),
-then AskUserQuestion — "Stage these files?" options **Stage all**, **Adjust** (let the
-user drop/add specific files).
+`.DS_Store`, or IDE configs. Build the grouped lists (Source / Tests / Docs / Excluded)
+but do **not** ask yet — 3.3 confirms the file set and the message in one round-trip.
 
 ### 3.2 Craft commit message
 
@@ -138,11 +138,18 @@ Subject stays in **conventional commits** (`feat`, `fix`, `refactor`, `test`, `d
 
 Full templates: [examples.md](references/examples.md).
 
-### 3.3 Confirm commit
+### 3.3 Confirm files + message (ONE batched gate)
 
-Show a preview (Branch / Files staged / full Message / Linked issues), then
-AskUserQuestion — "Commit this?" options **Commit**, **Edit message** (user revises, then
-re-confirm), **Abort**.
+Show a preview (Branch / Files to stage grouped per 3.1 / full Message / Linked issues),
+then ask **both** questions in a **single `AskUserQuestion` call** — never two sequential
+calls:
+
+1. "Stage these files?" → **Stage all**, **Adjust** (user drops/adds specific files).
+2. "Commit this message?" → **Commit**, **Edit message**, **Abort**.
+
+Resolve the answers together: `Abort` stops regardless of Q1. On `Adjust` and/or `Edit
+message`, apply the revisions and re-ask the same batched pair once — the happy path
+(Stage all + Commit) costs one round-trip, not two.
 
 ## PHASE 4: COMMIT
 
@@ -188,9 +195,19 @@ Use `existing_pr` from Phase 1.2: found → **5.A** (push + update); none → **
 
 ### 5.B Create new PR
 
-1. AskUserQuestion — "Open a PR?" options **Yes** (create now), **Commit only** (→ Phase 6),
-   **Push, PR later** (push branch, skip PR → Phase 6).
-2. AskUserQuestion — "PR target?" options **main**, **develop**, **Other** (specify).
+1. **Resolve the base branch — never ask for it.** The repo already declares it:
+
+   ```bash
+   gh repo view --json defaultBranchRef -q .defaultBranchRef.name
+   ```
+
+   Use that as the PR base. If `gh` fails, fall back to `main`. Only when the repo has a
+   `develop` branch **and** the default is not `develop` is the target genuinely ambiguous
+   (`git rev-parse --verify --quiet origin/develop`) — in that case offer it as an option
+   inside the single question below rather than as a second prompt.
+2. AskUserQuestion — one call, "Open a PR into `<base>`?": **Yes** (create now),
+   **Commit only** (→ Phase 6), **Push, PR later** (push branch, skip PR → Phase 6),
+   **Different base** (only when step 1 found a genuine ambiguity — then ask for the base).
 3. `git push -u origin <branch-name>`.
 4. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
    — no story IDs, AC checkboxes, or test tallies. Bodies (feature / bug fix) + the exact
@@ -359,6 +376,8 @@ that ran (created issue numbers, quick links, total). Note which stories/epics g
 - **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index.sh`; never cell-edit an index or flip an EPIC checkbox for status.
 - **Always run `ck-index.sh` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
 - **Never commit directly to `main` or `develop`** (Phase 1).
+- **Never ask the user for the PR base branch** — read it from `gh repo view --json defaultBranchRef` (Phase 5.B); prompt only on a genuine `main`/`develop` ambiguity.
+- **Never split a confirmation into sequential `AskUserQuestion` calls** when the questions are known at the same time — `AskUserQuestion` takes up to 4 questions per call, and each extra call is a full round-trip. Phase 3.3 batches file-set + message.
 - **Never `git add -A` or `git add .`** — stage files by name; never stage secrets or env files.
 - **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language, read by non-engineers.
 - **Never overwrite a PR description** — append beneath the existing body and prior `## Updates` entries.

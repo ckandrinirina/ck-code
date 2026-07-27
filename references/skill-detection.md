@@ -57,19 +57,10 @@ A `paths` match is authoritative; treat a `keywords`-only match as the weaker fa
 `expert-analyst` for bug-fix flows (root-cause analysis). These three —
 `expert-qa`, `expert-analyst`, `expert-qa-project` — carry no `paths`/`keywords`.
 
-**Fallback for experts with no `paths`/`keywords` frontmatter** (older generations):
-use the anchor mapping below.
-
-| File path / keyword                                           | Expert            |
-| ------------------------------------------------------------- | ----------------- |
-| `mobile/`, `app/`, `components/`, `screens/`, `ui/`           | `expert-frontend` |
-| `server/`, `api/`, `backend/`, `services/`                    | `expert-backend`  |
-| `docker/`, `.github/`, `ci/`, `deploy/`                       | `expert-devops`   |
-| `auth/`, secrets/crypto/payment paths or keywords             | `expert-security` |
-| DB migrations, `.sql`, `models/`, schema changes              | `expert-database` |
-| Technical Notes mentions "frontend"/"UI"/"component"/"screen" | `expert-frontend` |
-| Technical Notes mentions "API"/"endpoint"/"server"/"handler"  | `expert-backend`  |
-| Technical Notes mentions "deploy"/"CI"/"docker"/"pipeline"    | `expert-devops`   |
+**Fallback for experts with no `paths`/`keywords` frontmatter** (older generations only):
+read the anchor tables in
+[`skill-detection-fallbacks.md`](skill-detection-fallbacks.md). Skip that file entirely
+when every present skill declares its own triggers — the common case.
 
 Detection means the skill enters the required set; whether it is actually loaded
 depends on the filesystem check in Step 4 (a missing file is reported, not
@@ -84,19 +75,9 @@ in its frontmatter (the source files it covers). Load a guide when any of its
 **`guide-conventions` is always required** (loaded if present, no trigger needed) —
 it holds the project's house rules and overrides generic guides on conflict.
 
-**Fallback for guides with no `paths` frontmatter** — use the anchor mapping:
-
-| Extension / pattern  | Guide                                         |
-| -------------------- | --------------------------------------------- |
-| `.rs`                | `guide-rust`                                  |
-| `.cpp`, `.h`, `.hpp` | `guide-cpp` (+ `guide-juce` if JUCE detected) |
-| `.ts`, `.tsx`        | `guide-typescript`                            |
-| `.tsx` in `mobile/`  | `guide-react-native`                          |
-| `.py`                | `guide-python`                                |
-| `.go`                | `guide-go`                                    |
-| `.java`, `.kt`       | `guide-java`                                  |
-| `.swift`             | `guide-swift`                                 |
-| Framework-specific   | `guide-axum`, `guide-juce`, etc.              |
+**Fallback for guides with no `paths` frontmatter** — the extension anchors live in
+[`skill-detection-fallbacks.md`](skill-detection-fallbacks.md) (same file as the expert
+anchors; open it once, only for legacy generations).
 
 ## Step 4 — Load skills (filesystem-only, ck-code namespaces)
 

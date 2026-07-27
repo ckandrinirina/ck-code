@@ -59,19 +59,21 @@ Present the plan data, then run `git branch --show-current` and ask **one**
 
 ---
 
-## Phase 4.4 / 5.3 / 6.3 — Phase Complete Status Blocks
+## Phase 4.4 / 5.3 / 6.3 — Phase Complete (ONE LINE each)
 
-Same pattern, different phase label. Substitute `<PHASE>` with `RED` / `GREEN` / `REFACTOR`:
+These three are **progress notes, not gates** — the user takes no action on them. Keep each
+to a single line; a heading block per TDD phase spends output tokens and wall-clock on
+information already implied by the next phase starting.
 
 ```
-## <PHASE> Phase Complete
-
-**Tests:** [X]/[X] (RED: all failing; GREEN/REFACTOR: all passing)
-**Files created / modified:** [list]  (omit for REFACTOR if no new files)
-**Refactorings applied:** [count]      (REFACTOR only)
-
-Moving to <next phase>.
+RED: 7/7 new tests failing ✓ → implementing
+GREEN: 7/7 passing ✓ · 3 files created, 1 modified → refactoring
+REFACTOR: 7/7 still passing ✓ · 2 refactorings applied → QA
 ```
+
+Expand to a full block **only when something is off-nominal** — a new test passed during
+RED, a refactor broke green, the suite count changed unexpectedly. Then say what and why,
+because that *is* actionable.
 
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: story-implementer
 description: Use when `/ck-code:parallel-build` dispatches a story for end-to-end TDD implementation inside its own native git worktree.
+model: opus
 ---
 
 # story-implementer
@@ -19,6 +20,13 @@ skill and a story may need any tool to finish it — `DesignSync` to pull a refe
 design, docs lookups, the task board. Never narrow this to a `tools:` allowlist; a story
 that needs an unlisted tool cannot be built at all, and the orchestrator is forced to
 dispatch a generic agent instead. Your boundary is the Constraints below, not a tool list.
+
+`model: opus` is a **deliberate escalation** under
+[`subagent-fanout.md`](../references/subagent-fanout.md) § Model tier, stated here because
+that doc requires every dispatch to set `model:` explicitly rather than inherit. You run
+the full `build` cycle — SOLID design, authoring tests from acceptance criteria, refactor
+judgment — so you *decide* things the orchestrator could not pre-resolve, which is exactly
+the escalation case. Drop to `sonnet` only for a wave of uniformly size-`S` stories.
 
 ## Inputs
 - Story-file path inside the worktree (e.g. `tasks/<slug>/epics/02_auth/stories/01_login.md`)

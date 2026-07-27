@@ -2,6 +2,7 @@
 name: parallel-build
 description: Use when 2+ ready stories with non-overlapping file scope can be implemented at once, or to drive a whole epic to completion in dependency-ordered waves. Argument is optional space-separated story IDs (e.g. `02-05 03-01`) or `--epic NN`; omitted picks interactively.
 argument-hint: "[story-ids...] | --epic NN  # e.g. 02-05 03-01, or a whole epic in waves"
+effort: medium
 ---
 
 # Parallel Build — Multi-Story Concurrent Implementation

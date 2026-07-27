@@ -7,7 +7,23 @@ to a single story. The rules in SKILL.md are authoritative.
 
 ## Phase 3.3 — SOLID Analysis Template
 
-Fill this out before any test or code is written (rule in SKILL.md 3.3).
+Two shapes, picked by the Phase 1.7 effort route. Either is filled before any test or code
+is written (rule in SKILL.md 3.3).
+
+### LEAN (size `S`, and Bug-Fix Mode)
+
+Name only the principles this story actually puts at stake, and say how each is satisfied.
+State the rest as not-in-play — never omit them silently:
+
+```
+## SOLID (lean) — [Story Title]
+
+S: [NewThing] owns only [one responsibility]; no existing file gains a second reason to change.
+D: [NewThing] takes [Dep] by interface, injected at [call site].
+O/L/I: not in play — no new abstraction, subtype, or interface in this story.
+```
+
+### FULL (size `M`, or size absent)
 
 ```
 ## SOLID Analysis for This Story
@@ -34,7 +50,16 @@ Fill this out before any test or code is written (rule in SKILL.md 3.3).
 
 ## Phase 3.4 — Subtasks Breakdown (TaskCreate)
 
-Typical task breakdown for a story:
+**LEAN route (size `S`, Bug-Fix Mode)** — three tasks, each blocked by the previous;
+refactor and completion fold into their phases rather than getting their own rows:
+
+```
+1. "Write tests for [story title]"      activeForm: "Writing tests for [story title]"
+2. "Implement [story title]"            activeForm: "Implementing [story title]"
+3. "QA validation for [story title]"    activeForm: "Running QA for [story title]"
+```
+
+**FULL route (size `M`)** — typical task breakdown for a story:
 
 ```
 1. "Write tests for [story title]"
@@ -78,7 +103,18 @@ Edge cases, error scenarios, and integration points: rules in SKILL.md Phase 4.3
 
 ## Phase 6.1 — SOLID Compliance Check Template
 
-Run this review against all new/modified code during the Refactor phase.
+**LEAN route** — spot-check only the principles named in the 3.3 lean note, plus any the
+diff newly put at stake. One line per principle checked; escalate to the full template below
+the moment a structural violation appears:
+
+```
+## SOLID spot-check — [Story Title]
+S: [x] [NewThing] still single-purpose
+D: [x] [Dep] still injected, no direct instantiation
+(O/L/I unchanged — nothing new introduced)
+```
+
+**FULL route** — run this review against all new/modified code during the Refactor phase.
 
 ```
 ## SOLID Compliance Check
