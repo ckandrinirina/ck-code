@@ -6,6 +6,9 @@ redefining the pattern. The per-story execution variant lives in
 [`../skills/parallel-build/references/agent-prompts.md`](../skills/parallel-build/references/agent-prompts.md);
 this doc covers the generic case (read-only investigation **and** independent-artifact writes).
 
+A fan-out this file already sanctions may optionally be *executed* as a scripted `Workflow` —
+opt-in only, and never a new fan-out: see [`dynamic-workflows.md`](dynamic-workflows.md).
+
 ## When fan-out helps (and when it hurts)
 
 Fan out only when **all** of these hold:

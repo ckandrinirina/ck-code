@@ -1,7 +1,7 @@
 ---
 name: team
 description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill.
-argument-hint: "[--basic|--standard|--max] [--check|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>]"
+argument-hint: "[--basic|--standard|--max] [--check|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
 disable-model-invocation: true
 effort: high
 ---
@@ -72,6 +72,10 @@ Both axes below are gated by **real detection**: TIER gates *breadth*, detection
 
 A depth flag combines with `--check`/`--regenerate` (e.g. `--max --check`). `--conventions`,
 `--new`, and `--adjust` route to their own phase and ignore the depth flag.
+
+`--workflow` is orthogonal (opt-in): it runs the Phase 1.6a and 3.1a fan-outs as `Workflow` scripts —
+enforced schemas, scripted retry, resume — when their ≥8 thresholds and the gate in
+[`dynamic-workflows.md`](../../references/dynamic-workflows.md) are met; otherwise ignored.
 
 ## MODE ROUTING
 
@@ -197,6 +201,12 @@ performance[], error_handling[], testing[], version_notes[], sources[]
 The orchestrator merges the briefs into the single "Best Practices Knowledge" block (step
 4), keeps verbose doc output out of its own context, and re-runs any failed/empty unit
 inline before Phase 2. Below 4 technologies, research inline.
+
+**Workflow path (≥8 technologies + `--workflow`).** When the gate in
+[`dynamic-workflows.md`](../../references/dynamic-workflows.md) passes, run this fan-out with the
+`Workflow` tool instead, passing [`references/research.workflow.md`](references/research.workflow.md)
+verbatim as `script` with `args = {technologies}`. It retries empty units itself (3 rounds); merge
+`briefs`, research the returned `unresolved` ids inline. At 8+ without the flag, print the hint once.
 
 ---
 
@@ -337,6 +347,12 @@ GENERATED-marker instruction; it writes exactly one file and nothing else. All p
 (0.5, 2.4) and the merge-rule decision stay with the orchestrator, before dispatch; Phase 4.1
 verifies centrally. Below 4, write inline.
 
+**Workflow path (≥8 skills + `--workflow`).** Same gate as 1.6a, using
+[`references/generate.workflow.md`](references/generate.workflow.md) with `args = {projectContext,
+skills}` — `skills` carries only paths the merge rule already cleared. Necessarily a **second,
+separate** `Workflow` call: the 2.4 gate sits between the two and a script can never prompt.
+Regenerate every slug in the returned `missing` inline.
+
 ## PHASE 3b: GENERATE GUIDE SKILLS
 
 For each guide, write `guides/<tech>/SKILL.md` from
@@ -355,6 +371,10 @@ line.
 ```bash
 ls -la .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md
 ```
+
+This `ls` is the proof, never a subagent's or workflow manifest's self-report — a resumed workflow
+replays cached results without re-writing, so a manifest entry can outlive its file. Write inline any
+planned path it does not show.
 
 ### 4.2 Summary
 
@@ -439,5 +459,6 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 - **Never invent conventions** — CAPTURE records only rules the user states or the code demonstrably follows; an empty area stays empty.
 - **Never ship a skill whose detection signal is absent**, whatever the tier: tier gates breadth, detection gates relevance.
 - **Never leave a `[bracketed placeholder]`** or an unresolved `[PROJECT CONTEXT BLOCK]` in a generated skill.
+- **Never run a `Workflow` without the full opt-in gate** — tool present, explicit `--workflow` signal, and the phase's threshold met. Missing any one → the `Agent` path. The workflow path is never the only way a phase can execute.
 - **Always keep this generator project-agnostic** — it reads project context dynamically and injects it.
 - **Always output in English.**
