@@ -5,7 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
-## [4.1.0] — 2026-07-27
+## [4.1.1] — 2026-07-27
+
+### Changed
+- **team**: house conventions are now settled inside a normal run instead of requiring a
+  second command. The Phase 2.4 plan prompt asks a second question — **Capture now / Skip**
+  when `guides/conventions/SKILL.md` is absent, **Keep as-is / Refresh & merge** when it
+  already exists — and a new Phase 2.5 runs PHASE C before any skill file is written, so
+  every prompt is front-loaded and generation runs unattended. The inline path reuses the
+  Phase 1.3 codebase scan rather than re-scanning, which is the duplicated work this
+  removes. `--conventions` still works as a standalone re-capture; `--check` reports the
+  conventions row without prompting.
 
 ### Added
 - **team**: an opt-in `--workflow` flag that runs the two largest fan-outs — Phase 1.6a
