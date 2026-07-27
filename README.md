@@ -70,6 +70,23 @@ conversion in a single revertable commit. Every change-producing skill blocks a 
 project until you run it, and the session-start hook reminds you. Pre-v3 projects are
 handled too — the converter chains the older layout migrations first.
 
+## Moving up from ck-code-lite
+
+Same command. When a project outgrows [ck-code-lite](https://github.com/ckandrinirina/ck-code-lite)
+— the task list no longer fits one file, or more than one person is planning the work —
+run it inside that project:
+
+```bash
+/ck-code:migrate
+```
+
+It converts the flat `tasks/PLAN.md` into epics and stories (proposing a grouping you
+confirm before anything is written), splits `docs/ARCHITECTURE.md` into `docs/architecture/`,
+and marks the lite artifacts superseded rather than deleting them. Status, acceptance
+criteria and ticked checkboxes are carried over, so finished work stays finished; task IDs
+change from `T-NN` to `EE-SS` and the report prints the full map. Feature docs are written
+as stubs — run `/ck-code:design` afterwards to fill them in.
+
 ## Per-project opt-in
 
 Enable the plugin explicitly per project in that project's `.claude/settings.json`:
@@ -124,7 +141,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:ship` | Commit, PR, update GitHub Issues. `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter | story file (optional) | commit + PR + issue updates |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
-| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v4 project to the v4 layout (frontmatter + generated indexes); stamps `tasks/VERSION.md` | — | converted project (one commit) |
+| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v4 **or ck-code-lite** project to the v4 layout (frontmatter + generated indexes); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
 
 ## Why ck-code?
@@ -160,7 +177,7 @@ ck-code/
 │   ├── ship/                      # commit + PR + Issue updates (+ --to-issues)
 │   ├── track/                     # progress dashboard
 │   ├── guide/                     # state/intent/command router
-│   ├── migrate/                   # pre-v4 → v4 layout converter
+│   ├── migrate/                   # pre-v4 → v4 and ck-code-lite → v4 converter
 │   └── explain/                   # post-implementation walkthrough
 └── README.md
 ```
@@ -187,7 +204,8 @@ apply adjustments — keeping the local file and the linked GitHub issue in sync
 > tables, `DESIGN_LEDGER.md`, `L`/`XL` sizes). Every change-producing skill runs a **version
 > gate** first: on a pre-v4 project it blocks and offers `/ck-code:migrate`, a one-shot,
 > idempotent converter that rewrites the layout and stamps `tasks/VERSION.md`. Run it once
-> and your project is v4.
+> and your project is v4. The same gate catches a **ck-code-lite** project (`tasks/PLAN.md`)
+> and routes it to the same command.
 
 - **Claude Code** — required (CLI, IDE extension, or desktop app)
 - **gh CLI** — required for `ship --to-issues` and `ship` GitHub Issue features
