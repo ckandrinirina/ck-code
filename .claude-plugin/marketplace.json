@@ -4,12 +4,21 @@
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
   },
-  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides) and ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers).",
+  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides), ck-code-lite (the same workflow trimmed to three skills and two files) and ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers).",
   "plugins": [
     {
       "name": "ck-code",
       "source": "./",
       "description": "Spec-driven workflow plugin: design, plan, build, ship, with per-project experts and tech guides."
+    },
+    {
+      "name": "ck-code-lite",
+      "source": {
+        "source": "github",
+        "repo": "ckandrinirina/ck-code-lite",
+        "ref": "v0.1.0"
+      },
+      "description": "Minimal three-skill workflow: start (architecture + flat plan), build (failing test first, isolated QA, manual sign-off), ship (commit + PR). The ck-code guarantees without the ceremony. An alternative to ck-code, not a companion."
     },
     {
       "name": "ck-tools",
