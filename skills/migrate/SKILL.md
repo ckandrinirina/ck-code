@@ -1,22 +1,24 @@
 ---
 name: migrate
-description: Use when a project is on a pre-v4 ck-code layout and a change-producing skill's version gate has blocked it, or when the user asks to upgrade a ck-code project to v4. Converts v3 (or older) story files, epics, and architecture docs to the v4 frontmatter-based layout, regenerates the indexes, and stamps tasks/VERSION.md. One-shot, idempotent, safe.
+description: Use when a project is on a pre-v4 ck-code layout and a change-producing skill's version gate has blocked it, when the user asks to upgrade a ck-code project to v4, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow. Converts v3 (or older) story files, epics, and architecture docs — or a lite flat plan — to the v4 frontmatter-based layout, regenerates the indexes, and stamps tasks/VERSION.md. One-shot, idempotent, safe.
 disable-model-invocation: false
 effort: medium
 ---
 
 # Migrate — Upgrade a Project to the v4 Layout
 
-Converts a pre-v4 ck-code project to the **v4 layout** (story-frontmatter source of
-truth + generated indexes — see [`data-model.md`](../../references/data-model.md)) and
-stamps `tasks/VERSION.md` as its final step. This is the **only** v4 migrator; the
+Converts a pre-v4 ck-code project **or a ck-code-lite project** to the **v4 layout**
+(story-frontmatter source of truth + generated indexes — see
+[`data-model.md`](../../references/data-model.md)) and stamps `tasks/VERSION.md` as its
+final step. This is the **only** v4 migrator; the
 [version gate](../../references/version-gate.md) in every change-producing skill routes
-pre-v4 projects here. This skill itself never gates.
+pre-v4 and lite projects here. This skill itself never gates.
 
 One-shot, idempotent, safe: an already-v4 project is a no-op that just (re)stamps. All
 originals are converted in place behind a **single pre-migration commit** so the whole
 conversion is one revertable step. The field-by-field mapping and the pre-v3
-doc-layout conversion live in [references/migration-map.md](references/migration-map.md).
+doc-layout conversion live in [references/migration-map.md](references/migration-map.md);
+the lite conversion in [references/lite-migration.md](references/lite-migration.md).
 
 ## PHASE 0: SAFETY GATE (hard)
 
@@ -36,10 +38,14 @@ Determine how old the project is — it decides which conversion steps run:
 1. **v4 already?** Read `tasks/VERSION.md`. `layout: v4` AND every
    `tasks/*/epics/*/stories/*.md` starts with `---` → already v4. Skip to Phase 5
    (re-stamp + regenerate) and report "already v4".
-2. **Pre-v3 doc layout?** Any of `docs/architecture/features/*.md` (flat feature docs),
+2. **lite?** `tasks/PLAN.md` exists and no `tasks/*/epics/` directory does → a
+   **ck-code-lite** project. Go to **PHASE L**; Phases 2–4 do not apply (there are no v3
+   story files, epics, or layer docs to convert). If **both** are present the project is
+   half-migrated: stop and report it, never merge a lite plan into an existing v4 plan.
+3. **Pre-v3 doc layout?** Any of `docs/architecture/features/*.md` (flat feature docs),
    `docs/architecture/{components,api-contracts,database-schema,data-flow}.md` (layer
    docs) → the architecture docs also need conversion (Phase 3b).
-3. **v3?** Story files without frontmatter, `Schema: v1/v2` indexes, or
+4. **v3?** Story files without frontmatter, `Schema: v1/v2` indexes, or
    `docs/architecture/DESIGN_LEDGER.md` present → the common case (Phases 2–4).
 
 Report the detected source layout before converting.
@@ -99,6 +105,55 @@ flag replaces it.
   **left in place** as historical files (never deleted — they may hold notes a user
   values); v4 simply stops writing new ones. Note in the report that they are now inert.
 
+## PHASE L: CONVERT A LITE PROJECT
+
+Runs **instead of** Phases 2–4 when Phase 1 detected `lite`. Every mapping table,
+template pointer, and banner text lives in
+[references/lite-migration.md](references/lite-migration.md) — open it before L1.
+
+**Always inline, never fan out.** A lite plan is small by contract (S/M tasks, one file),
+so the `≥3 epics` dispatch rule in Phase 2 does not apply here.
+
+### L1 — Read the source
+
+Read `docs/ARCHITECTURE.md` whole (it is one screen by contract), then the plan's table:
+
+```bash
+grep -n '^| T-' tasks/PLAN.md
+grep -n '^## T-' tasks/PLAN.md
+```
+
+Read each task section by offset. Resolve the project slug and the dated plan folder.
+
+### L2 — Propose the grouping (hard gate)
+
+Infer epics from task titles and `files:` paths, then present the proposal **with the
+`T-NN → EE-SS` column** and gate on `AskUserQuestion` (Accept / Single epic / Adjust).
+Write nothing before the answer. On Adjust, re-present and ask again.
+
+### L3 — Write epics and stories
+
+Create the plan folder, `PROJECT_OVERVIEW.md`, `ROADMAP.md`, one `EPIC.md` per epic, and
+one story file per task. Frontmatter and body follow the mapping tables; `blocked` tasks
+become `todo` and are recorded for the report. Bodies move verbatim — a ticked box stays
+ticked.
+
+### L4 — Write the architecture docs
+
+Split `docs/ARCHITECTURE.md` into the global docs per the mapping, then write one
+**stub** `features/<epic-slug>/index.md` per epic (`design: planned`, `## Summary` from
+the epic description, everything else `[TO BE DEFINED]`). Never invent component, API,
+data, or flow detail lite never recorded.
+
+### L5 — Retire the lite artifacts and offer the swap
+
+Rename `tasks/PLAN.md` → `tasks/PLAN.superseded.md` with its banner, banner
+`docs/ARCHITECTURE.md`, then offer the `.claude/settings.json` plugin swap (one
+`AskUserQuestion`, applied only on Swap).
+
+Continue at Phase 5, committing with
+`chore: migrate ck-code-lite project to ck-code v4 layout`.
+
 ## PHASE 5: REGENERATE + STAMP
 
 1. **Regenerate indexes** from the new frontmatter:
@@ -125,6 +180,10 @@ Report a verification table so the user can trust the conversion:
 - Confirm `tasks/VERSION.md` now reads `layout: v4` and the indexes regenerated.
 - Rollback reminder: `git reset --hard <pre-migration-sha>`.
 
+After a **lite** migration, add the items listed under "Report additions" in
+[references/lite-migration.md](references/lite-migration.md) — the ID map above all, since
+every task ID in the project changed.
+
 ## RULES
 
 - **Never run on a dirty tree** — Phase 0 refuses; migration must be one revertable commit.
@@ -133,3 +192,8 @@ Report a verification table so the user can trust the conversion:
 - **Never stamp `layout: v4` before conversion succeeds** — the stamp is the final step.
 - **Always list unparseable files** in the report — a skipped file must be visible, never silent.
 - **Idempotent** — an already-v4 project re-stamps and regenerates with no other change.
+- **Never merge a lite plan into an existing v4 plan folder** — `tasks/PLAN.md` alongside `tasks/*/epics/` is a half-migrated project; stop and report it.
+- **Never write epics or stories before the L2 grouping is confirmed** — the ID map changes every task ID, so the user sees it first.
+- **Never invent architecture detail in a lite migration** — feature docs are stubs; `/ck-code:design` fills them.
+- **Never leave `tasks/PLAN.md` live after a lite migration** — the rename is what stops a competing `/ck-code-lite:build` and clears the version-gate marker.
+- **Never edit `.claude/settings.json` without the Swap confirmation**, and never touch a key other than the two `enabledPlugins` entries.

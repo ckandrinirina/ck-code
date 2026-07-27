@@ -49,8 +49,8 @@ restate *only* this one check, never the Tier-2 detection.
 
 ### Tier 2 — full detection (only when the stamp is missing or stale)
 
-One filesystem probe — any single marker means the project is **pre-v4** (either v3
-or older):
+One filesystem probe — any single marker means the project is **not v4** (v3 or older,
+or a ck-code-lite project):
 
 ```bash
 # pre-v4 markers — any hit = old layout, must migrate
@@ -59,19 +59,34 @@ grep -lq "Schema: v1\|Schema: v2" tasks/*/STORIES_INDEX.md tasks/FEATURE_INDEX.m
 for f in tasks/*/epics/*/stories/*.md; do [ -e "$f" ] || continue; IFS= read -r l < "$f"; [ "$l" = "---" ] || { echo OLD; break; }; done  # a story without frontmatter = pre-v4
 ls docs/architecture/features/*.md 2>/dev/null | grep -q . && echo OLD                     # pre-v3 flat feature doc
 ls docs/architecture/{components,api-contracts,database-schema,data-flow}.md 2>/dev/null | grep -q . && echo OLD  # pre-v3 layer docs
+ls tasks/PLAN.md 2>/dev/null | grep -q . && echo LITE                                      # ck-code-lite flat plan
 ```
+
+The **`LITE`** marker matters even though a lite project carries none of the `OLD` ones:
+its `tasks/` holds a flat `PLAN.md` and no story files, so without this line the scan
+finds nothing, stamps `layout: v4`, and ck-code plans straight past a plan it never read.
+`migrate` renames `PLAN.md` on its way out, so the marker cannot re-fire afterwards.
 
 - **No marker found** → the project is already v4-shaped (predates the stamp, or
   `tasks/` is empty/greenfield). Write `tasks/VERSION.md` (Stamp, below) and **PASS**.
-- **A marker found** → **BLOCK**. Never stamp a project carrying an old layout.
+- **A marker found** → **BLOCK**. Never stamp a project carrying an old or lite layout.
 
 ### BLOCK
 
-Print exactly:
+Print exactly — for an `OLD` marker:
 
 ```
 ⛔ This project uses a pre-v4 layout.
    ck-code v4 stores story state in frontmatter and generates its indexes.
+   Migrate with /ck-code:migrate  →  [Run it now? y/N]
+```
+
+For a `LITE` marker:
+
+```
+⛔ This project uses the ck-code-lite layout (tasks/PLAN.md).
+   ck-code needs epics, stories, and frontmatter — /ck-code:migrate converts it,
+   keeping every task's status, acceptance criteria and history.
    Migrate with /ck-code:migrate  →  [Run it now? y/N]
 ```
 
@@ -107,7 +122,7 @@ restates the Tier-2 detection.
 ## Rules
 
 - **Never read or write project state before this gate PASSes** in a change-producing skill.
-- **Never stamp `tasks/VERSION.md` while a pre-v4 marker is present** — stamp only after a clean detection or a successful `migrate`.
+- **Never stamp `tasks/VERSION.md` while a pre-v4 or lite marker is present** — stamp only after a clean detection or a successful `migrate`. A `tasks/PLAN.md` is a lite plan, not an empty `tasks/`.
 - **Never auto-migrate without the `y` confirmation** — BLOCK always asks.
 - **Compare on `layout:` (the major), never the full `ck-code:` version.**
 - **Tier 2 runs only on a missing/stale stamp** — a valid `layout: v4` stamp short-circuits with no scan and without loading this file.
