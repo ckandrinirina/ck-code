@@ -5,6 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [4.1.2] — 2026-07-27
+
+### Fixed
+- **subagent-fanout / plan / team / design / migrate / fix**: the declared fan-outs almost
+  never ran. Each was written as a suffixed sub-step (`plan` 5.4b, `team` 3.1a, `design`
+  3.8a) placed *after* the inline "write each one" instruction — read top to bottom,
+  everything was already written by the time the fan-out was reached, so it applied to zero
+  remaining units. Three further causes compounded it: hedged framing (`plan` 2.5 was
+  literally titled "(Optional)"), thresholds of 4–8 units that sat just above the common
+  case, and no HARD GATE naming the fan-out, unlike `build`'s `qa-validator` delegation
+  which is gated and does fire reliably. Every site is now **decision-first** — count the
+  units, announce the branch, then produce — with the threshold lowered to **3** and the
+  fan-out named in each skill's HARD GATES / RULES. `subagent-fanout.md` carries the rule
+  as a shared contract, plus a mandatory announcement in both directions so a
+  below-threshold run is visibly sequential rather than indistinguishable from a forgotten
+  one.
+
+### Changed
+- **team**: experts and guides now share a single dispatch decision at Phase 3.1. Phase 3b
+  (guide generation) previously had no fan-out at all, and on a `--standard` run guides
+  usually outnumber experts — so the largest write batch in the skill was always sequential.
+  Phase 3 is now 3.0 merge-rule resolution → 3.1 dispatch decision → 3.2/3.3 per-file
+  content contracts, which also removes the duplicated write instructions.
+
 ## [4.1.1] — 2026-07-27
 
 ### Changed
