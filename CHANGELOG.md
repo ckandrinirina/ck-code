@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.0.3] — 2026-07-29
+
+### Changed
+- **track / guide / explain**: the three read-only skills declare `context: fork` with `background: false` — their index reads and state probes run in a forked context instead of the caller's, while output still returns inline rather than as a background task notification.
+- **track**: new rule requiring the rendered dashboard be returned verbatim — forking adds a relay step that would otherwise summarize the template away.
+- **build / design / fix / ship / spec / team** and **explain / guide / track**: the inline Tier-1 version-gate check had drifted into seven distinct phrasings across the hard-blocking skills and three across the read-only ones; all ten now use one canonical wording per tier. Tier 1 remains inline by design (`version-gate.md` documents the one-read fast path) — this removes the drift, not the stanza. `ship`'s no-`tasks/` standalone-commit exception and `design`'s orchestrator-only note are preserved.
+- **build / ship**: ROUTING CHECK gained the "this skill does X" framing sentence the other five already had; **plan / team** gained the missing `Next step after this skill` line.
+
+### Fixed
+- **fix**: the version gate was restated in full in both Phase 0 and HARD GATES — the HARD GATES entry is now the same one-line pointer `plan` uses, ending the in-file duplication.
+
 ## [5.0.2] — 2026-07-29
 
 ### Fixed
