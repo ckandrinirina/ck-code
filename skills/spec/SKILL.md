@@ -82,7 +82,8 @@ and stamps a clean/greenfield project. Do not read or write any spec state until
 ### CREATE branch
 
 1. Get a 1-3 sentence feature description (from `$ARGUMENTS` or ask).
-2. **Read project context** (don't invent — ask if missing):
+2. **Read project context** (don't invent — ask if missing). Every bullet below is an
+   independent read — issue them all in **one parallel tool-call message**:
    - `CLAUDE.md` at repo root
    - Project memory at
      `~/.claude/projects/<encoded-path>/memory/MEMORY.md` and referenced
@@ -252,5 +253,3 @@ in the same folder, sets `linkedDesign` accordingly, and bumps status to
 - **Never guess a conflict resolution** — every contradiction goes through the `AskUserQuestion` gate.
 - **Always let user-saved memory override repo inference** for issue location, labels, and default branch.
 - **Always write descriptively, not prescriptively** — `MUST`/`SHALL` only for non-negotiable product invariants.
-</content>
-</invoke>

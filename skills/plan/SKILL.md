@@ -48,15 +48,12 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 architecture instead of re-deriving it, and pick the simplest viable epic/story
 structure. See [`reuse-first.md`](../../references/reuse-first.md).
 
-## EFFORT SCALING
+## EFFORT
 
-**Effort** (**${CLAUDE_EFFORT}**) controls **depth per story**, never story count or size:
-
-- **low** — Minimal acceptance criteria; terse technical notes.
-- **medium** (default) — Each story is a complete slice with clear criteria and dependencies.
-- **high / xhigh / max** — Add edge cases, test notes, a finer `## Implementation Tasks`
-  breakdown per story, and an explicit dependency graph in the roadmap. Do **not** make
-  stories larger to spend effort — add task and criteria depth instead.
+This skill pins `effort: high`: every story gets edge cases, test notes, a finer
+`## Implementation Tasks` breakdown, and the roadmap gets an explicit dependency graph.
+Effort controls **depth per story**, never story count or size — do **not** make stories
+larger to spend effort; add task and criteria depth instead.
 
 ---
 
@@ -114,6 +111,9 @@ Options:
 Read the entire `$ARGUMENTS` file.
 
 ### 2.2 (Feature / Continue) read existing context
+
+Groups 1–3 are independent — issue them as **one parallel tool-call message** (batched
+Reads + Globs), never three sequential rounds:
 
 1. **Global architecture + feature docs** — `overview.md`, `tech-stack.md`,
    `folder-structure.md`, `_shared.md`, and the feature index. Open a full

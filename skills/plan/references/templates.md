@@ -65,7 +65,11 @@ components introduced; integration points with the existing system.
 Used for `epics/NN_<epic-slug>/EPIC.md`. Carries **frontmatter** and has **no
 `## Stories` table** — the story list is generated into `STORIES_INDEX.md`. The generator
 reads `description` for the `FEATURE_INDEX.md` cell, and links the `Docs` cell when the
-epic `slug` matches a `docs/architecture/features/<slug>/index.md`.
+epic `slug` matches a `docs/architecture/features/<slug>/index.md`. **Set `slug:` to the
+owning feature-doc dir name whenever one exists** (several epics may share one feature —
+e.g. epics `03_keyboard-split-engine` and `04_keyboard-split-desktop` both get
+`slug: keyboard-split`); an unlinked `Docs` cell strands builders without their
+architecture doc. `title`/`description` must not contain `|` (table cells).
 
 ```markdown
 ---

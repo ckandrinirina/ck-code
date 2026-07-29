@@ -142,6 +142,9 @@ missing skills need; Phase 2.4 plans only missing skills; Phase 3 generates only
 
 **Goal:** a complete understanding of the project to inject into each skill.
 
+The reads in 1.2, 1.3, and 1.4 are independent — after 1.1 passes, issue them as **one
+parallel tool-call message** (batched Reads + Globs/Greps), never three sequential rounds.
+
 ### 1.1 Validate prerequisites
 
 If `docs/architecture/` is missing or empty → "No architecture docs found. Run
@@ -219,6 +222,10 @@ verbatim as `script` with `args = {technologies}`. It retries empty units itself
 **The intelligent core — not a lookup against a fixed list.** Read the Phase 1 context and
 *derive* the experts and guides **this specific project** needs.
 
+**Reuse Phase 0.5's derivation when it ran** — its EXPECTED list *is* this phase's output
+for the same tier; carry it (and the MISSING-ONLY target set) into 2.3–2.4 instead of
+re-deriving from scratch.
+
 **Two non-negotiable principles:**
 
 1. **Necessary only.** Generate a skill only where the project has a real, demonstrable
@@ -248,27 +255,11 @@ expert. Litmus:
   `expert-analyst` + guides, not a standalone `expert-performance` — unless there is a
   dedicated perf workstream (benchmark suite, a latency budget with its own code).
 
-**Common anchor roles** (start here, add project-specific roles as needed). Templates and
-per-role deltas: [`references/expert-templates.md`](references/expert-templates.md).
-
-| Role | Slug | Typical tier | Generate when the project has… |
-|---|---|---|---|
-| Frontend | `expert-frontend` | basic | a UI/client component (web or mobile framework, UI dir) |
-| Backend | `expert-backend` | basic | a server/API/engine component |
-| QA Tester | `expert-qa` | basic | always (testing) |
-| Code Analyst | `expert-analyst` | basic | always (review) |
-| Project Q&A | `expert-qa-project` | basic | always (project knowledge) |
-| DevOps / Infra | `expert-devops` | standard | deployment, CI/CD, Docker, cloud infra |
-| Security | `expert-security` | standard | auth, secrets, crypto, payments, PII, or a public API |
-| Database | `expert-database` | standard | a database, ORM, or migrations |
-| Performance | `expert-performance` | max | explicit latency/throughput targets, realtime, heavy compute |
-| API Designer | `expert-api` | max | a public/external/versioned API contract surface |
-| Mobile | `expert-mobile` | max | a mobile app (React Native, Expo, Flutter, native) |
-| Data / ML | `expert-data` | max | a data pipeline, ETL, or ML/AI workflow |
-| Technical Writer | `expert-docs` | max | a docs site or user/developer documentation requirement |
-
-Anchor roles use their per-role delta; a **derived (project-specific) role** uses the
-generic [base template](references/expert-templates.md#the-base-expert-template) filled from
+**Common anchor roles:** the catalog (role → slug → tier → generation signal) lives in
+[`expert-templates.md` § Anchor-role catalog](references/expert-templates.md#anchor-role-catalog)
+— start there, add project-specific roles as needed. Anchor roles use their per-role
+delta; a **derived (project-specific) role** uses the generic
+[base template](references/expert-templates.md#the-base-expert-template) filled from
 project context + Phase 1.6 research.
 
 ### 2.2 Derive the guide set
@@ -278,14 +269,15 @@ Generate one guide per **significant technology actually in the stack** — deri
 have an idiom that is easy to get wrong?"** — most best-practice surface lives in libraries
 that are neither a language nor a framework, so they MUST be able to earn a guide.
 
-- **Generate for:** the project's **languages**; its major **frameworks** (Next.js, NestJS,
-  React, Redux Toolkit…); major **protocols** (gRPC, GraphQL…); and **significant libraries
-  with non-trivial idiom** — styling systems (Tailwind, CSS-in-JS), i18n (i18next),
-  analytics/flags (PostHog), client SDKs (Firebase/FCM, auth, blockchain), state/data
-  (Redux Toolkit, React Query), forms/validation (react-hook-form + zod), charts/maps/
-  rich-text/file-upload.
-- **Skip only genuinely idiom-free utilities:** lodash, date-fns, uuid, dotenv, clsx, plain
-  build tools. If a newcomer could use it correctly from its signature, it needs no guide.
+- **Generate for:** the project's languages, major frameworks and protocols, and any
+  library with non-trivial idiom — one that can be misused while still compiling and
+  running (styling systems, i18n, state/data layers, client SDKs, forms/validation).
+- **Skip idiom-free utilities** — if a newcomer could use it correctly from its signature
+  alone (lodash, date-fns, uuid, dotenv), it needs no guide.
+- **One guide owns one surface.** Technologies that ship as a single working surface get a
+  **single combined guide**, never siblings that restate each other (React Native + Expo →
+  one `guide-react-native`; a state library's docs live in its own guide, not repeated in
+  the framework guide). Overlapping guides multiply load cost for zero new signal.
 
 Guide **depth by tier** is defined once in [INPUT](#input). A library earns **one** guide,
 owned by the expert whose code uses it — never a reason to mint a new expert (2.1). All
@@ -307,7 +299,10 @@ without knowing its name:
 - `keywords:` — Technical-Notes / story trigger words (`auth`, `migration`, `endpoint`).
 
 `expert-qa`, `expert-analyst`, `expert-qa-project` set **no** triggers (always loaded).
-Set `paths`/`keywords` on every other expert and every guide.
+Set `paths`/`keywords` on every other expert and every guide — and **never write
+"always loaded" (or any always-on claim) into any other generated skill's description**:
+the always-on set is exactly those three experts plus `guide-conventions`. Every extra
+always-on skill is a permanent per-session token tax on `build`/`fix`.
 
 ### 2.4 Present the plan (and settle house conventions)
 
@@ -392,6 +387,13 @@ come from Phase 1.6 research (context7 or WebSearch) — if a section has no res
 WebSearch to fill it before writing. Resolve every placeholder, inject the real project
 context block, set `user-invocable: false`, and emit the GENERATED marker as the first body
 line.
+
+**Size budget — a guide is a project idiom sheet, not a tutorial: ≤ 150 lines** (experts
+≤ 120). Spend the budget on what is project-specific, version-specific, or easy to get
+wrong *in this codebase*; link official docs for everything a framework tutorial would
+cover. A guide that cannot fit is covering more than one surface — split the scope
+decision back to 2.2, never pad the file. These skills are loaded into every `build`/`fix`
+session that touches their paths: every line is a recurring cost.
 
 ---
 
@@ -500,6 +502,7 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 - **Never invent conventions** — CAPTURE records only rules the user states or the code demonstrably follows; an empty area stays empty.
 - **Never enter PHASE C twice in one run** — inline (2.5) and standalone (`--conventions`) are mutually exclusive entry points; inline never re-scans what Phase 1.3 already read, and no skill file is written until the 2.4 gate and 2.5 have both resolved.
 - **Never ship a skill whose detection signal is absent**, whatever the tier: tier gates breadth, detection gates relevance.
+- **Never exceed the size budget** — guides ≤ 150 lines, experts ≤ 120 (3.3). Never generate overlapping guides for one surface (2.2), and never declare a generated skill always-on beyond `expert-qa`/`expert-qa-project`/`expert-analyst`/`guide-conventions` (2.3).
 - **Never leave a `[bracketed placeholder]`** or an unresolved `[PROJECT CONTEXT BLOCK]` in a generated skill.
 - **Never run a `Workflow` without the full opt-in gate** — tool present, explicit `--workflow` signal, and the phase's threshold met. Missing any one → the `Agent` path. The workflow path is never the only way a phase can execute.
 - **Always keep this generator project-agnostic** — it reads project context dynamically and injects it.

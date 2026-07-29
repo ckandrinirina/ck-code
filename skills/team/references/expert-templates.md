@@ -92,6 +92,27 @@ sections with the special sections named in their delta; everything above stays.
 
 ---
 
+## Anchor-role catalog
+
+Common starting roles for Phase 2.1 derivation (never a mandatory set — invent the role
+the project needs):
+
+| Role | Slug | Typical tier | Generate when the project has… |
+|---|---|---|---|
+| Frontend | `expert-frontend` | basic | a UI/client component (web or mobile framework, UI dir) |
+| Backend | `expert-backend` | basic | a server/API/engine component |
+| QA Tester | `expert-qa` | basic | always (testing) |
+| Code Analyst | `expert-analyst` | basic | always (review) |
+| Project Q&A | `expert-qa-project` | basic | always (project knowledge) |
+| DevOps / Infra | `expert-devops` | standard | deployment, CI/CD, Docker, cloud infra |
+| Security | `expert-security` | standard | auth, secrets, crypto, payments, PII, or a public API |
+| Database | `expert-database` | standard | a database, ORM, or migrations |
+| Performance | `expert-performance` | max | explicit latency/throughput targets, realtime, heavy compute |
+| API Designer | `expert-api` | max | a public/external/versioned API contract surface |
+| Mobile | `expert-mobile` | max | a mobile app (React Native, Expo, Flutter, native) |
+| Data / ML | `expert-data` | max | a data pipeline, ETL, or ML/AI workflow |
+| Technical Writer | `expert-docs` | max | a docs site or user/developer documentation requirement |
+
 ## Per-role deltas
 
 ### expert-frontend (basic)

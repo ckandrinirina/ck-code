@@ -2,7 +2,6 @@
 name: ship
 description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --to-issues [tasks-folder] [--mode feature|epics|stories]"
-disable-model-invocation: false
 effort: medium
 ---
 
@@ -217,9 +216,11 @@ Use `existing_pr` from Phase 1.2: found → **5.A** (push + update); none → **
 
 ### 6.1 Mark the story done (frontmatter is the source of truth)
 
-If this ship completes the story's work: set the story frontmatter `status: done` (Edit
-the `status:` line — do **not** cell-edit any index or flip an EPIC checkbox), then
-regenerate views once:
+**Skip when the frontmatter already reads `status: done`** — `/ck-code:build` Phase 8.6
+flips it and regenerates the views before invoking this skill; a second flip and
+regenerate here is duplicate work. Otherwise, if this ship completes the story's work:
+set the story frontmatter `status: done` (Edit the `status:` line — do **not** cell-edit
+any index or flip an EPIC checkbox), then regenerate views once:
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
@@ -265,6 +266,9 @@ Story (status/path), Next steps. Worked shape: [examples.md](references/examples
 - More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.
 - Epic complete → note the epic issue can be closed manually or auto-closes once all its
   checkboxes are checked.
+- Remind the user: once the PR merges, delete the local story branch
+  (`git branch -d <branch>`) — merged `story/*`/`fix/*` branches otherwise accumulate
+  forever.
 
 ## STANDALONE MODE (no story)
 

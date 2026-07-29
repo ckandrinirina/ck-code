@@ -10,10 +10,10 @@ effort: high
 Implements stories from `tasks/` using Test-Driven Development, SOLID principles, and
 automated QA. Cycle: plan → test (RED) → implement (GREEN) → refactor → QA → complete.
 
-**One story** runs inline through Phases 0–8. **Two or more stories, or a whole epic**, run
-through [PARALLEL MODE](#parallel-mode) — one worktree agent per story, dependency-ordered
-waves — and every gate below still applies. A `status: bug` story handed off by
-`/ck-code:fix` runs in **Bug-Fix Mode** (Phase 1.3.5).
+**One story** runs inline through Phases 0–8; **more than one** runs through
+[PARALLEL MODE](#parallel-mode) (one worktree agent per story, dependency-ordered waves —
+every gate below still applies); a `status: bug` story handed off by `/ck-code:fix` runs
+in **Bug-Fix Mode** (Phase 1.3.5). Argument shapes: [INPUT](#input).
 
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
 views are **generated read-only** — this skill changes frontmatter, then regenerates. See [`data-model.md`](../../references/data-model.md).
@@ -152,7 +152,8 @@ If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuesti
 
 The story's `issue:` frontmatter field is the linkage (v4 uses the number, never a
 title-substring match). If `issue:` is set, present `Linked GitHub Issue: #<n>`; if empty,
-present `No linked issue found`. Store the number for `/ck-code:ship`. No `gh` search needed.
+present `No linked issue found`. No `gh` search needed — `/ck-code:ship` re-reads the
+number from frontmatter itself.
 
 ### 1.6 Set Status → in-progress (frontmatter + regenerate)
 
@@ -197,8 +198,8 @@ that grows past its `size:` during Phase 5 switches to FULL for 6.1 — say so w
 **Mandatory — blocks Phase 3. Never plan or write code until it completes.** Done ONLY when
 all three hold: (1) the `ls` of project skills ran, (2) every detected-and-present skill was
 `Read`, and (3) the "Skills loaded for this implementation" block was shown to the user.
-`expert-qa` is always detected (+ `expert-analyst` for bug-fix flows), and
-`guide-conventions` always loads when present. If skills exist but you loaded none, stop and
+`expert-qa` and `expert-qa-project` are always detected (+ `expert-analyst` for bug-fix
+flows), and `guide-conventions` always loads when present. If skills exist but you loaded none, stop and
 re-run — a non-empty project must never reach Phase 3 with zero skills loaded, else Phases
 5/6 "follow loaded skills" silently become no-ops.
 
@@ -472,8 +473,11 @@ sub-agent's context is discarded on return, this one is re-paid every turn.
 Every phase below is detailed in [parallel-mode.md](references/parallel-mode.md); the
 dispatch prompts and return schema in [agent-prompts.md](references/agent-prompts.md); the
 wave-planning algorithm in [wave-mode.md](references/wave-mode.md); every report shape in
-[conflict-format.md](references/conflict-format.md). **Scope is exactly one epic — never a
-feature.**
+[conflict-format.md](references/conflict-format.md). Dispatches follow the shared contract
+in [subagent-fanout.md](../../references/subagent-fanout.md) — single-message dispatch,
+explicit `model:` on every call, typed-schema returns — and P4 **announces the decision**
+(`Fan-out: N stories → dispatching N agents.`) before the first dispatch. **Scope is
+exactly one epic — never a feature.**
 
 | Step | What this context does | Non-negotiable |
 |---|---|---|
@@ -543,10 +547,8 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
-- **Never plan or write code before Phase 2 loads and reports the project skills.**
 - **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. RED-before-GREEN, QA delegation, and the manual-test gate run identically on both routes.
-- **Never write failing implementation before RED**, and never edit a test to force GREEN.
-- **Never implement on `main` or `develop`.**
+- **Never edit a test to force GREEN.** (RED-before-GREEN, the Phase 2 skill gate, and the protected-branch ban are HARD GATES above — they bind here identically.)
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 

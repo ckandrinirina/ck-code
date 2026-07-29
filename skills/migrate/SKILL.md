@@ -1,7 +1,6 @@
 ---
 name: migrate
 description: Use when a project is on a pre-v4 ck-code layout and a change-producing skill's version gate has blocked it, when the user asks to upgrade a ck-code project to v4, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow. Converts v3 (or older) story files, epics, and architecture docs — or a lite flat plan — to the v4 frontmatter-based layout, regenerates the indexes, and stamps tasks/VERSION.md. One-shot, idempotent, safe.
-disable-model-invocation: false
 effort: medium
 ---
 

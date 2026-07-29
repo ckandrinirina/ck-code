@@ -78,8 +78,10 @@ selection was the confirmation, and re-asking it is a wasted round-trip.
 
 ## P4 — Dispatch
 
-Dispatch every story of the wave in a **single message** — one `Agent` call each, all in one
-turn, so they run concurrently. Per story (full prompt: [agent-prompts.md](agent-prompts.md)):
+Announce the decision first, in one line: `Fan-out: N stories → dispatching N agents.`
+(an unannounced dispatch is indistinguishable from a forgotten one). Then dispatch every
+story of the wave in a **single message** — one `Agent` call each, all in one turn, so
+they run concurrently. Per story (full prompt: [agent-prompts.md](agent-prompts.md)):
 
 - `isolation: "worktree"` — the harness cuts each agent its own git worktree from `$TARGET`;
   no manual `git worktree add`, no base-SHA pinning, no branch-collision guard. Changed
@@ -196,8 +198,11 @@ re-ask. The story stays merged — this is a fix, not a re-open.
 
 **Cleanup.** After the merge and its check settle, `git worktree prune` and confirm only the
 main worktree remains (changed native worktrees linger until pruned; unchanged ones already
-auto-cleaned). A worktree still standing must map to a story the report names as held,
-blocked, or conflicted — that is the only state a resume can read from.
+auto-cleaned). Then delete each **merged** story branch — `git branch -d "<branch>"` per
+branch that landed in `$TARGET` this wave (`-d`, never `-D`: an unmerged branch must refuse
+to die). Merged branches left standing accumulate forever and bury the real ones. A worktree
+or branch still standing must map to a story the report names as held, blocked, or
+conflicted — that is the only state a resume can read from.
 
 ## P9 — Next wave
 

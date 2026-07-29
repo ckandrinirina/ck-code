@@ -75,11 +75,13 @@ Ask at most 1-2 follow-ups (intermittent vs. consistent, trigger input, recent r
 
 ### 2.5.1 Score Candidate Stories
 
-Read `tasks/<slug>/STORIES_INDEX.md`. Compute relevance scores in **two passes** using the same three signals:
+Read `tasks/<slug>/STORIES_INDEX.md`. Compute relevance scores in **two passes** using the
+same three signals. A story's score is the **sum of the weights of the signals it matches**
+(0 to 1.0):
 
-- **File overlap** — does the bug area (paths inferred from the description, error messages, or stack trace) intersect the story's `files` frontmatter (any status) or technical-notes file list (`todo`)?
-- **Criterion match** — does any acceptance criterion mention the broken behavior?
-- **Component / epic match** — does the bug component match the parent epic's scope?
+- **File overlap (weight 0.5)** — the bug area (paths inferred from the description, error messages, or stack trace) intersects the story's `files` frontmatter (any status) or technical-notes file list (`todo`).
+- **Criterion match (weight 0.3)** — an acceptance criterion mentions the broken behavior.
+- **Component / epic match (weight 0.2)** — the bug component matches the parent epic's scope.
 
 **Pass 1 — `active_scores`:** every `done` / `in-progress` / `bug` row.
 **Pass 2 — `todo_scores`:** every `todo` row. Collect rows scoring ≥ 0.7 into `future_coverage_matches` — these mean the fix is already planned in a future story.
@@ -125,7 +127,7 @@ For each missing-functionality slot identified in 2.5.1, invoke `/ck-code:plan -
 
 ### 3.1 Detect & Load Skills
 
-Follow the shared procedure in [`skill-detection.md`](../../references/skill-detection.md). Experts/guides are matched by each present skill's `paths`/`keywords` frontmatter (anchor tables as fallback) — the slug set is project-derived, not fixed. For bug-fix flows, **both `expert-qa` AND `expert-analyst` are always loaded** (analyst drives root-cause analysis), and `guide-conventions` always loads when present. Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
+Follow the shared procedure in [`skill-detection.md`](../../references/skill-detection.md). Experts/guides are matched by each present skill's `paths`/`keywords` frontmatter (anchor tables as fallback) — the slug set is project-derived, not fixed. For bug-fix flows, **`expert-qa`, `expert-qa-project`, AND `expert-analyst` are always loaded** (analyst drives root-cause analysis), and `guide-conventions` always loads when present. Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
 
 ### 3.2 Prepare Systematic Debugging Approach
 
@@ -237,6 +239,7 @@ Each gate is enforced inside its phase; this is the checklist.
 
 - **Version gate (Phase 0)** — `tasks/VERSION.md` reads `layout: v4` → proceed; else run the [shared procedure](../../references/version-gate.md). No story read/write before it passes.
 - **Phase 2.5** — scope analysis mandatory, even with an explicit story path.
+- **Phase 4.1.5** — the hypothesis fan-out decision is announced before tracing any suspect path ([subagent-fanout.md](../../references/subagent-fanout.md)); investigators are read-only, `model: haiku`.
 - **Phase 2.5.1** — score `todo` rows too; a `todo` match triggers verdict E.
 - **Phase 2.5.2 / 2.5.5 / 4.6 / 5.3** — `AskUserQuestion` confirmation gates; never write without an explicit confirm.
 - **Phase 2.6** — missing stories are created by `/ck-code:plan --quick`, never inline.

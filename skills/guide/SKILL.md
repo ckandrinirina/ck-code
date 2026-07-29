@@ -212,9 +212,10 @@ If `<name>` is not a v4 command, say so and list the valid command names.
 - **Never** invoke another skill via the `Skill` tool — this skill recommends only.
 - **Never** write, edit, or generate any file (including running `ck-index.sh`) —
   Bash is for read-only probes only.
-- **Never** reference retired v3 skills (`start`, `advise`, `help`, `sync`,
-  `doc-optimizer`, `quick-story`, `to-issues`, `pre-spec`, `convention`) — route only
-  to the v4 roster in [`../../references/workflow-map.md`](../../references/workflow-map.md).
+- **Never** reference retired skills (`start`, `advise`, `help`, `sync`,
+  `doc-optimizer`, `quick-story`, `to-issues`, `pre-spec`, `convention`,
+  `parallel-build`) — route only to the current roster in
+  [`../../references/workflow-map.md`](../../references/workflow-map.md).
 - **Never** duplicate the workflow graph or misuse matrix — route against `workflow-map.md`.
 - **Always** apply the Mode A / Mode B tables top-to-bottom; the first match wins.
 - **Always** name the prerequisite when a routed skill has an unmet one (Mode B.2).

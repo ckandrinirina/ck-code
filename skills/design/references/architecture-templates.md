@@ -13,6 +13,24 @@ Cross-cutting infra lives once in `_shared.md`. The retired layer docs (`compone
 `api-contracts.md`, `database-schema.md`, `data-flow.md`) are no longer generated — their
 content lives in feature docs.
 
+## Conditional content
+
+Within a feature doc, **omit** sections that don't apply rather than leaving empty
+placeholders:
+
+- **`## Data`** — omit if the feature touches no tables/entities.
+- **`## API`** — omit if the feature exposes no endpoints (e.g. a pure CLI feature).
+- **`## Flows`** — omit if there is no non-trivial flow to document.
+
+For global docs:
+
+- **`configuration.md`** — skip if the project has no configuration files.
+- **`_shared.md`** — always create it (even if thin); it is the link target for feature
+  docs and the destination for the `optimize` dedup pass.
+
+When skipping a **global** file, still list it in `README.md` with a note: "Not applicable
+for this project."
+
 ---
 
 ## README.md (Index)

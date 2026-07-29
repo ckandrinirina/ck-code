@@ -47,11 +47,10 @@ simplest thing that meets the requirement — see [`reuse-first.md`](../../refer
 ## PHASE 0: VERSION GATE (hard gate, inline)
 
 Before reading or writing any project state, in ALL modes: read `tasks/VERSION.md`. If it
-exists and says `layout: v4` → PASS, proceed. Otherwise open the shared
-[version gate](../../references/version-gate.md) and run its Tier-2 detection: on any
-pre-v4 marker, BLOCK and offer `/ck-code:migrate` (stop until it PASSes or the user
-declines); on a clean greenfield, stamp `tasks/VERSION.md` (`mkdir -p tasks` first) and
-PASS. This runs **once, in the orchestrator** — never inside a fan-out subagent.
+exists and says `layout: v4` → PASS, proceed. Otherwise run the full
+[version-gate.md](../../references/version-gate.md) procedure (Tier-2 detection → stamp or
+BLOCK-and-route-to-`/ck-code:migrate`). This runs **once, in the orchestrator** — never
+inside a fan-out subagent.
 
 ---
 
@@ -80,17 +79,19 @@ path or (B) be guided through creating one from scratch.
 
 ---
 
-## EFFORT SCALING (design flow)
+## EFFORT (design flow)
 
-Adapt depth to the current effort level (**${CLAUDE_EFFORT}**):
-
-- **low** — Minimal Q&A; generate the core globals (overview, tech-stack, folder-structure) plus a thin feature doc per identified feature, marking the rest `[TO BE DEFINED]`.
-- **medium** (default) — Up to 3 Q&A rounds; generate all applicable docs at standard depth.
-- **high / xhigh / max** — Up to the full 5 Q&A rounds; research every named technology via context7; add deep component/data-flow detail plus cross-cutting concerns (scaling, failure modes, observability) to each doc.
+This skill pins `effort: high`: up to the full 5 Q&A rounds, research every named
+technology via context7, and deep component/data-flow detail plus cross-cutting concerns
+(scaling, failure modes, observability) in each doc. Depth never means length — the
+size budget in CONTENT SHAPE below still binds.
 
 ---
 
 ## MODE DETECTION (New Project vs Feature)
+
+Both probes below are independent — run them in **one parallel tool-call message** (or a
+single batched Bash probe), never two round-trips:
 
 1. Glob `docs/architecture/` — does it exist with files?
 2. Check `tasks/` for prior plans, and the codebase for source beyond docs.
@@ -123,7 +124,8 @@ produce all output in English.
 
 ### 1.1b (Feature Mode) Read Existing Architecture Context
 
-BEFORE assessing coverage, token-frugally:
+BEFORE assessing coverage, token-frugally. Steps 1–2 are independent — issue the global-doc
+Reads and the source Glob in **one parallel tool-call message**:
 
 1. Read the global docs (`overview.md`, `tech-stack.md`, `folder-structure.md`,
    `_shared.md`) and the `README.md` index — **NOT** every feature doc. From the index,
@@ -340,22 +342,17 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
 
 ---
 
-## CONDITIONAL CONTENT
+## CONTENT SHAPE
 
-Within a feature doc, **omit** sections that don't apply rather than leaving empty placeholders:
+Which sections a doc includes (and when to omit one) is a template concern — follow
+**Conditional content** in
+[references/architecture-templates.md](references/architecture-templates.md).
 
-- **`## Data`** — omit if the feature touches no tables/entities.
-- **`## API`** — omit if the feature exposes no endpoints (e.g. a pure CLI feature).
-- **`## Flows`** — omit if there is no non-trivial flow to document.
-
-For global docs:
-
-- **`configuration.md`** — skip if the project has no configuration files.
-- **`_shared.md`** — always create it (even if thin); it is the link target for feature docs
-  and the destination for the `optimize` dedup pass.
-
-When skipping a **global** file, still list it in `README.md` with a note: "Not applicable
-for this project."
+**Size budget:** a feature doc is a lookup sheet a story reads before building, not a
+spec — target **≤ 250 lines**; `_shared.md` **≤ 150**. Spend lines on contracts
+(components, API shapes, data, flows) and cut narrative; a doc that cannot fit is covering
+two features (split it — `optimize` step 5) or restating globals/`_shared.md` (link
+instead). Every line here is re-read by every story that touches the feature.
 
 ---
 

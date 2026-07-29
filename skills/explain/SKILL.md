@@ -2,7 +2,6 @@
 name: explain
 description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works. Triggers on "explain", "what was implemented", "how do I check", "how does this work".
 argument-hint: "[file-or-concept]"
-user-invocable: true
 effort: low
 disallowed-tools: Write, Edit, NotebookEdit
 ---
@@ -36,51 +35,24 @@ Optional argument: a specific file, class, or concept to focus on.
 
 List the exact shell commands the user can run right now to confirm everything works. Rules:
 
-- One command per check, with a comment explaining what it verifies
-- Show expected output (or "should show X") after each command
+- One numbered check per command, each as a bold one-line label + a `bash` fence with a
+  comment stating the expected output (`# Should show: …`, `# Should exit 0`)
 - Cover: file existence, build/compile, binary run, key integration points
 - Keep it short — 3 to 6 checks maximum
 - If no terminal check is possible (e.g. pure UI), describe what to look at instead
 
-```
-**1. Verify X exists:**
-\`\`\`bash
-ls path/to/file
-# Should show: filename
-\`\`\`
-
-**2. Verify build succeeds:**
-\`\`\`bash
-cd component && build-command
-# Should exit 0 with no errors
-\`\`\`
-```
-
 ### Section 2 — What Was Built (Learning Explanation)
 
-Explain every file, technology, and pattern that was introduced. Rules:
+Explain every file, technology, and pattern that was introduced, grouped by logical theme
+(`### <Theme>` per group — build system, framework, class design, …), ending with a
+`### What comes next` of 1–3 bullets on what future stories will add. Rules:
 
-- Assume the user is **new to this technology** — never assume prior knowledge
-- Use analogies to things the user already knows (e.g. "like package.json", "like index.js")
+- Assume the user is **new to this technology** — never assume prior knowledge; prefer
+  analogies to things they already know ("like package.json"); define unavoidable jargon
+  immediately
 - For each concept: what is it, why does it exist here, what problem does it solve
 - For each file: what is its role, what key lines mean
-- Use short code snippets to illustrate (annotated with comments)
-- Group by logical theme (build system, framework, class design, etc.)
-- End with: "What comes next" — what will be added in future stories
-
-**Structure:**
-
-```
-### [Theme — e.g. "The Build System"]
-[Plain-language explanation + analogy]
-[Annotated code snippet if useful]
-
-### [Theme — e.g. "The Class Stubs"]
-...
-
-### What comes next
-[1–3 bullets on what future stories will add to what was built today]
-```
+- Use short annotated code snippets to illustrate
 
 ---
 
@@ -104,7 +76,5 @@ If the user specifies a path or concept, focus on that instead.
 
 ## Tone
 
-- Supportive and encouraging — the user is learning
-- Concrete and specific — no vague statements like "this handles the logic"
-- Short paragraphs — one idea per paragraph
-- Prefer analogies over jargon. When jargon is unavoidable, define it immediately
+Supportive and encouraging (the user is learning); concrete and specific — never vague
+("this handles the logic"); short paragraphs, one idea each.
