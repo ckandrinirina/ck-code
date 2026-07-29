@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.0.2] — 2026-07-29
+
+### Fixed
+- **no-ai-references**: the rule declared itself binding on `ship`, `build` and `fix`, but only `ship` linked it — `build` (DELEGATED MODE commits + RULES) and `fix` (RULES) now cite it, so an "absolute, non-overridable" rule is reachable from every skill it governs.
+- **ck-index.sh**: feature rows are split by field position instead of `IFS=$'\t'`, which collapsed runs — an epic folder with an empty slug (`03_`) no longer shifts the Plan/Status/Stories/Docs values one column left.
+- **session-start.sh**: a project whose indexes carry no story rows stays silent instead of injecting a vacuous `0 TODO, 0 IN PROGRESS, 0 DONE` line into every session.
+- **migrate**: added the missing `argument-hint`.
+- **guide**: `references/commands.md` dropped its stale `(v4)` title (the layout constant is not the plugin version).
+
+### Changed
+- **reuse-first**: scope statement now matches its real linkers (`design`, `plan`, `team`, `spec`) and notes that `build`/`fix` encode the ethos inline.
+- **README**: the layout tree documents `references/`, `hooks/`, `settings.json` and `CHANGELOG.md`, which it previously omitted entirely.
+
 ## [5.0.1] — 2026-07-29
 
 ### Fixed
