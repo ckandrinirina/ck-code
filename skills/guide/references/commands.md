@@ -1,4 +1,4 @@
-# ck-code — Command Reference (v4)
+# ck-code — Command Reference
 
 Per-command syntax for `guide --command`. The workflow graph, hand-offs, output
 locations, "when to use which", and the misuse-redirect matrix are the single source

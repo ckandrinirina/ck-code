@@ -53,6 +53,12 @@ counts=$(awk -F'|' '
 if [ -n "$counts" ]; then
   set -- $counts
   todo=${1:-0}; ip=${2:-0}; done=${3:-0}; bug=${4:-0}
+  # All-zero means the indexes carry no story rows — say nothing rather than
+  # emit a vacuous "0 TODO, 0 IN PROGRESS, 0 DONE".
+  if [ $((todo + ip + done + bug)) -eq 0 ]; then
+    emit_plain
+    exit 0
+  fi
   msg="ck-code v4 project: $todo TODO, $ip IN PROGRESS, $done DONE"
   [ "${bug:-0}" -gt 0 ] && msg="$msg, $bug BUG"
   msg="$msg. Run /ck-code:track for the next step."

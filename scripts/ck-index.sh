@@ -133,7 +133,12 @@ regen_stories_index() {
 collect_features() {
   local plandir="$1" planname="${1#tasks/}" rows
   rows="$(plan_rows "$plandir")"
-  grep '^F	' "$rows" | while IFS=$'\t' read -r _ epic edisp stories st eslug; do
+  # IFS=tab alone collapses runs, so an empty middle field would shift every later
+  # variable; -d '' with a sentinel keeps positions exact.
+  grep '^F	' "$rows" | while IFS= read -r frow; do
+    epic=$(printf '%s' "$frow" | cut -f2); edisp=$(printf '%s' "$frow" | cut -f3)
+    stories=$(printf '%s' "$frow" | cut -f4); st=$(printf '%s' "$frow" | cut -f5)
+    eslug=$(printf '%s' "$frow" | cut -f6)
     local desc="" fmslug="" epicmd
     epicmd=$(find "$plandir/epics" -maxdepth 2 -name EPIC.md -path "*/${epic}_*" 2>/dev/null | head -1)
     if [ -n "$epicmd" ]; then

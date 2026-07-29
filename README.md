@@ -160,6 +160,12 @@ ck-code/
 │   ├── qa-validator.md
 │   ├── conflict-analyzer.md
 │   └── story-implementer.md
+├── references/                    # cross-skill shared contracts (version gate, data model,
+│                                  # skill detection, subagent fan-out, QA, workflow map, …)
+├── hooks/
+│   └── hooks.json                 # SessionStart + PostToolUse(format) registrations
+├── settings.json                  # subagent status line
+├── CHANGELOG.md
 ├── scripts/
 │   ├── ck-index.sh                # regenerate the index views from story frontmatter
 │   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)

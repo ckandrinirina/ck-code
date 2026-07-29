@@ -514,7 +514,8 @@ this run in its own worktree on its own branch, and there is no user to ask.
 | 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
 
 Uncommitted work cannot be merged and cannot be resumed. Commit messages are conventional
-(`test(EE-SS):`, `feat(EE-SS):`) with no AI references.
+(`test(EE-SS):`, `feat(EE-SS):`) with **no AI references** — full rule:
+[`no-ai-references.md`](../../references/no-ai-references.md).
 
 ---
 
@@ -546,6 +547,7 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
   (the two are one atomic mutation).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
+- **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
 - **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. RED-before-GREEN, QA delegation, and the manual-test gate run identically on both routes.
 - **Never edit a test to force GREEN.** (RED-before-GREEN, the Phase 2 skill gate, and the protected-branch ban are HARD GATES above — they bind here identically.)
