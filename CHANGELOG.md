@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.0.0] — 2026-07-29
+
+### Removed
+- **parallel-build**: the `/ck-code:parallel-build` command no longer exists. Every one of its
+  capabilities — multi-story worktree dispatch, dependency-ordered epic waves, conflict
+  analysis, per-branch QA, merge orchestration — now lives inside `/ck-code:build`. **Migration:**
+  `parallel-build 02-05 03-01` → `build 02-05 03-01`; `parallel-build --epic 02` → `build --epic 02`.
+
+### Changed
+- **build**: accepts a story path (inline, unchanged), two or more story IDs, or `--epic NN`.
+  One story in scope still runs Phases 1–8 inline; two or more enter the new `PARALLEL MODE`
+  (P1–P9), so the two skills no longer hand off to each other mid-run. The duplicated version
+  gate, feature gate, index read, `files:` conflict map, whole-epic detection, and team gate
+  collapse to one implementation.
+- **build**: new `DELEGATED MODE`, active when a dispatch prompt begins `MODE: delegated`. A
+  worktree agent now has an explicit per-phase contract — no branch question, no `ck-index.sh`,
+  no manual-test gate, no ship — instead of that contract living only in the dispatching agent's
+  prompt. This closes a real hazard: a dispatched `build` could previously run the generator
+  inside its worktree.
+- **build references**: `agent-prompts.md`, `wave-mode.md`, and `conflict-format.md` moved from
+  `skills/parallel-build/references/` to `skills/build/references/`; new `parallel-mode.md`
+  carries the full P1–P9 orchestration detail, read only when two or more stories are in scope;
+  `parallel-switch.md` removed (its epic-wave offer is now build Phase 1.4 inline).
+- **agents**: `story-implementer`, `conflict-analyzer`, and `qa-validator` now describe
+  themselves as `/ck-code:build` PARALLEL MODE workers.
+
 ## [4.2.0] — 2026-07-27
 
 ### Added
