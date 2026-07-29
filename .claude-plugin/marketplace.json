@@ -16,7 +16,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-code-lite",
-        "ref": "v0.2.2"
+        "ref": "v0.2.3"
       },
       "description": "Minimal three-skill workflow: start (architecture + flat plan), build (failing test first, isolated QA, manual sign-off), ship (commit + PR). The ck-code guarantees without the ceremony. An alternative to ck-code, not a companion."
     },
@@ -25,7 +25,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-tools",
-        "ref": "v2.2.1"
+        "ref": "v2.2.2"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores. Coexists with ck-code."
     }
