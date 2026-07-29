@@ -51,8 +51,8 @@ at collection instead of silently mis-parsed — and it keeps the orchestrator's
 lean because it never re-reads the subagent's working prose. The v3 "return a brief the
 orchestrator scans" convention is replaced: state the schema, require the schema, read the
 schema. This applies to every registered ck-code agent too — `story-implementer` returns
-`{status, commits, remaining, criteria_met}`, `qa-validator` returns a `QA: PASS/FAIL`
-verdict line, `conflict-analyzer` returns `{order, report[]}`.
+`{status, branch, commits, remaining, criteria_met}`, `qa-validator` returns a
+`QA: PASS/FAIL` verdict line, `conflict-analyzer` returns `{order, report[]}`.
 
 ## Model tier (pass `model:` on every dispatch)
 

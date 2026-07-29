@@ -1,8 +1,9 @@
 # QA Validation — Shared Procedure
 
-Used by `build` (Phase 7) and `fix` (Phase 7). Invoke the
-`ck-code:qa-validator` agent in preference to running these steps inline if
-the agent is registered.
+Used by `build` (Phase 7). (`fix` does not run this procedure — its reproduction
+and diagnosis live in its own Phase 4, delegated to `ck-code:qa-validator`.)
+Invoke the `ck-code:qa-validator` agent in preference to running these steps
+inline if the agent is registered.
 
 ## Step 0 — Load QA expert skills (mandatory)
 
@@ -77,8 +78,8 @@ Emit a QA Report with:
 - Issues Found table (severity).
 - Final **Verdict: PASS / NEEDS FIXES**.
 
-Skill-specific report templates: `build/references/examples.md` (Phase 7)
-or `fix/references/qa-dialogue.md` (Phase 7.5).
+Skill-specific report templates: `build/references/output-blocks.md` (Phase 7)
+or `fix/references/qa-dialogue.md` (the fix diagnosis report, Phase 4.6).
 
 ## Step 8 — Handle the result
 
@@ -96,7 +97,7 @@ calling skill's completion phase.
   - **C) ABORT** — stop work, set the story frontmatter `status: todo` and regenerate the views (`scripts/ck-index.sh`).
 
 Exact wording for the escalation lives in the calling skill's references
-(`build/references/examples.md` or `fix/references/qa-dialogue.md`).
+(`build/references/output-blocks.md` or `fix/references/qa-dialogue.md`).
 
 ## Rules
 

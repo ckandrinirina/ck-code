@@ -53,13 +53,28 @@ prior_status:
 | `size` | `S` \| `M` | one-dispatch sizing; larger work is split at a seam (no `L`/`XL`) |
 | `blocked_by` | `[id, ...]` or `[]` | story IDs that must be `done` first |
 | `files` | `[path, ...]` or `[]` | files the story creates/modifies — the conflict-detection and touched-files key |
-| `issue` | number or empty | linked GitHub issue, written by `to-issues`/`ship`; empty until pushed |
+| `issue` | number or empty | linked GitHub issue, written by `ship` (incl. `--to-issues`); empty until pushed |
 | `prior_status` | status or empty | set to the pre-`bug` status when `status: bug`; restored on fix |
 
 **Format contract (so the generator can read it without a YAML library):** one key
 per line, `key: value`; list values are inline flow style `[a, b, c]` (or `[]`);
 no block/multiline scalars in frontmatter. Body prose is free-form Markdown below
 the closing `---`. `status` and `size` are lowercase/uppercase exactly as the enum.
+
+## Epic file (`plan` output)
+
+`tasks/<slug>/epics/NN_<epic-slug>/EPIC.md` carries frontmatter the generator reads:
+
+| Key | Values | Meaning |
+|---|---|---|
+| `epic` | `NN` | epic number — the rollup key; **must match the folder prefix** |
+| `slug` | text | routes the `FEATURE_INDEX` `Docs` cell to `docs/architecture/features/<slug>/index.md`; set it to the owning feature-doc dir name (defaults to the folder slug) |
+| `title` | text | epic display title |
+| `description` | text | one line — becomes the `FEATURE_INDEX` Description cell |
+| `issue` | number or empty | linked GitHub issue, written by `ship --to-issues` |
+
+Same format contract as story frontmatter. `title` and `description` must not
+contain `|` (they are emitted into markdown table cells).
 
 ## Feature doc (`design` output)
 

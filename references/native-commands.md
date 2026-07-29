@@ -19,11 +19,11 @@ until a fast/cheap verifier model confirms it holds — no manual re-prompting. 
 Token note: the verifier runs on a cheap model, so `/goal` is *cheaper* than re-prompting
 each turn yourself. One goal per session; run `/goal` with no argument to see turns/tokens spent.
 
-## `/fast` — ~2.5× faster output on Opus 4.8 (user toggle only)
+## `/fast` — faster Opus output (user toggle only)
 
 `/fast` (or `"fastMode": true` in `~/.claude/settings.json`) routes through a faster
-serving path — same Opus model, quicker output. **A plugin cannot enable it for you.**
-Use it intelligently:
+serving path — same Opus model (available on Opus 5 and 4.x), quicker output. **A plugin
+cannot enable it for you.** Use it intelligently:
 
 | Situation | `/fast`? |
 |---|---|

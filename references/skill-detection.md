@@ -53,9 +53,10 @@ For each expert present on disk (from Step 4a), read its frontmatter and load it
 
 A `paths` match is authoritative; treat a `keywords`-only match as the weaker fallback signal — when a skill matches on neither the touched files nor a title/Technical-Notes keyword, do not load its body.
 
-**Always required** (loaded if present, no trigger needed): `expert-qa`; plus
-`expert-analyst` for bug-fix flows (root-cause analysis). These three —
-`expert-qa`, `expert-analyst`, `expert-qa-project` — carry no `paths`/`keywords`.
+**Always required** (loaded if present, no trigger needed): `expert-qa` and
+`expert-qa-project`; plus `expert-analyst` for bug-fix flows (root-cause analysis).
+These three — `expert-qa`, `expert-qa-project`, `expert-analyst` — carry no
+`paths`/`keywords`, so nothing but this list ever detects them.
 
 **Fallback for experts with no `paths`/`keywords` frontmatter** (older generations only):
 read the anchor tables in
@@ -163,9 +164,9 @@ would silently load an unrelated plugin skill, and no match would error
 before any fallback ran. `Read` against the absolute project path is the
 only correct mechanism.
 
-`experts/qa/SKILL.md` and (for bug-fix flows) `experts/analyst/SKILL.md`
-are loaded **only when 4a confirms their files exist on disk** — a missing
-file is reported in 4c, never silently faked. `guides/conventions/SKILL.md`
+`experts/qa/SKILL.md`, `experts/qa-project/SKILL.md`, and (for bug-fix flows)
+`experts/analyst/SKILL.md` are loaded **only when 4a confirms their files exist
+on disk** — a missing file is reported in 4c, never silently faked. `guides/conventions/SKILL.md`
 is likewise **always loaded when present** (the project house rules), with
 no trigger required.
 
