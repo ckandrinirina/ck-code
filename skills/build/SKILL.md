@@ -1,29 +1,34 @@
 ---
 name: build
-description: Use when implementing a single story from `tasks/` end-to-end with TDD, or when a `status: bug` story handed off by `/ck-code:fix` needs its recorded fix implemented (Bug-Fix Mode). Argument is an optional story-file path; with no argument, picks the next ready story or open bug interactively.
-argument-hint: "[path-to-story.md]"
+description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a `status: bug` story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
+argument-hint: "[story-path] | [story-ids...] | --epic NN"
+effort: high
 ---
 
-# Build — TDD Story Implementation Orchestrator
+# Build — TDD Story Implementation
 
-Implements a single story from `tasks/` using Test-Driven Development, SOLID principles,
-and automated QA. Cycle: plan → test (RED) → implement (GREEN) → refactor → QA → complete.
-A `status: bug` story handed off by `/ck-code:fix` runs in **Bug-Fix Mode** (Phase 1.3.5).
+Implements stories from `tasks/` using Test-Driven Development, SOLID principles, and
+automated QA. Cycle: plan → test (RED) → implement (GREEN) → refactor → QA → complete.
+
+**One story** runs inline through Phases 0–8. **Two or more stories, or a whole epic**, run
+through [PARALLEL MODE](#parallel-mode) — one worktree agent per story, dependency-ordered
+waves — and every gate below still applies. A `status: bug` story handed off by
+`/ck-code:fix` runs in **Bug-Fix Mode** (Phase 1.3.5).
 
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
 views are **generated read-only** — this skill changes frontmatter, then regenerates. See [`data-model.md`](../../references/data-model.md).
 
-References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [parallel-switch.md](references/parallel-switch.md) (Phase 1.4 explicit-path epic-wave offer) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+
+Parallel-mode references, read **only** when two or more stories are in scope: [parallel-mode.md](references/parallel-mode.md) (orchestration detail for P1–P9) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [wave-mode.md](references/wave-mode.md) (wave planning) · [conflict-format.md](references/conflict-format.md) (table/integrity/conflict/QA/summary formats).
 
 **Read each reference at most once per run** — `output-blocks.md` and `tdd-walkthrough.md` are cited from many phases; load each once, keep it resident, and reuse it.
 
 ## ROUTING CHECK (do first)
 
-This skill TDD-implements **one story**. If the request is something else, STOP and
-recommend the better skill:
+If the request is something else, STOP and recommend the better skill:
 
 - An **un-triaged** bug in shipped code → `/ck-code:fix` first (it diagnoses, writes the failing test + Fix Plan, and flips the story to `status: bug`). A story **already at `status: bug`** is triaged — implement it here in Bug-Fix Mode (Phase 1.3.5).
-- 3+ independent ready stories with empty `blocked_by` → `/ck-code:parallel-build`.
 - No story exists for the work yet → `/ck-code:plan` first.
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
@@ -31,8 +36,18 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## INPUT
 
-`$ARGUMENTS` is an optional path to a story markdown file. If provided: read and
-validate. If empty: enter interactive selection (Phase 1.2).
+`$ARGUMENTS` is empty, a story path, space-separated story IDs, or `--epic NN`:
+
+- **A story path** (`tasks/<slug>/epics/02/stories/02-05-*.md`) — build that one story
+  inline through Phases 1–8. Validate it before anything else (Phase 1.1).
+- **Two or more story IDs** (`02-05 03-01`) — PARALLEL MODE, one wave.
+- **`--epic NN`** — PARALLEL MODE over every non-`done` story of that epic, in
+  dependency-ordered waves.
+- **Empty** — interactive selection (Phase 1.2), which also offers the parallel set and
+  whole-epic waves.
+
+A dispatch prompt beginning `MODE: delegated` means this run **is** a worktree agent inside
+someone else's parallel run — read [DELEGATED MODE](#delegated-mode) before Phase 1.
 
 ---
 
@@ -54,13 +69,16 @@ Read the story at `$ARGUMENTS`. Validate its frontmatter (`id`, `title`, `epic`,
 `status`, `size`) and that it has a body with Acceptance Criteria. If invalid or missing,
 tell the user and stop.
 
+Explicit **story IDs** or `--epic NN` instead of a path skip to
+[PARALLEL MODE](#parallel-mode) P1 — resolve each ID against the index there, never here.
+
 ### 1.2 If No Story Path (Interactive — index-driven)
 
 **1.2.0 Feature gate (read `tasks/FEATURE_INDEX.md` FIRST).** Before any story index, run
 the feature-selection gate in [`feature-index.md`](../../references/feature-index.md) — it
 owns the regenerate condition, the unfinished-set rule, and the 0/1/2/>2 branches; do not
 restate them here. The chosen feature's `Plan` + `NN` scope the story index read below.
-Interactive mode only — an explicit `$ARGUMENTS` path skips this.
+Interactive mode only — explicit `$ARGUMENTS` skips this.
 
 1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN`.
    Regenerate first if it is missing or lacks the `GENERATED` header
@@ -86,13 +104,14 @@ Interactive mode only — an explicit `$ARGUMENTS` path skips this.
 
    Group the `files:` paths so no two stories share a file. The largest conflict-free
    group of ≥ 2 is the **recommended parallel set** — the preferred default. Keep this map:
-   Phase 2 reuses the selected story's `files:` for skill matching; only Phase 1.3 issues a
-   full `Read` (for the one selected story).
+   PARALLEL MODE P2 reuses it instead of re-reading, and Phase 2 reuses the selected story's
+   `files:` for skill matching. Only Phase 1.3 issues a full `Read` (for the one selected story).
 6. **Present the menu and route the choice** per [examples.md](references/examples.md):
    recommended parallel set (⚡, when ≥ 2) → epics → single stories. The selection is the
-   one confirmation — parallel/epic routes hand off to `parallel-build` (which does not
-   re-prompt); a single story proceeds to 1.3 (Phase 1.4 then skips its offer). If none
-   ready, say so + which deps are missing (suggest `/ck-code:plan` if the index is empty).
+   one confirmation — parallel and epic choices enter [PARALLEL MODE](#parallel-mode) at P1
+   with the scope already resolved (P3 does not re-ask which stories); a single story
+   proceeds to 1.3 (Phase 1.4 then skips its offer). If none ready, say so + which deps are
+   missing (suggest `/ck-code:plan` if the index is empty).
 
 ### 1.3 Load Story Context
 
@@ -118,12 +137,16 @@ Technical Notes reference it explicitly.
 
 ### 1.4 Epic-Wave Offer (explicit-path only, before status change)
 
-Runs ONLY for an explicit `$ARGUMENTS` story path — **skip** when the 1.2 menu ran or
-non-interactively. Never auto-pull parallel-safe peers. If the story's epic still has > 1
-non-DONE story, ask (`AskUserQuestion`): build-whole-epic-in-waves
-(`Skill("ck-code:parallel-build", "--epic NN")`, status stays `todo`, exit) vs stay on this
-story (→ 1.5); if only this story remains, skip silently. Detail:
-[parallel-switch.md](references/parallel-switch.md).
+Runs ONLY for an explicit `$ARGUMENTS` story path — **skip** when the 1.2 menu ran, in
+Bug-Fix Mode, in DELEGATED MODE, or non-interactively. Never auto-pull parallel-safe peers:
+an explicit single-story request is respected, and batch routing belongs to the 1.2 menu.
+
+Count the selected story's epic (`NN`) rows in `STORIES_INDEX.md` whose `Status` ≠ `DONE`.
+If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuestion`):
+
+- **Build the whole epic in dependency-ordered waves** — leave this story `status: todo`
+  (do NOT run 1.6) and enter [PARALLEL MODE](#parallel-mode) at P1 with scope `--epic NN`.
+- **Stay on this story** — proceed to 1.5.
 
 ### 1.5 Detect Linked GitHub Issue
 
@@ -144,8 +167,9 @@ views in the same phase:
 ```
 
 That is the whole mutation — the generator recomputes every view from frontmatter, so there
-is no index cell, `EPIC.md`, or rollup to touch, and no per-worktree special-casing (a
-`parallel-build` agent edits only its own frontmatter; the orchestrator regenerates on merge).
+is no index cell, `EPIC.md`, or rollup to touch. **DELEGATED MODE skips the regenerate** —
+a worktree agent edits only its own story's frontmatter; the orchestrator regenerates once
+on the target branch after merge.
 
 ### 1.7 Effort Route (from frontmatter `size:`)
 
@@ -243,7 +267,9 @@ chooses where the work lands:
 - **Adjust plan** — revise the plan, then re-ask.
 
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
-touched in Phase 4 until this gate returns a branch.
+touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the branch
+question** — the harness already placed the run on its worktree branch — but still presents
+the plan.
 
 ---
 
@@ -337,7 +363,8 @@ QA reviews the work — this is **not** a self-review.
 
 **Always delegate to the `ck-code:qa-validator` agent** (Haiku) — it absorbs the verbose
 suite/build/lint output in its own context and returns a compact verdict. Run the heavy
-commands inline **only** when that subagent_type is unregistered.
+commands inline **only** when that subagent_type is unregistered, or in DELEGATED MODE
+(where the orchestrator runs `qa-validator` per branch instead).
 
 Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../references/qa-validation.md)
 — it loads the QA experts, validates every acceptance criterion, runs the suite +
@@ -383,6 +410,8 @@ Use TaskList to show the completed summary of all tasks.
 ### 8.5 User Manual Testing — REQUIRED GATE
 
 Story stays `in-progress` until the user confirms PASS here. Never set `done` before that.
+**DELEGATED MODE skips this phase** — the orchestrator runs the manual gate once on the
+target branch after merge, where every merged story sits together.
 
 **8.5.1** Present the manual-testing prompt (template in
 [output-blocks.md](references/output-blocks.md)) — scenarios from acceptance criteria + an
@@ -421,6 +450,7 @@ automatically):
 ```
 
 No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v4.
+**DELEGATED MODE skips the regenerate** (see 1.6).
 
 ### 8.7 Ship (Commit + PR + Issue Updates)
 
@@ -428,7 +458,59 @@ Apply the ship answer already collected at 8.5.1 Q2 — **do not ask again**: **
 invoke `/ck-code:ship` with the story file path (handles branch, staging, commit, PR, and
 GitHub Issue updates); **SKIP** — don't commit yet; remind the user they can run
 `/ck-code:ship [story-path]` later. Only ask here if 8.5.1 ran without Q2 (e.g. a
-non-interactive caller).
+non-interactive caller). **DELEGATED MODE never ships** — it commits inside its worktree and
+returns its verdict.
+
+---
+
+## PARALLEL MODE
+
+Two or more stories of **one epic** at a time, each in its own git worktree. This context
+**decides, verifies, and merges** — it never builds, tests, or reads source itself; a
+sub-agent's context is discarded on return, this one is re-paid every turn.
+
+Every phase below is detailed in [parallel-mode.md](references/parallel-mode.md); the
+dispatch prompts and return schema in [agent-prompts.md](references/agent-prompts.md); the
+wave-planning algorithm in [wave-mode.md](references/wave-mode.md); every report shape in
+[conflict-format.md](references/conflict-format.md). **Scope is exactly one epic — never a
+feature.**
+
+| Step | What this context does | Non-negotiable |
+|---|---|---|
+| **P1** | Freeze `$TARGET` (`git branch --show-current`; dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main` |
+| **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
+| **P3** | Team gate (`ls .claude/skills/{experts,guides}/*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
+| **P4** | Dispatch the wave in a **single message**: one `Agent` per story, `isolation: "worktree"`, `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` prompt | Tier the model by reasoning complexity, never `size` |
+| **P5** | Integrity per returned branch → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
+| **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Every dry-run is aborted; nothing lands here |
+| **P7** | One `ck-code:qa-validator` per ✓ branch, single parallel message | Merge-eligible = ✓ complete + `QA: PASS` + conflict-free |
+| **P8** | Merge in P6's order, regenerate the indexes **once**, post-merge `qa-validator` on `$TARGET`, then the Phase 8.5 manual gate once for the wave | Never merge a branch that has not passed P7 |
+| **P9** | Re-resolve the next wave from the regenerated index and loop from P3 | A held story keeps its worktree and holds its dependents |
+
+Every step above — the exact commands, the resume prompt, the stack-command table, the
+classification rules, the cleanup contract — is in
+[parallel-mode.md](references/parallel-mode.md). Read it once when this mode starts.
+
+---
+
+## DELEGATED MODE
+
+Active only when the dispatch prompt begins `MODE: delegated`. The harness has already placed
+this run in its own worktree on its own branch, and there is no user to ask.
+
+| Phase | Change |
+|---|---|
+| 1.1–1.2 | Skipped — the story path is given. |
+| 1.4 | Skipped — never offer waves from inside a wave. |
+| 1.6 / 8.6 | Edit **this story's frontmatter only**; never run `ck-index.sh` and never touch a generated index — the orchestrator regenerates once on the target after merge. |
+| 3.5 | Present the plan; no branch question — the harness owns the branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
+| 4–6 | Unchanged. RED still gates GREEN. |
+| 7 | Run the QA commands inline; never delegate to `qa-validator` — the orchestrator runs one per branch. |
+| 8.5 | Skipped — manual sign-off happens once on the target after merge. |
+| 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
+
+Uncommitted work cannot be merged and cannot be resumed. Commit messages are conventional
+(`test(EE-SS):`, `feat(EE-SS):`) with no AI references.
 
 ---
 
@@ -436,7 +518,7 @@ non-interactive caller).
 
 - **0** — version gate PASSes (`layout: v4`) before any project read/write.
 - **1.2.0** — feature index read first; ask when > 2 features unfinished.
-- **1.2** — interactive selection prefers the parallel set; an explicit arg is single-story.
+- **1.2** — interactive selection prefers the parallel set; an explicit path is single-story.
 - **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project
   skills → warn + ask (`/ck-code:team` first) rather than proceed silently.
 - **1.7** — effort route fixed from `size:` and announced; it scales ceremony only, never a
@@ -450,6 +532,8 @@ non-interactive caller).
 - **1.3.5 (Bug-Fix Mode)** — implement only the recorded Fix Plan; the failing repro test is
   the RED target; restore `prior_status`, never an Implementation Summary. `status: bug`
   without a `DIAGNOSED` Bug Report → STOP (run `/ck-code:fix`).
+- **P3 / P5 / P7 (PARALLEL MODE)** — team gate asked once per batch; "done" derived from git;
+  no branch merges without `QA: PASS`.
 
 ## RULES
 
@@ -466,10 +550,23 @@ non-interactive caller).
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 
+### Parallel mode
+
+The P-table's "Non-negotiable" column is the rest of this contract; these four are the
+traps it does not carry.
+
+- **Never orchestrate a single story** — one story in scope takes Phases 1–8 inline.
+- **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
+  names, statuses, SHAs, and structured returns only. Every implementation is a sub-agent.
+- **Never let a dispatched agent run `ck-index.sh` or edit a generated index** — it changes
+  only its own story's frontmatter; this context regenerates once per wave after merge.
+- **Never span epics in one run** — every wave and every batch is scoped to a single epic.
+
 ## NEXT
 
 After manual-test PASS (8.5), run `/ck-code:ship <story-path>` to commit, open the PR, and
-update the linked GitHub Issue. If more stories remain, follow with `/ck-code:track next`.
+update the linked GitHub Issue — once per story, or per merged branch after a parallel run.
+If more stories remain, follow with `/ck-code:track next`.
 
 **Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
 `/goal "all acceptance criteria in <story> pass and the suite is green"` autonomises the

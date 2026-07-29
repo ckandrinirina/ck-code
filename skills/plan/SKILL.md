@@ -23,8 +23,8 @@ Story state lives in **story-file frontmatter**; `STORIES_INDEX.md` and
 **Hand-off:** requires `/ck-code:design` (architecture docs in `docs/architecture/`),
 then `/ck-code:team` (expert + guide skills). If `.claude/skills/experts/` is absent,
 say so and recommend `/ck-code:team` before continuing — `build` relies on it. Hands
-off to `/ck-code:build` / `/ck-code:parallel-build` (or `/ck-code:ship` to publish
-issues first).
+off to `/ck-code:build` (one story, several, or a whole epic) — or `/ck-code:ship` to
+publish issues first.
 
 ## HARD GATES
 
@@ -202,7 +202,7 @@ integration. The plan's **last** epic is always the mandatory Integration & E2E 
 
 ### 3.2 Define stories
 
-**One story = one agent dispatch.** A single `build` session — or one `parallel-build`
+**One story = one agent dispatch.** A single `build` session — or one PARALLEL MODE
 sub-agent — implements it end-to-end (red → green → refactor → QA → commit) within its
 budget. An oversized story stalls mid-build and forces a costly recovery pass.
 
@@ -265,7 +265,7 @@ Rules:
 
 - Slug it `integration-e2e` (`NN_integration-e2e`); its Goal states the end-to-end behavior proved.
 - `blocked_by` every prior epic's terminal stories — it runs only after the pieces exist,
-  so it is last in the roadmap and never a `parallel-build` candidate alongside the work it verifies.
+  so it is last in the roadmap and never a parallel candidate alongside the work it verifies.
 - Its stories **exercise real user journeys through actual entry points** (API, CLI, UI,
   message bus), asserting cross-component behavior and the seams from 2.7 — not more unit tests.
 - **Each E2E story is still S or M, one dispatch** (3.2). When coverage exceeds one
@@ -434,7 +434,7 @@ Next steps (pick one):
 
 Run `/ck-code:ship` to publish the epics and stories to GitHub Issues, **or** skip
 publishing and run `/ck-code:track next` to find the first story to implement. An epic of
-independent stories is a natural fit for `/ck-code:parallel-build`.
+independent stories is a natural fit for `/ck-code:build --epic NN`.
 
 ---
 

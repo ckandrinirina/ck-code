@@ -112,7 +112,7 @@ The longest sequential chain is:
 1. Review the generated plan in tasks/
 2. Adjust stories or sizing as needed
 3. Use `/ck-code:ship` to publish to GitHub Issues (optional)
-4. Start with `/ck-code:build` (or `/ck-code:parallel-build` for independent stories)
+4. Start with `/ck-code:build` (pass several story IDs to build independent stories at once)
 ```
 
 ### Feature Mode — Add Feature Summary

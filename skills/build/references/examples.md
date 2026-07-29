@@ -9,9 +9,9 @@ bug-fix sub-loop. The compact per-phase status/prompt templates live in
 ## Phase 1.2 — Interactive Story Selection
 
 The menu leads with the **parallel** option whenever ≥ 2 ready stories are conflict-free,
-then whole-epic wave builds, then single stories. Picking parallel hands off to
-`/ck-code:parallel-build "<ids>"` (which dispatches one worktree agent per story, no
-re-prompt); picking an epic hands off to `/ck-code:parallel-build --epic NN`.
+then whole-epic wave builds, then single stories. Picking parallel or an epic enters
+SKILL.md § PARALLEL MODE at P1 with the scope already resolved — one worktree agent per
+story, and P3 does not re-ask which stories to build.
 
 ```
 ## Stories Ready for Implementation
@@ -24,24 +24,24 @@ re-prompt); picking an epic hands off to `/ck-code:parallel-build --epic NN`.
 
 ## ⚡ Recommended — build in parallel (isolated worktrees, one agent each)
 
-| #  | Set                      | Builds via                          |
-|----|--------------------------|-------------------------------------|
-| P  | 01-04, 01-02, 02-01 (3)  | parallel-build "01-04 01-02 02-01"  |
+| #  | Set                      | Scope                    |
+|----|--------------------------|--------------------------|
+| P  | 01-04, 01-02, 02-01 (3)  | one wave, 3 worktrees    |
 
 ## Or build a whole epic in dependency-ordered waves (drives every story to DONE)
 
-| #  | Epic    | Remaining | Builds via                |
-|----|---------|-----------|---------------------------|
-| E1 | Epic 01 | 2 stories | parallel-build --epic 01  |
-| E2 | Epic 02 | 2 stories | parallel-build --epic 02  |
+| #  | Epic    | Remaining | Scope             |
+|----|---------|-----------|-------------------|
+| E1 | Epic 01 | 2 stories | epic 01, in waves |
+| E2 | Epic 02 | 2 stories | epic 02, in waves |
 
 Pick P to build the parallel set, an epic (E1/E2) for waves, or a single story (number/path).
 ```
 
-**Routing (the selection is the single confirm — the downstream skill does not re-prompt):**
+**Routing (the selection is the single confirm — PARALLEL MODE does not re-prompt for scope):**
 
-- **Parallel set (P)** → statuses stay `todo` (skip SKILL.md 1.3–1.6); call `Skill("ck-code:parallel-build", "<id1> <id2> ...")` and exit. parallel-build receives explicit IDs, skips its own selection, and dispatches one worktree agent per story.
-- **Epic (E1/E2)** → statuses stay `todo`; call `Skill("ck-code:parallel-build", "--epic NN")` and exit — parallel-build owns the wave loop.
+- **Parallel set (P)** → statuses stay `todo` (skip SKILL.md 1.3–1.6); enter PARALLEL MODE at P1 with those IDs as the scope, one wave.
+- **Epic (E1/E2)** → statuses stay `todo`; enter PARALLEL MODE at P1 with scope `--epic NN` — [wave-mode.md](wave-mode.md) owns the loop.
 - **Single story** → proceed to SKILL.md 1.3; Phase 1.4 does NOT re-offer parallel/epic.
 
 Do NOT glob `tasks/*/epics/*/stories/*.md` and do NOT full-`Read` any story body — for

@@ -18,8 +18,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `team` | `[--basic\|--standard\|--max] [--check\|--regenerate]` | Architecture → expert + guide skills; offers house-conventions capture in the same run | `.claude/skills/` |
 | `plan` | `<spec-file> \| --quick [brief] [--epic NN]` | Architecture → epics, stories, roadmap; `--quick` adds one small story | `tasks/` (+ regenerated views) |
 | `track` | `[status\|next\|progress]` | Progress dashboard / next ready story (regenerates missing views) | read-only |
-| `build` | `[story-path]` | TDD-implement one story end-to-end, or a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter + views |
-| `parallel-build` | `[story-ids...] \| --epic NN` | Implement several ready stories (or `bug` fixes) in worktrees | branch per story |
+| `build` | `[story-path] \| [story-ids...] \| --epic NN` | TDD-implement stories end-to-end — one inline, several in worktrees, or a whole epic in waves; also a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter + views; a branch per story in PARALLEL MODE |
 | `fix` | `[story-path]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
 | `ship` | `[story-path] [--issues]` | Commit, open PR, mirror plan/implementation to GitHub Issues | git + GitHub |
 | `migrate` | — | Upgrade a pre-v4 **or ck-code-lite** project to the v4 frontmatter layout, then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `VERSION.md` |
@@ -40,8 +39,8 @@ read that rather than restating it here. This file is the per-command syntax onl
 /ck-code:plan --quick "add rate-limit header"       # one small story
 /ck-code:track next                                 # next ready story
 /ck-code:build                                      # interactive story picker
-/ck-code:parallel-build 02-05 03-01                 # two independent stories
-/ck-code:parallel-build --epic 02                   # whole epic, in waves
+/ck-code:build 02-05 03-01                          # two independent stories, in worktrees
+/ck-code:build --epic 02                            # whole epic, in waves
 /ck-code:fix                                        # pick from implemented stories
 /ck-code:ship                                       # commit + PR + issue updates
 ```

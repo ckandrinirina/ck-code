@@ -3,7 +3,7 @@
 How a ck-code skill dispatches a **team of parallel subagents**, each digging into one
 independent unit, then converges the results. Skills reference this file instead of
 redefining the pattern. The per-story execution variant lives in
-[`../skills/parallel-build/references/agent-prompts.md`](../skills/parallel-build/references/agent-prompts.md);
+[`../skills/build/references/agent-prompts.md`](../skills/build/references/agent-prompts.md);
 this doc covers the generic case (read-only investigation **and** independent-artifact writes).
 
 A fan-out this file already sanctions may optionally be *executed* as a scripted `Workflow` —
@@ -123,6 +123,6 @@ Fan-out: 2 units < 3 → writing inline.
 Then a one-line-per-unit launch announcement (informational, not a second gate — the
 decision already happened at the skill's own confirmation step) and a result roster on
 collection, mirroring
-[`parallel-build/references/agent-prompts.md`](../skills/parallel-build/references/agent-prompts.md).
+[`build/references/agent-prompts.md`](../skills/build/references/agent-prompts.md).
 Never silently imply the whole set was parallelized, and never let a below-threshold run
 pass without saying so — an unannounced decision is indistinguishable from a forgotten one.

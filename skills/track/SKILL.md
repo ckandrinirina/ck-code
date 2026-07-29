@@ -103,6 +103,6 @@ Present the top story (a 🐛 bug if any is open); list the rest under *Also Rea
   frontmatter is the source of truth and `ck-index.sh` produces the views.
 - **Never** cache state — every run re-reads the index.
 - **Never** fail on a malformed story row — skip it with a one-line warning.
-- **Always** reference v4 skills only (`build`, `parallel-build`, `fix`, `ship`,
-  `plan`, `migrate`); never `start`, `advise`, `help`, `sync`, or `to-issues`.
+- **Always** reference v5 skills only (`build`, `fix`, `ship`, `plan`, `migrate`);
+  never `parallel-build`, `start`, `advise`, `help`, `sync`, or `to-issues`.
 - **Always** output in English.

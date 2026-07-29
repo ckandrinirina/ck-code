@@ -97,8 +97,8 @@ First matching row wins; print only that recommendation.
 | `has_tasks && all counts == 0` | **`/ck-code:plan`** appears not to have produced stories — re-check `tasks/<slug>/`. |
 
 Where two ready paths fit and the choice matters (e.g. 3+ independent ready stories),
-use **AskUserQuestion** to offer `build` (sequential, deepest TDD) vs `parallel-build`
-(worktrees) — never launch either.
+use **AskUserQuestion** to offer `build <story-path>` (one story, sequential) vs
+`build <ids>` / `build --epic NN` (PARALLEL MODE, worktrees) — never launch either.
 
 ### A.4 Output format
 
@@ -145,7 +145,7 @@ becomes the "Alternative".
 | Adding one small story or a quick tweak to an existing plan | `/ck-code:plan --quick` |
 | Project status, progress, "which story is next" | `/ck-code:track` |
 | Implementing a story that already exists | `/ck-code:build` |
-| Building several independent ready stories at once | `/ck-code:parallel-build` |
+| Building several independent ready stories at once | `/ck-code:build <ids>` |
 | A bug, crash, regression, "something is broken" in built code | `/ck-code:fix` |
 | Committing, opening a PR, publishing to GitHub Issues, "ship it", delivering work | `/ck-code:ship` |
 | Explaining what was just built or how to verify it | `/ck-code:explain` |

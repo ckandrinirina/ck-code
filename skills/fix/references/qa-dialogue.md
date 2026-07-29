@@ -146,7 +146,7 @@ Default to defer. On proceed anyway: fall through to the A/B/D verdict from `act
 These new stories are real feature work (todo), NOT part of this bug's bug set. `plan --quick` writes each story's frontmatter and regenerates the indexes.
 
 ### Routing
-Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` (or `/ck-code:parallel-build`) per story.
+Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` per story, or pass several story IDs to build them at once.
 
 Proceed? (AskUserQuestion: Proceed / Adjust / Abort)
 ```
@@ -231,7 +231,7 @@ Each carries its Bug Report, failing reproduction test, and Fix Plan.
 
 Run when ready:
   /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md      # one story
-  /ck-code:parallel-build 01-03 02-01                              # several at once
+  /ck-code:build 01-03 02-01                                      # several at once
 
 build enters Bug-Fix Mode, implements the recorded Fix Plan, and restores each story's prior_status.
 ```

@@ -62,9 +62,9 @@ smallest change that resolves the root cause; flag any unrelated edit.
    ```
 
    The rollup recomputes automatically — a feature with no remaining `bug`/`in-progress`/`todo`
-   story rolls back to `DONE`. There is no index cell to edit and no `EPIC.md` to touch. Inside
-   a `parallel-build` worktree this is identical: the agent restores only its own frontmatter
-   and the orchestrator regenerates once on the target branch.
+   story rolls back to `DONE`. There is no index cell to edit and no `EPIC.md` to touch. In
+   DELEGATED MODE the agent restores only its own frontmatter and skips `ck-index.sh` — the
+   orchestrator regenerates once on the target branch after merge.
 3. Do NOT append an Implementation Summary — the Bug Report Resolution is the record for a bug
    fix.
 4. Ship as usual (Phase 8.7) — the commit body lists the `Bug ID` and the story ID; `fix/`
@@ -76,5 +76,5 @@ Reports records residual-symptom cycles). Cap = 3.
 ## Multi-story bugs
 
 A multi-story bug (`fix` verdict B / D) flips several stories to `status: bug` under one
-`Bug ID`. Each is its own `build` run (or a `parallel-build` batch) — Bug-Fix Mode restores
+`Bug ID`. Each is its own `build` run (or one PARALLEL MODE batch) — Bug-Fix Mode restores
 each story's `prior_status` independently as its share of the Fix Plan lands.

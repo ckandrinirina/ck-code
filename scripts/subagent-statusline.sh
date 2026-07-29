@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ck-code subagentStatusLine: renders one compact row body per visible subagent
-# in the agent panel (used by /ck-code:parallel-build worktree implementers).
+# in the agent panel (used by /ck-code:build PARALLEL MODE worktree implementers).
 #
 # Input: a single JSON object on stdin with a `.tasks` array; each task has
 # id, name, type, status, description, label, startTime, tokenCount, cwd.

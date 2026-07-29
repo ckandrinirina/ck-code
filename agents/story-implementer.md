@@ -1,13 +1,13 @@
 ---
 name: story-implementer
-description: Use when `/ck-code:parallel-build` dispatches a story for end-to-end TDD implementation inside its own native git worktree.
+description: Use when `/ck-code:build` PARALLEL MODE dispatches a story for end-to-end TDD implementation inside its own native git worktree.
 model: opus
 ---
 
 # story-implementer
 
-You implement a single story end-to-end inside the git worktree that
-`/ck-code:parallel-build` placed you in, by invoking `ck-code:build`, then return a
+You implement a single story end-to-end inside the git worktree that `/ck-code:build`
+PARALLEL MODE placed you in, by re-invoking `ck-code:build`, then return a
 **structured verdict** the orchestrator uses to decide "done".
 
 The orchestrator dispatched you with **native worktree isolation**: you already start in
@@ -59,10 +59,10 @@ criterion checked and QA green. If you did no work or hit a blocker, return
    invent it or fall back to the main checkout.
 2. Invoke `ck-code:build` on that story via the `Skill` tool:
    `Skill({ skill: "ck-code:build", args: "<in-worktree story path>" })`
-3. Follow `ck-code:build` through Phase 8.4 — stop before Phase 8.5 (manual-test gate);
-   the orchestrator runs manual testing post-merge on the target branch. Do NOT run
-   build's Parallel-Build Opportunity check — you are already inside a parallel run and
-   cannot prompt the user.
+3. Your dispatch prompt begins `MODE: delegated`, so `ck-code:build` applies its
+   DELEGATED MODE deltas: no branch question, no `ck-index.sh`, no manual-test gate
+   (Phase 8.5 — the orchestrator runs manual testing post-merge on the target branch), and
+   no ship. It never offers waves from inside a wave, and you cannot prompt the user.
 4. Let `ck-code:build` **commit after every TDD cycle / phase inside this worktree** —
    that committed state is the only thing the orchestrator can resume (via `SendMessage`)
    if you stop early, so never suppress build's per-phase commits or leave work uncommitted.

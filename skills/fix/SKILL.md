@@ -8,7 +8,7 @@ effort: high
 
 # Fix — Bug Triage & Routing Orchestrator
 
-Diagnoses a story-linked bug, records the diagnosis + a FAILING reproduction test + a Fix Plan into the story, flips the story's frontmatter to `status: bug` (recording `prior_status`), and routes the fix. `fix` does NOT implement the fix — `build` does (Bug-Fix Mode). An easy single-story fix auto-invokes `build`; a complex one stops for a manual `build` / `parallel-build`. Always confirms scope before writing.
+Diagnoses a story-linked bug, records the diagnosis + a FAILING reproduction test + a Fix Plan into the story, flips the story's frontmatter to `status: bug` (recording `prior_status`), and routes the fix. `fix` does NOT implement the fix — `build` does (Bug-Fix Mode). An easy single-story fix auto-invokes `build`; a complex one stops for a manual `build` run. Always confirms scope before writing.
 
 References: [examples.md](references/examples.md) (worked triage walkthroughs) · [qa-dialogue.md](references/qa-dialogue.md) (user-facing prompt scripts) · [bug-section-template.md](references/bug-section-template.md) (story-file bug sections — the fix→build contract) · [`data-model.md`](../../references/data-model.md) (frontmatter source of truth) · [`stories-index.md`](../../references/stories-index.md), [`feature-index.md`](../../references/feature-index.md) (generated read-only views).
 
@@ -229,7 +229,7 @@ If **any** box is unchecked, it is a **MANUAL hand-off** (complex). Multi-story 
 ### 6.3 Route
 
 - **AUTO-BUILD** → announce with the Phase 6 auto-build prompt in `references/qa-dialogue.md`, then invoke `/ck-code:build <story-path>` via the Skill tool. `build` detects the `bug` status, enters **Bug-Fix Mode**, takes the reproduction test RED → GREEN per the Fix Plan, runs SOLID + QA + manual-test, ships, and restores the story's `prior_status`. `fix` ends here.
-- **MANUAL hand-off** → print the manual-build prompt in `references/qa-dialogue.md` (Phase 6 manual). Recommend `/ck-code:build <primary-story>` (highest-scored story), or `/ck-code:parallel-build <ids>` for a multi-story bug. **STOP** — everything is recorded; the user runs `build` when ready. Do NOT implement the fix inside `fix`.
+- **MANUAL hand-off** → print the manual-build prompt in `references/qa-dialogue.md` (Phase 6 manual). Recommend `/ck-code:build <primary-story>` (highest-scored story), or `/ck-code:build <ids>` (PARALLEL MODE) for a multi-story bug. **STOP** — everything is recorded; the user runs `build` when ready. Do NOT implement the fix inside `fix`.
 
 ## HARD GATES (cross-phase contract)
 
@@ -263,6 +263,6 @@ Each gate is enforced inside its phase; this is the checklist.
 ## NEXT
 
 - **Easy fix** → `fix` already invoked `/ck-code:build <story>`; follow `build` through to `/ck-code:ship`.
-- **Complex fix** → run `/ck-code:build <primary-story>` (or `/ck-code:parallel-build <ids>`) when ready; `build` enters Bug-Fix Mode, implements the recorded Fix Plan, and restores the story's `prior_status`.
+- **Complex fix** → run `/ck-code:build <primary-story>` (or `/ck-code:build <ids>` for several at once) when ready; `build` enters Bug-Fix Mode, implements the recorded Fix Plan, and restores the story's `prior_status`.
 
 To drive an auto-build regression loop autonomously, the user can set `/goal "the new regression test passes and the full suite stays green"` (cheap verifier model). See [native-commands.md](../../references/native-commands.md).

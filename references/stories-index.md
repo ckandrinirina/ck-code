@@ -5,7 +5,7 @@ plan, produced by `scripts/ck-index.sh` from story-file frontmatter. It is never
 hand-edited and never independently mutated — the story frontmatter is the source of
 truth (see [`data-model.md`](data-model.md) for the frontmatter schema and the columns).
 
-Skills that select stories (`build`, `parallel-build`, `track`, `fix`) read this file
+Skills that select stories (`build`, `track`, `fix`) read this file
 for status, size, and dependencies instead of opening every story file.
 
 ## Read protocol
@@ -30,7 +30,7 @@ frontmatter**, then regenerate the view in the same phase:
 ```
 
 There is no cell-edit protocol and no cross-file reconciliation in v4: the view is a
-pure function of the frontmatter, so it cannot drift. Inside a `parallel-build`
+pure function of the frontmatter, so it cannot drift. Inside a `build` PARALLEL MODE
 worktree an agent edits only its own story's frontmatter; the orchestrator regenerates
 the views once on the target branch after merges.
 

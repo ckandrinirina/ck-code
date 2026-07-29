@@ -1,8 +1,8 @@
 # Wave Mode — Dependency-Ordered Epic Builds
 
-Wave mode runs the parallel pipeline once per **wave** and merges each wave before the
-next, so a dependent story always sees its blockers already `done`. Entered by
-`--epic NN` or the whole-epic option in Phase 2 selection.
+Wave mode runs PARALLEL MODE once per **wave** and merges each wave before the next, so a
+dependent story always sees its blockers already `done`. Entered by `--epic NN`, or by the
+whole-epic option in the SKILL.md 1.2 menu / the 1.4 epic-wave offer.
 
 **Scope is exactly one epic — never a whole feature.** A multi-epic feature is built one
 epic per `--epic` run; after an epic completes, the operator picks the next (no
@@ -32,23 +32,22 @@ story prefixed by wave (`W1 · Implement 01-01: …`) when the Task tools are av
 
 For each wave, in order:
 
-1. **Confirm** — AskUserQuestion `YES / SKIP STORY / ABORT` for this wave's stories.
-2. **Dispatch** this wave's stories through SKILL.md Phase 3 → 4 (integrity/resume) → 5
-   (conflict, intra-wave only) → 6 (QA). The worktrees are cut from the target branch's
-   current HEAD, which already carries prior waves' merged code. A single-story wave takes
-   the Phase 1.5 short-circuit only when it is the **whole** remaining scope; inside a
-   multi-wave run each wave still merges into the shared target, so dispatch it as a
-   one-agent worktree run (never inline) so its work lands on the target.
-3. **Merge** this wave's merge-eligible branches into the target (SKILL.md Phase 7
-   Option 1), then **regenerate the indexes** — `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
-   tasks/<Plan>` — so the next wave's re-resolve sees these stories as `done`. Run the
-   post-merge QA on the target via a `qa-validator` agent, not inline.
-4. **Verify** the merged wave on the target (SKILL.md Phase 7 post-merge check) before the
-   next wave builds on it. A reverted story returns to `todo`/`in-progress`, holds its
-   dependents, and its branch is kept.
+1. **Confirm** — the P3 question call, `PROCEED / DROP A STORY / ABORT` for this wave.
+2. **Dispatch** this wave's stories through [parallel-mode.md](parallel-mode.md) P4 → P5
+   (integrity/resume) → P6 (conflict, intra-wave only) → P7 (QA). The worktrees are cut from
+   the target branch's current HEAD, which already carries prior waves' merged code. A
+   single-story wave inside a multi-wave run is still dispatched as a one-agent worktree run,
+   never inline — its work has to land on the shared target like every other wave.
+3. **Merge** this wave's merge-eligible branches into the target (P8 Option 1), then
+   **regenerate the indexes** — `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<Plan>` —
+   so the next wave's re-resolve sees these stories as `done`. Run the post-merge QA on the
+   target via a `qa-validator` agent, not inline.
+4. **Verify** the merged wave on the target (the P8 manual gate) before the next wave builds
+   on it. A reverted story returns to `todo`/`in-progress`, holds its dependents, and its
+   branch is kept.
 5. **Update Tasks** — this wave's merged, verified stories `completed`; a blocked or
    reverted story stays open with the reason recorded.
-6. **Re-resolve** the next wave from the freshly regenerated index and loop until no
+6. **Re-resolve** the next wave (P9) from the freshly regenerated index and loop until no
    scheduled story remains.
 
 ## Blocked dependencies & summary

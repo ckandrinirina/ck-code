@@ -15,8 +15,9 @@ duplicating the workflow graph.
 5. /ck-code:ship --to-issues   (Optional) Push tasks/ → GitHub Issues
 6. /ck-code:track        Show progress / find next ready story
 
-7. /ck-code:build        TDD-implement one story (story → done), or a bug story's recorded fix (Bug-Fix Mode)
-   /ck-code:parallel-build  TDD-implement multiple stories (or bug fixes) in worktrees
+7. /ck-code:build        TDD-implement stories (story → done): one inline, several at once in
+                        worktrees (story IDs), or a whole epic in waves (--epic NN); also a
+                        bug story's recorded fix (Bug-Fix Mode)
    /ck-code:fix          Diagnose a bug, record it to its story (→ bug), route the fix
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues
@@ -34,18 +35,18 @@ duplicating the workflow graph.
 | `team` | `/ck-code:plan` |
 | `plan` | `/ck-code:ship --to-issues` *(optional)* or `/ck-code:track next` |
 | `track next` | `/ck-code:build [path]` |
-| `build` | `/ck-code:ship` |
-| `parallel-build` | `/ck-code:ship` (per branch) |
+| `build` | `/ck-code:ship` (once per story, or per merged branch after PARALLEL MODE) |
 | `fix` (easy) | auto-runs `/ck-code:build` → `/ck-code:ship` |
-| `fix` (complex) | `/ck-code:build <story>` or `/ck-code:parallel-build <ids>` (Bug-Fix Mode) |
+| `fix` (complex) | `/ck-code:build <story>` or `/ck-code:build <ids>` (Bug-Fix Mode) |
 | `ship` | `/ck-code:track next` (more stories) or `/ck-code:explain` |
 
 ## When to use which
 
 | Choice | Use this | Not this |
 |---|---|---|
-| Single story, sequential, deepest-quality TDD | `build` | `parallel-build` |
-| Multiple unrelated stories, independent files | `parallel-build` | `build` |
+| Single story, sequential, deepest-quality TDD | `build <story-path>` | `build <ids>` |
+| Multiple unrelated stories, independent files | `build <ids>` (PARALLEL MODE) | one `build` per story |
+| Every story of an epic, dependencies and all | `build --epic NN` (waves) | `build <ids>` |
 | Bug in already-implemented code | `fix` | `build` |
 | Push the plan to GitHub for tracking | `ship --to-issues` | `ship` (default) |
 | Deliver code (commit + PR + close issues) | `ship` | `ship --to-issues` |
@@ -71,10 +72,7 @@ the last column instead.
 | `plan` | no architecture docs yet | `design` (first) |
 | `plan` | stakeholder-facing spec, not a task breakdown | `spec` |
 | `build` | an **un-triaged** bug in already-implemented code | `fix` (first — a `bug`-status story is already triaged and stays in `build` Bug-Fix Mode) |
-| `build` | 3+ independent ready stories, no `blocked_by` | `parallel-build` |
 | `build` | no story exists for the work | `plan --quick` or `plan` |
-| `parallel-build` | one story, or stories with `blocked_by` deps | `build` |
-| `parallel-build` | a bug in implemented code | `fix` |
 | `fix` | new functionality / new acceptance criteria (not a bug) | `plan --quick` then `build` |
 | `fix` | just committing a finished change | `ship` |
 | `fix` | implementing a fix already diagnosed (story at `bug`) | `build` (Bug-Fix Mode) |
@@ -95,8 +93,7 @@ command reference.
 | `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`) |
 | `team` | `.claude/skills/experts/*/SKILL.md`, `.claude/skills/guides/*/SKILL.md` (incl. `guides/conventions/`) |
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/ with EPIC.md, stories/ with frontmatter, ROADMAP.md); flips feature doc to `design: planned`; regenerates the index views |
-| `build` | Source + tests in repo; the story file only (frontmatter `status`, plan, summary; Bug Report Resolution in Bug-Fix Mode); regenerates the index views |
-| `parallel-build` | Per-story branches in native worktrees, each with the same story-file outputs as `build`; orchestrator regenerates the index views once on the target branch after merges |
+| `build` | Source + tests in repo; the story file only (frontmatter `status`, plan, summary; Bug Report Resolution in Bug-Fix Mode); regenerates the index views. In PARALLEL MODE: per-story branches in native worktrees with the same story-file outputs, and the orchestrator regenerates the views once on the target branch after merges |
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`); regenerates the views. Auto-invokes `build` for an easy fix; never writes the source fix itself |
 | `ship` | Git commit, PR, GitHub Issue updates; writes the created issue number back to story frontmatter `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
 | `migrate` | Converts a pre-v4 project in place (one commit); or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
@@ -110,7 +107,7 @@ command reference.
 - **Bug flow:** `done → bug` (set by `fix` when it diagnoses a bug on a shipped story,
   recording the previous status in frontmatter `prior_status:`) `→ done` (restored by
   `build` Bug-Fix Mode when the recorded fix lands). A `bug` story is actionable work —
-  `track` and `build`/`parallel-build` surface it.
+  `track` and `build` surface it.
 - **Bug Report sub-status** (`DIAGNOSED` → `FIXED`) lives in the story body only; it is
   narrative and does not affect the frontmatter `status:`.
 - **Indexes are generated, never hand-edited.** To change status, edit the frontmatter

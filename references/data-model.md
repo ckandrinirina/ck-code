@@ -88,10 +88,10 @@ Both are produced by `scripts/ck-index.sh` (ships with the plugin). Each carries
 regenerates them in the same phase by running the script; it never edits a cell.
 
 - **`tasks/<slug>/STORIES_INDEX.md`** — one row per story in that plan, from each
-  story's frontmatter. The selection/dependency source for `build`, `parallel-build`,
+  story's frontmatter. The selection/dependency source for `build`,
   `track`, `fix`.
 - **`tasks/FEATURE_INDEX.md`** — one row per epic across all plans, rolled up from
-  story statuses. `build`/`parallel-build` read it first to pick a feature.
+  story statuses. `build` reads it first to pick a feature.
 
 Status rollup (computed, never stored): a feature is `DONE` when every non-`skip`
 story is `done`; `IN PROGRESS` when any story is `in-progress`/`bug` or some-but-not-all
@@ -106,9 +106,9 @@ are `done`; `TODO` when none has started. A `bug` story counts as not-done.
 
 The script reads only frontmatter (not story bodies), so it is cheap and cannot be
 wrong. Call it after any frontmatter mutation. Because the views are generated,
-there is no per-worktree "defer the shared-index edit" hazard: a `parallel-build`
-worktree edits only its own story's frontmatter, and the orchestrator regenerates
-the views once on the target branch after merges.
+there is no per-worktree "defer the shared-index edit" hazard: a `build`
+PARALLEL MODE worktree edits only its own story's frontmatter, and the orchestrator
+regenerates the views once on the target branch after merges.
 
 ## VERSION stamp
 

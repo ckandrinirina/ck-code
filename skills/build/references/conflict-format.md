@@ -1,11 +1,13 @@
 # Output Formats — Tables, Integrity, Conflict, QA, Summary
 
-Reference output templates for the orchestrator's phases.
+Reference output templates for PARALLEL MODE. Phase labels are the `P` steps in
+[parallel-mode.md](parallel-mode.md).
 
-## Phase 2 — Ready Stories Table
+## P1/P2 — Ready Stories Table
 
-The `Parallel` column comes from Phase 1.3 (declared file-scope overlap):
-✓ parallel-safe, or ⚠ overlaps [ID] (build in a separate batch).
+Printed by the SKILL.md 1.2 interactive menu and by P2 when scope is resolved there. The
+`Parallel` column comes from the declared file-scope overlap: ✓ parallel-safe, or
+⚠ overlaps [ID] (build in a separate wave).
 
 ```
 Ready stories (N available):
@@ -21,7 +23,7 @@ Pick: "recommended", "all", "1 3", or IDs like "02-05 03-01"
 (or build whole epic NN in dependency-ordered waves)
 ```
 
-## Phase 4 — Integrity Report
+## P5 — Integrity Report
 
 ```
 Integrity (derived from git — not the agents' self-report):
@@ -32,7 +34,7 @@ Integrity (derived from git — not the agents' self-report):
 ─────────────────────────────────────────────────────
 ```
 
-## Phase 5 — Conflict Report
+## P6 — Conflict Report
 
 ```
 Conflict analysis (dry-run merges onto <$TARGET>):
@@ -51,7 +53,7 @@ Conflict analysis (dry-run merges onto <$TARGET>):
 
 No overlaps at all → "No conflicts detected — all branches merge cleanly."
 
-## Phase 6 — QA Report
+## P7 — QA Report
 
 ```
 QA (per branch, delegated to qa-validator):
@@ -61,7 +63,7 @@ QA (per branch, delegated to qa-validator):
 ─────────────────────────────────────────────────────
 ```
 
-## Phase 7 — Final Summary & Choices
+## P8 — Final Summary & Choices
 
 ```
 Summary:
@@ -76,7 +78,7 @@ What would you like to do?
   [3] Re-dispatch blocked/failed stories from scratch (new worktree)
 ```
 
-## Phase 7 — Post-Merge Check Prompt
+## P8 — Post-Merge Check Prompt
 
 Run on `$TARGET` in the main checkout, where every merged story sits together.
 
@@ -101,5 +103,5 @@ Epic 01 — Wave plan (4 stories, depth 3):
   Wave 2               01-03  Auth middleware     M   ← needs 01-01, 01-02
   Wave 3               01-04  Audit log           S   ← needs 01-03
 
-Proceed with Wave 1? (YES / SKIP STORY / ABORT)
+Proceed with Wave 1? (PROCEED / DROP A STORY / ABORT)
 ```

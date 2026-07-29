@@ -14,7 +14,7 @@ until a fast/cheap verifier model confirms it holds — no manual re-prompting. 
 |---|---|
 | `build` QA / manual-test loop (Phase 7–8) | `/goal "all acceptance criteria in <story> pass and the full test suite is green"` |
 | `build` Bug-Fix Mode (a `bug` story's recorded fix) | `/goal "the fix-written reproduction test passes and the full suite stays green"` |
-| `parallel-build` wave | `/goal "every story in epic NN reaches done with green tests"` |
+| `build` PARALLEL MODE wave | `/goal "every story in epic NN reaches done with green tests"` |
 
 Token note: the verifier runs on a cheap model, so `/goal` is *cheaper* than re-prompting
 each turn yourself. One goal per session; run `/goal` with no argument to see turns/tokens spent.
