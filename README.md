@@ -33,7 +33,7 @@ regenerates; that's it.
 - **SOLID principle checks** — every implementation is reviewed against the five principles
 - **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge
-- **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build`/`parallel-build`
+- **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
 - **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
 
 ## Install
@@ -126,7 +126,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
                                                                               /ck-code:build  →  /ck-code:ship
                                                                                          ↑
                               /ck-code:fix  (diagnose bug → bug status)  ─────────────────┘
-                              (easy fix auto-runs build; complex hands off to build/parallel-build)
+                              (easy fix auto-runs build; complex hands off to build)
 ```
 
 | Skill | Purpose | Input | Output |
@@ -135,8 +135,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes | spec file | `docs/architecture/` |
 | `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline at the plan prompt (`--conventions` re-runs it alone); `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
 | `/ck-code:plan` | Create epics, single-dispatch S/M stories, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
-| `/ck-code:build` | Implement a story (TDD + QA); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`) | story file | source code + tests; regenerated index views |
-| `/ck-code:parallel-build` | Implement multiple ready stories in parallel worktrees, or a whole epic in dependency-ordered waves (`--epic NN`) | — / story IDs / `--epic NN` | parallel results + conflict report |
+| `/ck-code:build` | Implement stories (TDD + QA): one inline, several at once in parallel worktrees (story IDs), or a whole epic in dependency-ordered waves (`--epic NN`); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`) | story file / story IDs / `--epic NN` | source code + tests; regenerated index views; a branch per story plus a conflict report in PARALLEL MODE |
 | `/ck-code:fix` | Diagnose a bug tied to a story, write a failing test + Fix Plan, flip it to `bug` — then auto-run `build` for an easy fix or hand off when complex. Never writes the source fix itself | story file (optional) | failing test + Bug Report + `bug` status → `build` |
 | `/ck-code:ship` | Commit, PR, update GitHub Issues. `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter | story file (optional) | commit + PR + issue updates |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
@@ -171,8 +170,7 @@ ck-code/
 │   ├── design/                    # spec → feature-scoped architecture docs (+ optimize/sync)
 │   ├── team/                      # derive per-project experts + guides (+ conventions)
 │   ├── plan/                      # architecture → epics/stories (+ --quick single story)
-│   ├── build/                     # TDD story implementation
-│   ├── parallel-build/            # parallel worktree builds
+│   ├── build/                     # TDD story implementation (inline, parallel, waves)
 │   ├── fix/                       # bug triage → hands off to build
 │   ├── ship/                      # commit + PR + Issue updates (+ --to-issues)
 │   ├── track/                     # progress dashboard
@@ -209,7 +207,7 @@ apply adjustments — keeping the local file and the linked GitHub issue in sync
 
 - **Claude Code** — required (CLI, IDE extension, or desktop app)
 - **gh CLI** — required for `ship --to-issues` and `ship` GitHub Issue features
-- **git** — required for `parallel-build` (uses worktrees)
+- **git** — required for `build` PARALLEL MODE (uses worktrees)
 - **[context7](https://context7.com)** — recommended for `team`, `design`, `plan`, and `build` to fetch up-to-date framework documentation. Either the MCP server or the `ctx7` CLI (`npx -y @upstash/context7 setup`) works.
 
 ## Contributing
