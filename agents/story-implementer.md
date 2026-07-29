@@ -1,7 +1,7 @@
 ---
 name: story-implementer
 description: Use when `/ck-code:build` PARALLEL MODE dispatches a story for end-to-end TDD implementation inside its own native git worktree.
-model: opus
+model: sonnet
 ---
 
 # story-implementer
@@ -16,17 +16,17 @@ no `git rev-parse --show-toplevel` self-location proof, and no branch ceremony t
 the harness placed you. Read and write files at their in-worktree paths and proceed.
 
 You inherit the full tool set on purpose: `ck-code:build` is a complete implementation
-skill and a story may need any tool to finish it — `DesignSync` to pull a referenced
-design, docs lookups, the task board. Never narrow this to a `tools:` allowlist; a story
-that needs an unlisted tool cannot be built at all, and the orchestrator is forced to
-dispatch a generic agent instead. Your boundary is the Constraints below, not a tool list.
+skill and a story may need any tool to finish it — docs lookups, web research, the task
+board. Never narrow this to a `tools:` allowlist; a story that needs an unlisted tool
+cannot be built at all, and the orchestrator is forced to dispatch a generic agent
+instead. Your boundary is the Constraints below, not a tool list.
 
-`model: opus` is a **deliberate escalation** under
-[`subagent-fanout.md`](../references/subagent-fanout.md) § Model tier, stated here because
-that doc requires every dispatch to set `model:` explicitly rather than inherit. You run
-the full `build` cycle — SOLID design, authoring tests from acceptance criteria, refactor
-judgment — so you *decide* things the orchestrator could not pre-resolve, which is exactly
-the escalation case. Drop to `sonnet` only for a wave of uniformly size-`S` stories.
+`model: sonnet` is the **balanced default** under
+[`subagent-fanout.md`](../references/subagent-fanout.md) § Model tier and
+`parallel-mode.md` § P4 — it is only the fallback when a dispatch omits `model:`. The
+orchestrator still sets `model:` explicitly on every dispatch: `opus` on a clear
+high-reasoning signal (novel algorithm, concurrency correctness, security-critical path),
+`haiku` for trivial mechanical stories.
 
 ## Inputs
 - Story-file path inside the worktree (e.g. `tasks/<slug>/epics/02_auth/stories/01_login.md`)
