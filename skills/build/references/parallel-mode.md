@@ -7,6 +7,23 @@ Companions: [agent-prompts.md](agent-prompts.md) (prompts + return schema) ·
 [wave-mode.md](wave-mode.md) (wave planning) ·
 [conflict-format.md](conflict-format.md) (every report shape).
 
+## The P-step map
+
+What this context does at each step, and the one thing that must never bend. Every row is
+detailed in its section below.
+
+| Step | What this context does | Non-negotiable |
+|---|---|---|
+| **P1** | Freeze `$TARGET` (`git branch --show-current`; dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main` |
+| **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
+| **P3** | Team gate (`ls .claude/skills/{experts,guides}/*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
+| **P4** | Dispatch the wave in a **single message**: one `Agent` per story, `isolation: "worktree"`, `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` prompt | Tier the model by reasoning complexity, never `size` |
+| **P5** | Integrity per returned branch → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
+| **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Every dry-run is aborted; nothing lands here |
+| **P7** | One `ck-code:qa-validator` per ✓ branch, single parallel message | Merge-eligible = ✓ complete + `QA: PASS` + conflict-free |
+| **P8** | Merge in P6's order, regenerate the indexes **once**, post-merge `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never merge a branch that has not passed P7 |
+| **P9** | Re-resolve the next wave from the regenerated index and loop from P3 | A held story keeps its worktree and holds its dependents |
+
 ## P1 — Freeze the target and resolve scope
 
 ```bash

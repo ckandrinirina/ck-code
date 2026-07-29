@@ -48,6 +48,21 @@ Do NOT glob `tasks/*/epics/*/stories/*.md` and do NOT full-`Read` any story body
 conflict detection read only each ready story's frontmatter `files:` line (SKILL.md 1.2 step
 5), located via the index `File` column.
 
+### Touched-files map (SKILL.md 1.2 step 5) — one batched Bash call
+
+`READY` is each ready story's `File` column from `STORIES_INDEX.md`, prefixed with its plan
+root. The `awk` stops at the closing frontmatter fence, so no body is ever read:
+
+```bash
+for f in $READY; do
+  echo "== $f"
+  awk 'FNR==1&&$0!="---"{exit} FNR==1{next} $0=="---"{exit} /^files:/{sub(/^files:[ \t]*/,"");print}' "$f"
+done
+```
+
+Group the printed paths so no two stories share a file. The largest conflict-free group of
+≥ 2 is the recommended parallel set.
+
 If none ready:
 
 ```

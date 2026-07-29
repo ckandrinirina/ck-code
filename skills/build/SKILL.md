@@ -90,22 +90,13 @@ Interactive mode only — explicit `$ARGUMENTS` skips this.
 3. Sort by epic, then story number, then size (S < M).
 4. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with
    > 1 non-DONE story is a wave candidate.
-5. **Detect the parallel-safe set:** if ≥ 2 stories are ready, build a **touched-files
-   map** by reading **only** each ready story's frontmatter `files:` list in one batched
-   Bash call — never a full body `Read`, never a glob of all stories:
-
-   ```bash
-   # READY = each ready story's `File` column (from STORIES_INDEX), prefixed with its plan root
-   for f in $READY; do
-     echo "== $f"
-     awk 'FNR==1&&$0!="---"{exit} FNR==1{next} $0=="---"{exit} /^files:/{sub(/^files:[ \t]*/,"");print}' "$f"
-   done
-   ```
-
-   Group the `files:` paths so no two stories share a file. The largest conflict-free
-   group of ≥ 2 is the **recommended parallel set** — the preferred default. Keep this map:
-   PARALLEL MODE P2 reuses it instead of re-reading, and Phase 2 reuses the selected story's
-   `files:` for skill matching. Only Phase 1.3 issues a full `Read` (for the one selected story).
+5. **Detect the parallel-safe set:** if ≥ 2 stories are ready, build a **touched-files map**
+   from **only** each ready story's frontmatter `files:` list, in one batched Bash call
+   (`awk` one-liner in [examples.md](references/examples.md) § touched-files map) — never a
+   full body `Read`, never a glob of all stories. The largest conflict-free group of ≥ 2 is
+   the **recommended parallel set** — the preferred default. Keep this map: PARALLEL MODE P2
+   reuses it instead of re-reading, and Phase 2 reuses the selected story's `files:` for
+   skill matching. Only Phase 1.3 issues a full `Read` (for the one selected story).
 6. **Present the menu and route the choice** per [examples.md](references/examples.md):
    recommended parallel set (⚡, when ≥ 2) → epics → single stories. The selection is the
    one confirmation — parallel and epic choices enter [PARALLEL MODE](#parallel-mode) at P1
@@ -223,37 +214,30 @@ Two build-specific bindings on top of that procedure:
 
 Create a SOLID-compliant plan **before writing any code.**
 
-### 3.1 Research (if needed)
+**3.1 Research (only if needed).** context7 (MCP) for framework docs, WebSearch for uncommon
+patterns — only when the story needs current docs, never for well-known basics.
 
-Only when the story needs current docs: use context7 (MCP tools) for framework docs and
-WebSearch for uncommon patterns. Don't research well-known basics.
-
-### 3.2 Clarify Ambiguities
-
-If any acceptance criterion is vague, ask the user 1-2 targeted questions — never about
-things already clear in the story or architecture docs.
+**3.2 Clarify ambiguities.** If an acceptance criterion is vague, ask 1–2 targeted questions
+— never about what the story or architecture docs already make clear.
 
 ### 3.3 Design with SOLID
 
 Plan the implementation applying SOLID. Per the 1.7 route: **FULL** fills the SOLID Analysis
-template in [tdd-walkthrough.md](references/tdd-walkthrough.md) — single responsibility per
-file/class, open/closed extension points, Liskov-substitutable new types, focused interfaces,
-dependency inversion via injection, every principle addressed before moving on. **LEAN**
-writes a 2–4 line note naming only the principles actually at stake in this story and how
-each is satisfied; principles with nothing to decide are stated as such, never silently
-dropped. Either way the reasoning is explicit before any test is written.
+template in [tdd-walkthrough.md](references/tdd-walkthrough.md), every principle addressed
+before moving on. **LEAN** writes a 2–4 line note naming only the principles actually at
+stake in this story and how each is satisfied; principles with nothing to decide are stated
+as such, never silently dropped. Either way the reasoning is explicit before any test is
+written.
 
 ### 3.4 Create Subtasks
 
 **Seed from the story's `## Implementation Tasks` section when present** (authored by
 `plan`) — fold those ordered tasks in rather than inventing generic ones; if absent, use the
-default breakdown. Track subtasks on **Claude Tasks** (TaskCreate; templates in
-[tdd-walkthrough.md](references/tdd-walkthrough.md)), each blocked by the previous — **FULL**:
-tests → implementation → refactor → QA → completion; **LEAN**: tests → implementation → QA
-(refactor and completion fold into their phases). If Task tools are unavailable, fall back to an
-in-session checklist (never written to the story file) — never skip the breakdown.
-**Never persist the plan itself to the story file** — the file records only frontmatter
-status, the final summary, and unplanned changes.
+default breakdown. Track subtasks on **Claude Tasks** (TaskCreate; per-route chains in
+[tdd-walkthrough.md](references/tdd-walkthrough.md)), each blocked by the previous. If Task
+tools are unavailable, fall back to an in-session checklist (never written to the story file)
+— never skip the breakdown. **Never persist the plan itself to the story file** — the file
+records only frontmatter status, the final summary, and unplanned changes.
 
 ### 3.5 Confirm Plan + Branch (single gate)
 
@@ -278,28 +262,20 @@ the plan.
 
 Write failing tests that define expected behavior **before any implementation.**
 
-### 4.1 Start Test Task
+**4.1 Start test task.** Mark the test-writing task `in_progress` (TaskUpdate).
 
-Mark the test-writing task `in_progress` (TaskUpdate).
+**4.2 Determine test structure.** Read existing test files to learn conventions: naming
+(`.test.ts`, `_test.rs`, `test_*.py`), location (co-located, `__tests__/`, `tests/`),
+framework, assertion style, mock/stub patterns. Follow loaded guide skills.
 
-### 4.2 Determine Test Structure
-
-Read existing test files to learn conventions: file naming (`.test.ts`, `_test.rs`,
-`test_*.py`), location (co-located, `__tests__/`, `tests/`), framework, assertion style,
-mock/stub patterns. Follow loaded guide skills.
-
-### 4.3 Write Tests from Acceptance Criteria
-
-For EACH acceptance criterion, write at least one test (worked mapping in
-[tdd-walkthrough.md](references/tdd-walkthrough.md)). Also cover **edge cases** (empty input,
+**4.3 Write tests from acceptance criteria.** At least one test per criterion (worked mapping
+in [tdd-walkthrough.md](references/tdd-walkthrough.md)), plus **edge cases** (empty input,
 boundaries, max limits), **error scenarios** (invalid input, connection failures, timeouts),
 and **integration points** when the story connects two components.
 
-### 4.4 Run Tests — Confirm RED
-
-Run the suite. **Expected: ALL new tests FAIL.** If a new test passes without implementation,
-it is likely wrong (testing something that already exists or is trivially true) — fix it.
-Report RED as **one line** (output-blocks). Mark the test task `completed`.
+**4.4 Run tests — confirm RED.** **Expected: ALL new tests FAIL.** A new test that passes
+without implementation is likely wrong (it tests something that already exists or is trivially
+true) — fix it. Report RED as **one line** (output-blocks); mark the test task `completed`.
 
 ---
 
@@ -307,28 +283,22 @@ Report RED as **one line** (output-blocks). Mark the test task `completed`.
 
 Write the **minimum** code to make ALL tests pass.
 
-### 5.1 Start Implementation Tasks
+**5.1 Start implementation tasks.** Mark the first implementation task `in_progress`.
+**Guard:** confirm the Phase 2 "Skills loaded" block was shown this run. If not, stop and run
+Phase 2 now — implementation must apply the loaded experts/guides.
 
-Mark the first implementation task `in_progress`. **Guard:** confirm the Phase 2 "Skills
-loaded" block was shown this run. If not, stop and run Phase 2 now — implementation must apply
-the loaded experts/guides.
-
-### 5.2 Implement
-
-Order: (1) create new files from the story's `files:`; (2) modify existing files;
-(3) run tests after each significant change; (4) stop as soon as all tests pass — don't
+**5.2 Implement.** Order: (1) create new files from the story's `files:`; (2) modify existing
+files; (3) run tests after each significant change; (4) stop as soon as all tests pass — don't
 over-engineer. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
-existing code (check `docs/architecture/`, scan files); write the simplest code that passes;
-comment only non-obvious logic. **Log unplanned changes incrementally** — any file touched
-outside the story's `files:` set gets one line in a `## Unplanned Changes` body section in the
-same Edit pass: `- <path> — <what> — <why>`. Record at the moment of change; empty section =
-omit the heading.
+existing code (check `docs/architecture/`, scan files); simplest code that passes; comment
+only non-obvious logic. **Log unplanned changes incrementally** — any file touched outside the
+story's `files:` set gets one line in a `## Unplanned Changes` body section in the same Edit
+pass: `- <path> — <what> — <why>`. Record at the moment of change; empty section = omit the
+heading.
 
-### 5.3 Run Tests — Confirm GREEN
-
-Run the full suite. **Expected: ALL tests PASS.** If tests fail, read the output and fix the
-implementation (NOT the tests, unless a test itself has a bug). Re-run until green. Report
-GREEN as **one line** (output-blocks). Mark implementation task(s) `completed`.
+**5.3 Run tests — confirm GREEN.** **Expected: ALL tests PASS.** On failure read the output
+and fix the implementation (NOT the tests, unless a test itself has a bug); re-run until
+green. Report GREEN as **one line** (output-blocks); mark implementation task(s) `completed`.
 
 ---
 
@@ -336,25 +306,20 @@ GREEN as **one line** (output-blocks). Mark implementation task(s) `completed`.
 
 Improve quality without changing behavior. **Tests stay green throughout.**
 
-### 6.1 SOLID Review
+**6.1 SOLID review.** Per the 1.7 route: **FULL** reviews all new/modified code with the SOLID
+Compliance Check template in [tdd-walkthrough.md](references/tdd-walkthrough.md), every
+principle checked. **LEAN** spot-checks the principles named in the 3.3 note plus any the diff
+newly put at stake. Either way, record every violation as an ISSUE to fix in 6.2 — a LEAN
+review that uncovers a structural problem escalates to the FULL template before continuing.
 
-Per the 1.7 route: **FULL** reviews all new/modified code with the SOLID Compliance Check
-template in [tdd-walkthrough.md](references/tdd-walkthrough.md), every principle checked.
-**LEAN** spot-checks the principles named in the 3.3 note plus any the diff newly put at
-stake. Either way, record every violation as an ISSUE to fix in 6.2 — a LEAN review that
-uncovers a structural problem escalates to the FULL template before continuing.
+**6.2 Apply refactorings.** For each issue: apply the refactoring, run tests (must stay green),
+revert and reconsider if they break. Common refactorings: extract function, rename, introduce
+interface/trait for dependency inversion, split large functions, move code to the correct
+module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
+also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
 
-### 6.2 Apply Refactorings
-
-For each issue: apply the refactoring, run tests (must stay green), revert and reconsider if
-they break. Common refactorings: extract function, rename, introduce interface/trait for
-dependency inversion, split large functions, move code to the correct module per
-`folder-structure.md`. Refactors touching files outside the story's `files:` set also log to
-`## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
-
-### 6.3 Final Green Check
-
-Run the full suite once more; report REFACTOR as **one line** (output-blocks).
+**6.3 Final green check.** Run the full suite once more; report REFACTOR as **one line**
+(output-blocks).
 
 ---
 
@@ -395,18 +360,12 @@ Append the Implementation Summary block (template in
 **mandatory Files Touched precision** (CREATED = path; MODIFIED = `path:lines` via `git diff`)
 are in [completion.md](references/completion.md).
 
-### 8.2 Update Acceptance Criteria Checklist
+### 8.2–8.4 Checklist, Subtasks, Summary
 
-Mark all acceptance criteria `[x]` in the story body.
-
-### 8.3 Mark Subtasks Complete
-
-Mark every implementation subtask `completed` on Claude Tasks (TaskUpdate) — subtasks live on
-Claude Tasks, never the story file.
-
-### 8.4 Show Final Task Summary
-
-Use TaskList to show the completed summary of all tasks.
+- **8.2** — mark all acceptance criteria `[x]` in the story body.
+- **8.3** — mark every implementation subtask `completed` on Claude Tasks (TaskUpdate);
+  subtasks live on Claude Tasks, never the story file.
+- **8.4** — `TaskList` to show the completed summary of all tasks.
 
 ### 8.5 User Manual Testing — REQUIRED GATE
 
@@ -470,30 +429,22 @@ Two or more stories of **one epic** at a time, each in its own git worktree. Thi
 **decides, verifies, and merges** — it never builds, tests, or reads source itself; a
 sub-agent's context is discarded on return, this one is re-paid every turn.
 
-Every phase below is detailed in [parallel-mode.md](references/parallel-mode.md); the
-dispatch prompts and return schema in [agent-prompts.md](references/agent-prompts.md); the
-wave-planning algorithm in [wave-mode.md](references/wave-mode.md); every report shape in
-[conflict-format.md](references/conflict-format.md). Dispatches follow the shared contract
-in [subagent-fanout.md](../../references/subagent-fanout.md) — single-message dispatch,
-explicit `model:` on every call, typed-schema returns — and P4 **announces the decision**
-(`Fan-out: N stories → dispatching N agents.`) before the first dispatch. **Scope is
-exactly one epic — never a feature.**
+**Scope is exactly one epic — never a feature.**
 
-| Step | What this context does | Non-negotiable |
-|---|---|---|
-| **P1** | Freeze `$TARGET` (`git branch --show-current`; dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main` |
-| **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
-| **P3** | Team gate (`ls .claude/skills/{experts,guides}/*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
-| **P4** | Dispatch the wave in a **single message**: one `Agent` per story, `isolation: "worktree"`, `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` prompt | Tier the model by reasoning complexity, never `size` |
-| **P5** | Integrity per returned branch → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
-| **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Every dry-run is aborted; nothing lands here |
-| **P7** | One `ck-code:qa-validator` per ✓ branch, single parallel message | Merge-eligible = ✓ complete + `QA: PASS` + conflict-free |
-| **P8** | Merge in P6's order, regenerate the indexes **once**, post-merge `qa-validator` on `$TARGET`, then the Phase 8.5 manual gate once for the wave | Never merge a branch that has not passed P7 |
-| **P9** | Re-resolve the next wave from the regenerated index and loop from P3 | A held story keeps its worktree and holds its dependents |
+**First action of this mode: `Read` [parallel-mode.md](references/parallel-mode.md).** It owns
+P1–P9 — the P-step map with each step's non-negotiable, the exact commands, the resume prompt,
+the stack-command table, the classification rules, the cleanup contract — and is mandatory,
+not a lookup: nothing here substitutes for it. It pulls in its own companions as needed
+([agent-prompts.md](references/agent-prompts.md) dispatch/resume prompts + return schema ·
+[wave-mode.md](references/wave-mode.md) wave planning ·
+[conflict-format.md](references/conflict-format.md) report shapes). Dispatches also follow the
+shared contract in [subagent-fanout.md](../../references/subagent-fanout.md) — single-message
+dispatch, explicit `model:` on every call, typed-schema returns — and P4 **announces the
+decision** (`Fan-out: N stories → dispatching N agents.`) before the first dispatch.
 
-Every step above — the exact commands, the resume prompt, the stack-command table, the
-classification rules, the cleanup contract — is in
-[parallel-mode.md](references/parallel-mode.md). Read it once when this mode starts.
+The three gates that bind even before that read: **P3** never dispatches into a project with
+zero skills without asking (agents cannot prompt) · **P5** derives "done" from git, never from
+an agent's self-report · **P7/P8** never merge a branch that has not returned `QA: PASS`.
 
 ---
 
@@ -549,15 +500,15 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
-- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. RED-before-GREEN, QA delegation, and the manual-test gate run identically on both routes.
-- **Never edit a test to force GREEN.** (RED-before-GREEN, the Phase 2 skill gate, and the protected-branch ban are HARD GATES above — they bind here identically.)
+- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else.
+- **Never edit a test to force GREEN.**
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 
 ### Parallel mode
 
-The P-table's "Non-negotiable" column is the rest of this contract; these four are the
-traps it does not carry.
+The "Non-negotiable" column of the P-step map ([parallel-mode.md](references/parallel-mode.md))
+is the rest of this contract; these four are the traps it does not carry.
 
 - **Never orchestrate a single story** — one story in scope takes Phases 1–8 inline.
 - **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
