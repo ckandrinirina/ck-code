@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.0.1] — 2026-07-29
+
+### Fixed
+- **skill-detection**: `expert-qa-project` joins the always-required set — it carries no `paths`/`keywords`, so nothing could ever load it despite `team` always generating it and `qa-validation.md` mandating its read. `build` Phase 2 and `fix` Phase 3.1 restate the corrected set.
+- **qa-validator**: the agent gains `Write, Edit` — `fix` Phase 4 requires it to author the minimal failing reproduction test, which its read-only tool list forbade (forcing heredoc writes that bypassed the format hook).
+- **ck-index.sh**: malformed stories (missing frontmatter fence, unterminated frontmatter, missing `id`, CRLF endings) now emit a stderr warning instead of vanishing silently from both indexes; `|` in a title or epic description no longer corrupts the generated tables; an invalid plan argument errors (exit 1) instead of writing a header-only index; a run from a subdirectory falls back to the git repo root instead of silently no-oping.
+- **ck-index.sh**: the `FEATURE_INDEX` `Docs` cell honours EPIC.md `slug:` frontmatter (falling back to the folder slug), so epics can route to the feature doc that owns them — previously the cell showed `—` whenever the epic folder name differed from the feature dir (21/26 epics in one real project).
+- **spec**: removed two stray tool-call artifact lines (`</content></invoke>`) at the end of SKILL.md.
+- **qa-validation**: corrected the phase map (`fix` has no Phase 7; its diagnosis is Phase 4) and the escalation-template pointers (`output-blocks.md`, not `examples.md`).
+- **subagent-fanout**: `story-implementer`'s documented return schema now includes `branch` — the field the merge actually needs.
+- **version-gate**: `to-issues` is a `ship` flag, not a skill; the stamp template no longer hardcodes `ck-code: 4.0.0`; prose clarifies the layout constant is independent of the plugin version.
+- **story-implementer**: dropped a justification citing the non-existent `DesignSync` tool.
+- **format.sh**: rustfmt runs with an `--edition 2024/2021` fallback (bare rustfmt assumes 2015 and silently no-ops on modern crates); prettier opt-in is monorepo-aware (probes from the file's directory up to the repo root); files outside the project are never formatted; the hook matcher also covers `MultiEdit`/`NotebookEdit`.
+
+### Changed
+- **story-implementer**: default model is `sonnet` — `opus` was the silent fallback for every wave member whenever a dispatch omitted `model:`; the orchestrator still escalates per story on a real high-reasoning signal. (Dispatching via native `isolation: "worktree"` is the deliberate 5.0 design and supersedes the 3.3.7 manual-worktree fix — the P1 clean-`$TARGET` freeze guarantees the harness cuts each worktree from the right base.)
+- **build / ship**: story completion is flipped and regenerated exactly once — `ship` 6.1 skips when `build` 8.6 already set `status: done`, ending the duplicate flip and double index regeneration; the dead 1.5 issue hand-off is dropped (`ship` re-reads frontmatter).
+- **build**: PARALLEL MODE is bound to the shared `subagent-fanout.md` contract and announces its dispatch (`Fan-out: N stories → dispatching N agents.`); P8 cleanup deletes merged story branches (`git branch -d`) so they stop accumulating.
+- **team**: generated guides are capped at 150 lines (experts 120), one guide owns one surface (no overlapping siblings), and no generated skill may declare itself always-on beyond `expert-qa`/`expert-qa-project`/`expert-analyst`/`guide-conventions` — real projects were carrying 50–90k tokens of generated skills per session. Phase 0.5's derivation is reused in Phase 2; the anchor-role catalog moved to `expert-templates.md`.
+- **design**: feature docs get a size budget (≤ 250 lines; `_shared.md` ≤ 150); Phase 0 no longer restates the version gate's Tier-2 detection; conditional-content rules moved into `architecture-templates.md`.
+- **fix**: the 2.5.1 relevance score is a defined weighted sum (file overlap 0.5, criterion 0.3, epic 0.2) instead of unscaled thresholds; the 4.1.5 hypothesis fan-out is anchored in HARD GATES.
+- **plan / team / design / spec / track**: independent context reads are issued as single parallel tool-call messages instead of sequential rounds.
+- **plan**: the epic template documents setting `slug:` to the owning feature-doc dir (several epics may share one feature doc) and bans `|` in table-bound fields.
+- **data-model**: EPIC.md frontmatter is now documented (`epic`/`slug`/`title`/`description`/`issue`), including the `slug:` Docs-routing contract.
+- **explain / migrate / ship / plan / track / guide**: token diet — default-valued frontmatter, dead effort branches, format skeletons, a duplicated Ready-rule restatement, and the retired-skill list gained `parallel-build`.
+- **native-commands**: `/fast` guidance is no longer pinned to Opus 4.8.
+
 ## [5.0.0] — 2026-07-29
 
 ### Removed
