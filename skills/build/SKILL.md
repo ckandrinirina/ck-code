@@ -26,7 +26,8 @@ Parallel-mode references, read **only** when two or more stories are in scope: [
 
 ## ROUTING CHECK (do first)
 
-If the request is something else, STOP and recommend the better skill:
+This skill **TDD-implements stories** from `tasks/`. If the request is actually
+something else, STOP and recommend the better skill:
 
 - An **un-triaged** bug in shipped code → `/ck-code:fix` first (it diagnoses, writes the failing test + Fix Plan, and flips the story to `status: bug`). A story **already at `status: bug`** is triaged — implement it here in Bug-Fix Mode (Phase 1.3.5).
 - No story exists for the work yet → `/ck-code:plan` first.
@@ -53,11 +54,10 @@ someone else's parallel run — read [DELEGATED MODE](#delegated-mode) before Ph
 
 ## PHASE 0: VERSION GATE (hard, before any project read/write)
 
-Read `tasks/VERSION.md` (Tier-1 fast path). If it exists AND its `layout:` line reads
-`layout: v4` → **PASS**, proceed. If it is missing or the layout differs, run the full
-[version-gate.md](../../references/version-gate.md) procedure (Tier-2 detection → stamp
-or BLOCK-and-route-to-`/ck-code:migrate`). Never read or write project state before this
-gate passes.
+Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
+Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
+it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+project state before this PASSes.
 
 ---
 

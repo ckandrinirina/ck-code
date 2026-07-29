@@ -29,9 +29,10 @@ is **merge-safe** (see [THE MERGE RULE](#the-merge-rule)); it never clobbers you
 
 ## PHASE 0: VERSION GATE
 
-Read `tasks/VERSION.md`. If it exists and `layout: v4` → **PASS**, proceed.
+Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
 Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps.
+it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+project state before this PASSes.
 
 ## ROUTING CHECK (do first)
 
@@ -42,6 +43,7 @@ actually something else, STOP and recommend the better skill:
 - Breaking the architecture into epics/stories → `/ck-code:plan`
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:plan`.
 
 **Reuse-first:** generate only skills a real project signal demands, and research only
 what is current, version-specific, or project-specific — never well-known fundamentals.

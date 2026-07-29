@@ -3,6 +3,8 @@ name: guide
 description: Use when unsure which ck-code step or skill to run. No argument recommends the next workflow step from project state; a free-text task description routes to the best-fit skill (naming any missing prerequisite); `--command [name]` looks up command syntax. Read-only — recommends the command, never launches it.
 argument-hint: "[task description | --command [name]]"
 effort: low
+context: fork
+background: false
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -26,9 +28,8 @@ Pick the mode from `$ARGUMENTS`, then run only that section:
 
 ## VERSION GATE (hint only)
 
-Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise (missing or a
-different `layout:`) emit one line — `ℹ pre-v4 layout — run /ck-code:migrate` — and
-**continue read-only**. Never block. See
+Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise emit one line —
+`ℹ pre-v4 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
 [`../../references/version-gate.md`](../../references/version-gate.md).
 
 ## The Ready rule

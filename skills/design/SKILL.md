@@ -46,11 +46,11 @@ simplest thing that meets the requirement — see [`reuse-first.md`](../../refer
 
 ## PHASE 0: VERSION GATE (hard gate, inline)
 
-Before reading or writing any project state, in ALL modes: read `tasks/VERSION.md`. If it
-exists and says `layout: v4` → PASS, proceed. Otherwise run the full
-[version-gate.md](../../references/version-gate.md) procedure (Tier-2 detection → stamp or
-BLOCK-and-route-to-`/ck-code:migrate`). This runs **once, in the orchestrator** — never
-inside a fan-out subagent.
+In ALL modes: read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**,
+proceed. Otherwise run the shared [version gate](../../references/version-gate.md)
+(HARD GATE) — it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never
+read or write project state before this PASSes. This runs **once, in the orchestrator** —
+never inside a fan-out subagent.
 
 ---
 

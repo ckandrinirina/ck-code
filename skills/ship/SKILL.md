@@ -18,6 +18,9 @@ References: [examples.md](references/examples.md) (worked ship walkthrough) · [
 
 ## ROUTING CHECK (do first)
 
+This skill **commits finished work**, opens or updates a PR, and updates the linked
+issue. If the request is actually something else, STOP and recommend the better skill:
+
 - The story isn't implemented yet → `/ck-code:build` or `/ck-code:fix` first.
 - Publishing the *plan* (not code) into GitHub Issues → this skill's `--to-issues` mode.
 
@@ -36,9 +39,10 @@ Parse `$ARGUMENTS`:
 
 ## PHASE 0: VERSION GATE (hard gate — both modes)
 
-Read `tasks/VERSION.md`. If it exists and `layout: v4` → **PASS**, proceed. If missing
-or not `v4` → open the shared [version gate](../../references/version-gate.md) and run
-Tier 2 (HARD GATE): it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps.
+Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
+Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
+it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+project state before this PASSes.
 **Exception:** a SHIP-MODE standalone commit in a repo with **no `tasks/` directory** is
 not a ck-code project — skip the gate and do not stamp; just commit.
 

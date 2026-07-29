@@ -29,7 +29,10 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → PASS, proceed. Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE — it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps). **Never read or write story state before this passes.**
+Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
+Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
+it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+project state before this PASSes.
 
 ## PHASE 1: CANDIDATE STORY SELECTION
 
@@ -237,7 +240,7 @@ If **any** box is unchecked, it is a **MANUAL hand-off** (complex). Multi-story 
 
 Each gate is enforced inside its phase; this is the checklist.
 
-- **Version gate (Phase 0)** — `tasks/VERSION.md` reads `layout: v4` → proceed; else run the [shared procedure](../../references/version-gate.md). No story read/write before it passes.
+- [Version gate](../../references/version-gate.md) — inlined in Phase 0. BLOCK halts the skill.
 - **Phase 2.5** — scope analysis mandatory, even with an explicit story path.
 - **Phase 4.1.5** — the hypothesis fan-out decision is announced before tracing any suspect path ([subagent-fanout.md](../../references/subagent-fanout.md)); investigators are read-only, `model: haiku`.
 - **Phase 2.5.1** — score `todo` rows too; a `todo` match triggers verdict E.

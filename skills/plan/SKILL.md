@@ -43,6 +43,7 @@ existing epic). If the request is something else, STOP and recommend the better 
 - `--quick` but no `tasks/` plan or target epic exists → fall through to full plan (Phase 1.2)
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
+**Next step after this skill:** `/ck-code:build`.
 
 **Reuse-first:** plan from the design docs and existing `tasks/` — reuse settled
 architecture instead of re-deriving it, and pick the simplest viable epic/story

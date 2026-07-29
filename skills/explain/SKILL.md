@@ -3,6 +3,8 @@ name: explain
 description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works. Triggers on "explain", "what was implemented", "how do I check", "how does this work".
 argument-hint: "[file-or-concept]"
 effort: low
+context: fork
+background: false
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -13,7 +15,9 @@ Produces two sections for the most recently implemented story or feature:
 1. **Manual verification** — exact commands to confirm it works
 2. **What was built** — learner-friendly explanation of every technology and pattern used
 
-> **Note:** Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise run the [version gate](../../references/version-gate.md) in hint-only mode: emit one line — `ℹ pre-v4 layout — run /ck-code:migrate` — and continue read-only. Never block.
+Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise emit one line —
+`ℹ pre-v4 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
+[`../../references/version-gate.md`](../../references/version-gate.md).
 
 ---
 
