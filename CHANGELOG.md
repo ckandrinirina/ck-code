@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.0.4] — 2026-07-29
+
+### Changed
+- **build**: `SKILL.md` trimmed 578 → 529 lines (33.2KB → 30.9KB) by relocating *conditionally-read* content only — the Phase 1.2 touched-files `awk` moved to `references/examples.md`, and the P1–P9 step map to `references/parallel-mode.md`, which PARALLEL MODE already reads. Sub-phases 8.2–8.4 collapse into one heading that keeps all three numbers addressable; no sub-phase was renumbered, since `output-blocks.md`, `story-template.md`, `tdd-walkthrough.md`, `completion.md` and `bug-fix-mode.md` cite them by number. Behavior is unchanged — this is the per-run context cost of every build, inline or parallel.
+
 ## [5.0.3] — 2026-07-29
 
 ### Changed
