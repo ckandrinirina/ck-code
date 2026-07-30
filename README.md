@@ -103,38 +103,52 @@ Without this entry the plugin stays dormant in that project.
 
 ## Status bar (opt-in, zero tokens)
 
-`scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the story
-you're on (derived from the git branch), how far its epic has got, and plan-wide counts:
+`scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the feature
+you're in, the story you're on (derived from the git branch), and how far each has got:
 
 ```
-ck-code ⚡ 01-03 Password reset flow · epic 01 2/5 · 3 ☐ · → epic/01 · 12/20 ✓ 60% · 2 ⚡ · 1 ✗ · ⚙ 3 wt 45%
+ck-code password-reset 2/5 ✓ 60% · ⚡ 01-03 Password reset flow · epic 01 auth 2/5 40% · 3 ☐ · → epic/01 · 2 ⚡ · 1 ✗ · ⚙ 3 wt 45%
 ```
 
+Each level reports in the unit below it — the feature in epics, the epic in stories, the
+story in criteria — so no segment repeats what another already said.
+
+- `password-reset 2/5 ✓ 60%` — the feature the branch belongs to, and its **epics** done /
+  total. The plan folder's date stamp and `feature-` prefix are dropped; an epic counts as
+  done when every story in it is. The percentage is story-weighted, so it moves between
+  epics instead of jumping in fifths.
 - `⚡ 01-03 Password reset flow` — the story you're on, read from the branch name
   (`story/<EE>-<SS>-…` or `fix/…`). On an `epic/<NN>-…` branch — where an
   `integration: epic|feature` session sits while its stories are built — the epic's own
   open story is resolved from the index instead (in progress before bug). With no story in
   play at all, this becomes `next 01-04`: the first TODO whose blockers are all DONE.
-- `epic 01 2/5` — the epic in context, done / total. Shown whenever a story or an epic
-  branch names one.
+- `epic 01 auth 2/5 40%` — the epic in context by number and name, its **stories** done /
+  total, and the same ratio as a percentage.
 - `3 ☐` — acceptance criteria still unchecked on the active story. Shown only when > 0,
   and it is the one field that says *nearly done* rather than *in progress*.
 - `→ epic/01` — where a finished story merges, shown only when the epic's `integration`
   is `epic` or `feature` (the `story` default merges to the default branch, which everyone
   already assumes). `→ feat` is appended at `feature` level, and on the epic branch itself
   only that promotion target is shown — naming the branch you are on is noise.
-- `12/20 ✓ 60%` — stories done / total across every plan, `skip` excluded. The percentage
-  rides the plan total, where the denominator is too large for a ratio to read at a glance;
-  `2/5` on an epic already does.
-- `2 ⚡` in progress, `1 ✗` bug — each shown only when non-zero.
+- `2 ⚡` in progress, `1 ✗` bug — stories in this feature, each shown only when non-zero.
 - `⚙ 3 wt 45%` — `build` PARALLEL MODE worktrees live right now, and the share of their
   stories' acceptance criteria ticked. Read from each **worktree's own** copy of the story
   file, since that is where its agent ticks them. Absent when no fan-out is running.
 - Story glyphs: `⚡` in progress · `✓` done · `○` todo · `✗` bug.
 
-Every segment past the first is conditional, so an idle session on `main` renders just
-`ck-code next 01-04 · 12/20 ✓ 60%`. Only `awk` and `git` are required; the whole line
-costs ~50ms to draw, ~85ms during a fan-out.
+**The branch picks the feature, never the directory alone.** Story ids and epic numbers are
+unique per plan, not across plans, so a `tasks/` holding several features can offer more
+than one answer for one branch — and a multi-repo project, whose code repo sits under the
+repo that owns `tasks/`, may check out a code repo carrying a stale plan of its own. Every
+ancestor holding a plan is a candidate; the one the branch confirms (matching epic slug, or
+a story id backed by the branch slug) wins, and all counts are then scoped to it. A branch
+naming work no visible plan owns renders **nothing** — a confident wrong number is worse
+than an empty status bar.
+
+With no ck-code branch to go on (`main`, a detached HEAD) there is no one feature to
+report, so an idle session falls back to project-wide story counts: `ck-code next 01-04 ·
+12/20 ✓ 60%`. Only `awk` and `git` are required; the whole line costs ~50ms to draw, ~85ms
+during a fan-out.
 
 ### Per-agent rows
 
@@ -148,6 +162,11 @@ and renders one row per dispatched agent:
 `5/8 63%` is that story's criteria, counted in that agent's own worktree; `+214/-18` is its
 diff against the branch the fan-out was cut from. **A row with no diff field has written no
 code** — the failure `build` P5 otherwise only catches after the agent claims success.
+
+The row resolves its story the same way the status bar does: the agent's own branch slug
+decides which plan's `02-01` is meant, and plans above the worktree are searched too, so a
+multi-repo layout (or a stale `tasks/` beside the code) cannot substitute another feature's
+story — and with it, another feature's progress.
 
 A percentage can only ever mean "boxes ticked": criteria are the sole progress signal with
 a denominator, and the implementing agent ticks them as it goes, so read it as direction,
