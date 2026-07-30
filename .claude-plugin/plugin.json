@@ -3,7 +3,7 @@
   "name": "ck-code",
   "displayName": "CK Code",
   "description": "Spec-driven workflow plugin: design -> plan -> build -> ship. Transforms specs into architecture docs, epics/stories, and auto-generated expert and language-guide skills tailored to your tech stack. Story state lives in frontmatter; indexes are generated.",
-  "version": "5.7.0",
+  "version": "5.8.0",
   "author": {
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
@@ -20,5 +20,25 @@
     "epics",
     "stories"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "userConfig": {
+    "model_fast": {
+      "type": "string",
+      "title": "Fast tier model",
+      "description": "Model alias dispatched for trivial mechanical stories and QA command runs. One of: haiku, fable, sonnet, opus.",
+      "default": "haiku"
+    },
+    "model_balanced": {
+      "type": "string",
+      "title": "Balanced tier model",
+      "description": "Default model alias for a story implementer in /ck-code:build PARALLEL MODE. One of: haiku, fable, sonnet, opus.",
+      "default": "sonnet"
+    },
+    "model_advanced": {
+      "type": "string",
+      "title": "Advanced tier model",
+      "description": "Model alias for stories with a high-reasoning signal — novel algorithm, concurrency correctness, security- or perf-critical path. One of: haiku, fable, sonnet, opus.",
+      "default": "opus"
+    }
+  }
 }
