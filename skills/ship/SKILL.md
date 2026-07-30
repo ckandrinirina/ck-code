@@ -297,6 +297,22 @@ gh issue edit <story_issue> --add-label "status/done"
 gh issue edit <story_issue> --add-label "has-bugfix"   # bug fix only
 ```
 
+### 6.5 Promotion gate (levels `epic` and `feature` only)
+
+Runs after 6.1 regenerated the indexes — that is when the rollup becomes visible. Skip
+entirely at level `story`.
+
+**Detect from story frontmatter, never from an index cell:** the epic just reached DONE when
+every non-`skip` story of epic `NN` reads `status: done`.
+
+Then run the **epic gate**, and — when its condition holds — the **feature gate**, both
+defined with their staleness handling in
+[`branch-topology.md`](../../references/branch-topology.md#promotion). Choosing
+**Merge into `feat/<plan-slug>`** also writes `integration: feature` to that `EPIC.md`;
+regenerate the views in the same phase if any frontmatter changed.
+
+Declining is never a dead end — **Not yet** points at `/ck-code:ship --promote --epic NN`.
+
 ## PHASE 7: SUMMARY
 
 Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
