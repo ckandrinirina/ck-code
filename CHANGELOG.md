@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.7.0] — 2026-07-30
+
+### Added
+
+- **doctor**: new read-only skill `/ck-code:doctor` reporting what is broken in the
+  project, with the command that fixes each finding. Checks the layout stamp and nested
+  team-skill folders; story frontmatter (parses, required keys present, `status`/`size`
+  in vocabulary, no duplicate ids, no `bug` story missing its `## Bug Report`); index
+  drift against the story frontmatter; `blocked_by` resolution, self-blocks and cycles;
+  epic-slug to feature-doc routing; team-skill registration and frontmatter validity; and
+  orphan `epic/*` branches. Exits 1 on any error.
+
+  Index drift is detected exactly — `scripts/ck-doctor.sh` regenerates into a throwaway
+  copy and diffs, so the check never writes to the project. Nothing in the skill mutates
+  state; repair stays with `migrate`, `design`, `team`, or a deliberate `ck-index.sh` run.
+
 ## [5.6.2] — 2026-07-30
 
 ### Fixed
