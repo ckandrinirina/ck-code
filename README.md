@@ -102,6 +102,32 @@ Enable the plugin explicitly per project in that project's `.claude/settings.jso
 
 Without this entry the plugin stays dormant in that project.
 
+## Settings
+
+Run `/plugin` → ck-code to set these; they are stored in your user `settings.json`, never
+in the repo, and never need to be exported as environment variables.
+
+| Setting | Default | What it changes |
+|---|---|---|
+| **Fast tier model** | `haiku` | model dispatched for trivial mechanical stories and QA command runs |
+| **Balanced tier model** | `sonnet` | default model for a story implementer in `build` PARALLEL MODE |
+| **Advanced tier model** | `opus` | model for stories with a high-reasoning signal (novel algorithm, concurrency, security- or perf-critical path) |
+
+Each accepts one of `haiku`, `fable`, `sonnet`, `opus`. Raise the balanced tier for a codebase
+where Sonnet consistently underperforms; lower the advanced tier to cap spend on a large epic.
+
+## Permissions and guardrails
+
+Every skill declares `allowed-tools`, so the `git`, `gh`, and `ck-index` calls it makes during
+a run are pre-approved for that turn instead of prompting one command at a time. The grant is
+narrow (a `build` run cannot `git push`; only `ship` can) and it expires with your next message.
+
+`ship`, `build`, `fix`, and `spec` additionally register a skill-scoped `PreToolUse` hook that
+blocks any commit, PR, or issue command carrying an AI-authorship trailer or footer. It matches
+the trailer *forms* only, so a commit that legitimately discusses Claude Code is untouched. The
+rule is [documented here](references/no-ai-references.md) and enforced by
+`scripts/no-ai-guard.sh` — the hook is active only while one of those skills is running.
+
 ## Status bar (opt-in, zero tokens)
 
 `scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the feature
@@ -278,10 +304,18 @@ ck-code/
 │   └── hooks.json                 # SessionStart + PostToolUse(format) registrations
 ├── settings.json                  # subagent status line
 ├── CHANGELOG.md
+├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
+│   ├── ck-index                   # → scripts/ck-index.sh   (skills call the bare command)
+│   └── ck-doctor                  # → scripts/ck-doctor.sh
+├── workflows/                     # registered Workflow scripts, invoked by name (resumable)
+│   ├── team-research.js           # /ck-code:team --workflow, Phase 1.6a
+│   └── team-generate.js           # /ck-code:team --workflow, Phase 3.1
 ├── scripts/
 │   ├── ck-index.sh                # regenerate the index views from story frontmatter
+│   ├── ck-doctor.sh               # read-only project health check (/ck-code:doctor)
 │   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
+│   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
 │   ├── statusline.sh              # opt-in status bar: active story + plan counts
 │   └── subagent-statusline.sh
 ├── skills/
