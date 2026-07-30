@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.3.0] — 2026-07-30
+
+More of the project state you had to *ask* for now arrives for free. Everything added here is drawn by the terminal, so the printed output and the context window are untouched — the only budget spent is render latency (~50ms idle, ~85ms during a fan-out).
+
+### Added
+- **statusline**: four conditional segments — `epic NN d/t` (the epic in context), `N ☐` (acceptance criteria still unchecked on the active story, the field that distinguishes *nearly done* from *in progress*), `→ epic/NN` (where a finished story merges, only when `integration` is `epic` or `feature`), and `⚙ N wt` (live PARALLEL MODE worktrees). With no story in play the story slot becomes `next EE-SS` — the first TODO whose blockers are all DONE, replacing a `track next` round-trip.
+- **statusline**: percentages — plan-wide `12/20 ✓ 60%`, and a wave figure on the worktree segment (`⚙ 3 wt 45%`) aggregated over the fan-out's stories. Both come from acceptance-criteria checkboxes, the only progress signal with a *denominator*; a diff stat or a token count has none. Read from each **worktree's own** copy of the story file, since that is where its agent ticks the boxes — the main checkout reads 0% until the merge.
+- **subagent-statusline**: rows now carry `5/8 63%` (that story's criteria, counted in that agent's worktree) and `+214/-18` (its diff against the branch the fan-out was cut from). **A row with no diff field has written no code** — the failure `build` P5 otherwise only catches after the agent reports success.
+
+### Changed
+- **statusline**: awk now emits a field record and bash composes the line, so the criteria count, the integration level and the worktree probes join the same render without a second pass over the indexes. Hard dependencies stay `awk` + `git` (`jq` remains optional, `--install`-only), and the record is US-separated because a tab is IFS whitespace and would collapse the empty fields a branch with no active story legitimately produces.
+- **statusline**: on an epic branch, `→ epic/NN` is suppressed — it names the branch you are already on. Ahead/behind against the parent was considered and left out: ccstatusline-style bars already carry branch state, and it was the weakest signal per column of width.
+
+### Compatibility
+Additive and still opt-in for the status bar (`scripts/statusline.sh --install`); the subagent rows ship enabled as before. No migration, no layout bump. Same coupling as 5.2.0 to know about — both scripts read the `STORIES_INDEX.md` column shape emitted by `scripts/ck-index.sh`, and the row probes additionally assume the `story-EE-SS` dispatch label or an id in the agent's description; a change to either must update the scripts in the same release.
+
 ## [5.2.1] — 2026-07-30
 
 ### Fixed
