@@ -101,6 +101,46 @@ Enable the plugin explicitly per project in that project's `.claude/settings.jso
 
 Without this entry the plugin stays dormant in that project.
 
+## Status bar (opt-in, zero tokens)
+
+`scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the story
+you're on (derived from the git branch) plus plan-wide counts:
+
+```
+ck-code ⚡ 01-03 Password reset flow · 12/20 ✓ · 2 ⚡ · 1 ✗
+```
+
+- `⚡ 01-03 Password reset flow` — the story you're on, read from the branch name
+  (`story/<EE>-<SS>-…` or `fix/…`). Absent when the branch isn't a story branch.
+- `12/20 ✓` — stories done / total across every plan, `skip` excluded.
+- `2 ⚡` in progress, `1 ✗` bug — each shown only when non-zero.
+- Story glyphs: `⚡` in progress · `✓` done · `○` todo · `✗` bug.
+
+**It costs nothing.** The status bar is drawn by the terminal, never by the model, so
+progress stays visible without spending output tokens or filling the context window —
+which is exactly why ck-code keeps its *printed* per-phase output to one line each.
+
+Claude Code only reads `statusLine` from user or project settings (a plugin's own
+`settings.json` may set `subagentStatusLine`, not `statusLine`), so this one is opt-in:
+
+```bash
+CK=$(find ~/.claude/plugins -type d -name ck-code | head -1)
+
+"$CK"/scripts/statusline.sh --install              # ~/.claude/settings.json
+"$CK"/scripts/statusline.sh --install --project    # .claude/settings.json
+"$CK"/scripts/statusline.sh --install --force      # replace an existing statusLine
+```
+
+Install writes an absolute path, keeps every other setting, and backs the file up;
+without `--force` it refuses to overwrite a `statusLine` you already have. It sets
+`refreshInterval: 5` so `/ck-code:build` PARALLEL MODE worktrees show up while the
+main session is idle.
+
+Already have a status line? Pipe the same stdin JSON into the script and interpolate its
+output as one segment — it prints nothing outside a ck-code project, so the segment simply
+disappears. Outside a ck-code project, or before `plan` has generated an index, it stays
+silent. `jq` is optional and only `--install` requires it.
+
 ## Quick start — first-time setup in a new project
 
 ```bash
@@ -170,6 +210,7 @@ ck-code/
 │   ├── ck-index.sh                # regenerate the index views from story frontmatter
 │   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
+│   ├── statusline.sh              # opt-in status bar: active story + plan counts
 │   └── subagent-statusline.sh
 ├── skills/
 │   ├── spec/                      # stakeholder-ready feature spec (create + adjust)
