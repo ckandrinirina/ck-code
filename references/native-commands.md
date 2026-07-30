@@ -30,7 +30,10 @@ cannot enable it for you.** Use it intelligently:
 | Small / mechanical: size `S` story, simple `fix`, `plan --quick`, `track`, `guide`, `explain` | ✅ **On** — deliberation not needed |
 | Big / complex: `design`, `plan`, `spec`, size `M` SOLID-heavy `build`, architecture | 🧠 **Off** — keep full reasoning |
 
-The skill-side levers that *are* automatic: `effort:` and `model:` frontmatter.
+The skill-side lever that *is* automatic is `effort:` frontmatter — every ck-code skill sets
+it (`low` for `track`/`guide`/`explain`/`doctor`, `high` for `design`/`plan`/`spec`/`build`).
+The read-only skills additionally pin `model: haiku`, so they cost a cheap model regardless
+of your session model. Neither lever can reach `/fast`, which is a serving path, not a model.
 
 ## Other native commands worth pairing
 
@@ -38,3 +41,14 @@ The skill-side levers that *are* automatic: `effort:` and `model:` frontmatter.
 - **`/context`** — visual context-usage grid; run it before a long `build`/`plan` if you suspect bloat.
 - **`/rewind`** — roll code+conversation back to a checkpoint; useful before a risky refactor in `build` Phase 6.
 - **`/compact`** — compress history with a focus hint when a long session nears capacity.
+- **`/plugin`** — where ck-code's own settings live (model-tier overrides; see `userConfig` in
+  `plugin.json`). Set them there rather than exporting `CK_MODEL_*` by hand.
+
+## What ck-code already does for you (do not re-do it manually)
+
+| You might reach for | ck-code already does it |
+|---|---|
+| Approving each `git`/`gh` call during `build`/`ship` | `allowed-tools` pre-approves them for the invoking turn |
+| `cat tasks/VERSION.md` before a skill runs | injected into the skill at load time via `` !`…` `` — Phase 0 costs no turn |
+| `git commit` without an AI trailer | a skill-scoped `PreToolUse` hook blocks the commit if one is present |
+| Tracking which build phase you are in | `TodoWrite` — one todo per phase, updated as it runs |

@@ -3,8 +3,11 @@ name: guide
 description: Use when unsure which ck-code step or skill to run. No argument recommends the next workflow step from project state; a free-text task description routes to the best-fit skill (naming any missing prerequisite); `--command [name]` looks up command syntax. Read-only — recommends the command, never launches it.
 argument-hint: "[task description | --command [name]]"
 effort: low
+model: haiku
 context: fork
+agent: Explore
 background: false
+allowed-tools: Bash(ls*) Bash(git branch*) Bash(git status*)
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -77,7 +80,7 @@ count rows by the `Status` column, applying **The Ready rule**:
 - `n_in_progress` — `in-progress`
 - `n_done` — `done`
 
-Do **not** run `ck-index.sh` here (this skill writes nothing). If `tasks/` exists but
+Do **not** run `ck-index` here (this skill writes nothing). If `tasks/` exists but
 `has_indexes` is false, the views just need regenerating — row 5 below routes to `track`.
 
 ### A.3 Recommend
@@ -212,7 +215,7 @@ If `<name>` is not a current command, say so and list the valid command names.
 ## RULES
 
 - **Never** invoke another skill via the `Skill` tool — this skill recommends only.
-- **Never** write, edit, or generate any file (including running `ck-index.sh`) —
+- **Never** write, edit, or generate any file (including running `ck-index`) —
   Bash is for read-only probes only.
 - **Never** reference retired skills (`start`, `advise`, `help`, `sync`,
   `doc-optimizer`, `quick-story`, `to-issues`, `pre-spec`, `convention`,

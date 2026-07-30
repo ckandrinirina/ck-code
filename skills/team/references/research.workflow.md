@@ -1,66 +1,29 @@
-# Phase 1.6a research workflow script
+# Phase 1.6a research workflow
 
-Passed verbatim as the `Workflow` tool's inline `script`, with
-`args = { technologies: [{ id, name, version }, …] }`.
+The script is a **registered plugin workflow**, not an inline blob: it ships at
+`workflows/team-research.js` and Claude Code loads it with the plugin. Invoke it by name —
+never paste the source into the `script` parameter.
+
+```
+Workflow({
+  name: "team-research",
+  args: { technologies: [{ id, name, version }, …] }
+})
+```
+
 Gate, contract, and script rules: [`../../../references/dynamic-workflows.md`](../../../references/dynamic-workflows.md).
 
-Returns `{ briefs: { <id>: brief }, unresolved: [<id>] }`. The orchestrator merges `briefs` into the
-single "Best Practices Knowledge" block and researches every `unresolved` id inline before Phase 2.
+Returns `{ briefs: { <id>: brief }, unresolved: [<id>] }`. The orchestrator merges `briefs`
+into the single "Best Practices Knowledge" block and researches every `unresolved` id inline
+before Phase 2.
 
-```js
-export const meta = {
-  name: 'team-research',
-  description: 'Per-technology best-practice research for /ck-code:team Phase 1.6a',
-  phases: [{ title: 'Research', detail: 'one agent per technology, retried until dry' }],
-}
+**Why registered rather than inline.** A named workflow has a stable identity across runs, so
+`resumeFromRunId` can replay the unchanged prefix from cache when a long research fan-out dies
+halfway — the whole reason [`dynamic-workflows.md`](../../../references/dynamic-workflows.md)
+sanctions the `Workflow` backend at all. An inline script re-pasted from a reference file is a
+new script each time and resumes nothing.
 
-const BRIEF = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['technology', 'version', 'conventions', 'structure', 'patterns', 'anti_patterns',
-             'performance', 'error_handling', 'testing', 'version_notes', 'sources'],
-  properties: {
-    technology: { type: 'string' },
-    version: { type: 'string' },
-    conventions: { type: 'array', items: { type: 'string' } },
-    structure: { type: 'string' },
-    patterns: { type: 'array', items: { type: 'string' } },
-    anti_patterns: { type: 'array', items: { type: 'string' } },
-    performance: { type: 'array', items: { type: 'string' } },
-    error_handling: { type: 'array', items: { type: 'string' } },
-    testing: { type: 'array', items: { type: 'string' } },
-    version_notes: { type: 'array', items: { type: 'string' } },
-    sources: { type: 'array', items: { type: 'string' } },
-  },
-}
-
-phase('Research')
-
-let todo = args.technologies
-const briefs = {}
-
-for (let round = 0; round < 3 && todo.length; round++) {
-  const batch = await parallel(todo.map(t => () => agent(
-    `Research CURRENT, version-specific best practices for ${t.name} ${t.version}.
-
-FIRST run ToolSearch with query "select:WebSearch,mcp__context7__resolve-library-id,mcp__context7__query-docs"
-to load those schemas — they are deferred and not callable until you do. If the context7 MCP tools
-do not resolve, fall back to the ctx7 CLI via Bash, then to WebSearch.
-
-Resolve the context7 library id and fetch its docs; use WebSearch only where context7 lacks coverage.
-Scope every field to what is current, version-specific, and project-relevant — never padded basics
-a competent developer already knows.
-
-Write NO files. Prompt no one. Return the schema; leave a field's array empty rather than inventing
-content for it.`,
-    { label: `research:${t.id}`, model: 'haiku', schema: BRIEF }
-  )))
-
-  const failed = []
-  batch.forEach((r, i) => (r ? (briefs[todo[i].id] = r) : failed.push(todo[i])))
-  if (failed.length) log(`round ${round + 1}: ${failed.length} technology(s) returned empty — retrying`)
-  todo = failed
-}
-
-return { briefs, unresolved: todo.map(t => t.id) }
-```
+Each technology is researched by one `haiku` agent returning a validated `BRIEF` schema, retried
+for up to 3 rounds while any agent returns empty. Read
+[`workflows/team-research.js`](../../../workflows/team-research.js) for the schema fields and
+the retry loop; it is the single source of truth and is never restated here.

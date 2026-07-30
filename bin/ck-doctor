@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# ck-doctor — read-only health check for a ck-code project (see skills/doctor).
+# On PATH while the plugin is enabled; see bin/ck-index for why the path is
+# resolved from the wrapper rather than from $CLAUDE_PLUGIN_ROOT.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-doctor.sh" "$@"

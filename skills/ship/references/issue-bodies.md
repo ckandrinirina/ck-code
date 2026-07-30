@@ -11,7 +11,7 @@ matching frontmatter so SHIP MODE can resolve it by number:
   absent);
 - a **story** issue → `Edit` that story file's frontmatter `issue:` line.
 
-Then regenerate the views once (SKILL.md P5): `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>`.
+Then regenerate the views once (SKILL.md P5): `ck-index tasks/<slug>`.
 
 ## Mode `feature` — one issue
 
@@ -155,7 +155,7 @@ Every epic `issue:` (`EPIC.md`) and every story `issue:` (story file) is now set
 the generator once so the views reflect the current frontmatter:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+ck-index tasks/<slug>
 ```
 
 ## Phase P6 summary shape

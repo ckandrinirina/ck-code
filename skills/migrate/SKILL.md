@@ -3,6 +3,7 @@ name: migrate
 description: Use when a change-producing skill's version gate has blocked a pre-v5 ck-code project, when the user asks to upgrade a project to v5, when team-generated skills sit in nested .claude/skills/experts/ or guides/ folders, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow. Converts v3 or older stories, epics and architecture docs — or a lite flat plan — to v5, flattens the team skill folders, regenerates the indexes, and stamps tasks/VERSION.md.
 argument-hint: "[--dry-run]"
 effort: medium
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git mv*) Bash(ls*) Bash(mkdir*) Bash(mv*)
 ---
 
 # Migrate — Upgrade a Project to the v5 Layout
@@ -23,6 +24,14 @@ originals are converted in place behind a **single pre-migration commit** so the
 conversion is one revertable step. The field-by-field mapping and the pre-v3
 doc-layout conversion live in [references/migration-map.md](references/migration-map.md);
 the lite conversion in [references/lite-migration.md](references/lite-migration.md).
+
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
 
 ## PHASE 0: SAFETY GATE (hard)
 
@@ -217,7 +226,7 @@ with `chore: migrate ck-code-lite project to ck-code v5 layout`.
 
 1. **Regenerate indexes** from the new frontmatter:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
+   ck-index
    ```
    This writes every `tasks/<slug>/STORIES_INDEX.md` and `tasks/FEATURE_INDEX.md` from
    the source of truth. Never hand-write these.
@@ -252,8 +261,8 @@ every task ID in the project changed.
 
 - **Never run on a dirty tree** — Phase 0 refuses; migration must be one revertable commit.
 - **Never delete a story body, journal doc, or design record** — convert in place; only `DESIGN_LEDGER.md` is removed (its state moves to the `design:` flag).
-- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Never hand-write an index** — always regenerate with `ck-index.sh` (Phase 5).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Never hand-write an index** — always regenerate with `ck-index` (Phase 5).
 - **Never stamp `layout: v5` before conversion succeeds** — the stamp is the final step.
 - **Always list unparseable files** in the report — a skipped file must be visible, never silent.
 - **Idempotent** — an already-v5 project re-stamps and regenerates with no other change.

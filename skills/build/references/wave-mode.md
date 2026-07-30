@@ -41,7 +41,7 @@ For each wave, in order:
    single-story wave inside a multi-wave run is still dispatched as a one-agent worktree run,
    never inline — its work has to land on the shared target like every other wave.
 3. **Merge** this wave's merge-eligible branches into the target (P8 Option 1), then
-   **regenerate the indexes** — `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<Plan>` —
+   **regenerate the indexes** — `ck-index tasks/<Plan>` —
    so the next wave's re-resolve sees these stories as `done`. Run the post-merge QA on the
    target via a `qa-validator` agent, not inline.
 4. **Verify** the merged wave on the target (the P8 manual gate) before the next wave builds

@@ -118,8 +118,8 @@ are `done`; `TODO` when none has started. A `bug` story counts as not-done.
 ## Regeneration contract
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"            # all plans + feature index
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>   # one plan + feature index
+ck-index            # all plans + feature index
+ck-index tasks/<slug>   # one plan + feature index
 ```
 
 The script reads only frontmatter (not story bodies), so it is cheap and cannot be
@@ -148,8 +148,8 @@ fast path; `migrate` writes it as its final step.
 
 ## Rules
 
-- **Never hand-edit a generated view** — regenerate from frontmatter with `ck-index.sh`.
+- **Never hand-edit a generated view** — regenerate from frontmatter with `ck-index`.
 - **Never store status anywhere but story frontmatter** — every other status display is derived.
 - **Never write a delta/journal doc** — commits are the history.
-- **Always run `ck-index.sh` in the same phase** you change any story's frontmatter.
+- **Always run `ck-index` in the same phase** you change any story's frontmatter.
 - **Frontmatter stays generator-readable** — one `key: value` per line, inline `[...]` lists, no block scalars.

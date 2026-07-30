@@ -43,17 +43,26 @@ Location: `tasks/VERSION.md`, sibling to `FEATURE_INDEX.md`.
 
 ## Procedure
 
-### Tier 1 — fast path (the common case, one read)
+### Tier 1 — fast path (the common case, zero reads)
 
-**Tier 1 lives inline in each skill; this file is opened only when it misses.** A
-skill's Phase 0 reads `tasks/VERSION.md` itself and proceeds on `layout: v5`. Skills
-restate *only* this one check, never the Tier-2 detection.
+**Tier 1 lives inline in each skill; this file is opened only when it misses.** Each
+change-producing skill's Phase 0 carries the stamp as a `` !`…` `` dynamic-context
+injection, so Claude Code runs the `cat` *before* the skill content is sent and the model
+receives the stamp already rendered. Skills restate *only* this one check, never the
+Tier-2 detection.
 
-1. Read `tasks/VERSION.md`.
-2. Exists AND `layout:` == `LAYOUT` (`v5`) → **PASS**. Proceed; no scan, no loading
-   this file. (If `ck-code:` differs from the running version, optionally restamp
-   that one line.)
-3. Missing or `layout:` ≠ `v5` → read this file and run Tier 2.
+```
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+```
+
+1. Read the injected stamp — **never spend a `Read` tool call on `tasks/VERSION.md`**.
+   The turn is already paid for; a Read here is pure waste.
+2. `layout:` == `LAYOUT` (`v5`) → **PASS**. Proceed; no scan, no loading this file.
+   (If `ck-code:` differs from the running version, optionally restamp that one line.)
+3. `ABSENT`, or `layout:` ≠ `v5` → read this file and run Tier 2.
+
+The injection resolves from the **git repo root**, not the cwd, so a skill invoked from a
+subdirectory still finds the stamp. Outside a git repo it falls back to the cwd.
 
 ### Tier 2 — full detection (only when the stamp is missing or stale)
 

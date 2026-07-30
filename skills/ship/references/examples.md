@@ -76,7 +76,7 @@ EOF
 
 Set the story frontmatter `status: done`, then regenerate the views:
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/2026-01-04_realtime-app
+ck-index tasks/2026-01-04_realtime-app
 ```
 
 The linked issue is resolved by the story frontmatter `issue: 42` (never by title).

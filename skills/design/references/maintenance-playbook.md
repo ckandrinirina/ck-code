@@ -62,4 +62,4 @@ run now reads versus reading the whole architecture before. Always include it in
 Always report what was left unresolved — scaffolded stubs, features still needing a real
 `design` pass, and any split/rename the user must wire into `plan` — so the user knows what
 still needs attention. The skill's `## RULES` block owns the safety constraints
-(confirm-before-destructive, never hand-edit a generated index, regenerate with `ck-index.sh`).
+(confirm-before-destructive, never hand-edit a generated index, regenerate with `ck-index`).

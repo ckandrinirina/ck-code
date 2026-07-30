@@ -3,8 +3,11 @@ name: explain
 description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works. Triggers on "explain", "what was implemented", "how do I check", "how does this work".
 argument-hint: "[file-or-concept]"
 effort: low
+model: haiku
 context: fork
+agent: Explore
 background: false
+allowed-tools: Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git status*) Bash(git branch*)
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 

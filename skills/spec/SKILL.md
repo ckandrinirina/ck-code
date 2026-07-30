@@ -3,6 +3,13 @@ name: spec
 description: Use when the user wants a stakeholder-ready feature specification (descriptive, no code, no file paths, no tooling jargon) before any design or architecture work, or wants to revise an existing spec identified by a slug or a GitHub issue URL. Produces a reviewable feature-spec document, optionally published as a GitHub issue, that `/ck-code:design` later consumes. Runs before `/ck-code:design`.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
 effort: high
+allowed-tools: Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(mkdir*)
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
 # Feature Spec
@@ -68,12 +75,24 @@ Resolve `$ARGUMENTS` against on-disk state:
 
 ---
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0 — Version gate (HARD GATE)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
-Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
-project state before this PASSes.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
 
 ---
 

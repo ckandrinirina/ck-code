@@ -3,6 +3,13 @@ name: ship
 description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git push*) Bash(gh auth status*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*)
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
 # Ship — Commit, PR, Issue Update & Plan Publishing
@@ -43,12 +50,24 @@ Parse `$ARGUMENTS`:
   - **Provided** → read the story for its frontmatter `issue:` and context.
   - **Empty** → detect context from branch name or recent git activity; if none, run as a standalone commit (STANDALONE MODE).
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0: VERSION GATE (hard gate — both modes)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
-Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
-project state before this PASSes.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
 **Exception:** a SHIP-MODE standalone commit in a repo with **no `tasks/` directory** is
 not a ck-code project — skip the gate and do not stamp; just commit.
 
@@ -262,7 +281,7 @@ set the story frontmatter `status: done` (Edit the `status:` line — do **not**
 any index or flip an EPIC checkbox), then regenerate views once:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+ck-index tasks/<slug>
 ```
 
 If the story is not yet fully done, leave `status` as is and skip issue-close steps.
@@ -432,7 +451,7 @@ between every `gh` call (GitHub rate-limits issue creation strictly).
 After all write-backs, regenerate the views once (frontmatter changed):
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+ck-index tasks/<slug>
 ```
 
 If a single `gh issue create` fails, report it and continue; list all failures at the end.
@@ -449,9 +468,9 @@ that ran (created issue numbers, quick links, total). Note which stories/epics g
 
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
-- **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index.sh`; never cell-edit an index or flip an EPIC checkbox for status.
-- **Always run `ck-index.sh` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
-- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index`; never cell-edit an index or flip an EPIC checkbox for status.
+- **Always run `ck-index` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
 - **Never ask the user for the PR base branch** — derive it from the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity.
 - **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, three consumers.

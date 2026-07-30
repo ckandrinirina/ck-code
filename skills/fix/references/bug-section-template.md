@@ -8,7 +8,7 @@ story file is the durable hand-off between the two skills.
 Bug Report status flow: `DIAGNOSED` (set by `fix`) → `FIXED` (set by `build`).
 Story frontmatter status flow: `done → bug` (set by `fix`, with `prior_status` recorded)
 → `done` (restored by `build` from `prior_status`). The indexes are generated views —
-`fix`/`build` change frontmatter and run `ck-index.sh`, never edit a cell.
+`fix`/`build` change frontmatter and run `ck-index`, never edit a cell.
 
 ---
 
@@ -150,7 +150,7 @@ run (no heading when empty).
 
 Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status to
 `FIXED`, restores the story frontmatter `status` from `prior_status`, and regenerates
-the views with `ck-index.sh`.
+the views with `ck-index`.
 
 ```markdown
 ### Resolution

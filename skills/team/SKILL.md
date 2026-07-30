@@ -4,6 +4,7 @@ description: Use when a project has architecture docs and needs project-tailored
 argument-hint: "[--basic|--standard|--max] [--check|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
 disable-model-invocation: true
 effort: high
+allowed-tools: Bash(ls*) Bash(mkdir*) Bash(git status*)
 ---
 
 # Team — Project-Tailored Expert & Guide Skill Factory
@@ -32,12 +33,24 @@ is **merge-safe** (see [THE MERGE RULE](#the-merge-rule)); it never clobbers you
 - **Fan-out decision announced before producing units** (1.6a, 3.1) — count, compare to the
   threshold of 3, print the branch taken. Deciding after the units exist is a gate failure.
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0: VERSION GATE
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
-Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
-project state before this PASSes.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
 
 ## ROUTING CHECK (do first)
 

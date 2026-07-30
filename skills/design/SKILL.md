@@ -3,6 +3,7 @@ name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md) or `sync` (scaffold feature docs missing from FEATURE_INDEX). Argument is a spec path, or `optimize`/`sync`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync]"
 effort: high
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*)
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -44,13 +45,26 @@ simplest thing that meets the requirement — see [`reuse-first.md`](../../refer
 
 ---
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0: VERSION GATE (hard gate, inline)
 
-In ALL modes: read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**,
-proceed. Otherwise run the shared [version gate](../../references/version-gate.md)
-(HARD GATE) — it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never
-read or write project state before this PASSes. This runs **once, in the orchestrator** —
-never inside a fan-out subagent.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
+
+Applies in ALL modes, and runs **once, in the orchestrator** — never inside a fan-out subagent.
 
 ---
 
@@ -264,7 +278,7 @@ After feature docs are written, regenerate the read-only views so `FEATURE_INDEX
 picks up any doc that matches an existing epic slug:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
+ck-index
 ```
 
 At greenfield time there are no epics yet, so the script exits cleanly with nothing to
@@ -311,7 +325,7 @@ content, only restructures and reports. Dedup rules and the token report format 
 5. **Right-size** — if a feature doc really covers two features, propose a split; on
    confirmation create the second doc + a note for the user to wire the new slug into `plan`.
 6. **Reindex** — if any feature doc was created/renamed, run
-   `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` and update the `README.md` index.
+   `ck-index` and update the `README.md` index.
 7. Report before/after token totals per doc and the total saved (playbook format).
 
 ---
@@ -322,7 +336,7 @@ Bring the doc set into lockstep with `FEATURE_INDEX` — the "as the project gro
 does **not** do layout migration (flat→subfolder, legacy layer docs) — that is `/ck-code:migrate`.
 
 1. **Detect state:** read `tasks/FEATURE_INDEX.md`. If missing or lacking the generated
-   header, regenerate it (`"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"`) then read it. If
+   header, regenerate it (`ck-index`) then read it. If
    `docs/architecture/` does not exist, tell the user to run `/ck-code:design` and stop.
 2. For each feature (epic) in `FEATURE_INDEX`, check whether
    `docs/architecture/features/<slug>/index.md` exists.
@@ -334,7 +348,7 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
    used `roles`, plan's epic is `role-management`), rename the `features/<slug>/` folder to
    the epic slug and fix inbound links. Confirm (AskUserQuestion) before renaming on
    ambiguous drift.
-5. **Reindex** — run `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` so each generated
+5. **Reindex** — run `ck-index` so each generated
    `FEATURE_INDEX.Docs` cell resolves to the doc, and update the `README.md` Feature
    Documents table.
 6. Report: docs scaffolded, renamed, and any features still lacking real design content (the
@@ -367,9 +381,9 @@ instead). Every line here is re-read by every story that touches the feature.
 - **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v5 has
   none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
   writes or updates is left `design: pending`; `plan` flips it to `planned`.
-- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never hand-edit a generated view** (`FEATURE_INDEX.md`, `STORIES_INDEX.md`) — change the
-  feature docs / story frontmatter and regenerate with `ck-index.sh`.
+  feature docs / story frontmatter and regenerate with `ck-index`.
 - **Never delete non-empty content in a maintenance run** without confirming first; `optimize`
   restructures and measures, it does not silently drop content.
 - **Never hardcode** — derive everything from the spec and the user's answers.

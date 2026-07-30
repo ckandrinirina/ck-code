@@ -58,12 +58,12 @@ smallest change that resolves the root cause; flag any unrelated edit.
    the generator in the same phase:
 
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+   ck-index tasks/<slug>
    ```
 
    The rollup recomputes automatically — a feature with no remaining `bug`/`in-progress`/`todo`
    story rolls back to `DONE`. There is no index cell to edit and no `EPIC.md` to touch. In
-   DELEGATED MODE the agent restores only its own frontmatter and skips `ck-index.sh` — the
+   DELEGATED MODE the agent restores only its own frontmatter and skips `ck-index` — the
    orchestrator regenerates once on the target branch after merge.
 3. Do NOT append an Implementation Summary — the Bug Report Resolution is the record for a bug
    fix.

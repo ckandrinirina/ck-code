@@ -3,6 +3,13 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*)
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
 # Build — TDD Story Implementation
@@ -52,12 +59,24 @@ someone else's parallel run — read [DELEGATED MODE](#delegated-mode) before Ph
 
 ---
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0: VERSION GATE (hard, before any project read/write)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
-Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
-project state before this PASSes.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
 
 ---
 
@@ -155,7 +174,7 @@ Edit the story-file frontmatter: `status: todo` → `status: in-progress`. Then 
 views in the same phase:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+ck-index tasks/<slug>
 ```
 
 That is the whole mutation — the generator recomputes every view from frontmatter, so there
@@ -417,7 +436,7 @@ Then regenerate the views in the same phase — one call recomputes `STORIES_IND
 automatically):
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+ck-index tasks/<slug>
 ```
 
 No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v5.
@@ -468,7 +487,7 @@ this run in its own worktree on its own branch, and there is no user to ask.
 |---|---|
 | 1.1–1.2 | Skipped — the story path is given. |
 | 1.4 | Skipped — never offer waves from inside a wave. |
-| 1.6 / 8.6 | Edit **this story's frontmatter only**; never run `ck-index.sh` and never touch a generated index — the orchestrator regenerates once on the target after merge. |
+| 1.6 / 8.6 | Edit **this story's frontmatter only**; never run `ck-index` and never touch a generated index — the orchestrator regenerates once on the target after merge. |
 | 3.5 | Present the plan; no branch question — the harness owns the branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
 | 4–6 | Unchanged. RED still gates GREEN. |
 | 7 | Run the QA commands inline; never delegate to `qa-validator` — the orchestrator runs one per branch. |
@@ -505,9 +524,9 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
 ## RULES
 
 - **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`,
-  `FEATURE_INDEX.md`, or `EPIC.md` — change `status:`, then run `ck-index.sh` in the same phase
+  `FEATURE_INDEX.md`, or `EPIC.md` — change `status:`, then run `ck-index` in the same phase
   (the two are one atomic mutation).
-- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
@@ -525,7 +544,7 @@ is the rest of this contract; these four are the traps it does not carry.
 - **Never orchestrate a single story** — one story in scope takes Phases 1–8 inline.
 - **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
   names, statuses, SHAs, and structured returns only. Every implementation is a sub-agent.
-- **Never let a dispatched agent run `ck-index.sh` or edit a generated index** — it changes
+- **Never let a dispatched agent run `ck-index` or edit a generated index** — it changes
   only its own story's frontmatter; this context regenerates once per wave after merge.
 - **Never span epics in one run** — every wave and every batch is scoped to a single epic.
 

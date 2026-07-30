@@ -94,7 +94,7 @@ calling skill's completion phase.
 - **Iteration = 3:** **escalate to user** with three options:
   - **A) FIX MANUALLY** — apply specific fixes the user suggests.
   - **B) ACCEPT AS-IS** — proceed with known issues, document them.
-  - **C) ABORT** — stop work, set the story frontmatter `status: todo` and regenerate the views (`scripts/ck-index.sh`).
+  - **C) ABORT** — stop work, set the story frontmatter `status: todo` and regenerate the views (`ck-index`).
 
 Exact wording for the escalation lives in the calling skill's references
 (`build/references/output-blocks.md` or `fix/references/qa-dialogue.md`).

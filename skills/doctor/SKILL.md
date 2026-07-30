@@ -3,8 +3,11 @@ name: doctor
 description: Use when checking a ck-code project for problems — a stale layout stamp, story frontmatter that will not parse, generated indexes that disagree with the story files, unresolvable blocked_by dependencies, feature-doc slug drift, unregistered team skills, or orphan epic branches. Read-only; reports each finding with the command that fixes it.
 argument-hint: "[tasks/<slug>] [--quiet]"
 effort: low
+model: haiku
 context: fork
+agent: Explore
 background: false
+allowed-tools: Bash(ck-doctor*)
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -25,7 +28,7 @@ diagnosed rather than refused. See [`version-gate.md`](../../references/version-
 ## PHASE 1: RUN
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-doctor.sh"
+ck-doctor
 ```
 
 Pass `$ARGUMENTS` through verbatim when present — `tasks/<slug>` scopes the plan checks,
@@ -49,7 +52,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `layout` | the stamp is missing or pre-v5; every change-producing skill will block | `/ck-code:migrate` |
 | `team layout` | skills sit in nested `experts/`/`guides/` folders, so Claude Code registers none of them | `/ck-code:migrate` |
 | `stories` | a story's frontmatter will not parse, or its status/size is outside the vocabulary | fix the frontmatter, then regenerate |
-| `indexes` | a generated view disagrees with the story files — usually a hand-edit, or a regenerate that never ran | `ck-index.sh` |
+| `indexes` | a generated view disagrees with the story files — usually a hand-edit, or a regenerate that never ran | `ck-index` |
 | `dependencies` | a `blocked_by` id resolves to nothing, a story blocks itself, there is a cycle, or a `done` story still depends on open work | fix `blocked_by` in the frontmatter |
 | `feature docs` (WARN) | an epic slug has no `features/<slug>/index.md`, so its `FEATURE_INDEX.Docs` cell is `—` and `build` has no doc to read | `/ck-code:design sync` |
 | `team skills` (WARN) | none generated, or one is invalid — `build` and `fix` then run with no project expertise | `/ck-code:team` |
@@ -67,11 +70,11 @@ Close with the single highest-value next command, never a list of every fix at o
 
 ## RULES
 
-- **Never write, edit, or create any file** — including running `ck-index.sh` against the
-  project. The only permitted Bash call is `ck-doctor.sh`, which is itself read-only.
+- **Never write, edit, or create any file** — including running `ck-index` against the
+  project. The only permitted Bash call is `ck-doctor`, which is itself read-only.
 - **Never fix a finding in this skill** — report it and name the command. Repair belongs
-  to `migrate`, `design`, `team`, or a deliberate `ck-index.sh` run the user chooses.
-- **Never restate or re-derive a check in prose** — `ck-doctor.sh` defines what is broken;
+  to `migrate`, `design`, `team`, or a deliberate `ck-index` run the user chooses.
+- **Never restate or re-derive a check in prose** — `ck-doctor` defines what is broken;
   this file only interprets its output.
 - **Never summarise the script output away** — return it verbatim, then interpret.
 - **Never treat a WARN as a blocker** — warnings are advisory; only an ERROR means the

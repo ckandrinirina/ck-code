@@ -29,7 +29,7 @@ decision points but the rules in `SKILL.md` are authoritative.
 - **5.2** Fix Plan recorded (status stays `DIAGNOSED`). **5.3** User confirms → `Record & route`.
 
 ### Phase 6 — Flip to bug & Route
-- **6.1** `01-03` frontmatter: set `status: bug`, `prior_status: done`; run `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/foundation`. The views regenerate — `STORIES_INDEX.md` shows `bug`, `FEATURE_INDEX.md` rolls Foundation to `IN PROGRESS` automatically. No cell is hand-edited.
+- **6.1** `01-03` frontmatter: set `status: bug`, `prior_status: done`; run `ck-index tasks/foundation`. The views regenerate — `STORIES_INDEX.md` shows `bug`, `FEATURE_INDEX.md` rolls Foundation to `IN PROGRESS` automatically. No cell is hand-edited.
 - **6.2 Auto-Build Eligibility Gate:** verdict A ✓, single cause ✓, 1 file ✓, LOW risk ✓, no new story ✓ → **AUTO-BUILD.**
 - **6.3** Announce, then invoke `/ck-code:build tasks/.../01-03-websocket-gateway.md`.
   - `build` sees `status: bug`, enters Bug-Fix Mode, runs the repro test RED → applies the 1-line fix → GREEN → SOLID + QA + manual-test → ships (`fix/` branch, Bug ID in commit) → restores `01-03` frontmatter from `prior_status` (`done`) and regenerates the views (Foundation back to `DONE`).
@@ -51,7 +51,7 @@ decision points but the rules in `SKILL.md` are authoritative.
 
 ### Phase 5–6 — Plan & Route
 - Fix Plan: replace `unwrap()` with `unwrap_or_default()`. Files: 1. Risk: **MEDIUM** (intermittent, hard to fully reproduce).
-- **6.1** frontmatter `status: done → bug`, `prior_status: done`; `ck-index.sh` regenerates the views.
+- **6.1** frontmatter `status: done → bug`, `prior_status: done`; `ck-index` regenerates the views.
 - **6.2 Gate:** Risk = MEDIUM fails a box → **MANUAL hand-off.**
 - **6.3** Print the manual-build prompt: recommend `/ck-code:build tasks/.../profile-screen.md`. STOP.
 
@@ -76,7 +76,7 @@ Deferring keeps the planned story authoritative and the bug log clean — no dup
 
 - Bug: settings screen shows a stale device IP. Diagnosis pins a real bug in `[03-01] Settings screen` (`done`) AND surfaces that "persist IP to config" was never built (no story in epic 04).
 - **Verdict D.** Phase 2.5c confirmation: UPDATE `[03-01]` (→ `bug`); CREATE one story via `/ck-code:plan --quick "persist device IP to config" --epic 04` (stays `todo`).
-- **Phase 2.6** `plan --quick` scaffolds the new story's frontmatter + regenerates the indexes. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01]` frontmatter to `bug` (`prior_status: done`) and runs `ck-index.sh`.
+- **Phase 2.6** `plan --quick` scaffolds the new story's frontmatter + regenerates the indexes. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01]` frontmatter to `bug` (`prior_status: done`) and runs `ck-index`.
 - **6.2 Gate:** verdict D → **MANUAL hand-off.** Recommend `/ck-code:build tasks/.../03-01-settings-screen.md` for the bug; the new epic-04 story is normal `build` work later.
 
 ### Key takeaway

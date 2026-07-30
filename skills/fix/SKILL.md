@@ -4,6 +4,13 @@ description: Use when the user reports a bug in already-built behavior tied to o
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 effort: high
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*)
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
 # Fix — Bug Triage & Routing Orchestrator
@@ -27,12 +34,24 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 `$ARGUMENTS` is an optional path to the story file. If provided, read it as a starting candidate (Phase 2.5 may still expand scope). If empty, enter interactive story selection (Phase 1.2) with `AUTO` as a supported answer.
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0: VERSION GATE (hard gate)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
-Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
-project state before this PASSes.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
 
 ## PHASE 1: CANDIDATE STORY SELECTION
 
@@ -214,7 +233,7 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
 2. Regenerate the views once, in this phase:
 
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+   ck-index tasks/<slug>
    ```
 
    The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it.
@@ -247,7 +266,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Phase 2.5.2 / 2.5.5 / 4.6 / 5.3** — `AskUserQuestion` confirmation gates; never write without an explicit confirm.
 - **Phase 2.6** — missing stories are created by `/ck-code:plan --quick`, never inline.
 - **Phase 4.2** — a failing reproduction test is mandatory before Phase 5; it is the RED target `build` inherits.
-- **Phase 6.1** — flip is a frontmatter edit (`status: bug` + `prior_status`) followed by `ck-index.sh` in the same phase; never hand-edit a generated view.
+- **Phase 6.1** — flip is a frontmatter edit (`status: bug` + `prior_status`) followed by `ck-index` in the same phase; never hand-edit a generated view.
 - **Phase 6.2 / 6.3** — the Auto-Build Eligibility Gate is deterministic; a single unchecked box forces MANUAL hand-off.
 
 ### Scope discipline (cross-cutting)
@@ -262,8 +281,8 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Never reference AI, Claude, or generated-by notes** in any git or GitHub artefact — [full rule](../../references/no-ai-references.md).
 - **Always use the same `Bug ID`** (`BUG-YYYYMMDD-NN`) across every in-scope story.
 - **Always record `prior_status`** in the story frontmatter so `build` can restore it.
-- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Always regenerate the views** with `ck-index.sh` in the same phase you change any frontmatter.
+- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Always regenerate the views** with `ck-index` in the same phase you change any frontmatter.
 - **Always output in English.**
 
 ---

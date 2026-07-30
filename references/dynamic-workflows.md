@@ -54,9 +54,26 @@ If the gate fails, if the run returns `null` for a unit, or if the script report
 the orchestrator recovers those units inline exactly as `subagent-fanout.md` step 4 already
 requires. A partially-failed workflow is never left silently short.
 
+## Invoke by name — every ck-code workflow is registered
+
+ck-code ships its workflow scripts as files under `workflows/`, so Claude Code registers them
+with the plugin and they are callable by name:
+
+```
+Workflow({ name: "team-research",  args: { … } })
+Workflow({ name: "team-generate", args: { … } })
+```
+
+**Never pass a ck-code workflow as an inline `script` string.** A named workflow has a stable
+identity across runs, which is what makes `resumeFromRunId` able to replay the unchanged prefix
+from cache — the single largest reason this backend exists. A script re-pasted from a reference
+file is a new script every time and resumes nothing. The reference file next to a skill
+documents the **args and the return shape**; the `.js` file is the only source of the logic.
+
 ## Script rules
 
-Stated once here so no `SKILL.md` repeats them.
+Stated once here so no `SKILL.md` repeats them. They apply when authoring a file in
+`workflows/`, not when calling one.
 
 - **Shape** — `export const meta = {name, description, phases: [...]}` (a **pure literal**), then the
   body at top level. `agent`, `parallel`, `pipeline`, `log`, `phase`, `args`, `budget` are
@@ -69,7 +86,7 @@ Stated once here so no `SKILL.md` repeats them.
 - **No user interaction anywhere inside a script.** Every prompt, confirmation, and gate runs to
   completion in the orchestrator before the call, or after it. A gate between two fan-outs means
   **two separate `Workflow` calls**, never one fused script.
-- **No shared or generated writes from a script's subagent** — `ck-index.sh`, `_shared.md`,
+- **No shared or generated writes from a script's subagent** — `ck-index`, `_shared.md`,
   `tasks/VERSION.md`, README index rows stay orchestrator-owned. A write subagent touches only its
   own unique path.
 - **Cap every retry loop** (3 rounds) and `log()` each round, so the journal shows what was retried.
@@ -89,7 +106,10 @@ disk does not have. This is why the write variant keeps a central verify step.
 
 - **`$CLAUDE_PLUGIN_ROOT` is EMPTY.** Every path in a dispatch prompt must be **absolute** or
   repo-relative — a `${CLAUDE_PLUGIN_ROOT}/…` reference resolves to nothing and the agent fails
-  silently. This is the single most likely authoring mistake.
+  silently. This is the single most likely authoring mistake. ck-code's own generators are the
+  exception: `ck-index` and `ck-doctor` are on `PATH` via the plugin's `bin/` and work here
+  unchanged — which is exactly why skills invoke them as bare commands
+  ([`stories-index.md`](stories-index.md#the-ck-index-command)).
 - **Directly callable:** `Read`, `Write`, `Edit`, `Bash`, `Skill`, `ToolSearch`. Repo reads work.
 - **`Skill` works** — a namespaced plugin skill (`ck-tools:bmad-guide`) loads normally, so a
   subagent can pull in a plugin reference instead of having it inlined.

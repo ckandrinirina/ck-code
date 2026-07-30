@@ -3,6 +3,7 @@ name: plan
 description: Use when breaking a project spec or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle; redirects to full planning when no epic exists. Argument is the spec-file path, or the `--quick` flags.
 argument-hint: "<path-to-spec> | --quick [brief] [--epic NN]"
 effort: high
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git branch*) Bash(mkdir*)
 ---
 
 # Project Architect — Spec to Epics/Stories (+ Quick Single-Story)
@@ -58,12 +59,24 @@ larger to spend effort; add task and criteria depth instead.
 
 ---
 
+## PROGRESS TRACKING
+
+Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+actually execute — then flip each to `in_progress` when it starts and `completed` when its
+gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
+view into where it is comes from this list, so update it as you go and never batch the
+updates to the end.
+
 ## PHASE 0: VERSION GATE (hard gate)
 
-Read `tasks/VERSION.md`. If it exists AND `layout: v5` → **PASS**, proceed. Otherwise
-run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects
-a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write project
-state before this PASSes.
+The stamp is injected at skill-load time — **do not spend a `Read` on it**:
+
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+this PASSes.
 
 ---
 
@@ -353,7 +366,7 @@ After all story + epic files are written, regenerate `STORIES_INDEX.md` and
 `FEATURE_INDEX.md` from frontmatter — never write or cell-edit them by hand:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"
+ck-index
 ```
 
 The script reads only frontmatter, so the views cannot disagree with the stories. It
@@ -413,7 +426,7 @@ Path `tasks/<slug>/epics/NN_<epic-slug>/stories/SS_<story-slug>.md`, frontmatter
 Never cell-edit an index and never touch `EPIC.md` — the story list is generated:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
+ck-index tasks/<slug>
 ```
 
 Print the created path and confirm the index regenerated (row `EE-SS`).
@@ -443,8 +456,8 @@ independent stories is a natural fit for `/ck-code:build --epic NN`.
 
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
 - **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
-- **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index.sh` (5.7, Q.5).
-- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index` (5.7, Q.5).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write an `EPIC.md` `## Stories` table** — the story list is generated.
 - **Never leave a planned feature `design: pending`** — flip it to `planned` (5.5).
 - **Never create a new epic in `--quick` mode** — redirect to full plan when no epic exists.

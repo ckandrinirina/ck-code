@@ -56,15 +56,18 @@ schema. This applies to every registered ck-code agent too — `story-implemente
 
 ## Model tier (pass `model:` on every dispatch)
 
-Match the model to the *reasoning* the unit needs, never to the unit's size:
+Match the model to the *reasoning* the unit needs, never to the unit's size. `model:` accepts
+only these four literal aliases — a tier name like `balanced` is an invalid value:
 
 - **`haiku`** — mechanical work: grep/trace/count, path extraction, token measurement,
   classifying output against fixed criteria. No design judgment.
+- **`fable`** — the same mechanical shape, when the unit has enough steps or enough
+  formatting constraints that `haiku` starts dropping them. Cheaper than `sonnet`.
 - **`sonnet`** — filling a frozen template from an already-resolved slice of context.
   Fidelity to the input matters; the structure is given.
-- **Escalate one tier** only when the unit itself must *decide* something the orchestrator
-  could not pre-resolve — a novel algorithm, a security-sensitive trade-off, an ambiguous
-  requirement. Escalation is the exception; state why in the dispatch prompt.
+- **`opus`** — escalate here only when the unit itself must *decide* something the
+  orchestrator could not pre-resolve: a novel algorithm, a security-sensitive trade-off, an
+  ambiguous requirement. Escalation is the exception; state why in the dispatch prompt.
 
 Omitting `model:` makes the subagent inherit the orchestrator's tier — the most expensive
 model in play — for work that rarely needs it. Never omit it.
@@ -77,7 +80,7 @@ The orchestrator (the skill thread) — never a subagent — does all of:
   _before_ dispatch and _after_ collection. Subagents get already-resolved context.
 - **Shared writes** — in v5 the story-status indexes (`STORIES_INDEX.md`,
   `FEATURE_INDEX.md`) are **generated views**, so a shared-index write means running
-  `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` **once, in the orchestrator**, after it has
+  `ck-index` **once, in the orchestrator**, after it has
   merged the subagents' work and the story frontmatter is settled — never a subagent editing
   an index cell (see [`data-model.md`](data-model.md)). The stamp `tasks/VERSION.md`,
   `_shared.md`, and any append-target singleton are likewise authored/merged only by the
@@ -90,7 +93,7 @@ The orchestrator (the skill thread) — never a subagent — does all of:
 So before dispatch: finish all prompts, author every shared/global file (freeze `_shared.md`),
 then pass each subagent its slice as **read-only** context. Generated indexes are the
 exception — they are not authored up front; the orchestrator regenerates them once with
-`ck-index.sh` after convergence, when the merged story frontmatter is final.
+`ck-index` after convergence, when the merged story frontmatter is final.
 
 ## Dispatch shape
 
@@ -108,7 +111,7 @@ exception — they are not authored up front; the orchestrator regenerates them 
    missing or malformed schema) is recovered or redone inline by the orchestrator, never left
    silently missing.
 5. **Converge** — merge into shared files, resolve conflicts, verify each unit landed, then
-   regenerate the indexes with `ck-index.sh` once, and summarize.
+   regenerate the indexes with `ck-index` once, and summarize.
 
 ## Announce + report
 

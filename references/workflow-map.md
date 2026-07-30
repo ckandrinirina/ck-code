@@ -112,4 +112,4 @@ command reference.
 - **Bug Report sub-status** (`DIAGNOSED` → `FIXED`) lives in the story body only; it is
   narrative and does not affect the frontmatter `status:`.
 - **Indexes are generated, never hand-edited.** To change status, edit the frontmatter
-  and run `scripts/ck-index.sh`. There is no reconciler — the views cannot drift.
+  and run `ck-index`. There is no reconciler — the views cannot drift.
