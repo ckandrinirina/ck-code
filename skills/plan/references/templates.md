@@ -70,6 +70,8 @@ owning feature-doc dir name whenever one exists** (several epics may share one f
 e.g. epics `03_keyboard-split-engine` and `04_keyboard-split-desktop` both get
 `slug: keyboard-split`); an unlinked `Docs` cell strands builders without their
 architecture doc. `title`/`description` must not contain `|` (table cells).
+Leave `integration:` empty — `build` fills it on the first story of the epic
+([`branch-topology.md`](../../../references/branch-topology.md)).
 
 ```markdown
 ---
@@ -77,6 +79,7 @@ epic: NN
 slug: [epic-slug]
 title: [Epic Title]
 description: [one-line goal — becomes the FEATURE_INDEX Description cell]
+integration:
 ---
 
 # Epic [NN]: [Epic Title]

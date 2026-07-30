@@ -16,6 +16,10 @@ story is `done`; `IN PROGRESS` when any story is `in-progress`/`bug` or some-but
 are `done`; `TODO` when none has started. A `bug` story counts as not-done. The `Docs`
 cell routes to `docs/architecture/features/<slug>/index.md` (or `—` if absent).
 
+**"Feature" here is the index sense — one row per epic.** The delivery branch
+`feat/<plan-slug>` in [`branch-topology.md`](branch-topology.md) is the *plan* sense: one
+branch collecting several epics. The two never refer to the same thing.
+
 ## Read protocol
 
 Before any phase that selects work (`build` Phase 1 / PARALLEL MODE P1):

@@ -1,7 +1,7 @@
 ---
 name: ship
-description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). Issue work needs `gh` authenticated.
-argument-hint: "[path-to-story.md] | --to-issues [tasks-folder] [--mode feature|epics|stories]"
+description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
+argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
 ---
 
@@ -33,6 +33,12 @@ Parse `$ARGUMENTS`:
 
 - Contains `--to-issues` → **PUBLISH MODE** (bottom half of this file). Also parse an
   optional `tasks/<slug>/` path and `--mode feature|epics|stories` (any order).
+- Contains `--promote` → **PROMOTE MODE** (§6.5 on demand). Also parse an optional
+  `--epic NN`. Mutually exclusive with `--to-issues` — if both appear, say so and stop.
+- Contains `--integration <story|epic|feature>` → write that level to the epic's `EPIC.md`
+  and stop (optionally scoped by `--epic NN`). Writes the field only: creates no branch and
+  moves nothing. A level change is **not** retroactive — it applies from the next story
+  onward; say so when stories are already merged.
 - Otherwise → **SHIP MODE** (default). `$ARGUMENTS` may be a story-file path:
   - **Provided** → read the story for its frontmatter `issue:` and context.
   - **Empty** → detect context from branch name or recent git activity; if none, run as a standalone commit (STANDALONE MODE).
@@ -80,6 +86,16 @@ Store as `existing_pr`:
 - **Multiple** (rare) → show the list, ask which to update (or `NONE` to open new).
 
 If `gh` is missing or unauthenticated, treat as "no existing PR" and continue.
+
+### 1.3 Resolve branch topology
+
+Read the parent epic's `EPIC.md` frontmatter `integration:` (absent or empty ≡ `story`),
+then resolve `parent` and `pr_base` per
+[`branch-topology.md`](../../references/branch-topology.md#resolution) — one file read plus
+one `git branch --list`. Do not restate the rule here.
+
+At `story` the parent is the default branch and Phases 5–7 behave exactly as before.
+**STANDALONE MODE skips this step** — no story means no epic, so no topology.
 
 ## PHASE 2: GATHER CONTEXT
 
@@ -178,7 +194,26 @@ Present hash, branch, file count, first message line.
 
 ### 5.1 Route by existing-PR detection
 
-Use `existing_pr` from Phase 1.2: found → **5.A** (push + update); none → **5.B** (create).
+Route on the Phase 1.3 level first, then on `existing_pr` from Phase 1.2.
+
+**Level `story` or empty** — unchanged: found → **5.A** (push + update); none → **5.B** (create).
+
+**Level `epic` or `feature`** — the story merges into `parent` instead of opening its own PR
+into the default branch. Ask **one** question:
+
+```
+Q: "Story <EE>-<SS> is committed. What next?"
+   > Merge into <parent>            local --no-ff merge, delete the story branch
+     Merge + push <parent>
+     Open a story PR into <parent>
+     Leave on story branch
+```
+
+Commands, the clean-tree guard and the conflict path are in
+[`branch-topology.md`](../../references/branch-topology.md#story-merge) — follow it exactly;
+do not improvise a merge here. **Open a story PR** runs 5.B with `--base <parent>` and
+**keeps** the story branch (the open PR needs it). An existing open PR for the story branch
+still routes to 5.A, whose base is already fixed.
 
 ### 5.A Update existing PR
 
@@ -262,6 +297,25 @@ gh issue edit <story_issue> --add-label "status/done"
 gh issue edit <story_issue> --add-label "has-bugfix"   # bug fix only
 ```
 
+### 6.5 Promotion gate (levels `epic` and `feature` only)
+
+Runs at the end of Phase 6 regardless of whether 6.1 did any work — 6.1 is **skipped** on the
+normal path (`/ck-code:build` Phase 8.6 already flipped the status), so this gate keys off
+project *state*, never off 6.1 having acted. Skip entirely at level `story`, and skip when
+6.1 determined the story is not yet fully done.
+
+**Detect from story frontmatter, never from an index cell:** the epic has reached DONE when
+every non-`skip` story of epic `NN` reads `status: done`. Fire the gate only on the ship run
+that completes the epic — if the epic was already DONE and already promoted, say nothing.
+
+Then run the **epic gate**, and — when its condition holds — the **feature gate**, both
+defined with their staleness handling in
+[`branch-topology.md`](../../references/branch-topology.md#promotion). Choosing
+**Merge into `feat/<plan-slug>`** also writes `integration: feature` to that `EPIC.md`;
+regenerate the views in the same phase if any frontmatter changed.
+
+Declining is never a dead end — **Not yet** points at `/ck-code:ship --promote --epic NN`.
+
 ## PHASE 7: SUMMARY
 
 Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
@@ -270,9 +324,9 @@ Story (status/path), Next steps. Worked shape: [examples.md](references/examples
 - More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.
 - Epic complete → note the epic issue can be closed manually or auto-closes once all its
   checkboxes are checked.
-- Remind the user: once the PR merges, delete the local story branch
-  (`git branch -d <branch>`) — merged `story/*`/`fix/*` branches otherwise accumulate
-  forever.
+- Merged story branches were already deleted at merge time. Remind the user only about
+  branches ship cannot clean: a story branch with an **open** PR, and the epic branch once
+  its PR merges ([`branch-topology.md`](../../references/branch-topology.md#cleanup)).
 
 ## STANDALONE MODE (no story)
 
@@ -282,6 +336,20 @@ Story (status/path), Next steps. Worked shape: [examples.md](references/examples
 4. Craft a conventional commit message (plain-language body).
 5. Commit, optionally PR (Phase 5).
 6. No issue updates and no frontmatter/index changes (no story to link).
+
+## PROMOTE MODE (`--promote`)
+
+Runs the §6.5 gate on demand so **Not yet** is never a dead end. Uses the *promotable*
+definition in [`branch-topology.md`](../../references/branch-topology.md#promotion).
+Resolution order:
+
+1. `--epic NN` given → promote that epic; if it is not promotable, say why and stop.
+2. Exactly one promotable epic → use it, announcing which.
+3. Several → `AskUserQuestion` which one.
+4. None promotable but the feature-gate condition holds → run the feature gate.
+5. Otherwise → report that there is nothing to promote, and why.
+
+No commit, no staging, no story frontmatter change — this mode only promotes branches.
 
 ---
 
@@ -384,7 +452,10 @@ that ran (created issue numbers, quick links, total). Note which stories/epics g
 - **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index.sh`; never cell-edit an index or flip an EPIC checkbox for status.
 - **Always run `ck-index.sh` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
 - **Never commit directly to `main` or `develop`** (Phase 1).
-- **Never ask the user for the PR base branch** — read it from `gh repo view --json defaultBranchRef` (Phase 5.B); prompt only on a genuine `main`/`develop` ambiguity.
+- **Never ask the user for the PR base branch** — derive it from the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity.
+- **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, three consumers.
+- **Never merge without the clean-tree guard**, and never leave a merge half-applied — `git merge --abort`, return to the story branch, report the conflicting paths, and stop.
+- **Never auto-open a promotion PR** — §6.5 always confirms, and a level change is never retroactive.
 - **Never split a confirmation into sequential `AskUserQuestion` calls** when the questions are known at the same time — `AskUserQuestion` takes up to 4 questions per call, and each extra call is a full round-trip. Phase 3.3 batches file-set + message.
 - **Never `git add -A` or `git add .`** — stage files by name; never stage secrets or env files.
 - **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language, read by non-engineers.

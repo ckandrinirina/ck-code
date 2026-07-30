@@ -72,6 +72,7 @@ the closing `---`. `status` and `size` are lowercase/uppercase exactly as the en
 | `title` | text | epic display title |
 | `description` | text | one line — becomes the `FEATURE_INDEX` Description cell |
 | `issue` | number or empty | linked GitHub issue, written by `ship --to-issues` |
+| `integration` | `story` \| `epic` \| `feature` \| empty | where this epic's work is proposed for review; empty ≡ `story`. Branch names are **derived, never stored** — see [`branch-topology.md`](branch-topology.md) |
 
 Same format contract as story frontmatter. `title` and `description` must not
 contain `|` (they are emitted into markdown table cells).
