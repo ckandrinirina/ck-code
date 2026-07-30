@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.5.0] — 2026-07-30
+
+### Changed
+- **statusline**: the segments now run **feature → epic → story → target → live work**, one level of the plan each, every level counted in the unit below it and each narrower than the last. The story previously sat *before* its epic, which asked you to hold an id in mind until the context that gives it meaning arrived; reading left to right now answers *which feature, which epic, which story, how far* in the order those questions are actually asked. The feature's open (`2⚡`) and bug (`1✗`) story counts move up beside the feature they describe, where they can no longer be read as belonging to the epic or the story further right.
+- **statusline**: `⚙ 3 wt 45%` becomes `⚙ 01-04 30%, 02-01 0%` — **every story a worktree is building**, sorted by id, each with its own criteria percentage from that worktree's own copy of the story file. A count says work is happening somewhere; the ids say which stories are moving and which are stuck, and one story at `0%` while its neighbours climb is the fan-out failure an aggregate percentage hid. `+N` marks worktrees the plan cannot name.
+- **statusline**: the standalone `3 ☐` becomes a ratio inside the story segment (`⚡ 01-03 Password reset flow 5/8 62%`). Every other level already reads done / total, and `10/11` says *nearly done* without the reader having to supply the denominator.
+
+### Fixed
+- **statusline**: the live-work segment counted the worktree list by position — the session's own checkout was excluded only when it happened to be the first record, so from inside a fan-out worktree the line repeated that agent's story under `⚙`, and the main checkout (parked on an epic branch, running nothing) was counted as an implementer. It is now excluded by path, and only `story/`/`fix/` worktrees count.
+
 ## [5.4.0] — 2026-07-30
 
 The status bar was answering the right question about the wrong feature. It now resolves *which plan the branch belongs to* before counting anything, and reports each level of the plan in the unit below it.
