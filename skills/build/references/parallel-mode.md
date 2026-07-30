@@ -14,7 +14,7 @@ detailed in its section below.
 
 | Step | What this context does | Non-negotiable |
 |---|---|---|
-| **P1** | Freeze `$TARGET` (`git branch --show-current`; dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main` |
+| **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main`, and never into whatever branch happened to be checked out |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
 | **P3** | Team gate (`ls .claude/skills/{experts,guides}/*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
 | **P4** | Dispatch the wave in a **single message**: one `Agent` per story, `isolation: "worktree"`, `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` prompt | Tier the model by reasoning complexity, never `size` |
@@ -30,8 +30,14 @@ detailed in its section below.
 git status --porcelain && git branch --show-current
 ```
 
-A dirty tree or a detached HEAD stops the run — say which and stop. The current branch is
-`$TARGET` for the whole run; every later phase merges into it, never a hardcoded `main`.
+A dirty tree or a detached HEAD stops the run — say which and stop.
+
+`$TARGET` is `resolve_parent(epic NN)`
+([`branch-topology.md`](../../../references/branch-topology.md#resolution)), created if
+absent — **not** whatever branch is currently checked out. At level `story` that resolves to
+the default branch; at `epic`/`feature` to `epic/<NN>-*`. This mode is already scoped to a
+single epic, so exactly one `$TARGET` resolves. Every later phase merges into it, never a
+hardcoded `main`.
 
 Resolving the scope set, by argument shape:
 
