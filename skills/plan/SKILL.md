@@ -444,6 +444,7 @@ independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
 - **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
 - **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index.sh` (5.7, Q.5).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write an `EPIC.md` `## Stories` table** — the story list is generated.
 - **Never leave a planned feature `design: pending`** — flip it to `planned` (5.5).
 - **Never create a new epic in `--quick` mode** — redirect to full plan when no epic exists.

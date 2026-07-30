@@ -252,6 +252,7 @@ every task ID in the project changed.
 
 - **Never run on a dirty tree** — Phase 0 refuses; migration must be one revertable commit.
 - **Never delete a story body, journal doc, or design record** — convert in place; only `DESIGN_LEDGER.md` is removed (its state moves to the `design:` flag).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never hand-write an index** — always regenerate with `ck-index.sh` (Phase 5).
 - **Never stamp `layout: v5` before conversion succeeds** — the stamp is the final step.
 - **Always list unparseable files** in the report — a skipped file must be visible, never silent.

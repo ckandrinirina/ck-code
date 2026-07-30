@@ -34,8 +34,29 @@ pure function of the frontmatter, so it cannot drift. Inside a `build` PARALLEL 
 worktree an agent edits only its own story's frontmatter; the orchestrator regenerates
 the views once on the target branch after merges.
 
+## Generator warnings — always surface them
+
+`ck-index.sh` never fails on a bad story: it skips it and prints one line to **stderr**,
+so one malformed file can never block the whole plan.
+
+```
+ck-index: WARN — tasks/…/stories/04_export.md: missing id in frontmatter — story skipped
+```
+
+A skipped story is **absent from every generated view** — it vanishes from the index, the
+epic rollup, and the `next` selection, while its file still sits on disk. Left unreported,
+that reads as "the story was completed" rather than "the story is invisible".
+
+So **every skill that runs `ck-index.sh` must relay any `ck-index: WARN` line it emits**,
+verbatim, in the same phase — one line per warning, with the fix (`missing id`,
+`no frontmatter fence`, `unterminated frontmatter`). Never summarise them away, never
+report a regenerate as clean when warnings appeared, and never let a fan-out subagent
+swallow them: the orchestrator relays whatever its run printed. Zero warnings prints
+nothing.
+
 ## Rules
 
+- **Always relay `ck-index: WARN` lines to the user** in the phase that ran the generator — a silently skipped story is invisible in every view while its file still exists.
 - **Never hand-edit `STORIES_INDEX.md`** — change the story frontmatter and regenerate.
 - **Never read every story file to check status** — that is what this view is for.
 - **Always regenerate in the same phase** you change any story's frontmatter.

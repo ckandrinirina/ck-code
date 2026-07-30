@@ -262,6 +262,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Never reference AI, Claude, or generated-by notes** in any git or GitHub artefact — [full rule](../../references/no-ai-references.md).
 - **Always use the same `Bug ID`** (`BUG-YYYYMMDD-NN`) across every in-scope story.
 - **Always record `prior_status`** in the story frontmatter so `build` can restore it.
+- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Always regenerate the views** with `ck-index.sh` in the same phase you change any frontmatter.
 - **Always output in English.**
 

@@ -131,7 +131,10 @@ Present the top story (a 🐛 bug if any is open); list the rest under *Also Rea
 - **Never** hand-maintain or bootstrap an index by globbing story files — the story
   frontmatter is the source of truth and `ck-index.sh` produces the views.
 - **Never** cache state — every run re-reads the index.
-- **Never** fail on a malformed story row — skip it with a one-line warning.
+- **Never** fail on a malformed story row — skip it with a one-line warning, and relay
+  any `ck-index: WARN` line a regenerate printed
+  ([stories-index.md](../../references/stories-index.md)): a skipped story is invisible
+  in every view while its file still exists.
 - **Always** reference v5 skills only (`build`, `fix`, `ship`, `plan`, `migrate`);
   never `parallel-build`, `start`, `advise`, `help`, `sync`, or `to-issues`.
 - **Always** return the rendered dashboard verbatim as the final output — this skill

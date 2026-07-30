@@ -507,6 +507,7 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
 - **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`,
   `FEATURE_INDEX.md`, or `EPIC.md` — change `status:`, then run `ck-index.sh` in the same phase
   (the two are one atomic mutation).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).

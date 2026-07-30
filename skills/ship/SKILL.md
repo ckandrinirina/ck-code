@@ -451,6 +451,7 @@ that ran (created issue numbers, quick links, total). Note which stories/epics g
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
 - **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index.sh`; never cell-edit an index or flip an EPIC checkbox for status.
 - **Always run `ck-index.sh` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
+- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
 - **Never ask the user for the PR base branch** — derive it from the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity.
 - **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, three consumers.

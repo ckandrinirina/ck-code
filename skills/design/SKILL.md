@@ -367,6 +367,7 @@ instead). Every line here is re-read by every story that touches the feature.
 - **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v5 has
   none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
   writes or updates is left `design: pending`; `plan` flips it to `planned`.
+- **Always relay `ck-index: WARN` lines** printed by `ck-index.sh` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never hand-edit a generated view** (`FEATURE_INDEX.md`, `STORIES_INDEX.md`) — change the
   feature docs / story frontmatter and regenerate with `ck-index.sh`.
 - **Never delete non-empty content in a maintenance run** without confirming first; `optimize`
