@@ -104,20 +104,54 @@ Without this entry the plugin stays dormant in that project.
 ## Status bar (opt-in, zero tokens)
 
 `scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the story
-you're on (derived from the git branch) plus plan-wide counts:
+you're on (derived from the git branch), how far its epic has got, and plan-wide counts:
 
 ```
-ck-code ⚡ 01-03 Password reset flow · 12/20 ✓ · 2 ⚡ · 1 ✗
+ck-code ⚡ 01-03 Password reset flow · epic 01 2/5 · 3 ☐ · → epic/01 · 12/20 ✓ 60% · 2 ⚡ · 1 ✗ · ⚙ 3 wt 45%
 ```
 
 - `⚡ 01-03 Password reset flow` — the story you're on, read from the branch name
   (`story/<EE>-<SS>-…` or `fix/…`). On an `epic/<NN>-…` branch — where an
   `integration: epic|feature` session sits while its stories are built — the epic's own
-  open story is resolved from the index instead (in progress before bug). Absent when the
-  branch names no story and the epic has none open.
-- `12/20 ✓` — stories done / total across every plan, `skip` excluded.
+  open story is resolved from the index instead (in progress before bug). With no story in
+  play at all, this becomes `next 01-04`: the first TODO whose blockers are all DONE.
+- `epic 01 2/5` — the epic in context, done / total. Shown whenever a story or an epic
+  branch names one.
+- `3 ☐` — acceptance criteria still unchecked on the active story. Shown only when > 0,
+  and it is the one field that says *nearly done* rather than *in progress*.
+- `→ epic/01` — where a finished story merges, shown only when the epic's `integration`
+  is `epic` or `feature` (the `story` default merges to the default branch, which everyone
+  already assumes). `→ feat` is appended at `feature` level, and on the epic branch itself
+  only that promotion target is shown — naming the branch you are on is noise.
+- `12/20 ✓ 60%` — stories done / total across every plan, `skip` excluded. The percentage
+  rides the plan total, where the denominator is too large for a ratio to read at a glance;
+  `2/5` on an epic already does.
 - `2 ⚡` in progress, `1 ✗` bug — each shown only when non-zero.
+- `⚙ 3 wt 45%` — `build` PARALLEL MODE worktrees live right now, and the share of their
+  stories' acceptance criteria ticked. Read from each **worktree's own** copy of the story
+  file, since that is where its agent ticks them. Absent when no fan-out is running.
 - Story glyphs: `⚡` in progress · `✓` done · `○` todo · `✗` bug.
+
+Every segment past the first is conditional, so an idle session on `main` renders just
+`ck-code next 01-04 · 12/20 ✓ 60%`. Only `awk` and `git` are required; the whole line
+costs ~50ms to draw, ~85ms during a fan-out.
+
+### Per-agent rows
+
+`scripts/subagent-statusline.sh` ships enabled (a plugin *may* set `subagentStatusLine`)
+and renders one row per dispatched agent:
+
+```
+⚡ story-02-01 · Implement 02-01 filter service · 5/8 63% · +214/-18 · 159.5k tok
+```
+
+`5/8 63%` is that story's criteria, counted in that agent's own worktree; `+214/-18` is its
+diff against the branch the fan-out was cut from. **A row with no diff field has written no
+code** — the failure `build` P5 otherwise only catches after the agent claims success.
+
+A percentage can only ever mean "boxes ticked": criteria are the sole progress signal with
+a denominator, and the implementing agent ticks them as it goes, so read it as direction,
+not as a measurement.
 
 **It costs nothing.** The status bar is drawn by the terminal, never by the model, so
 progress stays visible without spending output tokens or filling the context window —
