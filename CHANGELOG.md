@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-07-30
+
+Progress you can see without paying for it. ck-code's printed output stays as terse as it was — the visibility moves to the status bar, where the terminal renders it and the model never spends a token on it.
+
+### Added
+- **statusline** (`scripts/statusline.sh`): an opt-in status bar showing the active story — derived from the git branch, never stored — plus plan-wide `done/total`, in-progress and bug counts, using the same glyph vocabulary as the subagent status row (`⚡ ✓ ✗ ○`). This is legibility bought at **zero token cost**: the status bar is drawn by the terminal, not by the model, so it neither spends output tokens nor occupies context — the reason ck-code keeps its *printed* per-phase output to one line each rather than to banners.
+- **statusline**: `--install [--project] [--force]` writes the `statusLine` key into user or project `settings.json` with an absolute self-resolved path, preserves every other setting, backs the file up, and refuses to clobber an existing `statusLine` without `--force`. A plugin's own `settings.json` may only set `subagentStatusLine`, so a plugin cannot ship this key itself — hence an installer rather than a default. `refreshInterval: 5` keeps `build` PARALLEL MODE worktrees visible while the main session is idle.
+- **statusline**: composes as one segment of an existing status line — it reads the same stdin JSON and prints nothing outside a ck-code project, before `plan` has generated an index, or when every story is `skip`. `jq` is optional for rendering (falls back to `$PWD`) and required only by `--install`; without `git` it degrades to plan-wide counts. Multi-plan projects resolve an ambiguous branch id to the story that is actually open, and a title containing an escaped `|` is read correctly by anchoring the index columns from the right.
+
+### Compatibility
+Additive and opt-in: no migration, no layout bump, and nothing changes for a project that never installs it. One new coupling to know about — `statusline.sh` reads the `STORIES_INDEX.md` column shape emitted by `scripts/ck-index.sh`, so a future change to those columns must update the script's field offsets in the same release.
+
 ## [5.1.0] — 2026-07-30
 
 Work no longer has to land one story at a time. An epic can be reviewed as a single PR, and a multi-epic feature as a single deliverable, chosen once per epic and then applied with no further prompts.
