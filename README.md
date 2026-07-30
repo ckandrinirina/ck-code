@@ -111,7 +111,10 @@ ck-code ⚡ 01-03 Password reset flow · 12/20 ✓ · 2 ⚡ · 1 ✗
 ```
 
 - `⚡ 01-03 Password reset flow` — the story you're on, read from the branch name
-  (`story/<EE>-<SS>-…` or `fix/…`). Absent when the branch isn't a story branch.
+  (`story/<EE>-<SS>-…` or `fix/…`). On an `epic/<NN>-…` branch — where an
+  `integration: epic|feature` session sits while its stories are built — the epic's own
+  open story is resolved from the index instead (in progress before bug). Absent when the
+  branch names no story and the epic has none open.
 - `12/20 ✓` — stories done / total across every plan, `skip` excluded.
 - `2 ⚡` in progress, `1 ✗` bug — each shown only when non-zero.
 - Story glyphs: `⚡` in progress · `✓` done · `○` todo · `✗` bug.
