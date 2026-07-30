@@ -440,13 +440,16 @@ EOF
 
 # --- cheap probes, each gated on what awk resolved -----------------------------
 
-# Unchecked acceptance criteria of the active story — the "am I done" signal that
-# otherwise only the model knows. One file, one grep, only when a story is active.
-crit=0
+# Acceptance criteria of the active story — the unit the story level reports in, and the
+# "am I done" signal that otherwise only the model knows. Ticked / total, like every level
+# above it, so `10/11` reads as nearly done where a bare `1 ☐` had to be interpreted.
+crit=""
 if [ -n "$wfile" ] && [ -f "$wdir/$wfile" ]; then
-  crit=$(awk '/^[[:space:]]*-[[:space:]]*\[ \]/ { n++ } END { print n+0 }' \
+  crit=$(awk '
+    /^[[:space:]]*-[[:space:]]*\[[xX]\]/ { d++ }
+    /^[[:space:]]*-[[:space:]]*\[ \]/    { o++ }
+    END { t = d + o; if (t > 0) printf "%d/%d %d%%", d+0, t, (d * 100) / t }' \
     "$wdir/$wfile" 2>/dev/null)
-  [ -n "$crit" ] || crit=0
 fi
 
 # Integration level of the epic in context (branch-topology.md). Only `epic` and
@@ -465,17 +468,25 @@ if [ -n "$epic_ctx" ] && [ -n "$plan" ]; then
   done
 fi
 
-# Live fan-out: worktrees beyond the main one are PARALLEL MODE implementers, which
-# are otherwise invisible from an idle main session. Count only — per-agent detail
-# belongs in the subagent rows, which already have each worktree's path.
-wave_pct=""
+# Live fan-out: worktrees beyond the main one are PARALLEL MODE implementers, which are
+# otherwise invisible from an idle main session. Each is named by the STORY it holds, not
+# just counted: `2 wt` says work is happening somewhere, `02-03 40%, 02-06 0%` says which
+# stories and how far each has got — and one story stuck at 0% while its neighbours climb
+# is the fan-out failure worth seeing, which no aggregate percentage can show.
+#
+# "Elsewhere" is the point, so the session's OWN checkout is excluded — its story is
+# already the story segment, and repeating it here would be the one thing this layout
+# exists to avoid. Excluding it by path rather than by position matters from inside a
+# fan-out worktree, where the session is not the first record.
+#
+# Only worktrees on a `story/` or `fix/` branch count: those are implementers. A checkout
+# parked on an epic or feature branch is somewhere you work, not something running, and
+# counting it would report a fan-out that is not happening.
+wt_rows=""
+wt_extra=0
 wt_count=0
+self=$(git rev-parse --show-toplevel 2>/dev/null)
 wt_list=$(git worktree list --porcelain 2>/dev/null)
-if [ -n "$wt_list" ]; then
-  wt_count=$(printf '%s\n' "$wt_list" | awk '/^worktree /{n++} END{print n+0}')
-  wt_count=$((wt_count - 1))
-  [ "$wt_count" -lt 0 ] && wt_count=0
-fi
 
 # Wave progress: aggregate acceptance criteria across the stories currently held by
 # worktrees. Criteria are the only progress signal with a *denominator* — a diff stat
@@ -484,21 +495,30 @@ fi
 #
 # Read from each WORKTREE's own copy of the story file, never the main checkout's:
 # the agent ticks boxes in its worktree, so the main copy shows 0% until the merge.
-if [ "$wt_count" -gt 0 ]; then
-  # The first porcelain record is the main worktree. Skipping it keeps the percentage
-  # counting exactly the stories the `N wt` count reports — on a story branch the
-  # session's own story would otherwise be folded in, and the two would disagree.
-  wave_ids=$(printf '%s\n' "$wt_list" | awk '
-    /^worktree /  { n++; path = substr($0, 10) }
+if [ -n "$wt_list" ]; then
+  # One record per implementer, id first — empty when the branch carries no parseable id,
+  # so such a worktree is still counted even though it can never be named.
+  wave_ids=$(printf '%s\n' "$wt_list" | awk -v self="$self" '
+    /^worktree /  { path = substr($0, 10) }
     /^branch /    { b = substr($0, 8); sub(/^refs\/heads\//, "", b)
-                    if (n > 1 && b ~ /^(story|fix)\//) {
+                    if (path != self && b ~ /^(story|fix)\//) {
                       sub(/^[^\/]*\//, "", b)
-                      # NOT `n` — that is the worktree counter this record set, and
-                      # overwriting it would let the main worktree back in on a later pass.
                       parts = split(b, p, "-")
-                      if (parts >= 2 && p[1] ~ /^[0-9]+$/ && p[2] ~ /^[0-9]+$/)
-                        print p[1] "-" p[2] "\t" path
-                    } }')
+                      id = (parts >= 2 && p[1] ~ /^[0-9]+$/ && p[2] ~ /^[0-9]+$/) \
+                           ? p[1] "-" p[2] : ""
+                      rec[++k] = id "\t" path
+                    } }
+    # Sorted by id, not by the order git happens to list the worktrees in: ids are
+    # zero-padded, so a string sort is the numeric one, and a wave reads as `01-02,
+    # 02-01, 02-03` — grouped by epic, the way the plan is written. Insertion sort
+    # because the list is a handful of items and `sort` would be a third dependency.
+    END { for (i = 2; i <= k; i++) {
+            v = rec[i]
+            for (j = i - 1; j >= 1 && rec[j] > v; j--) rec[j + 1] = rec[j]
+            rec[j + 1] = v
+          }
+          for (i = 1; i <= k; i++) print rec[i] }')
+  wt_count=$(printf '%s' "$wave_ids" | awk 'NF { n++ } END { print n+0 }')
   if [ -n "$wave_ids" ]; then
     # id → path-relative-to-plan, from the indexes the main checkout already has.
     # awk builds the id list too — the script's only hard dependencies stay awk + git.
@@ -511,39 +531,39 @@ if [ "$wt_count" -gt 0 ]; then
           d = FILENAME; sub(/\/[^\/]*$/, "", d)
           print id "\t" d "/" trim($(NF - 1))
         } }' "$@" 2>/dev/null)
-    # One path per line, so a directory containing a space stays one filename.
-    files=""
     while IFS='	' read -r id path; do
       [ -n "$id" ] || continue
       rel=$(printf '%s\n' "$map" | awk -F'\t' -v i="$id" '$1 == i { print $2; exit }')
-      [ -n "$rel" ] || continue
-      # `$rel` is absolute; the worktree's own copy is the same path relative to the
-      # plan root. When the plan lives OUTSIDE the code repo (multi-repo), no worktree
-      # holds a copy and the shared plan file — which the agent edits directly — is the
-      # live one, so the fallback is not a stale read there.
-      wrel=${rel#"$plan_root"/}
-      if   [ "$wrel" != "$rel" ] && [ -f "$path/$wrel" ]; then files="$files$path/$wrel
-"
-      elif [ -f "$rel" ];                                 then files="$files$rel
-"
+      file=""
+      if [ -n "$rel" ]; then
+        # `$rel` is absolute; the worktree's own copy is the same path relative to the
+        # plan root. When the plan lives OUTSIDE the code repo (multi-repo), no worktree
+        # holds a copy and the shared plan file — which the agent edits directly — is the
+        # live one, so the fallback is not a stale read there.
+        wrel=${rel#"$plan_root"/}
+        if   [ "$wrel" != "$rel" ] && [ -f "$path/$wrel" ]; then file="$path/$wrel"
+        elif [ -f "$rel" ];                                 then file="$rel"
+        fi
       fi
+      # An unreadable story file costs the percentage, never the name: knowing WHICH story
+      # a worktree holds is the larger half of the answer.
+      pct=""
+      [ -n "$file" ] && pct=$(awk '
+        /^[[:space:]]*-[[:space:]]*\[[xX]\]/ { d++ }
+        /^[[:space:]]*-[[:space:]]*\[ \]/    { o++ }
+        END { t = d + o; if (t > 0) printf "%d", (d * 100) / t }' "$file" 2>/dev/null)
+      wt_rows="$wt_rows$id $pct
+"
     done <<EOF
 $wave_ids
 EOF
-    if [ -n "$files" ]; then
-      # Each input line IS a filename; awk reads it with getline, so no word
-      # splitting and no temp file.
-      wave_pct=$(printf '%s' "$files" | awk '
-        NF {
-          while ((getline line < $0) > 0) {
-            if      (line ~ /^[[:space:]]*-[[:space:]]*\[[xX]\]/) d++
-            else if (line ~ /^[[:space:]]*-[[:space:]]*\[ \]/)    o++
-          }
-          close($0)
-        }
-        END { t = d + o; if (t > 0) printf "%d", (d * 100) / t }' 2>/dev/null)
-    fi
   fi
+  # Worktrees whose branch names no story this plan knows — another feature's branch, or
+  # a hand-made one. Counted, never named: dropping them would make `⚙` under-report the
+  # checkouts that actually exist.
+  wt_named=$(printf '%s' "$wt_rows" | awk 'NF { n++ } END { print n+0 }')
+  wt_extra=$((wt_count - wt_named))
+  [ "$wt_extra" -lt 0 ] && wt_extra=0
 fi
 
 # --- compose ------------------------------------------------------------------
@@ -555,18 +575,45 @@ DIM="${ESC}[2m"; RESET="${ESC}[0m"
 GRN="${ESC}[32m"; YEL="${ESC}[33m"; RED="${ESC}[31m"; CYN="${ESC}[36m"
 SEP="${DIM} · ${RESET}"
 
+# The line reads top-down, one level of the plan per segment, each counted in the unit
+# below it and each narrower than the last:
+#
+#   ck-code <feature> <epics> · epic <NN> <name> <stories> · <story> <criteria> · ⚙ <live>
+#
+# Nothing jumps levels and nothing repeats what a wider segment already said, so scanning
+# left to right answers "which feature, which epic, which story, how far" in that order —
+# the order the questions are actually asked in.
 out="${DIM}ck-code${RESET} "
 
-# The feature leads, counted in EPICS — every number after it is scoped to this one plan,
-# and each level of the line then reports in the unit below it: the feature in epics, the
-# epic in stories, the story in criteria. A single feature-wide story ratio flattened all
-# three into one number that told you the size of the plan, not where you were in it.
+# 1. FEATURE, counted in epics. Everything after it is scoped to this one plan.
 if [ -n "$feat_name" ]; then
   out="${out}${CYN}${feat_name}${RESET}"
   [ "${epn:-0}" -gt 0 ] && out="${out} ${GRN}${epdone}/${epn} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
+  # The feature's own health, kept at the level it describes: somewhere in this plan N
+  # stories are open and N are bugs. Attached, not separated, so it cannot be read as
+  # belonging to the epic or the story segment further right.
+  [ "${ip:-0}"  -gt 0 ] && out="${out} ${YEL}${ip}⚡${RESET}"
+  [ "${bug:-0}" -gt 0 ] && out="${out} ${RED}${bug}✗${RESET}"
+  out="${out}${SEP}"
+else
+  # No feature resolved (`main`, a detached HEAD): there is no one plan to report in
+  # epics, so project-wide story counts are all there is to say.
+  out="${out}${GRN}${dn}/${total} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
+  [ "${ip:-0}"  -gt 0 ] && out="${out}${SEP}${YEL}${ip} ⚡${RESET}"
+  [ "${bug:-0}" -gt 0 ] && out="${out}${SEP}${RED}${bug} ✗${RESET}"
   out="${out}${SEP}"
 fi
 
+# 2. EPIC, counted in stories.
+if [ "${etotal:-0}" -gt 0 ]; then
+  out="${out}${DIM}epic ${epic_ctx}${RESET}"
+  [ -n "$epic_name" ] && out="${out} ${epic_name}"
+  out="${out} ${edn}/${etotal}${DIM} $((edn * 100 / etotal))%${RESET}${SEP}"
+fi
+
+# 3. STORY, counted in acceptance criteria. It sits BELOW its epic now: a story is read
+# as "which one, inside that epic", and the old order asked you to hold the story in mind
+# until the epic arrived to give it a context.
 if [ -n "$wt" ]; then
   case "$ws" in
     "IN PROGRESS") g="${YEL}⚡" ;;
@@ -574,20 +621,15 @@ if [ -n "$wt" ]; then
     BUG)           g="${RED}✗" ;;
     *)             g="${CYN}○" ;;
   esac
-  out="${out}${g} ${wid}${RESET} ${wt}${SEP}"
+  out="${out}${g} ${wid}${RESET} ${wt}"
+  [ -n "$crit" ] && out="${out} ${crit%% *}${DIM} ${crit#* }${RESET}"
+  out="${out}${SEP}"
 elif [ -n "$nid" ]; then
-  # No story in play: the next ready one is the only story worth naming.
+  # No story in play: the next ready one — first TODO whose blockers are all DONE.
   out="${out}${DIM}next${RESET} ${CYN}${nid}${RESET}${SEP}"
 fi
 
-if [ "${etotal:-0}" -gt 0 ]; then
-  out="${out}${DIM}epic ${epic_ctx}${RESET}"
-  [ -n "$epic_name" ] && out="${out} ${epic_name}"
-  # Same shape as the feature segment one level up, so the two read as one scale rather
-  # than as two conventions: count in the unit below, percentage of the level itself.
-  out="${out} ${edn}/${etotal}${DIM} $((edn * 100 / etotal))%${RESET}${SEP}"
-fi
-[ "${crit:-0}" -gt 0 ]   && out="${out}${YEL}${crit} ☐${RESET}${SEP}"
+# 4. Where the finished story lands, when it is not the default branch.
 if [ -n "$integ" ]; then
   if [ -n "$epic_id" ]; then
     # Already sitting on the epic branch: naming it as the target is noise. Only the
@@ -600,22 +642,29 @@ if [ -n "$integ" ]; then
   fi
 fi
 
-# Story totals only when no feature was resolved — on `main` there is no one plan to
-# report in epics, so the project-wide count is all there is to say. When a feature IS
-# resolved this segment would only repeat, one unit coarser, what the epic segment and
-# the feature's own epic ratio already say precisely.
-if [ -n "$feat_name" ]; then
-  # Strip the separator the feature segment left behind, so the line never ends in `·`.
-  case "$out" in *"$SEP") out="${out%"$SEP"}" ;; esac
-else
-  out="${out}${GRN}${dn}/${total} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
-fi
-[ "${ip:-0}"  -gt 0 ] && out="${out}${SEP}${YEL}${ip} ⚡${RESET}"
-[ "${bug:-0}" -gt 0 ] && out="${out}${SEP}${RED}${bug} ✗${RESET}"
+# 5. Live work: every story a worktree is building right now, each with its own criteria
+# percentage. Named rather than counted — `2 wt` cannot tell you WHICH stories are moving.
 if [ "$wt_count" -gt 0 ]; then
-  out="${out}${SEP}${DIM}⚙${RESET} ${wt_count} wt"
-  [ -n "$wave_pct" ] && out="${out} ${YEL}${wave_pct}%${RESET}"
+  out="${out}${DIM}⚙${RESET}"
+  first=1
+  while read -r id pct; do
+    [ -n "$id" ] || continue
+    [ "$first" -eq 1 ] && first=0 || out="${out}${DIM},${RESET}"
+    out="${out} ${CYN}${id}${RESET}"
+    [ -n "$pct" ] && out="${out} ${YEL}${pct}%${RESET}"
+  done <<EOF
+$wt_rows
+EOF
+  # Worktrees this plan cannot name, so `⚙` never under-reports what is checked out.
+  if [ "$wt_extra" -gt 0 ]; then
+    [ "$first" -eq 1 ] && out="${out} ${wt_extra} wt" || out="${out}${DIM} +${wt_extra}${RESET}"
+  fi
+  out="${out}${SEP}"
 fi
+
+# Trim the trailing separator: every segment above appends its own, so whichever ends up
+# last would otherwise leave the line hanging on a `·`.
+case "$out" in *"$SEP") out="${out%"$SEP"}" ;; esac
 
 printf '%s\n' "$out"
 
