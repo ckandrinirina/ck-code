@@ -28,15 +28,6 @@
         "ref": "v2.2.2"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores. Coexists with ck-code."
-    },
-    {
-      "name": "ck-ai-coding",
-      "source": {
-        "source": "github",
-        "repo": "ckandrinirina/ck-ai-coding",
-        "ref": "v0.1.4"
-      },
-      "description": "Experimental sibling of ck-code: the same eleven skills and the same artifacts, with guarantees enforced by hooks, verification subagents and dynamic workflows instead of prose phases. 80% less instruction; installable alongside ck-code."
     }
   ]
 }
