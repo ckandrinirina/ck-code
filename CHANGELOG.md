@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.4.0] — 2026-07-30
+
+The status bar was answering the right question about the wrong feature. It now resolves *which plan the branch belongs to* before counting anything, and reports each level of the plan in the unit below it.
+
+### Fixed
+- **statusline**: the plan came from the nearest `tasks/` and was never checked against the branch. Story ids and epic numbers are unique **per plan**, not across plans, so a `tasks/` holding several features answered one branch several ways: `epic NN d/t` summed every feature's epic NN, the plan total spanned every feature ever planned, and the wave percentage resolved a worktree's `02-01` to whichever index listed it first. In a multi-repo project — code repo checked out under the repo that owns `tasks/` — a stale plan left beside the code won outright: `ck-code epic 02 3/3 · 11/11 ✓ 100% · ⚙ 1 wt 100%` was an abandoned feature's finished epic 02, its story count, and its ticked criteria, while the epic actually being built stood at 0/6. Now every ancestor holding a plan is a candidate and the branch decides: an `epic/<NN>-<slug>` branch must match an epic folder's slug (or its `slug:`, so a rename does not orphan it), a story branch needs its id backed by a word of the branch slug. **A branch no visible plan owns renders nothing** — a confident wrong number is worse than an empty status bar.
+- **statusline**: git probes (branch, worktrees) now stay in the session's own checkout instead of following the plan. In a multi-repo layout the fan-out worktrees belong to the code repo and the plan to its parent; reading both from one directory made the other invisible.
+- **statusline**: a feature with no DONE story rendered `/12 ✓` — an awk counter that was never incremented prints as the empty string. Project-wide counts almost never hit it; feature-scoped ones hit it on day one of every feature.
+- **subagent-statusline**: a row's `5/8 63%` took the first index row carrying that id, so with several plans in `tasks/` (or a stale one beside the code) an agent's progress could be read from a different feature's story file. The agent's own branch slug now decides, and plans above the worktree are searched too.
+
+### Changed
+- **statusline**: the line reports the **feature in epics**, the **epic in stories**, the **story in criteria** — `points-flow 1/5 ✓ 16% · ⚡ 02-01 … · epic 02 read-api 0/6 0% · 11 ☐`. The feature and the epic are now named, not just numbered: `epic 02` means nothing until you know which feature's epic 02 it is, which is exactly the question a multi-feature `tasks/` raises and no branch name answers on a story branch. Both levels carry a percentage. This replaces the plan-wide `12/20 ✓ 60%` story ratio, which told you the size of the plan rather than where you stood in it; it still renders when no branch identifies a feature (on `main`, a detached HEAD), where project-wide really is all there is to say. An epic counts as done when every story in it is — the rule `ship` already applies when closing one.
+
+### Compatibility
+No migration and no layout bump; both scripts read the same generated `STORIES_INDEX.md` shape as before, and the status bar stays opt-in (`scripts/statusline.sh --install`). Hard dependencies are still `awk` + `git`. What changes is what renders: single-feature projects keep the same segments (plus the feature and epic names), while a project whose branch names no plan it can see now renders nothing where it previously rendered another feature's counts. The plan search walks at most 8 ancestors and stops at `$HOME`.
+
 ## [5.3.0] — 2026-07-30
 
 More of the project state you had to *ask* for now arrives for free. Everything added here is drawn by the terminal, so the printed output and the context window are untouched — the only budget spent is render latency (~50ms idle, ~85ms during a fan-out).
