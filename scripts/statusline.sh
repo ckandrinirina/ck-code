@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # ck-code statusLine: renders a compact view of ck-code project state in the
 # Claude Code status bar — the active story (derived from the git branch) plus
-# plan-wide story counts.
+# the counts of the plan that branch belongs to.
+#
+# The branch picks the plan, never the directory alone: story ids and epic numbers
+# are unique per plan, not across plans, so a `tasks/` holding several features (or a
+# multi-repo project whose code repo carries a stale `tasks/` of its own) can offer
+# several answers for one branch. A plan is used only when the branch confirms it, and
+# a branch no visible plan owns renders nothing at all.
 #
 # Costs zero tokens by design. The status bar is rendered by the terminal, never
 # by the model, so this buys legibility without spending output tokens or
@@ -90,39 +96,156 @@ fi
 [ -n "$dir" ] && [ -d "$dir" ] || dir="$PWD"
 cd "$dir" 2>/dev/null || exit 0
 
-# Locate tasks/: fall back to the git repo root so a session opened in a
-# subdirectory (or a PARALLEL MODE worktree) still resolves the plan.
-if [ ! -d tasks ]; then
-  root=$(git rev-parse --show-toplevel 2>/dev/null)
-  [ -n "$root" ] && [ -d "$root/tasks" ] || exit 0
-  cd "$root" 2>/dev/null || exit 0
-fi
-
-# No generated index yet → the project is planned but not indexed; say nothing
-# rather than render an empty scoreboard.
-set -- tasks/*/STORIES_INDEX.md
-[ -f "$1" ] || exit 0
+# Two roots, deliberately kept apart. Every git probe runs HERE, in the session's own
+# checkout: that is the repo whose branch names the work and whose worktrees hold the
+# fan-out. The plan is resolved separately below, because a multi-repo project keeps
+# `tasks/` in a parent repo while the code is checked out underneath it.
+repo_dir=$PWD
 
 # Active story: derived from the branch name, never stored (branch-topology.md).
 # story/<EE>-<SS>-<slug> and fix/<EE>-<SS>-<slug> both carry the id outright.
 # epic/<NN>-<slug> carries only the epic, so the story is resolved from the index:
 # an epic branch is where an `integration: epic|feature` session sits while its
 # stories are built, and it names no story of its own.
+#
+# The trailing slug is kept too: with several plans in play the id alone is ambiguous
+# (every feature has an epic 02), and the slug is the only part of the branch name that
+# says WHICH one.
 story_id=""
 epic_id=""
+bslug=""
 # `branch --show-current` (git >= 2.22) is empty on a detached HEAD and, unlike
 # `rev-parse --abbrev-ref HEAD`, does not error on an unborn branch.
 branch=$(git branch --show-current 2>/dev/null)
 [ -n "$branch" ] || branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+btail=${branch#*/}
 case "$branch" in
   story/*|fix/*)
-    story_id=$(printf '%s' "${branch#*/}" | awk -F- \
+    story_id=$(printf '%s' "$btail" | awk -F- \
       '$1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "-" $2 }')
+    [ -n "$story_id" ] && bslug=${btail#"$story_id"-}
     ;;
   epic/*)
-    epic_id=$(printf '%s' "${branch#*/}" | awk -F- '$1 ~ /^[0-9]+$/ { print $1 }')
+    epic_id=$(printf '%s' "$btail" | awk -F- '$1 ~ /^[0-9]+$/ { print $1 }')
+    [ -n "$epic_id" ] && bslug=${btail#"$epic_id"-}
     ;;
 esac
+# An id with no slug after it leaves the tail untouched by the strip above.
+[ "$bslug" = "$btail" ] && bslug=""
+
+# Plan roots: every ancestor holding a generated index, nearest first. A `tasks/` beside
+# the code is a CANDIDATE, not an answer — in a multi-repo project it is routinely an
+# abandoned plan from before the split, while the plan being built sits one level up.
+# Bounded to 8 levels and stopped at $HOME, so a render never walks the whole filesystem.
+roots=""
+d=$repo_dir
+depth=0
+while [ "$depth" -lt 8 ]; do
+  set -- "$d"/tasks/*/STORIES_INDEX.md
+  [ -f "$1" ] && roots="$roots$d
+"
+  [ "$d" = "/" ] && break
+  [ "$d" = "$HOME" ] && break
+  d=${d%/*}
+  [ -n "$d" ] || d="/"
+  depth=$((depth + 1))
+done
+
+# No generated index anywhere → the project is planned but not indexed (or is not a
+# ck-code project at all); say nothing rather than render an empty scoreboard.
+[ -n "$roots" ] || exit 0
+
+# Does plan $1 own the current branch? 2 = the slug confirms it, 1 = the number or id
+# matches but nothing corroborates it, 0 = no.
+plan_score() {
+  p=$1
+  if [ -n "$epic_id" ]; then
+    hit=0
+    for e in "$p"/epics/"$epic_id"_*; do
+      [ -d "$e" ] || continue
+      hit=1
+      [ -n "$bslug" ] || continue
+      s=${e##*/}; s=${s#*_}
+      [ "$s" = "$bslug" ] && { echo 2; return; }
+      # An epic renamed after its branch was cut still answers to its `slug:` field.
+      fs=$(awk '/^slug:[[:space:]]*[^[:space:]]/ {
+        sub(/^slug:[[:space:]]*/, ""); gsub(/[[:space:]]/, ""); print; exit }' \
+        "$e/EPIC.md" 2>/dev/null)
+      [ -n "$fs" ] && [ "$fs" = "$bslug" ] && { echo 2; return; }
+    done
+    [ "$hit" -eq 1 ] || { echo 0; return; }
+    [ -n "$bslug" ] || { echo 1; return; }
+    # Number matches, slug does not. Accept only if the epic still has open work: a
+    # finished epic NN in an unrelated or abandoned plan is the false positive this
+    # whole resolution exists to reject, while an epic you are actually building
+    # always has a story that is not DONE.
+    open=$(awk -F'|' -v e="$epic_id" '
+      function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+      FNR == 1 || NF < 9 { next }
+      { id = trim($3); st = trim($(NF - 4))
+        if (index(id, e "-") == 1 && st != "DONE" && st != "SKIP") n++ }
+      END { print n+0 }' "$p/STORIES_INDEX.md" 2>/dev/null)
+    [ "${open:-0}" -gt 0 ] && { echo 1; return; }
+    echo 0
+    return
+  fi
+
+  # Story branch: the id must be in the index, and the branch slug is corroboration —
+  # any word of it (4+ chars, so `the` and `api` cannot carry a match on their own)
+  # appearing in the row's title or file path.
+  awk -F'|' -v want="$story_id" -v bslug="$bslug" '
+    function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+    FNR == 1 || NF < 9 { next }
+    trim($3) == want {
+      s = 1
+      if (bslug != "") {
+        hay = tolower($0); n = split(bslug, w, "-")
+        for (i = 1; i <= n; i++)
+          if (length(w[i]) >= 4 && index(hay, w[i]) > 0) { s = 2; break }
+      }
+      exit
+    }
+    END { print s+0 }' "$p/STORIES_INDEX.md" 2>/dev/null
+}
+
+# Pick the plan the branch confirms: a slug-confirmed match anywhere beats an
+# id-only match nearer by, and among equals the nearest root wins.
+plan=""
+plan_root=""
+best=0
+if [ -n "$story_id" ] || [ -n "$epic_id" ]; then
+  while IFS= read -r root; do
+    [ -n "$root" ] || continue
+    for p in "$root"/tasks/*/; do
+      p=${p%/}
+      [ -f "$p/STORIES_INDEX.md" ] || continue
+      s=$(plan_score "$p")
+      if [ "${s:-0}" -gt "$best" ]; then
+        best=$s; plan=$p; plan_root=$root
+        [ "$best" -eq 2 ] && break
+      fi
+    done
+    [ "$best" -eq 2 ] && break
+  done <<EOF
+$roots
+EOF
+  # The branch names ck-code work that no visible plan owns. Say nothing rather than
+  # answer with another feature's scoreboard — the plan is simply not in this checkout,
+  # and a confident wrong number is worse than an empty status bar.
+  [ "$best" -gt 0 ] || exit 0
+fi
+
+if [ -n "$plan" ]; then
+  # Counts are the FEATURE's, not the project's: with the plan known, folding in every
+  # other feature ever planned would answer a question nobody asked.
+  set -- "$plan/STORIES_INDEX.md"
+else
+  # No ck-code branch to go on (`main`, a detached HEAD): nothing identifies one plan,
+  # so the counts stay project-wide and no epic segment is drawn.
+  plan_root=$(printf '%s\n' "$roots" | awk 'NF { print; exit }')
+  set -- "$plan_root"/tasks/*/STORIES_INDEX.md
+  [ -f "$1" ] || exit 0
+fi
 
 # Epic context: the epic whose roll-up is worth showing — the active story's own
 # epic on a story branch, the branch's epic on an epic branch.
@@ -130,6 +253,53 @@ case "$story_id" in
   *-*) epic_ctx="${story_id%%-*}" ;;
   *)   epic_ctx="$epic_id" ;;
 esac
+
+# Names, not just numbers. `epic 02` is only meaningful once you know WHICH feature's
+# epic 02 it is — the exact question a plan holding several features raises, and one no
+# branch name answers on a story branch. Both are folder names, so they cost no file read.
+#
+# Shown only when a plan was resolved: without one the numbers are project-wide and
+# there is no single feature to name.
+feat_name=""
+epic_name=""
+if [ -n "$plan" ]; then
+  feat_name=${plan##*/}
+  # Strip the date stamp and the `feature-` prefix every plan folder carries: filing
+  # metadata, identical on every row, and never what distinguishes one feature.
+  case "$feat_name" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_*) feat_name=${feat_name#*_} ;;
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*) feat_name=${feat_name#????-??-??-} ;;
+  esac
+  case "$feat_name" in
+    feature-*) feat_name=${feat_name#feature-} ;;
+    feat-*)    feat_name=${feat_name#feat-} ;;
+  esac
+
+  if [ -n "$epic_ctx" ]; then
+    for e in "$plan"/epics/"$epic_ctx"_*; do
+      [ -d "$e" ] || continue
+      epic_name=${e##*/}; epic_name=${epic_name#*_}
+      break
+    done
+  fi
+fi
+
+# Both are slugs, so a hyphen is the safe cut point — the same word-boundary rule the
+# title shortening uses, and for the same reason: never cut mid-character.
+shorten_slug() {
+  [ ${#1} -le "$2" ] && { printf '%s' "$1"; return; }
+  printf '%s' "$1" | awk -v max="$2" '{
+    n = split($0, w, "-"); o = w[1]
+    for (i = 2; i <= n; i++) { if (length(o) + 1 + length(w[i]) > max) break; o = o "-" w[i] }
+    printf "%s", (o == $0) ? o : o "…" }'
+}
+[ -n "$feat_name" ] && feat_name=$(shorten_slug "$feat_name" 18)
+[ -n "$epic_name" ] && epic_name=$(shorten_slug "$epic_name" 16)
+
+# The story title yields the width the names take: it is the one field with no fixed
+# meaning per character, so it is where a column of width buys the least.
+tmax=32
+[ -n "$feat_name" ] && tmax=22
 
 # One awk pass over every plan's index: aggregate counts AND resolve the active
 # story, its epic's roll-up, and the next ready story. Row shape is
@@ -144,7 +314,8 @@ esac
 # count, the integration level and the worktree count are cheap shell probes that
 # depend on what awk resolved (which story file, which epic), so composition
 # happens below in bash. Rendering here would mean a second pass over the indexes.
-record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epic_ctx" '
+record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epic_ctx" \
+             -v tmax="$tmax" '
   function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
 
   # Rejoin the title fields an escaped pipe was split across, then unescape.
@@ -192,6 +363,17 @@ record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epi
       if (st == "DONE") edn++
     }
 
+    # Per-epic tallies, so the feature can be reported in EPICS rather than in stories.
+    # A story count spanning a whole feature answers "how much work is left" with a
+    # number too coarse to act on; an epic is the unit a feature is actually planned,
+    # branched, reviewed and shipped in, so `1/5` says where the feature stands.
+    ep = id; sub(/-.*$/, "", ep)
+    if (ep != "") {
+      if (!(ep in eptot)) epn++
+      eptot[ep]++
+      if (st == "DONE") epdn[ep]++
+    }
+
     # Next ready story: a TODO whose blockers are all DONE. Blockers can appear
     # after their dependents in the index, so this is resolved in END.
     if (st == "TODO") { ntodo++; tid[ntodo] = id; tblk[ntodo] = trim($(NF - 2)) }
@@ -230,19 +412,29 @@ record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epi
       if (ok) nid = tid[i]
     }
 
+    # An epic is done when every story it has is done — the same rule `ship` applies
+    # when it closes one. An epic with no indexed story cannot be complete, and is not
+    # counted at all: it would otherwise start life already finished.
+    for (e in eptot) if (epdn[e] == eptot[e]) epdone++
+
     # US (0x1f) separates the fields, not a tab: tab is an IFS *whitespace*
     # character, so bash `read` would collapse the empty fields a branch with no
     # active story legitimately produces, shifting every field after it.
     US = sprintf("%c", 31)
-    print wid US ws US shorten(wt, 32) US wfile US wdir US \
-          dn US total US ip+0 US bug+0 US edn+0 US etotal+0 US nid
+    # `dn+0`, not `dn`: a feature whose stories are all still open never incremented it,
+    # and an uninitialised awk variable prints as the empty string — which reads as the
+    # broken `/12 ✓` rather than `0/12 ✓`. Feature-scoped counts hit this constantly;
+    # project-wide ones almost never did.
+    print wid US ws US shorten(wt, tmax + 0) US wfile US wdir US \
+          dn+0 US total US ip+0 US bug+0 US edn+0 US etotal+0 US nid US \
+          epdone+0 US epn+0
   }
 ' "$@" 2>/dev/null)
 
 [ -n "$record" ] || exit 0
 
 US=$(printf '\037')
-IFS="$US" read -r wid ws wt wfile wdir dn total ip bug edn etotal nid <<EOF
+IFS="$US" read -r wid ws wt wfile wdir dn total ip bug edn etotal nid epdone epn <<EOF
 $record
 EOF
 
@@ -261,11 +453,11 @@ fi
 # `feature` are shown — `story` (the default, and an absent key) merges straight to
 # the default branch, which is what everyone already assumes.
 integ=""
-if [ -n "$epic_ctx" ]; then
-  # Prefer the plan the active story came from, then any plan's epic of that number.
+if [ -n "$epic_ctx" ] && [ -n "$plan" ]; then
+  # Read from the resolved plan only — an epic number means nothing outside it.
   # `$@` still holds the index list the wave aggregation below needs, so this glob
   # must never go through `set --`.
-  for e in "$wdir"/epics/"$epic_ctx"_*/EPIC.md tasks/*/epics/"$epic_ctx"_*/EPIC.md; do
+  for e in "$plan"/epics/"$epic_ctx"_*/EPIC.md; do
     [ -f "$e" ] || continue
     integ=$(awk '/^integration:[[:space:]]*(epic|feature)[[:space:]]*$/ {
       sub(/^integration:[[:space:]]*/, ""); gsub(/[[:space:]]/, ""); print; exit }' "$e" 2>/dev/null)
@@ -301,8 +493,11 @@ if [ "$wt_count" -gt 0 ]; then
     /^branch /    { b = substr($0, 8); sub(/^refs\/heads\//, "", b)
                     if (n > 1 && b ~ /^(story|fix)\//) {
                       sub(/^[^\/]*\//, "", b)
-                      n = split(b, p, "-")
-                      if (p[1] ~ /^[0-9]+$/ && p[2] ~ /^[0-9]+$/) print p[1] "-" p[2] "\t" path
+                      # NOT `n` — that is the worktree counter this record set, and
+                      # overwriting it would let the main worktree back in on a later pass.
+                      parts = split(b, p, "-")
+                      if (parts >= 2 && p[1] ~ /^[0-9]+$/ && p[2] ~ /^[0-9]+$/)
+                        print p[1] "-" p[2] "\t" path
                     } }')
   if [ -n "$wave_ids" ]; then
     # id → path-relative-to-plan, from the indexes the main checkout already has.
@@ -322,9 +517,14 @@ if [ "$wt_count" -gt 0 ]; then
       [ -n "$id" ] || continue
       rel=$(printf '%s\n' "$map" | awk -F'\t' -v i="$id" '$1 == i { print $2; exit }')
       [ -n "$rel" ] || continue
-      if   [ -f "$path/$rel" ]; then files="$files$path/$rel
+      # `$rel` is absolute; the worktree's own copy is the same path relative to the
+      # plan root. When the plan lives OUTSIDE the code repo (multi-repo), no worktree
+      # holds a copy and the shared plan file — which the agent edits directly — is the
+      # live one, so the fallback is not a stale read there.
+      wrel=${rel#"$plan_root"/}
+      if   [ "$wrel" != "$rel" ] && [ -f "$path/$wrel" ]; then files="$files$path/$wrel
 "
-      elif [ -f "$rel" ];       then files="$files$rel
+      elif [ -f "$rel" ];                                 then files="$files$rel
 "
       fi
     done <<EOF
@@ -357,6 +557,16 @@ SEP="${DIM} · ${RESET}"
 
 out="${DIM}ck-code${RESET} "
 
+# The feature leads, counted in EPICS — every number after it is scoped to this one plan,
+# and each level of the line then reports in the unit below it: the feature in epics, the
+# epic in stories, the story in criteria. A single feature-wide story ratio flattened all
+# three into one number that told you the size of the plan, not where you were in it.
+if [ -n "$feat_name" ]; then
+  out="${out}${CYN}${feat_name}${RESET}"
+  [ "${epn:-0}" -gt 0 ] && out="${out} ${GRN}${epdone}/${epn} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
+  out="${out}${SEP}"
+fi
+
 if [ -n "$wt" ]; then
   case "$ws" in
     "IN PROGRESS") g="${YEL}⚡" ;;
@@ -370,7 +580,13 @@ elif [ -n "$nid" ]; then
   out="${out}${DIM}next${RESET} ${CYN}${nid}${RESET}${SEP}"
 fi
 
-[ "${etotal:-0}" -gt 0 ] && out="${out}${DIM}epic ${epic_ctx}${RESET} ${edn}/${etotal}${SEP}"
+if [ "${etotal:-0}" -gt 0 ]; then
+  out="${out}${DIM}epic ${epic_ctx}${RESET}"
+  [ -n "$epic_name" ] && out="${out} ${epic_name}"
+  # Same shape as the feature segment one level up, so the two read as one scale rather
+  # than as two conventions: count in the unit below, percentage of the level itself.
+  out="${out} ${edn}/${etotal}${DIM} $((edn * 100 / etotal))%${RESET}${SEP}"
+fi
 [ "${crit:-0}" -gt 0 ]   && out="${out}${YEL}${crit} ☐${RESET}${SEP}"
 if [ -n "$integ" ]; then
   if [ -n "$epic_id" ]; then
@@ -384,9 +600,16 @@ if [ -n "$integ" ]; then
   fi
 fi
 
-# The percentage earns its place on the plan total, where the denominator is large
-# enough that a ratio no longer reads at a glance; `0/3` on an epic already does.
-out="${out}${GRN}${dn}/${total} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
+# Story totals only when no feature was resolved — on `main` there is no one plan to
+# report in epics, so the project-wide count is all there is to say. When a feature IS
+# resolved this segment would only repeat, one unit coarser, what the epic segment and
+# the feature's own epic ratio already say precisely.
+if [ -n "$feat_name" ]; then
+  # Strip the separator the feature segment left behind, so the line never ends in `·`.
+  case "$out" in *"$SEP") out="${out%"$SEP"}" ;; esac
+else
+  out="${out}${GRN}${dn}/${total} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
+fi
 [ "${ip:-0}"  -gt 0 ] && out="${out}${SEP}${YEL}${ip} ⚡${RESET}"
 [ "${bug:-0}" -gt 0 ] && out="${out}${SEP}${RED}${bug} ✗${RESET}"
 if [ "$wt_count" -gt 0 ]; then

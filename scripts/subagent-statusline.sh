@@ -79,11 +79,43 @@ while IFS="$US" read -r glyph label desc tok id cwd; do
   # story file is pulled in with getline, so a row costs one process here, not two.
   crit=""
   if [ -n "$id" ] && [ -n "$cwd" ] && [ -d "$cwd" ]; then
-    crit=$(awk -F'|' -v want="$id" '
+    # Candidate indexes, nearest first: the worktree's own plan, then every ancestor
+    # holding one. A multi-repo project keeps `tasks/` above the code repo, so the
+    # worktree may hold no plan at all — or a stale one whose ids collide.
+    set --
+    d=$cwd
+    depth=0
+    while [ "$depth" -lt 8 ]; do
+      for f in "$d"/tasks/*/STORIES_INDEX.md; do
+        [ -f "$f" ] && set -- "$@" "$f"
+      done
+      [ "$d" = "/" ] && break
+      [ "$d" = "$HOME" ] && break
+      d=${d%/*}; [ -n "$d" ] || d="/"
+      depth=$((depth + 1))
+    done
+    # `02-01` names a story in EVERY feature; the agent's own branch slug is the only
+    # thing that says which one, so it decides between plans that both claim the id.
+    bslug=$(git -C "$cwd" branch --show-current 2>/dev/null | awk -F/ '
+      NF > 1 { s = $NF; sub(/^[0-9]+-[0-9]+-/, "", s); print s }')
+    [ "$#" -gt 0 ] && crit=$(awk -F'|' -v want="$id" -v bslug="$bslug" '
       function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
       FNR == 1 || NF < 9 { next }
       trim($3) == want {
-        d = FILENAME; sub(/\/[^\/]*$/, "", d); f = d "/" trim($(NF - 1))
+        s = 1
+        if (bslug != "") {
+          hay = tolower($0); n = split(bslug, w, "-")
+          for (i = 1; i <= n; i++)
+            if (length(w[i]) >= 4 && index(hay, w[i]) > 0) { s = 2; break }
+        }
+        if (s > best) {
+          best = s
+          d = FILENAME; sub(/\/[^\/]*$/, "", d); f = d "/" trim($(NF - 1))
+        }
+        if (best == 2) exit          # slug-confirmed; no nearer plan can beat it
+      }
+      END {
+        if (f == "") exit
         while ((getline line < f) > 0) {
           if      (line ~ /^[[:space:]]*-[[:space:]]*\[[xX]\]/) done_++
           else if (line ~ /^[[:space:]]*-[[:space:]]*\[ \]/)    open_++
@@ -91,8 +123,7 @@ while IFS="$US" read -r glyph label desc tok id cwd; do
         close(f)
         t = done_ + open_
         if (t > 0) printf "%d/%d %d%%", done_, t, (done_ * 100) / t
-        exit
-      }' "$cwd"/tasks/*/STORIES_INDEX.md 2>/dev/null)
+      }' "$@" 2>/dev/null)
   fi
 
   # Diff against $TARGET, so committed and uncommitted work both count. No diff means
