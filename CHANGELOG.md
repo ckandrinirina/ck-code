@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.5.1] — 2026-07-30
+
+### Changed
+- **statusline**: one colour per **role**, identical at every level — dim for structure (the `ck-code` mark, the `epic` / `next` / `⚙` labels, separators) and for every percentage, cyan for identity (feature, epic, story id and title, merge target, worktree ids), green for every done / total ratio, yellow and red for status alone. Colour had been tracking the *segment* instead of the value: the feature's ratio was green while the epic's and the story's were plain, percentages were dim twice and yellow once, and names were cyan at the feature but uncoloured at the epic — so the line had to be learnt segment by segment rather than once. The `✓` on the feature ratio goes with it; once every level reads done / total it marked nothing the others lacked.
+
 ## [5.5.0] — 2026-07-30
 
 ### Changed
