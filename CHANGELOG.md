@@ -5,6 +5,75 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.8.0] — 2026-07-30
+
+An audit of the plugin against the current Claude Code plugin and skill specifications.
+Nothing about the design → plan → build → ship workflow changes; what changes is how much
+of the harness ck-code lets do the work instead of instructing the model to do it.
+
+### Added
+
+- **bin/**: `ck-index` and `ck-doctor` ship as executables. Claude Code puts a plugin's
+  `bin/` on the Bash tool's `PATH`, so every skill now invokes the bare command instead of
+  spelling out `"${CLAUDE_PLUGIN_ROOT}"/scripts/ck-index.sh`. Beyond brevity this fixes a
+  real failure: `$CLAUDE_PLUGIN_ROOT` is **empty** inside a `Workflow` subagent, where the
+  old form silently resolved to nothing.
+- **allowed-tools on all 12 skills**: the `git`, `gh`, and `ck-index` calls a skill actually
+  makes are pre-approved for the turn that invokes it, ending the one-prompt-per-command
+  interruption during `build` and `ship`. Grants are narrow — `build` cannot `git push`;
+  only `ship` can — and expire with the next user message.
+- **no-ai-guard.sh**: `references/no-ai-references.md` was enforced only by prose a model can
+  drift past. It is now a skill-scoped `PreToolUse` hook on `ship`, `build`, `fix`, and
+  `spec` that blocks any commit/PR/issue command carrying an AI-authorship trailer or
+  footer. It matches the trailer *forms*, not the words, so a commit that legitimately
+  discusses Claude Code still passes. Fail-open: any parse error allows the call.
+- **workflows/**: `team-research.js` and `team-generate.js` are registered plugin workflows
+  invoked by name, replacing the inline scripts pasted from reference files. A named
+  workflow has a stable identity across runs, which is what lets `resumeFromRunId` replay
+  a died-halfway fan-out from cache — the reason the `Workflow` backend exists at all.
+- **userConfig**: the three model tiers are configured in `/plugin` → ck-code and
+  substituted into the dispatch tables at load time. This replaces `CK_MODEL_FAST` /
+  `CK_MODEL_BALANCED` / `CK_MODEL_ADVANCED`, which were mentioned in exactly one line of one
+  reference file, had no documented default, and required hand-exported environment vars.
+- **Progress tracking**: the eight multi-phase skills open a `TodoWrite` list at Phase 0 with
+  one todo per phase. Parallel mode already had a live board via `TaskCreate`; the
+  sequential path showed the user nothing during a long run.
+
+### Fixed
+
+- **build (agent-prompts, parallel-mode), subagent-fanout**: the dispatch templates told the
+  model to emit `model: fast (Haiku)` and `model: <balanced default…>`. The `Agent` tool's
+  `model` parameter accepts only the literal aliases `haiku`, `fable`, `sonnet`, `opus`, so a
+  copied template produced a rejected call. The tier names are now clearly ck-code prose with
+  an explicit alias map, and `fable` — previously absent from every tier table — is included.
+- **native-commands**: claimed `effort:` and `model:` frontmatter were both automatic levers.
+  No skill set `model:`. The four read-only skills now pin `model: haiku`, and the claim
+  matches what ships.
+
+### Changed
+
+- **Version gate (Phase 0)**: the layout stamp is injected with a `` !`…` `` dynamic-context
+  command, so Claude Code renders it before the skill content is sent. Phase 0 costs zero
+  tool calls in the common case instead of a `Read` on every change-producing skill. The
+  injection resolves from the git repo root, so a skill invoked from a subdirectory still
+  finds the stamp.
+- **doctor, explain, guide, track**: forked skills declare `agent: Explore` rather than
+  forking the default full-tool agent and subtracting capability with `disallowed-tools`,
+  and pin `model: haiku` so they cost a cheap model regardless of the session model.
+- **plugin-doctor.sh**: two new release checks — `claude plugin validate --strict` (catches a
+  misspelled or foreign `plugin.json` field that Claude Code would silently ignore) and a
+  `bin/` executable-bit check (a non-executable file there is invisible at runtime with no
+  error, and every skill calling it as a bare command fails).
+
+### Deliberately not done
+
+- **No bundled `.mcp.json` for context7.** `team`'s research already resolves context7 as an
+  MCP server, a CLI, or WebSearch, in that order. Declaring the server here would start a
+  second copy for every user who already has context7 installed as its own plugin.
+- **No `dependencies` entry for ck-code-lite.** The field declares plugins this one
+  *requires*; lite is a mutually exclusive alternative, and there is no "conflicts" field to
+  express that.
+
 ## [5.7.0] — 2026-07-30
 
 ### Added
