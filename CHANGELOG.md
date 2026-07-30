@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.5.3] — 2026-07-30
+
+### Changed
+- **build**: PARALLEL MODE no longer barriers the whole wave before conflict analysis and QA — P5 (integrity) and P7 (QA) now run per branch as each agent returns, so a finished story's QA overlaps with a slower story still coding. P6 and P8 stay barriers: a merge order needs every branch, and a merge needs a settled target.
+- **build**: parallel-mode.md documents the worktree dependency bootstrap — every worktree is a bare checkout, so N agents pay N cold installs. Per-stack guidance to share immutable caches (pnpm store, `CARGO_TARGET_DIR`, `UV_CACHE_DIR`) and never a mutable install tree.
+
 ## [5.5.2] — 2026-07-30
 
 ### Changed
