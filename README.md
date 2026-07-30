@@ -107,13 +107,15 @@ Without this entry the plugin stays dormant in that project.
 you're in, the story you're on (derived from the git branch), and how far each has got:
 
 ```
-ck-code password-reset 2/5 60% 2⚡ 1✗ · epic 01 auth 2/5 40% · ⚡ 01-03 Password reset flow 5/8 62% · → epic/01 · ⚙ 01-04 30%, 02-01 0%
+ck-code password-reset 2/5 60% 2⚡ 1✗ · epic 01 auth 2/5 40% · ⚡ 01-03 Password reset flow 5/8 · → epic/01 · ⚙ 01-04, 02-01
 ```
 
 The line reads **top-down, one level of the plan per segment**, each counted in the unit
 below it and each narrower than the last — feature in epics, epic in stories, story in
 criteria. Scanning left to right answers *which feature, which epic, which story, how far*
-in that order, and no segment repeats what a wider one already said.
+in that order, and no segment repeats what a wider one already said. **Percentages belong to
+the feature and the epic only** — the two levels whose ratios summarise many rows; below
+them the ratio's own numbers are small enough to read directly.
 
 - **Feature** `password-reset 2/5 60% 2⚡ 1✗` — the feature the branch belongs to, its
   **epics** done / total, and its open (`⚡`) and bug (`✗`) stories. The plan folder's date
@@ -121,26 +123,27 @@ in that order, and no segment repeats what a wider one already said.
   The percentage is story-weighted, so it moves between epics instead of jumping in fifths.
 - **Epic** `epic 01 auth 2/5 40%` — the epic in context, by number and name, counted in
   **stories**.
-- **Story** `⚡ 01-03 Password reset flow 5/8 62%` — the story you're on, read from the
-  branch name (`story/<EE>-<SS>-…` or `fix/…`), counted in **acceptance criteria**. On an
+- **Story** `⚡ 01-03 Password reset flow 5/8` — the story you're on, read from the branch
+  name (`story/<EE>-<SS>-…` or `fix/…`), counted in **acceptance criteria**. On an
   `epic/<NN>-…` branch — where an `integration: epic|feature` session sits while its stories
   are built — the epic's own open story is resolved from the index instead (in progress
-  before bug). With no story in play, this becomes `next 01-04`: the first TODO whose
-  blockers are all DONE. Glyphs: `⚡` in progress · `✓` done · `○` todo · `✗` bug.
+  before bug). With no story in play the segment is simply absent: this line says where you
+  *are*, and `/ck-code:track next` is what recommends where to go. Glyphs: `⚡` in progress ·
+  `✓` done · `○` todo · `✗` bug.
 - **Target** `→ epic/01` — where a finished story merges, shown only when the epic's
   `integration` is `epic` or `feature` (the `story` default merges to the default branch,
   which everyone already assumes). `→ feat` is appended at `feature` level, and on the epic
   branch itself only that promotion target is shown — naming the branch you are on is noise.
-- **Live work** `⚙ 01-04 30%, 02-01 0%` — every story a worktree is building right now,
-  sorted by id, each with its own criteria percentage, read from that **worktree's own** copy
-  of the story file (where its agent ticks the boxes). One story stuck at `0%` while its
-  neighbours climb is the fan-out failure worth seeing, and an aggregate percentage hid it.
-  The session's own checkout is excluded — its story is the segment just before — and only
-  `story/`/`fix/` worktrees count, since a checkout parked on an epic branch is somewhere
-  you work, not something running. `+N` marks worktrees this plan cannot name.
+- **Live work** `⚙ 01-04, 02-01` — every story a worktree is building right now, sorted by
+  id. Named rather than counted: `2 wt` says work is happening somewhere, the ids say which
+  stories are moving. The session's own checkout is excluded — its story is the segment just
+  before — and only `story/`/`fix/` worktrees count, since a checkout parked on an epic branch
+  is somewhere you work, not something running. `+N` marks worktrees whose branch carries no
+  story id (`⚙ 1 wt` when none can be named), so the segment never under-reports what is
+  checked out.
 
 **One colour per role, identical at every level** — dim for structure (the `ck-code` mark,
-the `epic` / `next` / `⚙` labels, separators) and for every percentage, cyan for identity
+the `epic` / `⚙` labels, separators) and for every percentage, cyan for identity
 (feature, epic, story id and title, merge target, worktree ids), green for every done /
 total ratio, and yellow or red for status alone (`⚡` open, `✗` bug, and the story glyph).
 Colour says what *kind* of value you are looking at, never which level it came from — the
@@ -157,9 +160,9 @@ naming work no visible plan owns renders **nothing** — a confident wrong numbe
 than an empty status bar.
 
 With no ck-code branch to go on (`main`, a detached HEAD) there is no one feature to
-report, so an idle session falls back to project-wide story counts: `ck-code 12/20 60% ·
-next 01-04`. Only `awk` and `git` are required; the whole line costs ~50ms to draw, ~85ms
-during a fan-out.
+report, so an idle session falls back to project-wide story counts: `ck-code 12/20 60% 2⚡`.
+Only `awk` and `git` are required; the whole line costs ~50ms to draw, and a fan-out now adds
+nothing beyond one `git worktree list` — the per-worktree story-file reads are gone.
 
 ### Per-agent rows
 
