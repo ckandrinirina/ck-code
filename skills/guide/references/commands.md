@@ -21,7 +21,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `build` | `[story-path] \| [story-ids...] \| --epic NN` | TDD-implement stories end-to-end — one inline, several in worktrees, or a whole epic in waves; also a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter + views; a branch per story in PARALLEL MODE |
 | `fix` | `[story-path]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
 | `ship` | `[story-path] [--issues]` | Commit, open PR, mirror plan/implementation to GitHub Issues | git + GitHub |
-| `migrate` | — | Upgrade a pre-v4 **or ck-code-lite** project to the v4 frontmatter layout, then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `VERSION.md` |
+| `migrate` | — | Upgrade a pre-v5 **or ck-code-lite** project to the v5 layout (frontmatter + flat team-skill folders), then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
 | `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
 
 ## Examples
@@ -57,7 +57,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 → /ck-code:team --regenerate → /ck-code:plan docs/new-feature.md → /ck-code:build
 
 # Upgrading an older project
-/ck-code:migrate    # converts a pre-v4 layout, regenerates indexes, stamps VERSION.md
+/ck-code:migrate    # converts a pre-v5 layout, regenerates indexes, stamps VERSION.md
 
 # Moving up from ck-code-lite
 /ck-code:migrate    # tasks/PLAN.md → epics/stories, docs/ARCHITECTURE.md → docs/architecture/

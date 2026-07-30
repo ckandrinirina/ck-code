@@ -30,8 +30,8 @@ files to build state and never maintains an index of its own.
 
 **This phase runs for ALL commands.**
 
-Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise emit one line —
-`ℹ pre-v4 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
+Read `tasks/VERSION.md`. If `layout: v5` → proceed silently. Otherwise emit one line —
+`ℹ pre-v5 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
 [`../../references/version-gate.md`](../../references/version-gate.md).
 
 ### 1.1 Find the plans

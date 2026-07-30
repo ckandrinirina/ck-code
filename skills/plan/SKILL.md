@@ -21,7 +21,7 @@ Story state lives in **story-file frontmatter**; `STORIES_INDEX.md` and
 (see [`data-model.md`](../../references/data-model.md)).
 
 **Hand-off:** requires `/ck-code:design` (architecture docs in `docs/architecture/`),
-then `/ck-code:team` (expert + guide skills). If `.claude/skills/experts/` is absent,
+then `/ck-code:team` (expert + guide skills). If no `.claude/skills/expert-*/` exists,
 say so and recommend `/ck-code:team` before continuing — `build` relies on it. Hands
 off to `/ck-code:build` (one story, several, or a whole epic) — or `/ck-code:ship` to
 publish issues first.
@@ -60,9 +60,9 @@ larger to spend effort; add task and criteria depth instead.
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Read `tasks/VERSION.md`. If it exists AND `layout: v4` → **PASS**, proceed. Otherwise
+Read `tasks/VERSION.md`. If it exists AND `layout: v5` → **PASS**, proceed. Otherwise
 run the shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects
-a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write project
+a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write project
 state before this PASSes.
 
 ---

@@ -75,11 +75,11 @@ Guides cover idiomatic libraries too — not just languages and frameworks.
 | i18next (namespaces, plurals) | /guide-i18next | context7 + WebSearch |
 
 **Output:**
-- .claude/skills/experts/<slug>/SKILL.md  (each with paths/keywords for auto-load)
-- .claude/skills/guides/<slug>/SKILL.md
+- .claude/skills/expert-<slug>/SKILL.md  (each with paths/keywords for auto-load)
+- .claude/skills/guide-<slug>/SKILL.md
 
 Preserved (PROTECTED — no GENERATED marker, never overwritten):
-- .claude/skills/guides/conventions/SKILL.md  (hand-authored house rules)
+- .claude/skills/guide-conventions/SKILL.md  (hand-authored house rules)
 
 Skipped — handled as guides under an existing expert, not as standalone experts:
 analytics, i18n, styling, API-contract (guide-over-expert rule). Skipped at this
@@ -195,21 +195,21 @@ Based on tech-stack.md, expected skills vs. current state:
 ### Expert Skills
 | Skill | Path | Status |
 |-------|------|--------|
-| expert-frontend   | .claude/skills/experts/frontend/SKILL.md   | ✓ exists  |
-| expert-backend    | .claude/skills/experts/backend/SKILL.md    | ✓ exists  |
-| expert-qa         | .claude/skills/experts/qa/SKILL.md         | ✓ exists  |
-| expert-analyst    | .claude/skills/experts/analyst/SKILL.md    | ✓ exists  |
-| expert-devops     | .claude/skills/experts/devops/SKILL.md     | ✗ missing |
-| expert-qa-project | .claude/skills/experts/qa-project/SKILL.md | ✓ exists  |
+| expert-frontend   | .claude/skills/expert-frontend/SKILL.md   | ✓ exists  |
+| expert-backend    | .claude/skills/expert-backend/SKILL.md    | ✓ exists  |
+| expert-qa         | .claude/skills/expert-qa/SKILL.md         | ✓ exists  |
+| expert-analyst    | .claude/skills/expert-analyst/SKILL.md    | ✓ exists  |
+| expert-devops     | .claude/skills/expert-devops/SKILL.md     | ✗ missing |
+| expert-qa-project | .claude/skills/expert-qa-project/SKILL.md | ✓ exists  |
 
 ### Language & Framework Guides
 | Guide              | Path                                         | Status                    |
 |--------------------|----------------------------------------------|---------------------------|
-| guide-typescript   | .claude/skills/guides/typescript/SKILL.md    | ✓ exists (owned)          |
-| guide-rust         | .claude/skills/guides/rust/SKILL.md          | ✓ exists (owned)          |
-| guide-react-native | .claude/skills/guides/react-native/SKILL.md  | ✗ missing                 |
-| guide-grpc         | .claude/skills/guides/grpc/SKILL.md          | ? extra (tech not detected) |
-| guide-conventions  | .claude/skills/guides/conventions/SKILL.md   | ● protected (house rules)   |
+| guide-typescript   | .claude/skills/guide-typescript/SKILL.md    | ✓ exists (owned)          |
+| guide-rust         | .claude/skills/guide-rust/SKILL.md          | ✓ exists (owned)          |
+| guide-react-native | .claude/skills/guide-react-native/SKILL.md  | ✗ missing                 |
+| guide-grpc         | .claude/skills/guide-grpc/SKILL.md          | ? extra (tech not detected) |
+| guide-conventions  | .claude/skills/guide-conventions/SKILL.md   | ● protected (house rules)   |
 
 **Summary:** 2 missing, 1 extra, 6 owned, 1 protected.
 

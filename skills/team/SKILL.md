@@ -13,9 +13,14 @@ aware of the project's tech stack, patterns, folder structure, and conventions.
 
 **What it produces (all project-level, in the user's `.claude/skills/`):**
 
-- `experts/<role>/SKILL.md` — expert-persona skills, invoked as `/expert-<role>`
-- `guides/<tech>/SKILL.md` — language/framework/library guides, auto-loaded by Claude
-- `guides/conventions/SKILL.md` — the project's house-rules guide (offered inline at [2.4](#24-present-the-plan-and-settle-house-conventions); also `--conventions` alone)
+- `expert-<role>/SKILL.md` — expert-persona skills, invoked as `/expert-<role>`
+- `guide-<tech>/SKILL.md` — language/framework/library guides, auto-loaded by Claude
+- `guide-conventions/SKILL.md` — the project's house-rules guide (offered inline at [2.4](#24-present-the-plan-and-settle-house-conventions); also `--conventions` alone)
+
+**One skill, one top-level folder — never nest.** Claude Code discovers project skills at
+`.claude/skills/<skill-name>/SKILL.md` and takes the command name from that directory, so a
+file one level deeper (`skills/experts/frontend/`) is registered as nothing at all. The
+folder name *is* the skill name, and it must match the frontmatter `name:`.
 
 **Auto-loaded by:** `/ck-code:build` and `/ck-code:fix`. Re-run with `--regenerate`
 after architecture or framework changes to refresh context and research — regeneration
@@ -29,9 +34,9 @@ is **merge-safe** (see [THE MERGE RULE](#the-merge-rule)); it never clobbers you
 
 ## PHASE 0: VERSION GATE
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
+Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
 Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
 project state before this PASSes.
 
 ## ROUTING CHECK (do first)
@@ -103,7 +108,7 @@ Per target path, in **every** generation and `--regenerate` run:
 
 1. **Absent** → write it (emit the GENERATED marker).
 2. **Present, marker missing** → **PROTECTED** — never overwrite. Skip and report as
-   preserved. This covers `guides/conventions`, every `--new` skill, and any file whose
+   preserved. This covers `guide-conventions`, every `--new` skill, and any file whose
    marker the user deleted.
 3. **Present, marker found** → team-owned. On plain generation it already exists → skip.
    On `--regenerate` → refresh the body, re-emit the marker, and **re-insert verbatim**
@@ -117,13 +122,13 @@ never write the GENERATED marker, so their output is protected forever.
 
 ## PHASE 0.5: DETECT EXISTING STATE
 
-**Skip entirely if** no `experts/` or `guides/` skills exist yet → go straight to Phase 1
+**Skip entirely if** no `expert-*` or `guide-*` skills exist yet → go straight to Phase 1
 in ALL mode. Otherwise:
 
 1. Quick-read `docs/architecture/tech-stack.md`.
 2. Run the Phase 2.1/2.2 derivation, gated by TIER → build the **EXPECTED** list (a skill
    is EXPECTED only when the project has a real need for it at this tier).
-3. Scan `experts/` and `guides/` → build the **EXISTING** list, tagging each file
+3. Scan `.claude/skills/expert-*/` and `guide-*/` → build the **EXISTING** list, tagging each file
    `owned` (GENERATED marker present) or `protected` (marker absent).
 4. Compute `MISSING = EXPECTED − EXISTING`; `EXTRA = owned EXISTING − EXPECTED` (tech no
    longer detected). **Protected files are never EXTRA** — they are hand-authored.
@@ -286,7 +291,7 @@ owned by the expert whose code uses it — never a reason to mint a new expert (
 guide content comes from Phase 1.6 research; template:
 [`references/guide-templates.md`](references/guide-templates.md).
 
-`guides/conventions` is **not** derived here — it is captured at
+`guide-conventions` is **not** derived here — it is captured at
 [2.5](#25-capture-house-conventions-inline) and is a PROTECTED file (THE MERGE RULE).
 
 ### 2.3 Self-describing detection metadata (enables dynamic auto-load)
@@ -311,7 +316,7 @@ always-on skill is a permanent per-session token tax on `build`/`fix`.
 Show every skill to be generated (MISSING-ONLY: only missing ones), the trigger reason and
 output path for each, plus which existing files are PROTECTED and will be preserved.
 
-Probe `guides/conventions/SKILL.md` — reuse the Phase 0.5 state-table row when 0.5 ran, probe
+Probe `guide-conventions/SKILL.md` — reuse the Phase 0.5 state-table row when 0.5 ran, probe
 directly when it was skipped. Then ask **both** questions in ONE **AskUserQuestion** call:
 
 1. **Plan** — **Proceed** / **Adjust** / **Cancel**.
@@ -368,7 +373,7 @@ Regenerate every slug in the returned `missing` inline.
 
 ### 3.2 Expert content contract
 
-Write `experts/<role>/SKILL.md` from the
+Write `expert-<role>/SKILL.md` from the
 [base template](references/expert-templates.md#the-base-expert-template) filled with the
 role's [per-role delta](references/expert-templates.md#per-role-deltas) (anchor) or from
 project context (derived). For each file:
@@ -383,7 +388,7 @@ project context (derived). For each file:
 
 ### 3.3 Guide content contract
 
-Write `guides/<tech>/SKILL.md` from
+Write `guide-<tech>/SKILL.md` from
 [references/guide-templates.md](references/guide-templates.md). Every section's content MUST
 come from Phase 1.6 research (context7 or WebSearch) — if a section has no research data, run
 WebSearch to fill it before writing. Resolve every placeholder, inject the real project
@@ -404,7 +409,7 @@ session that touches their paths: every line is a recurring cost.
 ### 4.1 Verify
 
 ```bash
-ls -la .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md
+ls -la .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md
 ```
 
 This `ls` is the proof, never a subagent's or workflow manifest's self-report — a resumed workflow
@@ -425,7 +430,7 @@ architecture changes, framework upgrades, or new tech — regeneration is merge-
 
 ## PHASE C: CONVENTIONS CAPTURE
 
-**Goal:** produce or refresh `guides/conventions/SKILL.md` from the project's real house
+**Goal:** produce or refresh `guide-conventions/SKILL.md` from the project's real house
 rules — the conventions research cannot supply. This file is PROTECTED: it never carries the
 GENERATED marker, so `--regenerate` never touches it.
 
@@ -445,7 +450,7 @@ deltas marked below and continues to Phase 3.
    folder structure; code style/formatting; architectural rules (layering, allowed/forbidden
    deps); preferred & banned libraries/patterns; project-specific must/never rules. **Capture
    only rules the user actually has** — never invent house rules to fill the template.
-3. **Write** `guides/conventions/SKILL.md` from the
+3. **Write** `guide-conventions/SKILL.md` from the
    [conventions template](references/guide-templates.md#guide-conventions-template):
    `user-invocable: false`, `paths: ["**/*"]`, **no GENERATED marker**. If it already exists,
    MERGE — keep sections the user did not change, update the rest. Every rule concrete, paired
@@ -459,13 +464,13 @@ deltas marked below and continues to Phase 3.
 **Goal:** scaffold a custom skill `team` would not derive, in the namespaces `build`/`fix`
 already scan. Its output is PROTECTED (no GENERATED marker).
 
-1. Confirm slug, namespace (`experts/` or `guides/`), and a one-sentence purpose.
-2. **Expert** → write `experts/<slug>/SKILL.md` from the
+1. Confirm slug, prefix (`expert-` or `guide-`), and a one-sentence purpose.
+2. **Expert** → write `expert-<slug>/SKILL.md` from the
    [base template](references/expert-templates.md#the-base-expert-template): frontmatter
    (`name: expert-<slug>`, `description`, **plus `paths:`/`keywords:`** for auto-load), the
    resolved project context block, and the standard sections; the standards section must
    reference `/guide-conventions`.
-3. **Guide** → write `guides/<slug>/SKILL.md` with `user-invocable: false`, a `paths` glob,
+3. **Guide** → write `guide-<slug>/SKILL.md` with `user-invocable: false`, a `paths` glob,
    and the conventions/patterns/anti-patterns the user dictates.
 4. Set `paths`/`keywords` so `build`/`fix` auto-load it (see `skill-detection.md`); omit them
    only if the user wants it invoke-only (`/expert-<slug>`). Do **not** write the GENERATED
@@ -475,14 +480,14 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 
 **Goal:** refine one existing generated skill without a full regenerate.
 
-1. Read the target (`experts/<slug>/SKILL.md` or `guides/<slug>/SKILL.md`) fully. If absent →
+1. Read the target (`expert-<slug>/SKILL.md` or `guide-<slug>/SKILL.md`) fully. If absent →
    report and STOP.
 2. Confirm the exact change with the user (add a rule, revise a section, add an example). Make
    the **minimal targeted edit** — never rewrite the whole file. Preserve the project context
    block and frontmatter.
 3. If the file is team-owned (GENERATED marker present) and the user wants the edit to survive
    `--regenerate`, wrap it in a `<!-- ck-code:team MANUAL START/END -->` fence — or move a
-   durable house rule into `guides/conventions` (`--conventions`) instead.
+   durable house rule into `guide-conventions` (`--conventions`) instead.
 
 ---
 

@@ -9,7 +9,7 @@ Rules below and `references/context7-research.md`).
 
 ## guide-skill-template
 
-**File:** `.claude/skills/guides/<slug>/SKILL.md`
+**File:** `.claude/skills/guide-<slug>/SKILL.md`
 
 ```markdown
 ---
@@ -160,7 +160,7 @@ paths:
 
 ## guide-conventions-template
 
-For `--conventions` (CAPTURE) mode only. `.claude/skills/guides/conventions/SKILL.md` is a
+For `--conventions` (CAPTURE) mode only. `.claude/skills/guide-conventions/SKILL.md` is a
 **PROTECTED** file: it never carries the GENERATED marker, so `--regenerate` never touches
 it. Every rule must come from the user or from demonstrable code patterns — never generic
 advice. Leave a section out entirely if the project has no rule for it; never pad it.

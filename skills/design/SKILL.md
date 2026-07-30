@@ -34,7 +34,7 @@ If the request is actually something else, STOP and recommend the better skill:
 
 - No stakeholder spec yet and you want one → `/ck-code:spec` (first)
 - Breaking work into epics/stories → `/ck-code:plan` (design comes first)
-- Project is on a pre-v4 layout (layer/flat docs, no frontmatter) → `/ck-code:migrate`
+- Project is on a pre-v5 layout (nested team skills, layer/flat docs, no frontmatter) → `/ck-code:migrate`
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:team`.
@@ -46,9 +46,9 @@ simplest thing that meets the requirement — see [`reuse-first.md`](../../refer
 
 ## PHASE 0: VERSION GATE (hard gate, inline)
 
-In ALL modes: read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**,
+In ALL modes: read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**,
 proceed. Otherwise run the shared [version gate](../../references/version-gate.md)
-(HARD GATE) — it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never
+(HARD GATE) — it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never
 read or write project state before this PASSes. This runs **once, in the orchestrator** —
 never inside a fan-out subagent.
 

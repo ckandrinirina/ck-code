@@ -10,14 +10,14 @@ inline if the agent is registered.
 Before any QA work:
 
 ```
-Read(".claude/skills/experts/qa/SKILL.md")
-Read(".claude/skills/experts/qa-project/SKILL.md")
+Read(".claude/skills/expert-qa/SKILL.md")
+Read(".claude/skills/expert-qa-project/SKILL.md")
 ```
 
 Apply their standards throughout. A self-review without loading these
 skills does NOT count as QA validation.
 
-For bug-fix flows, also `Read(".claude/skills/experts/analyst/SKILL.md")`.
+For bug-fix flows, also `Read(".claude/skills/expert-analyst/SKILL.md")`.
 
 ## Step 1 — Acceptance criteria verification
 

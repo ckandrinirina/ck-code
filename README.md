@@ -66,7 +66,7 @@ it is a **breaking** layout change. Existing projects upgrade in one step:
 ```
 
 `migrate` is one-shot, idempotent, and safe: it refuses a dirty tree and lands every
-conversion in a single revertable commit. Every change-producing skill blocks a pre-v4
+conversion in a single revertable commit. Every change-producing skill blocks a pre-v5
 project until you run it, and the session-start hook reminds you. Pre-v3 projects are
 handled too — the converter chains the older layout migrations first.
 
@@ -243,14 +243,14 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | --- | --- | --- | --- |
 | `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes | feature description or notes file | `docs/specs/` and/or GitHub issue |
 | `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes | spec file | `docs/architecture/` |
-| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline at the plan prompt (`--conventions` re-runs it alone); `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/experts/`, `.claude/skills/guides/` |
+| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline at the plan prompt (`--conventions` re-runs it alone); `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/expert-*/`, `.claude/skills/guide-*/` |
 | `/ck-code:plan` | Create epics, single-dispatch S/M stories, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
 | `/ck-code:build` | Implement stories (TDD + QA): one inline, several at once in parallel worktrees (story IDs), or a whole epic in dependency-ordered waves (`--epic NN`); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`) | story file / story IDs / `--epic NN` | source code + tests; regenerated index views; a branch per story plus a conflict report in PARALLEL MODE |
 | `/ck-code:fix` | Diagnose a bug tied to a story, write a failing test + Fix Plan, flip it to `bug` — then auto-run `build` for an easy fix or hand off when complex. Never writes the source fix itself | story file (optional) | failing test + Bug Report + `bug` status → `build` |
 | `/ck-code:ship` | Commit, PR, update GitHub Issues. Honours the epic's **integration level** — a PR per story, per epic, or one per feature — merging story branches up the hierarchy and offering promotion when a rollup completes (`--promote` runs that gate later, `--integration` sets the level). `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter | story file (optional) | commit + PR + issue updates; merged/promoted branches |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
-| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v4 **or ck-code-lite** project to the v4 layout (frontmatter + generated indexes); stamps `tasks/VERSION.md` | — | converted project (one commit) |
+| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v5 **or ck-code-lite** project to the v5 layout (frontmatter + generated indexes + flat team-skill folders); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
 
 ## Why ck-code?
@@ -292,7 +292,7 @@ ck-code/
 │   ├── ship/                      # commit + PR + Issue updates (+ --to-issues)
 │   ├── track/                     # progress dashboard
 │   ├── guide/                     # state/intent/command router
-│   ├── migrate/                   # pre-v4 → v4 and ck-code-lite → v4 converter
+│   ├── migrate/                   # pre-v5 → v5 and ck-code-lite → v5 converter
 │   └── explain/                   # post-implementation walkthrough
 └── README.md
 ```
@@ -313,13 +313,23 @@ apply adjustments — keeping the local file and the linked GitHub issue in sync
 
 ## Compatibility
 
+> **v5 — breaking (team skills only).** `/ck-code:team` now writes each generated skill to
+> its own top-level folder — `.claude/skills/expert-<role>/` and `guide-<tech>/` — instead of
+> nesting them under `experts/` and `guides/`. Claude Code discovers project skills at
+> `.claude/skills/<skill-name>/SKILL.md` and takes the command name from that directory, so
+> the nested files were never registered as skills: `/expert-<role>` did not exist and no
+> guide ever auto-loaded outside a ck-code `build`/`fix`. `/ck-code:migrate` moves the folders
+> with `git mv` (history preserved) and re-stamps `tasks/VERSION.md` to `layout: v5`. Stories,
+> epics, and architecture docs are untouched — a v4 project needs only this one step. Restart
+> Claude Code afterwards so it picks up the new top-level directories.
+>
 > **v4 — breaking.** ck-code v4 stores story state in story-file frontmatter and generates
 > its `STORIES_INDEX.md` / `FEATURE_INDEX.md` views. It no longer reads the v3 layout
 > (prose `Status:` headers, hand-maintained `Schema: v1/v2` index tables, `EPIC.md` story
 > tables, `DESIGN_LEDGER.md`, `L`/`XL` sizes). Every change-producing skill runs a **version
-> gate** first: on a pre-v4 project it blocks and offers `/ck-code:migrate`, a one-shot,
+> gate** first: on a pre-v5 project it blocks and offers `/ck-code:migrate`, a one-shot,
 > idempotent converter that rewrites the layout and stamps `tasks/VERSION.md`. Run it once
-> and your project is v4. The same gate catches a **ck-code-lite** project (`tasks/PLAN.md`)
+> and your project is v5. The same gate catches a **ck-code-lite** project (`tasks/PLAN.md`)
 > and routes it to the same command.
 
 - **Claude Code** — required (CLI, IDE extension, or desktop app)

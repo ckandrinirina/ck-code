@@ -28,8 +28,8 @@ Pick the mode from `$ARGUMENTS`, then run only that section:
 
 ## VERSION GATE (hint only)
 
-Read `tasks/VERSION.md`. If `layout: v4` → proceed silently. Otherwise emit one line —
-`ℹ pre-v4 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
+Read `tasks/VERSION.md`. If `layout: v5` → proceed silently. Otherwise emit one line —
+`ℹ pre-v5 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
 [`../../references/version-gate.md`](../../references/version-gate.md).
 
 ## The Ready rule
@@ -56,7 +56,7 @@ Run once, in parallel; record what each block shows:
 ```bash
 echo "== specs =="; ls -d docs/specs/*/ 2>/dev/null | head -5
 echo "== architecture =="; find docs/architecture -name '*.md' 2>/dev/null | head -3
-echo "== team skills =="; find .claude/skills -type f -name SKILL.md 2>/dev/null | grep -E '(experts|guides)/' | head -3
+echo "== team skills =="; ls -d .claude/skills/expert-*/ .claude/skills/guide-*/ 2>/dev/null | head -3
 echo "== tasks =="; ls -d tasks/*/ 2>/dev/null | head -5
 echo "== feature index =="; ls tasks/FEATURE_INDEX.md 2>/dev/null
 echo "== stories index =="; ls tasks/*/STORIES_INDEX.md 2>/dev/null | head -5
@@ -110,7 +110,7 @@ use **AskUserQuestion** to offer `build <story-path>` (one story, sequential) vs
 |---|---|
 | docs/specs/        | <has or — > |
 | docs/architecture/ | <has or — > |
-| .claude/skills/    | <count of experts/guides or — > |
+| .claude/skills/    | <count of expert-*/guide-* or — > |
 | tasks/             | <has or — > |
 | generated indexes  | <has or — > |
 | Stories            | <n_ready ready · n_bug bug · n_blocked blocked · n_in_progress IP · n_done done> |
@@ -150,7 +150,7 @@ becomes the "Alternative".
 | A bug, crash, regression, "something is broken" in built code | `/ck-code:fix` |
 | Committing, opening a PR, publishing to GitHub Issues, "ship it", delivering work | `/ck-code:ship` |
 | Explaining what was just built or how to verify it | `/ck-code:explain` |
-| The project is on an old (pre-v4) layout and needs upgrading | `/ck-code:migrate` |
+| The project is on an old (pre-v5) layout and needs upgrading | `/ck-code:migrate` |
 | "I don't have a task — just tell me what's next" | run `/ck-code:guide` with no argument (Mode A) |
 
 If nothing matches, say so plainly and point to Mode A (state routing) or

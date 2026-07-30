@@ -1,18 +1,22 @@
 ---
 name: migrate
-description: Use when a project is on a pre-v4 ck-code layout and a change-producing skill's version gate has blocked it, when the user asks to upgrade a ck-code project to v4, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow. Converts v3 (or older) story files, epics, and architecture docs — or a lite flat plan — to the v4 frontmatter-based layout, regenerates the indexes, and stamps tasks/VERSION.md. One-shot, idempotent, safe.
+description: Use when a change-producing skill's version gate has blocked a pre-v5 ck-code project, when the user asks to upgrade a project to v5, when team-generated skills sit in nested .claude/skills/experts/ or guides/ folders, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow. Converts v3 or older stories, epics and architecture docs — or a lite flat plan — to v5, flattens the team skill folders, regenerates the indexes, and stamps tasks/VERSION.md.
 argument-hint: "[--dry-run]"
 effort: medium
 ---
 
-# Migrate — Upgrade a Project to the v4 Layout
+# Migrate — Upgrade a Project to the v5 Layout
 
-Converts a pre-v4 ck-code project **or a ck-code-lite project** to the **v4 layout**
+Converts a pre-v5 ck-code project **or a ck-code-lite project** to the **v5 layout**
 (story-frontmatter source of truth + generated indexes — see
-[`data-model.md`](../../references/data-model.md)) and stamps `tasks/VERSION.md` as its
-final step. This is the **only** v4 migrator; the
+[`data-model.md`](../../references/data-model.md) — plus **flat** team-skill folders) and
+stamps `tasks/VERSION.md` as its final step. This is the **only** v5 migrator; the
 [version gate](../../references/version-gate.md) in every change-producing skill routes
-pre-v4 and lite projects here. This skill itself never gates.
+pre-v5, nested and lite projects here. This skill itself never gates.
+
+**v4 → v5 is a one-phase job.** A project already on v4 needs only Phase S (flatten the
+skill folders); its stories, epics and architecture docs are already correct and Phases
+2–4 must not touch them.
 
 One-shot, idempotent, safe: an already-v4 project is a no-op that just (re)stamps. All
 originals are converted in place behind a **single pre-migration commit** so the whole
@@ -27,7 +31,7 @@ the lite conversion in [references/lite-migration.md](references/lite-migration.
    clean, revertable step. Do not proceed on a dirty tree.
 2. **Snapshot commit.** With a clean tree, note the current SHA (`git rev-parse HEAD`)
    and report it — this is the one-command rollback point (`git reset --hard <sha>`).
-3. Confirm with the user: `AskUserQuestion` — "Migrate this project to the ck-code v4
+3. Confirm with the user: `AskUserQuestion` — "Migrate this project to the ck-code v5
    layout? All conversions land in one commit; rollback is `git reset --hard <sha>`."
    Options: `Migrate` / `Cancel`. On Cancel, stop.
 
@@ -36,8 +40,10 @@ the lite conversion in [references/lite-migration.md](references/lite-migration.
 Determine how old the project is — it decides which conversion steps run:
 
 1. **v4 already?** Read `tasks/VERSION.md`. `layout: v4` AND every
-   `tasks/*/epics/*/stories/*.md` starts with `---` → already v4. Skip to Phase 5
-   (re-stamp + regenerate) and report "already v4".
+   `tasks/*/epics/*/stories/*.md` starts with `---` → the story layer is current. Skip
+   Phases 2–4 entirely, run **Phase S**, then Phase 5. Report "v4 → v5 (skill folders
+   only)". `layout: v5` and no nested skill folders → already v5; Phase 5 alone
+   (re-stamp + regenerate), report "already v5".
 2. **lite?** `tasks/PLAN.md` exists and no `tasks/*/epics/` directory does → a
    **ck-code-lite** project. Go to **PHASE L**; Phases 2–4 do not apply (there are no v3
    story files, epics, or layer docs to convert). If **both** are present the project is
@@ -103,7 +109,60 @@ flag replaces it.
   generator in Phase 5 — no action needed beyond that.
 - Dated journal/delta docs (`features/<slug>/YYYY-MM-DD_*.md`, design records) are
   **left in place** as historical files (never deleted — they may hold notes a user
-  values); v4 simply stops writing new ones. Note in the report that they are now inert.
+  values); v5 simply stops writing new ones. Note in the report that they are now inert.
+
+## PHASE S: FLATTEN THE TEAM SKILL FOLDERS (every path)
+
+Runs on **every** migration path, including after Phase L. It is the whole of a v4 → v5
+migration and a no-op when the project has no nested folders.
+
+`/ck-code:team` used to write `.claude/skills/experts/<role>/SKILL.md` and
+`.claude/skills/guides/<tech>/SKILL.md`. Claude Code discovers project skills at
+`.claude/skills/<skill-name>/SKILL.md` and takes the command name from that directory,
+so nothing under `experts/` or `guides/` was ever registered — no `/expert-<role>`
+command existed and no guide auto-loaded. Only ck-code's own `Read`-by-path detection
+saw them. v5 puts each skill in its own top-level folder, where the name is real.
+
+**S1 — enumerate (read-only):**
+
+```bash
+ls -d .claude/skills/experts/*/ .claude/skills/guides/*/ 2>/dev/null
+```
+
+Empty → nothing to do; say so in the report and continue to Phase 5.
+
+**S2 — collision check (hard).** For every `experts/<role>/` the target is
+`.claude/skills/expert-<role>/`; for every `guides/<tech>/`, `.claude/skills/guide-<tech>/`
+(so `guides/conventions/` → `guide-conventions/`). If any target already exists, the
+project is half-migrated: **stop**, list every colliding pair, and never merge or
+overwrite. The user resolves it, then re-runs.
+
+**S3 — move.** One `git mv` per folder, preserving history and every sibling file in the
+skill directory (`references/`, scripts, assets — the whole folder moves, not just
+`SKILL.md`):
+
+```bash
+for d in .claude/skills/experts/*/; do git mv "$d" ".claude/skills/expert-$(basename "$d")"; done
+for d in .claude/skills/guides/*/;  do git mv "$d" ".claude/skills/guide-$(basename "$d")";  done
+rmdir .claude/skills/experts .claude/skills/guides 2>/dev/null
+```
+
+`rmdir` (never `rm -rf`) — it refuses if anything was left behind, which is the signal
+that a file escaped the loop. If it refuses, list the remainder and stop.
+
+**S4 — reconcile names and stale paths.** The generated frontmatter already carries
+`name: expert-<slug>` / `name: guide-<slug>`, which now matches the directory. Verify,
+and fix any file whose `name:` disagrees with its new folder — at project level the
+**directory name** is the command, so a mismatch is invisible rather than an error:
+
+```bash
+grep -H '^name:' .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md
+grep -rln 'skills/experts/\|skills/guides/' .claude/skills/ CLAUDE.md docs/ 2>/dev/null
+```
+
+Rewrite any surviving `.claude/skills/experts/…` or `…/guides/…` path found by the second
+grep to its flat form. Leave every other line of every skill body untouched — the
+`ck-code:team GENERATED` marker included, so `--regenerate` still behaves.
 
 ## PHASE L: CONVERT A LITE PROJECT
 
@@ -151,8 +210,8 @@ Rename `tasks/PLAN.md` → `tasks/PLAN.superseded.md` with its banner, banner
 `docs/ARCHITECTURE.md`, then offer the `.claude/settings.json` plugin swap (one
 `AskUserQuestion`, applied only on Swap).
 
-Continue at Phase 5, committing with
-`chore: migrate ck-code-lite project to ck-code v4 layout`.
+Continue at Phase S (a no-op for lite — it has no team skills), then Phase 5, committing
+with `chore: migrate ck-code-lite project to ck-code v5 layout`.
 
 ## PHASE 5: REGENERATE + STAMP
 
@@ -162,11 +221,11 @@ Continue at Phase 5, committing with
    ```
    This writes every `tasks/<slug>/STORIES_INDEX.md` and `tasks/FEATURE_INDEX.md` from
    the source of truth. Never hand-write these.
-2. **Stamp** `tasks/VERSION.md` with `layout: v4` per the
+2. **Stamp** `tasks/VERSION.md` with `layout: v5` per the
    [version gate](../../references/version-gate.md) (`mkdir -p tasks` first if needed).
    This is the **final** step — only after conversion succeeded.
 3. **Commit** all conversions in one commit:
-   `git add -A && git commit -m "chore: migrate ck-code project to v4 layout"`.
+   `git add -A && git commit -m "chore: migrate ck-code project to v5 layout"`.
 
 ## PHASE 6: VERIFY + REPORT
 
@@ -177,7 +236,12 @@ Report a verification table so the user can trust the conversion:
 - Any story file that could **not** be parsed — list it explicitly for manual review;
   never silently skip.
 - Epics converted, `DESIGN_LEDGER.md` retired, journal docs left inert.
-- Confirm `tasks/VERSION.md` now reads `layout: v4` and the indexes regenerated.
+- **Skill folders flattened** (Phase S): one line per move, `experts/<role>` →
+  `expert-<role>`, `guides/<tech>` → `guide-<tech>`, or "none — no nested folders". Add
+  one line stating that these are now real Claude Code skills: `/expert-<role>` is
+  invocable and the guides auto-load. Tell the user to restart Claude Code so the new
+  top-level directories are picked up.
+- Confirm `tasks/VERSION.md` now reads `layout: v5` and the indexes regenerated.
 - Rollback reminder: `git reset --hard <pre-migration-sha>`.
 
 After a **lite** migration, add the items listed under "Report additions" in
@@ -189,9 +253,12 @@ every task ID in the project changed.
 - **Never run on a dirty tree** — Phase 0 refuses; migration must be one revertable commit.
 - **Never delete a story body, journal doc, or design record** — convert in place; only `DESIGN_LEDGER.md` is removed (its state moves to the `design:` flag).
 - **Never hand-write an index** — always regenerate with `ck-index.sh` (Phase 5).
-- **Never stamp `layout: v4` before conversion succeeds** — the stamp is the final step.
+- **Never stamp `layout: v5` before conversion succeeds** — the stamp is the final step.
 - **Always list unparseable files** in the report — a skipped file must be visible, never silent.
-- **Idempotent** — an already-v4 project re-stamps and regenerates with no other change.
+- **Idempotent** — an already-v5 project re-stamps and regenerates with no other change.
+- **Never run Phases 2–4 on a v4 project** — its stories, epics and docs are already correct; v4 → v5 is Phase S plus the stamp.
+- **Always move skill folders with `git mv`, never copy-then-delete** — the whole folder moves, siblings included, and history survives.
+- **Never overwrite an existing flat skill folder** — a collision is a half-migrated project; stop and report it (S2).
 - **Never merge a lite plan into an existing v4 plan folder** — `tasks/PLAN.md` alongside `tasks/*/epics/` is a half-migrated project; stop and report it.
 - **Never write epics or stories before the L2 grouping is confirmed** — the ID map changes every task ID, so the user sees it first.
 - **Never invent architecture detail in a lite migration** — feature docs are stubs; `/ck-code:design` fills them.

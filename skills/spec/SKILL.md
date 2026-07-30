@@ -70,9 +70,9 @@ Resolve `$ARGUMENTS` against on-disk state:
 
 ## PHASE 0 — Version gate (HARD GATE)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
+Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
 Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
 project state before this PASSes.
 
 ---

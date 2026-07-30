@@ -22,7 +22,7 @@ duplicating the workflow graph.
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues
 
-   /ck-code:migrate      (One-shot) Upgrade a pre-v4 or ck-code-lite project to the v4 layout
+   /ck-code:migrate      (One-shot) Upgrade a pre-v5 or ck-code-lite project to the v5 layout
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
 ```
 
@@ -91,15 +91,15 @@ command reference.
 |---|---|
 | `spec` | `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ `.metadata.json`), optional GitHub issue |
 | `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`) |
-| `team` | `.claude/skills/experts/*/SKILL.md`, `.claude/skills/guides/*/SKILL.md` (incl. `guides/conventions/`) |
+| `team` | `.claude/skills/expert-*/SKILL.md`, `.claude/skills/guide-*/SKILL.md` (incl. `guide-conventions/`) |
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/ with EPIC.md, stories/ with frontmatter, ROADMAP.md); flips feature doc to `design: planned`; regenerates the index views |
 | `build` | Source + tests in repo; the story file only (frontmatter `status`, plan, summary; Bug Report Resolution in Bug-Fix Mode); regenerates the index views. In PARALLEL MODE: per-story branches in native worktrees with the same story-file outputs, and the orchestrator regenerates the views once on the target branch after merges |
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`); regenerates the views. Auto-invokes `build` for an easy fix; never writes the source fix itself |
 | `ship` | Git commit, PR, GitHub Issue updates; writes the created issue number back to story frontmatter `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
-| `migrate` | Converts a pre-v4 project in place (one commit); or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
+| `migrate` | Converts a pre-v5 project in place (one commit) — including flattening nested `experts/` + `guides/` skill folders; or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
 | `track`, `explain`, `guide` | Read-only |
 
-## State conventions (v4)
+## State conventions (v5)
 
 - **Story status** lives ONLY in the story-file frontmatter `status:`
   (`todo → in-progress → done`, lowercase). Every index is a generated view of it —

@@ -54,9 +54,9 @@ someone else's parallel run — read [DELEGATED MODE](#delegated-mode) before Ph
 
 ## PHASE 0: VERSION GATE (hard, before any project read/write)
 
-Read `tasks/VERSION.md`. If it exists and reads `layout: v4` → **PASS**, proceed.
+Read `tasks/VERSION.md`. If it exists and reads `layout: v5` → **PASS**, proceed.
 Otherwise run the shared [version gate](../../references/version-gate.md) (HARD GATE) —
-it detects a pre-v4 layout, offers `/ck-code:migrate`, and stamps. Never read or write
+it detects a pre-v5 layout, offers `/ck-code:migrate`, and stamps. Never read or write
 project state before this PASSes.
 
 ---
@@ -483,7 +483,7 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
 
 ## HARD GATES (cross-phase contract, in phase order)
 
-- **0** — version gate PASSes (`layout: v4`) before any project read/write.
+- **0** — version gate PASSes (`layout: v5`) before any project read/write.
 - **1.2.0** — feature index read first; ask when > 2 features unfinished.
 - **1.2** — interactive selection prefers the parallel set; an explicit path is single-story.
 - **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project

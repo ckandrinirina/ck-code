@@ -16,7 +16,7 @@ detailed in its section below.
 |---|---|---|
 | **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main`, and never into whatever branch happened to be checked out |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
-| **P3** | Team gate (`ls .claude/skills/{experts,guides}/*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
+| **P3** | Team gate (`ls .claude/skills/{expert,guide}-*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
 | **P4** | Dispatch the wave in a **single message**: one `Agent` per story, `isolation: "worktree"`, `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` prompt | Tier the model by reasoning complexity, never `size` |
 | **P5** | Integrity per branch **the moment its agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
 | **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Cross-branch by construction — the wave's one barrier. Every dry-run is aborted; nothing lands here |
@@ -90,7 +90,7 @@ This is a heuristic from *declared* scope; P6 still runs the authoritative dry-r
 ## P3 — Team gate and confirmation
 
 ```bash
-ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md 2>/dev/null
+ls .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md 2>/dev/null
 ```
 
 Empty output means `/ck-code:team` has never run and every dispatched agent would write

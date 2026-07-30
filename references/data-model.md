@@ -1,14 +1,16 @@
-# Data Model — v4 (Shared Source of Truth)
+# Data Model — v5 (Shared Source of Truth)
 
-The v4 layout has **one writable source of truth for story state: the story file's
+The v5 layout has **one writable source of truth for story state: the story file's
 YAML frontmatter.** Every index (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) is a
 **generated, read-only view** regenerated from frontmatter — never hand-edited,
 never independently mutated. This is what removes drift: a view is a pure function
 of the frontmatter, so it cannot disagree with it. There is no reconciler skill in
-v4 because there is nothing to reconcile — you regenerate.
+v5 because there is nothing to reconcile — you regenerate.
 
-The layout constant is `v4` (see [`version-gate.md`](version-gate.md)). A pre-v4
-project is blocked and routed to `/ck-code:migrate`.
+The layout constant is `v5` (see [`version-gate.md`](version-gate.md)). A pre-v5
+project is blocked and routed to `/ck-code:migrate`. v5 changes one artifact only:
+team-generated skills live in flat `.claude/skills/expert-*/` and `guide-*/` folders,
+never nested under `experts/` or `guides/`.
 
 ## Story file (the source of truth)
 
@@ -128,10 +130,10 @@ regenerates the views once on the target branch after merges.
 
 ## VERSION stamp
 
-`tasks/VERSION.md` records `layout: v4`. The version gate reads it for a one-line
+`tasks/VERSION.md` records `layout: v5`. The version gate reads it for a one-line
 fast path; `migrate` writes it as its final step.
 
-## What v3 had that v4 removes
+## What v3 had that v5 removes
 
 | v3 | v4 |
 |---|---|
