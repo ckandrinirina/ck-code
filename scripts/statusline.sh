@@ -104,8 +104,12 @@ set -- tasks/*/STORIES_INDEX.md
 [ -f "$1" ] || exit 0
 
 # Active story: derived from the branch name, never stored (branch-topology.md).
-# story/<EE>-<SS>-<slug> and fix/<EE>-<SS>-<slug> both carry the id.
+# story/<EE>-<SS>-<slug> and fix/<EE>-<SS>-<slug> both carry the id outright.
+# epic/<NN>-<slug> carries only the epic, so the story is resolved from the index:
+# an epic branch is where an `integration: epic|feature` session sits while its
+# stories are built, and it names no story of its own.
 story_id=""
+epic_id=""
 # `branch --show-current` (git >= 2.22) is empty on a detached HEAD and, unlike
 # `rev-parse --abbrev-ref HEAD`, does not error on an unborn branch.
 branch=$(git branch --show-current 2>/dev/null)
@@ -114,6 +118,9 @@ case "$branch" in
   story/*|fix/*)
     story_id=$(printf '%s' "${branch#*/}" | awk -F- \
       '$1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print $1 "-" $2 }')
+    ;;
+  epic/*)
+    epic_id=$(printf '%s' "${branch#*/}" | awk -F- '$1 ~ /^[0-9]+$/ { print $1 }')
     ;;
 esac
 
@@ -124,7 +131,7 @@ esac
 # Fields are addressed from the RIGHT because a title may legitimately contain a
 # `|` (ck-index.sh escapes it as `\|`, which awk still splits on, inflating NF).
 # Status/Size/Blocked by/File can never contain one, so NF-4 is always Status.
-awk -F'|' -v want="$story_id" '
+awk -F'|' -v want="$story_id" -v want_epic="$epic_id" '
   function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
 
   # Rejoin the title fields an escaped pipe was split across, then unescape.
@@ -164,7 +171,17 @@ awk -F'|' -v want="$story_id" '
     # Story ids are unique per plan, not across plans, so a multi-plan project can
     # offer several matches for one branch. Prefer the one that is actually open.
     if (want != "" && trim($3) == want) {
-      if (wt == "" || (ws != "IN PROGRESS" && ws != "BUG")) { wt = title(); ws = st }
+      if (wid == "" || (ws != "IN PROGRESS" && ws != "BUG")) { wid = want; wt = title(); ws = st }
+    }
+    # On an epic branch only open stories can be the active one — a TODO story is
+    # work not started, not work you are on. IN PROGRESS beats BUG; among equals the
+    # lowest id wins, so the pick is stable across renders and across plans.
+    else if (want_epic != "" && (st == "IN PROGRESS" || st == "BUG")) {
+      id = trim($3)
+      if (index(id, want_epic "-") == 1 \
+          && (wid == "" || (ws == "BUG" && st == "IN PROGRESS") || (ws == st && id < wid))) {
+        wid = id; wt = title(); ws = st
+      }
     }
   }
 
@@ -183,7 +200,7 @@ awk -F'|' -v want="$story_id" '
       else if (ws == "DONE")        { g = GRN "✓" }
       else if (ws == "BUG")         { g = RED "✗" }
       else                          { g = CYN "○" }
-      out = out g " " want RESET " " shorten(wt, 32) DIM " · " RESET
+      out = out g " " wid RESET " " shorten(wt, 32) DIM " · " RESET
     }
 
     out = out GRN dn "/" total " ✓" RESET
