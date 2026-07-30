@@ -245,11 +245,22 @@ Present the plan (template in [output-blocks.md](references/output-blocks.md)), 
 `git branch --show-current` and ask **one** `AskUserQuestion` that both confirms the plan and
 chooses where the work lands:
 
-- **New branch** — `git checkout -b story/<EE>-<SS>-<slug>` (or `fix/<EE>-<SS>-<slug>` for a
-  bug story); slug = kebab-case of the title. Verify with `git branch --show-current`.
+- **New branch** — cut from `resolve_parent(...)`
+  ([`branch-topology.md`](../../references/branch-topology.md#resolution)), creating the
+  parent chain first if absent:
+  `git checkout -b story/<EE>-<SS>-<slug> <parent>` (or `fix/<EE>-<SS>-<slug>` for a bug
+  story); slug = kebab-case of the title. Verify with `git branch --show-current`.
+  At level `story` the parent is the default branch, exactly as before.
 - **Current branch `<name>`** — ship will commit here. Omit this option when `<name>` is
   `main`/`develop` (implementation on protected branches is forbidden).
 - **Adjust plan** — revise the plan, then re-ask.
+
+**Third field, only when the epic's `EPIC.md` `integration:` is empty** — fold it into the
+*same* `AskUserQuestion` call (the tool takes 4 questions; splitting a known question into a
+second call is forbidden by RULES): "How should epic `<NN>` land?" → **a PR per story**
+(`story`) · **one PR per epic** (`epic`) · **one PR for the whole feature** (`feature`).
+Write the answer to `EPIC.md` `integration:` in this phase, then resolve the parent from it.
+Answering `story` writes the literal `story`, so the question never returns for that epic.
 
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
 touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the branch
@@ -479,7 +490,7 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
   skills → warn + ask (`/ck-code:team` first) rather than proceed silently.
 - **1.7** — effort route fixed from `size:` and announced; it scales ceremony only, never a
   guarantee, and escalates LEAN → FULL when the work outgrows its size.
-- **3.5** — plan + branch confirmed in one gate before any code; never `main`/`develop`.
+- **3.5** — plan, branch and (first story of an epic only) integration level confirmed in one gate before any code; the story branch is cut from the resolved parent; never `main`/`develop`.
 - **3.3 + 6.1** — SOLID applied at design, verified after refactor (lean or full per 1.7).
 - **4** — failing tests before implementation (trivial boilerplate exempt).
 - **5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
