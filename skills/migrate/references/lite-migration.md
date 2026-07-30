@@ -94,7 +94,7 @@ A lite task has no description prose beyond its title. Never invent one — a th
 |---|---|
 | `PROJECT_OVERVIEW.md` | Project Overview Template in [`templates.md`](../../plan/references/templates.md); Vision from the `ARCHITECTURE.md` intro paragraph, Tech Stack from `## Stack`, Key Design Decisions from `## Decisions`. Anything lite does not record → `[TO BE DEFINED]`. |
 | `ROADMAP.md` | ROADMAP.md Template in [`roadmap-format.md`](../../plan/references/roadmap-format.md); phases follow the epic order, dependencies from the translated `blocked_by`. |
-| `epics/NN_<slug>/EPIC.md` | Epic Template in [`templates.md`](../../plan/references/templates.md). `description` is a one-line goal summarising that epic's stories — it becomes the `FEATURE_INDEX` Description cell. No `## Stories` table. |
+| `epics/NN_<slug>/EPIC.md` | Epic Template in [`templates.md`](../../plan/references/templates.md). `description` is a one-line goal summarising that epic's stories — it becomes the `FEATURE_INDEX` Description cell. `integration:` is left **empty** (≡ `story`, one PR per story), which is the right default for a just-migrated project; `build` fills it on the first story. No `## Stories` table. |
 
 ## `docs/ARCHITECTURE.md` → `docs/architecture/`
 

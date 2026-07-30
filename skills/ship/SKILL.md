@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). With `--promote`, opens the PR for a completed epic or feature branch; with `--integration`, sets an epic's integration level. Issue work needs `gh` authenticated.
+description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
 ---
