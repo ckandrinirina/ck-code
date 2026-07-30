@@ -76,11 +76,37 @@ Status values are lowercase `todo | in-progress | done | skip | bug`; sizes are 
 Group rows by their `Epic` column for per-epic completion counts (done / total). Read a
 per-epic `EPIC.md` only in `progress` mode when you need a title/metadata not in the index.
 
+### 1.5 Branch topology (conditional)
+
+Read each `EPIC.md` `integration:`. **If every epic is `story` or empty, skip this step
+entirely** — the block would be noise for the majority of projects. Otherwise collect, with
+read-only git:
+
+```bash
+git branch --list "epic/*" "feat/*" "story/*"
+git rev-list --count <parent>..<branch>      # per non-story epic and its open stories
+```
+
+Branch names derive per
+[`../../references/branch-topology.md`](../../references/branch-topology.md). An
+`epic/<NN>-*` glob matching a branch whose slug no longer matches its `EPIC.md` `slug:` is an
+orphan left by a rename — list it under the tree as `orphan`.
+
 ## PHASE 2: RENDER
 
 Read only the template for the invoked command from
 [`references/dashboard-templates.md`](references/dashboard-templates.md), then fill it
 from the Phase 1 scan. Multiple task plans → render each separately (template included).
+
+When 1.5 collected topology, render this block above the story table:
+
+```
+feat/auth-system        -> main       2 epics, no PR
+  epic/02-auth          -> feat/…     DONE 4/4, merged
+  epic/03-profile       -> feat/…     IN PROGRESS 2/5
+    story/03-03-avatar  -> epic/03    2 commits unmerged
+  epic/04-billing       -> main       TODO, integration: story
+```
 
 ### `next` — selection algorithm
 
@@ -98,8 +124,10 @@ Present the top story (a 🐛 bug if any is open); list the rest under *Also Rea
 
 ## RULES
 
-- **Never** write, edit, or create any project file — this skill is read-only.
-  Regenerating a generated view with `ck-index.sh` is the only permitted Bash write.
+- **Never** write, edit, or create any project file — this skill is read-only. The only
+  permitted Bash calls are regenerating a generated view with `ck-index.sh` and the
+  **read-only** git queries in 1.5 (`git branch --list`, `git rev-list --count`). Never
+  `checkout`, `merge`, `push` or `branch -d`.
 - **Never** hand-maintain or bootstrap an index by globbing story files — the story
   frontmatter is the source of truth and `ck-index.sh` produces the views.
 - **Never** cache state — every run re-reads the index.
