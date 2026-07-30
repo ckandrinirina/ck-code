@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.5.2] — 2026-07-30
+
+### Changed
+- **statusline**: **percentages now appear at the feature and epic levels only** — the two whose ratios summarise many rows and where the reader has no denominator of their own. The story segment keeps its criteria ratio without one (`⚡ 01-03 Password reset flow 5/8`), and the live-work segment keeps the ids without one (`⚙ 01-04, 02-01`). Both of those figures came from acceptance-criteria checkboxes, which are ticked as a story *finishes* rather than as it progresses, so they read `0%` for almost the whole life of the story they were meant to track — a number that moves only at the end measures nothing, and beside `5/8` it was a second rendering of the two digits next to it.
+
+### Removed
+- **statusline**: the `next 01-04` segment. With no story in play the story slot is now simply absent. `next` was a *recommendation* on a line that otherwise reports only where you **are**, and it duplicated `/ck-code:track next` — which can weigh a choice (size, blockers, epic order) as a status bar never could. The blocker-resolution pass over every TODO row goes with it.
+
 ## [5.5.1] — 2026-07-30
 
 ### Changed
