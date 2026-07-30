@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.2.1] — 2026-07-30
+
+### Fixed
+- **statusline** (`scripts/statusline.sh`): an `epic/<NN>-…` branch showed plan-wide counts with no active story, because the story id was only ever read out of a `story/`/`fix/` branch name. Since 5.1.0 made `integration: epic|feature` a normal way to work, that is exactly where a main session sits while its stories are built — so the epic's own open story is now resolved from the index (in progress before bug, lowest id among equals, so the pick is stable across renders and across plans). An epic with nothing open, an unknown epic number, and a branch with no number all still render counts only.
+
 ## [5.2.0] — 2026-07-30
 
 Progress you can see without paying for it. ck-code's printed output stays as terse as it was — the visibility moves to the status bar, where the terminal renders it and the model never spends a token on it.
