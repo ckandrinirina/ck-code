@@ -107,7 +107,7 @@ Without this entry the plugin stays dormant in that project.
 you're in, the story you're on (derived from the git branch), and how far each has got:
 
 ```
-ck-code password-reset 2/5 ✓ 60% 2⚡ 1✗ · epic 01 auth 2/5 40% · ⚡ 01-03 Password reset flow 5/8 62% · → epic/01 · ⚙ 01-04 30%, 02-01 0%
+ck-code password-reset 2/5 60% 2⚡ 1✗ · epic 01 auth 2/5 40% · ⚡ 01-03 Password reset flow 5/8 62% · → epic/01 · ⚙ 01-04 30%, 02-01 0%
 ```
 
 The line reads **top-down, one level of the plan per segment**, each counted in the unit
@@ -115,7 +115,7 @@ below it and each narrower than the last — feature in epics, epic in stories, 
 criteria. Scanning left to right answers *which feature, which epic, which story, how far*
 in that order, and no segment repeats what a wider one already said.
 
-- **Feature** `password-reset 2/5 ✓ 60% 2⚡ 1✗` — the feature the branch belongs to, its
+- **Feature** `password-reset 2/5 60% 2⚡ 1✗` — the feature the branch belongs to, its
   **epics** done / total, and its open (`⚡`) and bug (`✗`) stories. The plan folder's date
   stamp and `feature-` prefix are dropped; an epic counts as done when every story in it is.
   The percentage is story-weighted, so it moves between epics instead of jumping in fifths.
@@ -139,6 +139,14 @@ in that order, and no segment repeats what a wider one already said.
   `story/`/`fix/` worktrees count, since a checkout parked on an epic branch is somewhere
   you work, not something running. `+N` marks worktrees this plan cannot name.
 
+**One colour per role, identical at every level** — dim for structure (the `ck-code` mark,
+the `epic` / `next` / `⚙` labels, separators) and for every percentage, cyan for identity
+(feature, epic, story id and title, merge target, worktree ids), green for every done /
+total ratio, and yellow or red for status alone (`⚡` open, `✗` bug, and the story glyph).
+Colour says what *kind* of value you are looking at, never which level it came from — the
+level is already carried by position — so the eye learns the line once instead of once per
+segment, and the only thing that interrupts a scan is a real status.
+
 **The branch picks the feature, never the directory alone.** Story ids and epic numbers are
 unique per plan, not across plans, so a `tasks/` holding several features can offer more
 than one answer for one branch — and a multi-repo project, whose code repo sits under the
@@ -149,7 +157,7 @@ naming work no visible plan owns renders **nothing** — a confident wrong numbe
 than an empty status bar.
 
 With no ck-code branch to go on (`main`, a detached HEAD) there is no one feature to
-report, so an idle session falls back to project-wide story counts: `ck-code 12/20 ✓ 60% ·
+report, so an idle session falls back to project-wide story counts: `ck-code 12/20 60% ·
 next 01-04`. Only `awk` and `git` are required; the whole line costs ~50ms to draw, ~85ms
 during a fan-out.
 

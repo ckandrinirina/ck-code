@@ -575,6 +575,19 @@ DIM="${ESC}[2m"; RESET="${ESC}[0m"
 GRN="${ESC}[32m"; YEL="${ESC}[33m"; RED="${ESC}[31m"; CYN="${ESC}[36m"
 SEP="${DIM} · ${RESET}"
 
+# One colour per ROLE, identical at every level, so the eye learns the line once instead
+# of once per segment:
+#
+#   dim    structure — the `ck-code` mark, the `epic`/`next`/`⚙` labels, separators
+#   cyan   identity  — what a thing is called: feature, epic, story id, story title
+#   green  progress  — a done/total ratio, wherever it appears
+#   dim    percentage — always, so it reads as the ratio's echo and never competes with it
+#   yellow / red  status only — `⚡` open, `✗` bug, and the story glyph
+#
+# Colour therefore says what KIND of value you are looking at, never which level it came
+# from; the level is already carried by position. Only status keeps a colour of its own,
+# because that is the one thing on the line worth interrupting a scan for.
+
 # The line reads top-down, one level of the plan per segment, each counted in the unit
 # below it and each narrower than the last:
 #
@@ -585,10 +598,16 @@ SEP="${DIM} · ${RESET}"
 # the order the questions are actually asked in.
 out="${DIM}ck-code${RESET} "
 
+# A level's numbers: green ratio, dim percentage. The `✓` the feature ratio used to carry
+# is gone — with every level reading done/total it marked nothing the others lacked.
+ratio() { printf '%s' "${GRN}$1/$2${RESET}${DIM} $(($1 * 100 / $2))%${RESET}"; }
+
 # 1. FEATURE, counted in epics. Everything after it is scoped to this one plan.
 if [ -n "$feat_name" ]; then
   out="${out}${CYN}${feat_name}${RESET}"
-  [ "${epn:-0}" -gt 0 ] && out="${out} ${GRN}${epdone}/${epn} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
+  # The percentage is the feature's STORY progress, deliberately finer than the epic
+  # ratio it follows — it moves inside an epic, where `1/5` cannot.
+  [ "${epn:-0}" -gt 0 ] && out="${out} ${GRN}${epdone}/${epn}${RESET}${DIM} $((dn * 100 / total))%${RESET}"
   # The feature's own health, kept at the level it describes: somewhere in this plan N
   # stories are open and N are bugs. Attached, not separated, so it cannot be read as
   # belonging to the epic or the story segment further right.
@@ -598,17 +617,17 @@ if [ -n "$feat_name" ]; then
 else
   # No feature resolved (`main`, a detached HEAD): there is no one plan to report in
   # epics, so project-wide story counts are all there is to say.
-  out="${out}${GRN}${dn}/${total} ✓${RESET}${DIM} $((dn * 100 / total))%${RESET}"
-  [ "${ip:-0}"  -gt 0 ] && out="${out}${SEP}${YEL}${ip} ⚡${RESET}"
-  [ "${bug:-0}" -gt 0 ] && out="${out}${SEP}${RED}${bug} ✗${RESET}"
+  out="${out}$(ratio "$dn" "$total")"
+  [ "${ip:-0}"  -gt 0 ] && out="${out} ${YEL}${ip}⚡${RESET}"
+  [ "${bug:-0}" -gt 0 ] && out="${out} ${RED}${bug}✗${RESET}"
   out="${out}${SEP}"
 fi
 
 # 2. EPIC, counted in stories.
 if [ "${etotal:-0}" -gt 0 ]; then
-  out="${out}${DIM}epic ${epic_ctx}${RESET}"
+  out="${out}${DIM}epic${RESET} ${CYN}${epic_ctx}"
   [ -n "$epic_name" ] && out="${out} ${epic_name}"
-  out="${out} ${edn}/${etotal}${DIM} $((edn * 100 / etotal))%${RESET}${SEP}"
+  out="${out}${RESET} $(ratio "$edn" "$etotal")${SEP}"
 fi
 
 # 3. STORY, counted in acceptance criteria. It sits BELOW its epic now: a story is read
@@ -621,8 +640,10 @@ if [ -n "$wt" ]; then
     BUG)           g="${RED}✗" ;;
     *)             g="${CYN}○" ;;
   esac
-  out="${out}${g} ${wid}${RESET} ${wt}"
-  [ -n "$crit" ] && out="${out} ${crit%% *}${DIM} ${crit#* }${RESET}"
+  # Glyph carries the status colour; the id and title are identity, so they are cyan like
+  # every other name on the line.
+  out="${out}${g}${RESET} ${CYN}${wid} ${wt}${RESET}"
+  [ -n "$crit" ] && out="${out} ${GRN}${crit%% *}${RESET}${DIM} ${crit#* }${RESET}"
   out="${out}${SEP}"
 elif [ -n "$nid" ]; then
   # No story in play: the next ready one — first TODO whose blockers are all DONE.
@@ -634,10 +655,10 @@ if [ -n "$integ" ]; then
   if [ -n "$epic_id" ]; then
     # Already sitting on the epic branch: naming it as the target is noise. Only the
     # level above it — where the epic PR will go — is news worth a segment.
-    [ "$integ" = feature ] && out="${out}${CYN}→ feat${RESET}${SEP}"
+    [ "$integ" = feature ] && out="${out}${DIM}→${RESET} ${CYN}feat${RESET}${SEP}"
   else
-    out="${out}${CYN}→ epic/${epic_ctx}${RESET}"
-    [ "$integ" = feature ] && out="${out}${DIM} → feat${RESET}"
+    out="${out}${DIM}→${RESET} ${CYN}epic/${epic_ctx}${RESET}"
+    [ "$integ" = feature ] && out="${out}${DIM} → ${RESET}${CYN}feat${RESET}"
     out="${out}${SEP}"
   fi
 fi
@@ -651,13 +672,14 @@ if [ "$wt_count" -gt 0 ]; then
     [ -n "$id" ] || continue
     [ "$first" -eq 1 ] && first=0 || out="${out}${DIM},${RESET}"
     out="${out} ${CYN}${id}${RESET}"
-    [ -n "$pct" ] && out="${out} ${YEL}${pct}%${RESET}"
+    [ -n "$pct" ] && out="${out}${DIM} ${pct}%${RESET}"
   done <<EOF
 $wt_rows
 EOF
   # Worktrees this plan cannot name, so `⚙` never under-reports what is checked out.
   if [ "$wt_extra" -gt 0 ]; then
-    [ "$first" -eq 1 ] && out="${out} ${wt_extra} wt" || out="${out}${DIM} +${wt_extra}${RESET}"
+    [ "$first" -eq 1 ] && out="${out}${DIM} ${wt_extra} wt${RESET}" \
+                       || out="${out}${DIM} +${wt_extra}${RESET}"
   fi
   out="${out}${SEP}"
 fi
