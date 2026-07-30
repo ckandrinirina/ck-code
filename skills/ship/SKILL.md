@@ -299,11 +299,14 @@ gh issue edit <story_issue> --add-label "has-bugfix"   # bug fix only
 
 ### 6.5 Promotion gate (levels `epic` and `feature` only)
 
-Runs after 6.1 regenerated the indexes — that is when the rollup becomes visible. Skip
-entirely at level `story`.
+Runs at the end of Phase 6 regardless of whether 6.1 did any work — 6.1 is **skipped** on the
+normal path (`/ck-code:build` Phase 8.6 already flipped the status), so this gate keys off
+project *state*, never off 6.1 having acted. Skip entirely at level `story`, and skip when
+6.1 determined the story is not yet fully done.
 
-**Detect from story frontmatter, never from an index cell:** the epic just reached DONE when
-every non-`skip` story of epic `NN` reads `status: done`.
+**Detect from story frontmatter, never from an index cell:** the epic has reached DONE when
+every non-`skip` story of epic `NN` reads `status: done`. Fire the gate only on the ship run
+that completes the epic — if the epic was already DONE and already promoted, say nothing.
 
 Then run the **epic gate**, and — when its condition holds — the **feature gate**, both
 defined with their staleness handling in
