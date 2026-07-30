@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.6.0] — 2026-07-30
+
+### Changed
+
+- **team**: generated skills are written to flat `.claude/skills/expert-<role>/` and
+  `guide-<tech>/` folders instead of nesting under `experts/` and `guides/`. Claude Code
+  discovers project skills at `.claude/skills/<skill-name>/SKILL.md` and takes the command
+  name from that directory, so the nested files were never registered as skills — no
+  `/expert-<role>` command existed and no guide auto-loaded outside a ck-code `build`/`fix`.
+- **skill-detection, qa-validation, build (parallel mode), plan, guide, workflow-map**: every
+  glob, `ls`, and `Read` path follows the flat layout.
+- **version-gate**: `LAYOUT` bumped to `v5` with a `NESTED` marker that detects the old
+  folders, plus its own BLOCK message; the stamp is now `layout: v5`.
+
+### Added
+
+- **migrate**: Phase S flattens the team skill folders with `git mv` (history preserved),
+  refuses to overwrite an existing flat folder, and reports every move. A v4 project needs
+  only this one step — its stories, epics and architecture docs are already current.
+
 ## [5.5.3] — 2026-07-30
 
 ### Changed
