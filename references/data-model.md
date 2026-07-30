@@ -96,7 +96,7 @@ design: planned
   `design` sets `pending`, `plan` flips it to `planned`. No separate ledger file, no
   dated design-record journal — git is the design history.
 
-Delta/journal docs are **not** written in v4. A change's history is its commits.
+Delta/journal docs are **not** written in v5. A change's history is its commits.
 `index.md` always holds current truth.
 
 ## Generated views (read-only, never hand-edited)
@@ -135,7 +135,7 @@ fast path; `migrate` writes it as its final step.
 
 ## What v3 had that v5 removes
 
-| v3 | v4 |
+| v3 | v5 |
 |---|---|
 | status cell-edited in story file + `STORIES_INDEX` + `FEATURE_INDEX` + `EPIC.md` | status in frontmatter only; views regenerated |
 | `sync` skill to repair story↔index↔epic drift | deleted — views are generated, nothing drifts |

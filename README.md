@@ -12,13 +12,13 @@
 
 Whether you're building a new project from scratch or adding a feature to an existing codebase, ck-code keeps the architecture, plan, and implementation in lock-step — so AI-generated code stays grounded in your real design.
 
-## One source of truth (v4)
+## One source of truth (v5)
 
-In v4, a story's state lives in **one** place: the YAML frontmatter of its story file
+In v5, a story's state lives in **one** place: the YAML frontmatter of its story file
 (`id, title, epic, status, size, blocked_by, files, issue, prior_status`). The
 `STORIES_INDEX.md` and `FEATURE_INDEX.md` you see are **generated read-only views**,
 regenerated from that frontmatter by `scripts/ck-index.sh`. Because a view is a pure
-function of the frontmatter, it can never drift — so v4 has no reconciler skill and no
+function of the frontmatter, it can never drift — so v5 has no reconciler skill and no
 hand-edited index tables. To change a story's status, a skill edits the frontmatter and
 regenerates; that's it.
 
@@ -56,10 +56,11 @@ Restart your Claude Code session and the `/ck-code:*` commands are available.
 
 Then restart your Claude Code session for the updated commands to take effect.
 
-## Upgrading a v3 project to v4
+## Upgrading an older project to v5
 
-v4 changes how story state is stored (frontmatter, not hand-maintained index tables), so
-it is a **breaking** layout change. Existing projects upgrade in one step:
+ck-code stores story state in story-file frontmatter and generates its index views, and
+`/ck-code:team` writes each generated skill to its own top-level folder. Projects created
+by an older ck-code upgrade in one step:
 
 ```bash
 /ck-code:migrate
@@ -343,7 +344,7 @@ Issues and pull requests welcome at [github.com/ckandrinirina/ck-code](https://g
 
 ## License
 
-MIT — see [LICENSE](LICENSE) if present, otherwise this notice constitutes the grant.
+MIT — see [LICENSE](LICENSE).
 
 ## Keywords
 

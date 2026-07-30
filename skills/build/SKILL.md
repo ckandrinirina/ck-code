@@ -1,6 +1,6 @@
 ---
 name: build
-description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a `status: bug` story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
+description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
 ---
@@ -141,7 +141,7 @@ If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuesti
 
 ### 1.5 Detect Linked GitHub Issue
 
-The story's `issue:` frontmatter field is the linkage (v4 uses the number, never a
+The story's `issue:` frontmatter field is the linkage (v5 uses the number, never a
 title-substring match). If `issue:` is set, present `Linked GitHub Issue: #<n>`; if empty,
 present `No linked issue found`. No `gh` search needed — `/ck-code:ship` re-reads the
 number from frontmatter itself.
@@ -420,7 +420,7 @@ automatically):
 "${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
 ```
 
-No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v4.
+No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v5.
 **DELEGATED MODE skips the regenerate** (see 1.6).
 
 ### 8.7 Ship (Commit + PR + Issue Updates)

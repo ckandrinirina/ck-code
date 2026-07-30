@@ -1,14 +1,14 @@
-# Migration Map — v3 (and older) → v4 Field Conversion
+# Migration Map — v3 (and older) → v5 Field Conversion
 
-Exact source→target mappings for `/ck-code:migrate`. The v4 target layout is defined in
+Exact source→target mappings for `/ck-code:migrate`. The v5 target layout is defined in
 [`data-model.md`](../../../references/data-model.md).
 
 ## Story fields
 
-v3 story files carry no frontmatter; state lives in prose. v4 prepends a frontmatter
+v3 story files carry no frontmatter; state lives in prose. v5 prepends a frontmatter
 block and keeps the body untouched.
 
-| v4 frontmatter key | v3 source | Conversion |
+| v5 frontmatter key | v3 source | Conversion |
 |---|---|---|
 | `id` | `# Story EE-SS: …` heading, or the `EE-SS` filename/index | keep `EE-SS` |
 | `title` | text after `# Story EE-SS:` | strip the `Story EE-SS:` prefix |
@@ -47,7 +47,7 @@ it when it sits cleanly on its own line, to avoid a stale second copy.
 
 `EPIC.md` gains frontmatter and loses its `## Stories` table (now generated).
 
-| v4 frontmatter key | v3 source |
+| v5 frontmatter key | v3 source |
 |---|---|
 | `epic` | parent folder `NN` |
 | `slug` | parent folder slug (`NN_<slug>` → `<slug>`) |

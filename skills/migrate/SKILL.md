@@ -18,7 +18,7 @@ pre-v5, nested and lite projects here. This skill itself never gates.
 skill folders); its stories, epics and architecture docs are already correct and Phases
 2–4 must not touch them.
 
-One-shot, idempotent, safe: an already-v4 project is a no-op that just (re)stamps. All
+One-shot, idempotent, safe: an already-v5 project is a no-op that just (re)stamps. All
 originals are converted in place behind a **single pre-migration commit** so the whole
 conversion is one revertable step. The field-by-field mapping and the pre-v3
 doc-layout conversion live in [references/migration-map.md](references/migration-map.md);
@@ -58,7 +58,7 @@ Report the detected source layout before converting.
 
 ## PHASE 2: CONVERT STORIES
 
-For every `tasks/*/epics/NN_<slug>/stories/*.md`, prepend v4 frontmatter derived from
+For every `tasks/*/epics/NN_<slug>/stories/*.md`, prepend v5 frontmatter derived from
 the v3 prose, then leave the body intact.
 
 **Dispatch decision first.** Count the story files and announce the branch **before
@@ -74,7 +74,7 @@ Use the mapping in
 - `status`: `TODO`→`todo`, `IN PROGRESS`→`in-progress`, `DONE`→`done`, `SKIP`→`skip`,
   `BUG`→`bug` (carry the recorded `Prior status` into `prior_status`).
 - `size`: `S`/`M` kept; **`L`/`XL`→`M`** and flag the story in the report as
-  "was L/XL — consider splitting" (v4 sizes are S/M only).
+  "was L/XL — consider splitting" (v5 sizes are S/M only).
 - `blocked_by`: the story IDs from the `## Dependencies` section as `[id, ...]` (or `[]`).
 - `files`: the paths from the `## Files to Create/Modify` table as `[path, ...]` (or `[]`).
 - `issue`: a `#NNN` reference found in the story, else empty. When `gh` is available and

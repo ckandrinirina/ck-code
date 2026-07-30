@@ -8,7 +8,7 @@ the files a story or bug touches.
 
 Architecture docs are **feature-scoped**: each feature owns a self-contained
 `docs/architecture/features/<slug>/index.md` with its components, APIs, data, and
-flows. A story reads its **own feature's doc**, not the whole architecture. v4 writes no
+flows. A story reads its **own feature's doc**, not the whole architecture. v5 writes no
 dated delta/journal docs (git is the history); if a pre-v4 project left some beside
 `index.md`, they are inert — `index.md` always carries current truth.
 
@@ -33,7 +33,7 @@ largest avoidable latency in `build`/`fix` Phase 2):
 is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run
 `/ck-code:design sync` to scaffold the missing feature doc. The retired layer docs
 (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) do not exist
-in a v4 project — the version gate migrates any pre-v4 project before this runs, and
+in a v5 project — the version gate migrates any pre-v5 project before this runs, and
 migrated originals live under `docs/architecture/archive/`. Never read them.
 
 Skip files absent on disk. Do NOT read `ROADMAP.md` here — it is loaded

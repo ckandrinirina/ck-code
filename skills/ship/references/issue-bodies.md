@@ -4,7 +4,7 @@ Used by PUBLISH MODE (SKILL.md Phases P5–P6). Read only the section for the se
 mode. Bracketed values are substituted from the plan map built in Phase P2. `sleep 1`
 between every `gh` call.
 
-**Write-back is the v4 linkage.** After creating an issue, write its number into the
+**Write-back is the v5 linkage.** After creating an issue, write its number into the
 matching frontmatter so SHIP MODE can resolve it by number:
 
 - an **epic** issue → `Edit` the epic's `EPIC.md` frontmatter `issue:` line (add it if

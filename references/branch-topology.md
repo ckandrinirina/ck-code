@@ -16,7 +16,7 @@ behaviour, so there is no migration and no layout bump.
 ## Branch names are derived, never stored
 
 A stored branch name is a second source of truth that can drift from git — the failure
-class the v4 generated-views design exists to eliminate.
+class the v5 generated-views design exists to eliminate.
 
 ```
 story branch    story/<EE>-<SS>-<kebab-case(title)>    fix/<EE>-<SS>-<slug> for a bug story

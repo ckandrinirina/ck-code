@@ -36,15 +36,22 @@ trap 'rm -f "$FEATURE_ROWS"; rm -rf "$ROW_CACHE"' EXIT
 trap 'exit 130' INT TERM
 
 # fm KEY FILE — print a frontmatter scalar (between the first --- fences).
+# Surrounding quotes are stripped: YAML 1.1 reads a bare `01` as octal, so a story
+# writer may legitimately quote `epic: "01"`. Left raw, that quote lands in the epic
+# folder glob below and silently blanks the Description and Docs cells.
 fm() {
   awk -v key="$2" '
+    function unquote(s) {
+      if (s ~ /^".*"$/ || s ~ /^'"'"'.*'"'"'$/) s = substr(s, 2, length(s)-2)
+      return s
+    }
     { sub(/\r$/,"") }
     FNR==1 && $0!="---" { exit }
     FNR==1 { next }
     $0=="---" { exit }
     { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1);
         gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v);
-        if(k==key){print v; exit} } }
+        if(k==key){print unquote(v); exit} } }
   ' "$1"
 }
 
@@ -61,6 +68,12 @@ emit_plan() {
   # shellcheck disable=SC2016
   printf '%s\n' "$files" | tr '\n' '\0' | xargs -0 awk -v plandir="$plandir" '
     function warn(msg) { print "ck-index: WARN — " msg > "/dev/stderr" }
+    # Strip surrounding quotes — see the fm() note above; a quoted `epic: "01"` would
+    # otherwise print as `"01"` in every generated cell and break the epic lookup.
+    function unquote(s) {
+      if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s = substr(s, 2, length(s)-2)
+      return s
+    }
     # Emit + accumulate when the closing frontmatter fence is reached (FILENAME is still correct here).
     function emit(   epicdir, eslug, edisp, n, parts, i, w, su, bl, relfile) {
       if (id=="") { warn(FILENAME ": missing id in frontmatter — story skipped"); return }
@@ -92,8 +105,8 @@ emit_plan() {
     infm && $0=="---" { infm=0; emit(); next }
     infm { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1);
              gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v);
-             if(k=="id")id=v; else if(k=="title")title=v; else if(k=="epic")epic=v;
-             else if(k=="status")status=v; else if(k=="size")size=v; else if(k=="blocked_by")blocked=v } }
+             if(k=="id")id=unquote(v); else if(k=="title")title=unquote(v); else if(k=="epic")epic=unquote(v);
+             else if(k=="status")status=unquote(v); else if(k=="size")size=unquote(v); else if(k=="blocked_by")blocked=v } }
     END {
       if (infm) warn(prevfile ": unterminated frontmatter — story skipped")
       for (e in edispOf) {

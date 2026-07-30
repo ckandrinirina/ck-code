@@ -204,7 +204,7 @@ Read [`references/commands.md`](references/commands.md).
 - `--command <name>` → print only that command's table row plus its examples.
 - `--command` (no name) → print the whole command table.
 
-If `<name>` is not a v4 command, say so and list the valid command names.
+If `<name>` is not a current command, say so and list the valid command names.
 
 ---
 

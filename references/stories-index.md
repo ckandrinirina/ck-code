@@ -29,7 +29,7 @@ frontmatter**, then regenerate the view in the same phase:
 "${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh" tasks/<slug>
 ```
 
-There is no cell-edit protocol and no cross-file reconciliation in v4: the view is a
+There is no cell-edit protocol and no cross-file reconciliation in v5: the view is a
 pure function of the frontmatter, so it cannot drift. Inside a `build` PARALLEL MODE
 worktree an agent edits only its own story's frontmatter; the orchestrator regenerates
 the views once on the target branch after merges.

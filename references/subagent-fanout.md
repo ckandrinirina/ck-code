@@ -75,7 +75,7 @@ The orchestrator (the skill thread) — never a subagent — does all of:
 
 - **User interaction** — every prompt, confirmation, and refinement runs to completion
   _before_ dispatch and _after_ collection. Subagents get already-resolved context.
-- **Shared writes** — in v4 the story-status indexes (`STORIES_INDEX.md`,
+- **Shared writes** — in v5 the story-status indexes (`STORIES_INDEX.md`,
   `FEATURE_INDEX.md`) are **generated views**, so a shared-index write means running
   `"${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh"` **once, in the orchestrator**, after it has
   merged the subagents' work and the story frontmatter is settled — never a subagent editing

@@ -1,6 +1,6 @@
 ---
 name: design
-description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet: dedup shared content into _shared.md) or `sync` (scaffold feature docs missing from FEATURE_INDEX). Argument is a spec path, or `optimize`/`sync`. Runs before `plan`.
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md) or `sync` (scaffold feature docs missing from FEATURE_INDEX). Argument is a spec path, or `optimize`/`sync`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync]"
 effort: high
 ---
@@ -15,7 +15,7 @@ The architecture is a few **global** docs (overview, folder-structure, tech-stac
 feature at `docs/architecture/features/<slug>/index.md`. Each feature doc carries
 frontmatter `slug: <slug>` and `design: pending`; a later `build`/`fix` story routes to
 the one doc it needs. There are **no journal/delta docs and no `DESIGN_LEDGER.md`** in
-v4 — git is the design history, and the `design:` flag (which `plan` flips to `planned`)
+v5 — git is the design history, and the `design:` flag (which `plan` flips to `planned`)
 is the whole design→plan bridge. The retired layer docs (`components.md`,
 `api-contracts.md`, `database-schema.md`, `data-flow.md`) are not generated — their
 content lives in each feature's doc so a story reads only that doc.
@@ -364,7 +364,7 @@ instead). Every line here is re-read by every story that touches the feature.
   the `optimize` measurement pass (PHASE O step 2).
 - **Never invent information** — mark anything undetermined `[TO BE DEFINED]`; `sync`
   scaffolds stubs only, it does not author technical detail.
-- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v4 has
+- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v5 has
   none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
   writes or updates is left `design: pending`; `plan` flips it to `planned`.
 - **Never hand-edit a generated view** (`FEATURE_INDEX.md`, `STORIES_INDEX.md`) — change the

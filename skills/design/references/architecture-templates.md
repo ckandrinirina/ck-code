@@ -7,7 +7,7 @@ from the spec and user answers.
 The architecture is **feature-scoped**: global docs describe the whole system, and
 each feature owns a self-contained slice (`features/<slug>/index.md`) holding its own
 components, APIs, data, and flows. `index.md` always holds the canonical current truth —
-in v4 there are **no dated delta/journal docs and no `DESIGN_LEDGER.md`**; git is the
+in v5 there are **no dated delta/journal docs and no `DESIGN_LEDGER.md`**; git is the
 history and the feature-doc `design:` frontmatter flag is the design→plan bridge.
 Cross-cutting infra lives once in `_shared.md`. The retired layer docs (`components.md`,
 `api-contracts.md`, `database-schema.md`, `data-flow.md`) are no longer generated — their
@@ -196,7 +196,7 @@ best practices (research via context7/WebSearch if needed).
 
 **File:** `docs/architecture/features/<slug>/index.md` — one per feature (= one epic).
 Self-contained: holds everything a `build`/`fix` story for this feature needs, so the
-story never opens another feature's doc. `index.md` is the canonical current truth — v4
+story never opens another feature's doc. `index.md` is the canonical current truth — v5
 writes no dated delta/journal siblings. `<slug>` matches the epic folder slug so
 `FEATURE_INDEX.Docs` can route to it.
 
@@ -279,7 +279,7 @@ do not duplicate their content here.]
 ```
 
 `index.md` holds current truth only — no per-change changelog. What changed and when is
-recorded by git commits, not by the doc. `build`/`fix` in v4 write only story files, never
+recorded by git commits, not by the doc. `build`/`fix` in v5 write only story files, never
 back into the feature doc.
 
 ---
