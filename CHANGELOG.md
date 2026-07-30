@@ -5,6 +5,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.1.0] — 2026-07-30
+
+Work no longer has to land one story at a time. An epic can be reviewed as a single PR, and a multi-epic feature as a single deliverable, chosen once per epic and then applied with no further prompts.
+
+### Added
+- **branch-topology** (`references/branch-topology.md`): new plugin-wide reference — the single definition of the three integration levels and everything derived from them (parent resolution, lazy branch creation, the `--no-ff` story merge and its conflict path, the promotion gates, cleanup). `ship`, `build` and `track` link to it and never restate it.
+- **EPIC.md frontmatter**: one new key, `integration: story|epic|feature` (empty ≡ `story`). It is the only stored state — branch names are **derived**, never stored, and an epic branch is looked up by its immutable number (`epic/<NN>-*`) so renaming an epic slug cannot orphan it. `plan`'s epic template now emits the key, and a lite migration leaves it empty.
+- **ship**: at level `epic`/`feature`, a finished story merges into its epic branch with `--no-ff` (so the epic PR reads story-by-story and `git log --first-parent` is a story list) and the merged story branch is deleted for you. Phase 5 stays **one** question; only its options change.
+- **ship**: a promotion gate fires the moment an epic rolls up to DONE — open the epic PR, or hold it back by merging into `feat/<plan-slug>`, which escalates the level on the spot and writes it back. The same gate one level up offers the feature PR. Staleness against the default branch is folded into that question rather than asked separately, and declining is never a dead end.
+- **ship**: `--promote [--epic NN]` runs the gate on demand; `--integration <level>` sets an epic's level without going through `build`.
+- **track**: renders a branch-topology tree — what sits where, what is unpushed or unmerged, and branches orphaned by a rename — shown only when some epic is non-`story`, so it stays quiet on projects that don't use the feature.
+
+### Changed
+- **build**: Phase 3.5 cuts the story branch from the resolved parent instead of the current branch, and asks the integration level as a **third field in the call it already makes** — once per epic, zero extra round-trips, never asked again.
+
+### Fixed
+- **build**: PARALLEL MODE froze `$TARGET` as whatever branch happened to be checked out, so a fan-out started from `main` merged every worktree branch straight into `main` with no gate. `$TARGET` is now resolved from the epic's integration level.
+
+### Compatibility
+No migration and no layout bump. An absent `integration:` key means `story`, which is byte-identical to previous behaviour on every existing project; the only visible change is one extra field in build's 3.5 question, once per epic.
+
 ## [5.0.4] — 2026-07-29
 
 ### Changed
