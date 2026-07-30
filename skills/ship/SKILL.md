@@ -194,7 +194,26 @@ Present hash, branch, file count, first message line.
 
 ### 5.1 Route by existing-PR detection
 
-Use `existing_pr` from Phase 1.2: found → **5.A** (push + update); none → **5.B** (create).
+Route on the Phase 1.3 level first, then on `existing_pr` from Phase 1.2.
+
+**Level `story` or empty** — unchanged: found → **5.A** (push + update); none → **5.B** (create).
+
+**Level `epic` or `feature`** — the story merges into `parent` instead of opening its own PR
+into the default branch. Ask **one** question:
+
+```
+Q: "Story <EE>-<SS> is committed. What next?"
+   > Merge into <parent>            local --no-ff merge, delete the story branch
+     Merge + push <parent>
+     Open a story PR into <parent>
+     Leave on story branch
+```
+
+Commands, the clean-tree guard and the conflict path are in
+[`branch-topology.md`](../../references/branch-topology.md#story-merge) — follow it exactly;
+do not improvise a merge here. **Open a story PR** runs 5.B with `--base <parent>` and
+**keeps** the story branch (the open PR needs it). An existing open PR for the story branch
+still routes to 5.A, whose base is already fixed.
 
 ### 5.A Update existing PR
 
