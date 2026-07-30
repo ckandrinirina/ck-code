@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.6.2] — 2026-07-30
+
+### Fixed
+
+- **build, plan, fix, ship, design, migrate, track**: `ck-index.sh` skips a malformed
+  story with a `ck-index: WARN` line on stderr, so one bad file can never block a whole
+  plan — but only `track` and `migrate` were told to report it. Any other skill that
+  regenerated the views dropped that story from every generated index **silently**: it
+  disappeared from the dashboard, from the epic rollup and from `next`-story selection
+  while its file stayed on disk, which reads as "completed" rather than "invisible".
+  `references/stories-index.md` now owns the relay contract and every skill that runs the
+  generator carries the rule.
+
 ## [5.6.1] — 2026-07-30
 
 Stability release — the LTS baseline for the v5 layout. No behaviour was added; this
