@@ -33,8 +33,10 @@ story prefixed by wave (`W1 · Implement 01-01: …`) when the Task tools are av
 For each wave, in order:
 
 1. **Confirm** — the P3 question call, `PROCEED / DROP A STORY / ABORT` for this wave.
-2. **Dispatch** this wave's stories through [parallel-mode.md](parallel-mode.md) P4 → P5
-   (integrity/resume) → P6 (conflict, intra-wave only) → P7 (QA). The worktrees are cut from
+2. **Dispatch** this wave's stories through [parallel-mode.md](parallel-mode.md) P4, then walk
+   each branch through P5 (integrity/resume) → P7 (QA) **as its agent returns** — those two are
+   per-branch and pipelined, never barriered on the wave. P6 (conflict, intra-wave only) is the
+   barrier: it starts once every branch has cleared P5. The worktrees are cut from
    the target branch's current HEAD, which already carries prior waves' merged code. A
    single-story wave inside a multi-wave run is still dispatched as a one-agent worktree run,
    never inline — its work has to land on the shared target like every other wave.

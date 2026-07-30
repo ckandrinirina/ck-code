@@ -18,11 +18,17 @@ detailed in its section below.
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
 | **P3** | Team gate (`ls .claude/skills/{experts,guides}/*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
 | **P4** | Dispatch the wave in a **single message**: one `Agent` per story, `isolation: "worktree"`, `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` prompt | Tier the model by reasoning complexity, never `size` |
-| **P5** | Integrity per returned branch → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
-| **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Every dry-run is aborted; nothing lands here |
-| **P7** | One `ck-code:qa-validator` per ✓ branch, single parallel message | Merge-eligible = ✓ complete + `QA: PASS` + conflict-free |
+| **P5** | Integrity per branch **the moment its agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
+| **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Cross-branch by construction — the wave's one barrier. Every dry-run is aborted; nothing lands here |
+| **P7** | One `ck-code:qa-validator` per ✓ branch, launched as that branch clears P5 | Merge-eligible = ✓ complete + `QA: PASS` + conflict-free |
 | **P8** | Merge in P6's order, regenerate the indexes **once**, post-merge `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never merge a branch that has not passed P7 |
 | **P9** | Re-resolve the next wave from the regenerated index and loop from P3 | A held story keeps its worktree and holds its dependents |
+
+**P5 and P7 are pipelined, P6 and P8 are barriers.** P5 and P7 judge one branch against
+itself, so each branch walks them as soon as its agent returns — the fastest story's QA runs
+while the slowest is still coding. P6 derives an order from the overlaps *between* branches
+and P8 merges into a moving `$TARGET`; neither can start on a partial set. Barriering P5 or
+P7 on the whole wave is the single largest avoidable delay in this mode.
 
 ## P1 — Freeze the target and resolve scope
 
@@ -114,6 +120,23 @@ they run concurrently. Per story (full prompt: [agent-prompts.md](agent-prompts.
 - A prompt beginning `MODE: delegated`, so the dispatched `build` run applies its
   DELEGATED MODE deltas (no branch question, no `ck-index.sh`, no manual gate, no ship).
 
+### Worktree dependency bootstrap
+
+Every worktree is a bare checkout — no `node_modules`, no `target/`, no `.venv`. N agents
+pay N cold installs and N cold compiles, routinely the largest slice of a parallel run's wall
+clock. The rule: **share immutable caches, never a mutable install tree** — a peer that
+changes a dependency must not be able to mutate another worktree mid-run.
+
+| Stack | Share this | Never |
+|---|---|---|
+| npm / yarn | pnpm's global store — `pnpm install` links a per-worktree `node_modules` over one immutable content store | One `node_modules` symlinked into every worktree |
+| Rust | `CARGO_TARGET_DIR=<absolute shared path>` — cargo file-locks it, so it is correct; concurrent builds then serialize on that lock, so measure before adopting | — |
+| Python | `UV_CACHE_DIR` / `PIP_CACHE_DIR` pointed at one shared path | One `.venv` shared across worktrees |
+
+Name the scheme in the dispatch prompt when the project has one, so every agent installs the
+same way. With no scheme, say so in the launch announce — the cold installs are then the
+expected cost, not a stall.
+
 ### Model tier — by reasoning complexity, never `size`
 
 Default every story to **`balanced` (Sonnet)**. Escalate to **`advanced` (Opus)** only on a
@@ -130,8 +153,9 @@ dispatch and `completed` when it merges and passes its gate. `TaskList` at P5, P
 
 ## P5 — Integrity and resume
 
-When all agents return, verify each objectively — the failure to catch is an agent that did
-nothing yet reported success. For each story, using its returned `branch` and story path:
+Verify each branch **the moment its agent returns** — never hold a returned branch waiting on
+the wave. The failure to catch is an agent that did nothing yet reported success. For each
+story, using its returned `branch` and story path:
 
 ```bash
 git diff --shortstat "$TARGET".."<branch>"                     # empty → 🚫 no implementation
@@ -155,6 +179,9 @@ Never trust the agent's word; a story is done only when this gate and P7 QA agre
 
 ## P6 — Conflict analysis (dry-run stage, before any merge)
 
+**The wave's one barrier** — starts only once every branch has cleared P5, and runs while the
+P7 QA already dispatched is still in flight. It never waits for QA.
+
 Delegate the ✓-complete branches to `ck-code:conflict-analyzer` (falls back inline): it
 dry-run `git merge --no-commit`s each branch onto `$TARGET`, classifies risk, and returns a
 merge order (fewest overlaps first) — aborting every dry-run so nothing lands. Print the
@@ -163,8 +190,11 @@ cleanly." One branch → nothing to compare; skip.
 
 ## P7 — QA, one validator per branch
 
-Dispatch one `ck-code:qa-validator` agent (Haiku tier) per ✓-complete branch, in a single
-parallel message — each runs its stack's build/test/lint in its own cheap context and returns
+Dispatch one `ck-code:qa-validator` agent (Haiku tier) per ✓-complete branch **as soon as that
+branch clears P5** — batch whatever branches cleared in the same turn into one message, but
+never hold a cleared branch waiting on a slower peer (the P4 single-message rule governs the
+implementer fan-out, not this one). QA judges a branch against itself, so it needs no other
+branch. Each runs its stack's build/test/lint in its own cheap context and returns
 a compact `QA: PASS` / `QA: FAIL — <cmd> — <excerpt>` verdict, keeping the heavy output off
 this context (prompt: [agent-prompts.md](agent-prompts.md)). Resolve each story's commands
 from the component its `files:` touch — detect the stack from that directory's manifest:
