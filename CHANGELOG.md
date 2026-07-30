@@ -5,6 +5,41 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.6.1] — 2026-07-30
+
+Stability release — the LTS baseline for the v5 layout. No behaviour was added; this
+fixes three defects that were shipping silently and aligns every version label on v5.
+
+### Fixed
+
+- **build, design**: a `": "` inside the unquoted `description:` made the whole YAML
+  frontmatter unparseable, so `name`, `description`, `argument-hint` and `effort` were
+  all discarded and neither skill registered correctly. Both descriptions are rephrased,
+  and `update-skill` now gates every release on a frontmatter parse check.
+- **session-start hook**: compared `tasks/VERSION.md` against `layout: v4` while every
+  skill gates on `v5`, so a correctly-migrated project was told to run `/ck-code:migrate`
+  at every session start and never received its story-count summary. The layout constant
+  is now named in the script and tracks `references/version-gate.md`.
+- **session-start hook**: a story title containing a `|` shifted the status column, so
+  that story was dropped from the TODO/IN PROGRESS/DONE/BUG counts. Escaped pipes are
+  neutralised before the split.
+- **ck-index.sh**: quoted frontmatter (`epic: "01"` — a natural way to protect a leading
+  zero from YAML 1.1 octal parsing) leaked its quotes into every generated cell and broke
+  the `EPIC.md` lookup, blanking the `Description` and `Docs` columns of
+  `FEATURE_INDEX.md`. Frontmatter scalars are now unquoted on read.
+
+### Changed
+
+- **docs**: labels describing the *current* layout said `v4`; aligned on `v5` across the
+  skills, shared references, migration maps and README. Genuine v3→v4 and v4→v5 history
+  is left intact.
+- **migrate**: corrected the claim that an already-`v4` project is a no-op — it still
+  needs Phase S to flatten the team-skill folders.
+
+### Added
+
+- **LICENSE**: the MIT text the README and `plugin.json` already referenced.
+
 ## [5.6.0] — 2026-07-30
 
 ### Changed
