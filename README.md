@@ -253,6 +253,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
 | `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v5 **or ck-code-lite** project to the v5 layout (frontmatter + generated indexes + flat team-skill folders); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
+| `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
 
 ## Why ck-code?
 

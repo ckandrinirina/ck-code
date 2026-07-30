@@ -150,6 +150,7 @@ becomes the "Alternative".
 | A bug, crash, regression, "something is broken" in built code | `/ck-code:fix` |
 | Committing, opening a PR, publishing to GitHub Issues, "ship it", delivering work | `/ck-code:ship` |
 | Explaining what was just built or how to verify it | `/ck-code:explain` |
+| Something is wrong with the project itself — stale indexes, a story that vanished, "why is this broken" | `/ck-code:doctor` |
 | The project is on an old (pre-v5) layout and needs upgrading | `/ck-code:migrate` |
 | "I don't have a task — just tell me what's next" | run `/ck-code:guide` with no argument (Mode A) |
 
@@ -176,7 +177,7 @@ First matching rule:
 | `ship` | no implemented work on the branch | `/ck-code:build` or `/ck-code:fix` (then ship) |
 | `fix` | the "bug" is actually new functionality | `/ck-code:plan --quick` (add a story), then `build` |
 
-Skip this step for read-only intents (`track`, `explain`, `migrate`, `spec`, `design`).
+Skip this step for read-only intents (`track`, `explain`, `doctor`, `migrate`, `spec`, `design`).
 
 ### B.3 Output
 

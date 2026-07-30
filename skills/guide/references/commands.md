@@ -22,6 +22,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `fix` | `[story-path]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
 | `ship` | `[story-path] [--issues]` | Commit, open PR, mirror plan/implementation to GitHub Issues | git + GitHub |
 | `migrate` | — | Upgrade a pre-v5 **or ck-code-lite** project to the v5 layout (frontmatter + flat team-skill folders), then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
+| `doctor` | `[tasks/<slug>] [--quiet]` | Report what is broken in this project — layout stamp, story frontmatter, index drift, dependencies, feature docs, team skills | read-only |
 | `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
 
 ## Examples
