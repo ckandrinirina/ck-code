@@ -1,7 +1,7 @@
 ---
 name: ship
-description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). Issue work needs `gh` authenticated.
-argument-hint: "[path-to-story.md] | --to-issues [tasks-folder] [--mode feature|epics|stories]"
+description: Use to commit finished work, open or update a PR, and update the linked GitHub Issue after a story or fix is complete — or for any standalone commit. With `--to-issues [--mode feature|epics|stories]`, instead publishes a `tasks/` plan to GitHub Issues at feature, epic, or story granularity and writes each new issue number back into story/epic frontmatter. Argument is an optional story path (default) or a `tasks/<slug>/` path (`--to-issues`). With `--promote`, opens the PR for a completed epic or feature branch; with `--integration`, sets an epic's integration level. Issue work needs `gh` authenticated.
+argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
 ---
 
@@ -33,6 +33,12 @@ Parse `$ARGUMENTS`:
 
 - Contains `--to-issues` → **PUBLISH MODE** (bottom half of this file). Also parse an
   optional `tasks/<slug>/` path and `--mode feature|epics|stories` (any order).
+- Contains `--promote` → **PROMOTE MODE** (§6.5 on demand). Also parse an optional
+  `--epic NN`. Mutually exclusive with `--to-issues` — if both appear, say so and stop.
+- Contains `--integration <story|epic|feature>` → write that level to the epic's `EPIC.md`
+  and stop (optionally scoped by `--epic NN`). Writes the field only: creates no branch and
+  moves nothing. A level change is **not** retroactive — it applies from the next story
+  onward; say so when stories are already merged.
 - Otherwise → **SHIP MODE** (default). `$ARGUMENTS` may be a story-file path:
   - **Provided** → read the story for its frontmatter `issue:` and context.
   - **Empty** → detect context from branch name or recent git activity; if none, run as a standalone commit (STANDALONE MODE).
@@ -80,6 +86,16 @@ Store as `existing_pr`:
 - **Multiple** (rare) → show the list, ask which to update (or `NONE` to open new).
 
 If `gh` is missing or unauthenticated, treat as "no existing PR" and continue.
+
+### 1.3 Resolve branch topology
+
+Read the parent epic's `EPIC.md` frontmatter `integration:` (absent or empty ≡ `story`),
+then resolve `parent` and `pr_base` per
+[`branch-topology.md`](../../references/branch-topology.md#resolution) — one file read plus
+one `git branch --list`. Do not restate the rule here.
+
+At `story` the parent is the default branch and Phases 5–7 behave exactly as before.
+**STANDALONE MODE skips this step** — no story means no epic, so no topology.
 
 ## PHASE 2: GATHER CONTEXT
 
