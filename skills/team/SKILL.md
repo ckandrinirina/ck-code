@@ -17,6 +17,7 @@ aware of the project's tech stack, patterns, folder structure, and conventions.
 - `expert-<role>/SKILL.md` — expert-persona skills, invoked as `/expert-<role>`
 - `guide-<tech>/SKILL.md` — language/framework/library guides, auto-loaded by Claude
 - `guide-conventions/SKILL.md` — the project's house-rules guide (offered inline at [2.4](#24-present-the-plan-and-settle-house-conventions); also `--conventions` alone)
+- `guide-design-system/SKILL.md` — the project's Claude Design system contract. Generated **only** when `docs/architecture/design-system/index.md` exists; absent otherwise, and dropped by `--regenerate` once the user deletes that directory
 
 **One skill, one top-level folder — never nest.** Claude Code discovers project skills at
 `.claude/skills/<skill-name>/SKILL.md` and takes the command name from that directory, so a
@@ -130,6 +131,13 @@ Per target path, in **every** generation and `--regenerate` run:
 So a user protects a whole file by removing its marker line, or protects an addition
 inside a team-owned file by wrapping it in a MANUAL fence. `--conventions` and `--new`
 never write the GENERATED marker, so their output is protected forever.
+
+`guide-design-system` is the one exception to "regeneration only adds": when
+`docs/architecture/design-system/` has been deleted, `--regenerate` **removes** it (rule 3
+targets, marker present), because the directory's absence is the integration's off switch
+and a stale guide would keep enforcing tokens that no longer have a source. A
+`guide-design-system` whose marker the user removed is PROTECTED like any other file —
+report it as preserved and let the user delete it.
 
 ---
 
@@ -415,6 +423,50 @@ cover. A guide that cannot fit is covering more than one surface — split the s
 decision back to 2.2, never pad the file. These skills are loaded into every `build`/`fix`
 session that touches their paths: every line is a recurring cost.
 
+### 3.4 Design-system guide contract (conditional)
+
+**Skip entirely** when `docs/architecture/design-system/index.md` does not exist. That
+absence is the integration's off switch — do not create the guide, do not mention it, do
+not ask. Most projects have no design system and must see nothing.
+
+When it exists, read it plus [`design-system.md`](../../references/design-system.md) and
+write `.claude/skills/guide-design-system/SKILL.md` (GENERATED marker as the first body
+line, `user-invocable: false`, same merge rule as every other guide):
+
+```markdown
+---
+name: guide-design-system
+description: Use when writing or changing UI in this project — components, styles, themes, or layout. Carries the project's Claude Design system tokens, component inventory, and the rules that keep generated UI exact against it.
+paths: [UI globs derived from folder-structure.md and tech-stack.md]
+keywords: [ui, component, style, css, theme, layout, design]
+user-invocable: false
+---
+
+# Design System — [project name]
+
+Cached at `docs/architecture/design-system/`. Refresh with `/ck-code:design ds`.
+
+## Tokens
+[the full ## Foundations table from index.md, verbatim]
+
+## Components
+[the full ## Components table from index.md, verbatim]
+
+## Before implementing a component
+[the three numbered steps from design-system.md § Component lookup order, verbatim]
+
+## Rules
+[the four rules from design-system.md § Fidelity rules, verbatim]
+```
+
+The tables are copied **verbatim**, never summarized: this guide is what sits in context
+during a build, and a paraphrased token value produces wrong UI. It is therefore exempt
+from the 150-line guide budget — an inventory is data, not prose, and truncating it
+silently drops components. Derive `paths:` from the project's real UI locations (e.g.
+`src/components/**`, `src/app/**/*.tsx`, `**/*.css`, `**/*.vue`); a `paths` match is the
+authoritative load signal in
+[`skill-detection.md`](../../references/skill-detection.md) Step 2.
+
 ---
 
 ## PHASE 4: POST-GENERATION
@@ -522,7 +574,7 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 - **Never invent conventions** — CAPTURE records only rules the user states or the code demonstrably follows; an empty area stays empty.
 - **Never enter PHASE C twice in one run** — inline (2.5) and standalone (`--conventions`) are mutually exclusive entry points; inline never re-scans what Phase 1.3 already read, and no skill file is written until the 2.4 gate and 2.5 have both resolved.
 - **Never ship a skill whose detection signal is absent**, whatever the tier: tier gates breadth, detection gates relevance.
-- **Never exceed the size budget** — guides ≤ 150 lines, experts ≤ 120 (3.3). Never generate overlapping guides for one surface (2.2), and never declare a generated skill always-on beyond `expert-qa`/`expert-qa-project`/`expert-analyst`/`guide-conventions` (2.3).
+- **Never exceed the size budget** — guides ≤ 150 lines, experts ≤ 120 (3.3); `guide-design-system` is exempt because its tables are verbatim data (3.4). Never generate overlapping guides for one surface (2.2), and never declare a generated skill always-on beyond `expert-qa`/`expert-qa-project`/`expert-analyst`/`guide-conventions` (2.3).
 - **Never leave a `[bracketed placeholder]`** or an unresolved `[PROJECT CONTEXT BLOCK]` in a generated skill.
 - **Never run a `Workflow` without the full opt-in gate** — tool present, explicit `--workflow` signal, and the phase's threshold met. Missing any one → the `Agent` path. The workflow path is never the only way a phase can execute.
 - **Always keep this generator project-agnostic** — it reads project context dynamically and injects it.
