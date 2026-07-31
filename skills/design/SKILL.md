@@ -1,9 +1,9 @@
 ---
 name: design
-description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md) or `sync` (scaffold feature docs missing from FEATURE_INDEX). Argument is a spec path, or `optimize`/`sync`. Runs before `plan`.
-argument-hint: "[path-to-spec | optimize | sync]"
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds` (link and refresh a Claude Design system cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
+argument-hint: "[path-to-spec | optimize | sync | ds]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*)
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -21,12 +21,13 @@ is the whole design→plan bridge. The retired layer docs (`components.md`,
 `api-contracts.md`, `database-schema.md`, `data-flow.md`) are not generated — their
 content lives in each feature's doc so a story reads only that doc.
 
-**Four modes** (chosen by `$ARGUMENTS`):
+**Five modes** (chosen by `$ARGUMENTS`):
 
 - **New Project** (spec path, or empty) — generate global docs + one feature doc per feature.
 - **Feature** (spec path, docs already exist) — add or extend one feature doc, globals kept consistent.
 - **optimize** (maintenance) — measure per-doc tokens, dedup repeated content into `_shared.md`.
 - **sync** (maintenance) — scaffold feature docs for features in `FEATURE_INDEX` that lack one.
+- **ds** (optional) — link a Claude Design system and refresh its git-tracked cache.
 
 ## ROUTING CHECK (do first)
 
@@ -74,9 +75,10 @@ Read `$ARGUMENTS`:
 
 - `optimize` → go to **PHASE O** (skip the design flow).
 - `sync` → go to **PHASE S** (skip the design flow).
+- `ds` → go to **PHASE DS** (skip the design flow).
 - a spec path, or empty → the **design flow** below (New Project / Feature).
 
-A maintenance mode is a hard scope — never run `optimize`/`sync` work in a design run, or
+A maintenance mode is a hard scope — never run `optimize`/`sync`/`ds` work in a design run, or
 vice versa.
 
 ---
@@ -182,6 +184,14 @@ Fill gaps and clarify ambiguities through adaptive questioning.
 - **New Project Mode:** use the priority-ordered bank (Architecture & Components → Tech
   Stack → Data Flow & APIs → Database & State → Configuration → Build & Run →
   Non-Functional).
+
+**Design-system offer (New Project Mode only, at most once).** When the answers so far put a
+UI in the stack AND `docs/architecture/design-system/` does not exist, append the
+design-system option to an existing question round — never as a standalone prompt, never in
+Feature Mode. Wording: [references/qna-examples.md](references/qna-examples.md) § Design
+system offer. Skip is a first-class answer and writes nothing; on accept, run
+[PHASE DS](#phase-ds-claude-design-system-optional) after Phase 3 completes, so the
+architecture docs exist first.
 
 Full wording of every question and the CLEAR/PARTIAL confirmation phrasing:
 [references/qna-examples.md](references/qna-examples.md).
@@ -353,6 +363,32 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
    Documents table.
 6. Report: docs scaffolded, renamed, and any features still lacking real design content (the
    stubs) so the user knows what needs a `/ck-code:design` pass.
+
+---
+
+## PHASE DS: CLAUDE DESIGN SYSTEM (optional)
+
+Link a `claude.ai/design` design system to this project and keep a git-tracked cache of it
+current, so `build` reproduces its components exactly. Entirely optional — a project that
+never runs this is unaffected by it.
+
+[`design-system.md`](../../references/design-system.md) owns the procedure. Do not restate
+its rules here; run them.
+
+1. **Tool check.** If the `DesignSync` tool is unavailable in this session, print the one
+   line from [§ When DesignSync is unavailable](../../references/design-system.md#when-designsync-is-unavailable)
+   and STOP cleanly. Never error.
+2. **Branch on `docs/architecture/design-system/`:**
+   - **Absent** → run [§ Linking a project](../../references/design-system.md#linking-a-project)
+     steps 1–7. `mkdir -p docs/architecture/design-system/cards` before the first write.
+   - **Present** → run [§ Freshness protocol](../../references/design-system.md#freshness-protocol)
+     from Tier 0. Announce which tier the run started at in one line.
+3. **Report** with the DS Sync Report block in
+   [references/qna-examples.md](references/qna-examples.md). A Tier-0 stop reports
+   `up to date — 1 call` and nothing else.
+4. **Next step.** When this run created the cache for the first time, close with: run
+   `/ck-code:team --regenerate` so `guide-design-system` is generated and UI stories pick up
+   the fidelity rules automatically.
 
 ---
 

@@ -218,3 +218,32 @@ Note: Existing content is preserved. New feature sections are clearly marked wit
 2. Run `/ck-code:team` to refresh expert + guide skills for this feature's stack
 3. Then `/ck-code:plan` to generate epics and stories for this feature
 ```
+
+---
+
+## Design system offer
+
+Appended as one extra option to an existing New Project Mode refinement round. Never a
+standalone prompt.
+
+```
+Question: Do you want UI built against a Claude Design system?
+Header:   Design system
+Options:
+  - Link a design system — I have one at claude.ai/design. ck-code caches it in the repo
+    and builds every component against its exact tokens and markup.
+  - Skip — build UI from the architecture docs alone. You can link one later with
+    /ck-code:design ds.
+```
+
+## DS Sync Report
+
+```
+=== DESIGN SYSTEM SYNC ===
+Project:    [name] ([projectId])
+Started at: Tier [0|1] ([reason])
+Result:     [up to date — 1 call | 3 cards added, 1 changed, 0 removed]
+Tokens:     [n] extracted ([m] low-confidence — confirm the ⚠️ rows)
+Cached:     [n] cards, [size]
+Next:       ['/ck-code:team --regenerate' on first sync | nothing to do]
+```
