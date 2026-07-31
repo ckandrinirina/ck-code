@@ -4,7 +4,7 @@
 
 **ck-code** is an open-source [Claude Code plugin](https://www.anthropic.com/claude-code) that brings spec-driven development to AI-assisted software engineering. Feed it a project specification and it will:
 
-1. **Design** — refine your spec into a complete set of architecture documents (global docs like folder structure and tech stack, plus one self-contained doc per feature covering its components, APIs, and data)
+1. **Design** — refine your spec into a complete set of architecture documents (global docs like folder structure and tech stack, plus one self-contained doc per feature covering its components, APIs, and data), plus an optional Claude Design system cache the build reproduces exactly
 2. **Plan** — break the architecture into epics and single-dispatch stories (each sized S/M so one agent finishes it in a pass) with explicit dependencies
 3. **Team** — derive a project-tailored team of expert and language-guide skills from your architecture, generating only the roles the project needs, at a depth you choose (`--basic` / `--standard` / `--max`), and capture your own house conventions in the same run (offered at the plan prompt — no second command)
 4. **Build** — implement each story using test-driven development (TDD), SOLID principles, and a built-in dev-QA validation loop
@@ -32,6 +32,7 @@ regenerates; that's it.
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
 - **SOLID principle checks** — every implementation is reviewed against the five principles
 - **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
+- **Claude Design system fidelity (optional)** — link a [claude.ai/design](https://claude.ai/design) design system with `/ck-code:design ds`; ck-code caches its tokens and component sources into the repo, generates a `guide-design-system` skill that auto-loads on UI stories, and builds components exactly against it. Fully offline after one sync, and entirely absent from projects that never opt in
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
 - **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
