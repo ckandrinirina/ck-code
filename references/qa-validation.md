@@ -99,6 +99,24 @@ calling skill's completion phase.
 Exact wording for the escalation lives in the calling skill's references
 (`build/references/output-blocks.md` or `fix/references/qa-dialogue.md`).
 
+## Design fidelity (conditional)
+
+**Skip entirely** when `docs/architecture/design-system/index.md` does not exist, or when
+the story touched no UI files. No design system means no fidelity check.
+
+When both hold, add these to the normal findings — they are ordinary QA findings inside the
+existing iteration cap of 3, never a new gate type:
+
+1. **Hardcoded value** — a literal hex, `rgb()`, `px` font-size, `font-family`, radius, or
+   spacing value in a changed UI file where `## Foundations` defines a token. Cite
+   `file:line` and the token that should have been used.
+2. **Unread card** — a component implemented in this story that maps to an inventory card
+   whose cached source was never read. Its markup is unverified against its source.
+3. **Undeclared new component** — a UI component with no matching card and no line in the
+   story's `## Unplanned Changes` explaining it.
+
+Rules and lookup order: [`design-system.md`](design-system.md) § Fidelity rules.
+
 ## Rules
 
 - **Iteration cap is 3.** Never silently continue past iteration 3 —

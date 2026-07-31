@@ -27,7 +27,10 @@ largest avoidable latency in `build`/`fix` Phase 2):
 
 **On-demand globals** (read only when the work clearly touches them, not by default):
 `dev-guide.md` for setup/build/run changes; `tech-stack.md` for `docker/`, `.github/`,
-`ci/`, `deploy/`; `configuration.md` for config-file changes.
+`ci/`, `deploy/`; `configuration.md` for config-file changes;
+`design-system/index.md` for stories touching UI files (components, styles, themes,
+layout) — when that file is absent the project has no design system and nothing is read,
+see [`design-system.md`](design-system.md).
 
 **Fallback when the feature doc is unavailable** — the `Docs` cell is `—` or the file
 is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run
