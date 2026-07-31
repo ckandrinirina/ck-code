@@ -282,6 +282,48 @@ check_branches() {
   fi
 }
 
+# ---- 8. design-system cache --------------------------------------------------
+# Local integrity only — never a network call. The design system is optional, so an
+# absent directory prints no row at all: most projects have none and must see nothing.
+check_design_system() {
+  local ds=docs/architecture/design-system
+  [ -d "$ds" ] || return 0
+  if [ ! -f "$ds/manifest.json" ]; then
+    row "design system" "cards/ present, manifest.json missing" WARN
+    note "run /ck-code:design ds to rebuild the cache manifest"
+    return 0
+  fi
+  if ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$ds/manifest.json" 2>/dev/null; then
+    row "design system" "manifest.json is not valid JSON" WARN
+    note "run /ck-code:design ds to rebuild the cache manifest"
+    return 0
+  fi
+  local bad="" n=0
+  while IFS=$'\t' read -r path want; do
+    [ -n "$path" ] || continue
+    n=$((n+1))
+    local f="$ds/cards/$path" got
+    if [ ! -f "$f" ]; then
+      bad="$bad$path: recorded as cached but the file is missing"$'\n'
+      continue
+    fi
+    got=$(shasum -a 256 "$f" 2>/dev/null | awk '{print $1}')
+    [ "$got" = "$want" ] || bad="$bad$path: digest differs from manifest"$'\n'
+  done < <(python3 -c '
+import json,sys
+for c in json.load(open(sys.argv[1])).get("cards", []):
+    if c.get("cached") and c.get("sha256"):
+        print("%s\t%s" % (c["path"], c["sha256"]))
+' "$ds/manifest.json" 2>/dev/null)
+  if [ -n "$bad" ]; then
+    row "design system" "$(printf '%s' "$bad" | grep -c .) of $n cached card(s) drifted" WARN
+    printf '%s' "$bad" | sed '/^$/d;s/^/                   ✗ /'
+    note "run /ck-code:design ds to refresh the cache"
+  else
+    row "design system" "$n cached card(s) verified" OK
+  fi
+}
+
 # ---- run ---------------------------------------------------------------------
 echo
 if [ -n "$ONLY_PLAN" ] && [ ! -d "$ONLY_PLAN" ]; then
@@ -295,6 +337,7 @@ check_deps
 check_docs
 check_team
 check_branches
+check_design_system
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."
