@@ -5,6 +5,48 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.9.0] — 2026-07-31
+
+Optional integration with Claude Design (`claude.ai/design`). A project can link a design
+system once; ck-code then caches it in the repo and builds UI exactly against its tokens
+and component sources — offline, and with a single API call when nothing has changed.
+Projects that never link one are untouched: the absence of
+`docs/architecture/design-system/` is the whole off switch.
+
+### Added
+
+- **design**: `ds` mode (`/ck-code:design ds`) links a Claude Design system and caches its
+  tokens and component sources under `docs/architecture/design-system/`. The cache is
+  git-tracked on purpose — parallel builds run in separate worktrees, and a gitignored
+  cache would make every agent re-download it. Freshness is tiered: an unchanged system
+  costs one `list_projects` call and stops there.
+- **team**: generates `guide-design-system` when a design system is cached, carrying the
+  token table and component inventory **verbatim** so UI stories load them automatically
+  through the existing `paths:` auto-load. Exempt from the 150-line guide budget — an
+  inventory is data, and truncating it silently drops components.
+- **build/fix**: UI stories read the cached design system as an on-demand global and port
+  component markup exactly; QA flags hardcoded values where a token exists, components
+  built without reading their cached source, and undeclared new components.
+- **doctor**: `ck-doctor.sh` verifies the design-system cache locally — every card recorded
+  as cached exists and matches its manifest `sha256`. WARN only, and silent when no design
+  system is present.
+- **references/design-system.md**: new plugin-wide procedure owning the cache layout,
+  freshness protocol, component lookup order, and fidelity rules.
+
+### Notes
+
+- Pull-only. ck-code calls the `DesignSync` read methods and never writes to a design
+  system, so no permission prompt originates from ck-code.
+- After one sync the integration needs no tool, no login, and no network — the git-tracked
+  cache is what `build` reads.
+- Remote-drift detection deliberately lives in `design ds`, not `doctor`: `doctor` is
+  read-only, allowlisted to `Bash(ck-doctor*)`, and runs forked, so it cannot make a
+  network call. It reports local cache integrity instead.
+- Not an architecture-layout change — the new directory is additive and optional, and
+  feature discovery is scoped to `features/`, so no `LAYOUT` bump and no `migrate` update.
+- `lite-migration.md` re-checked: mapping still holds, ck-code-lite has no design-system
+  counterpart.
+
 ## [5.8.0] — 2026-07-30
 
 An audit of the plugin against the current Claude Code plugin and skill specifications.
