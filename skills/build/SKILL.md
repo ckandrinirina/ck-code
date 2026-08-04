@@ -283,8 +283,8 @@ Answering `story` writes the literal `story`, so the question never returns for 
 
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
 touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the branch
-question** — the harness already placed the run on its worktree branch — but still presents
-the plan.
+question** — the run is already on the branch the orchestrator chose (worktree or solo) — but
+still presents the plan.
 
 ---
 
@@ -360,7 +360,7 @@ QA reviews the work — this is **not** a self-review.
 **Always delegate to the `ck-code:qa-validator` agent** (Haiku) — it absorbs the verbose
 suite/build/lint output in its own context and returns a compact verdict. Run the heavy
 commands inline **only** when that subagent_type is unregistered, or in DELEGATED MODE
-(where the orchestrator runs `qa-validator` per branch instead).
+(where the orchestrator runs `qa-validator` per story instead).
 
 Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../references/qa-validation.md)
 — it loads the QA experts, validates every acceptance criterion, runs the suite +
@@ -455,9 +455,18 @@ returns its verdict.
 
 ## PARALLEL MODE
 
-Two or more stories of **one epic** at a time, each in its own git worktree. This context
-**decides, verifies, and merges** — it never builds, tests, or reads source itself; a
-sub-agent's context is discarded on return, this one is re-paid every turn.
+Stories of **one epic**, dispatched wave by wave. This context **decides, verifies, and
+merges** — it never builds, tests, or reads source itself; a sub-agent's context is discarded
+on return, this one is re-paid every turn.
+
+**Every story in this mode is implemented by a dispatched agent — never inline here.**
+
+**Isolation follows wave width, not mode.** A wave holding **≥ 2** stories fans out one
+worktree agent per story (`isolation: "worktree"`), then conflict-checks and merges them. A
+wave holding **exactly one** story is dispatched **solo**: one agent in the **main checkout**,
+no worktree, no cross-branch conflict stage, nothing to merge between branches. A worktree
+exists to keep concurrent agents off each other's files; with no peer there is nothing to
+isolate from, and the cold dependency install it forces is pure cost.
 
 **Scope is exactly one epic — never a feature.**
 
@@ -470,31 +479,36 @@ not a lookup: nothing here substitutes for it. It pulls in its own companions as
 [conflict-format.md](references/conflict-format.md) report shapes). Dispatches also follow the
 shared contract in [subagent-fanout.md](../../references/subagent-fanout.md) — single-message
 dispatch, explicit `model:` on every call, typed-schema returns — and P4 **announces the
-decision** (`Fan-out: N stories → dispatching N agents.`) before the first dispatch.
+decision** before the first dispatch (`Fan-out: N stories → dispatching N agents.`, or
+`Solo: 1 story → dispatching 1 agent on <branch> (no worktree).`).
 
 The three gates that bind even before that read: **P3** never dispatches into a project with
 zero skills without asking (agents cannot prompt) · **P5** derives "done" from git, never from
-an agent's self-report · **P7/P8** never merge a branch that has not returned `QA: PASS`.
+an agent's self-report · **P7/P8** never accept work that has not returned `QA: PASS`.
 
 ---
 
 ## DELEGATED MODE
 
-Active only when the dispatch prompt begins `MODE: delegated`. The harness has already placed
-this run in its own worktree on its own branch, and there is no user to ask.
+Active only when the dispatch prompt begins `MODE: delegated`. The run is already on the
+branch it must work on — its own harness-created worktree (fan-out), or the branch the
+orchestrator checked out in the main checkout (solo dispatch, where the prompt names it and
+asks for the branch guard first). Either way the branch is not this run's to choose, and there
+is no user to ask.
 
 | Phase | Change |
 |---|---|
 | 1.1–1.2 | Skipped — the story path is given. |
 | 1.4 | Skipped — never offer waves from inside a wave. |
-| 1.6 / 8.6 | Edit **this story's frontmatter only**; never run `ck-index` and never touch a generated index — the orchestrator regenerates once on the target after merge. |
-| 3.5 | Present the plan; no branch question — the harness owns the branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
+| 1.6 / 8.6 | Edit **this story's frontmatter only**; never run `ck-index` and never touch a generated index — the orchestrator regenerates once on the target after the wave. |
+| 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
 | 4–6 | Unchanged. RED still gates GREEN. |
-| 7 | Run the QA commands inline; never delegate to `qa-validator` — the orchestrator runs one per branch. |
-| 8.5 | Skipped — manual sign-off happens once on the target after merge. |
+| 7 | Run the QA commands inline; never delegate to `qa-validator` — the orchestrator runs one per story. |
+| 8.5 | Skipped — manual sign-off happens once on the target, after the wave lands. |
 | 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
 
-Uncommitted work cannot be merged and cannot be resumed. Commit messages are conventional
+Uncommitted work cannot be merged, cannot be resumed, and (solo) leaves the shared branch
+dirty for the orchestrator. Commit messages are conventional
 (`test(EE-SS):`, `feat(EE-SS):`) with **no AI references** — full rule:
 [`no-ai-references.md`](../../references/no-ai-references.md).
 
@@ -518,8 +532,9 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
 - **1.3.5 (Bug-Fix Mode)** — implement only the recorded Fix Plan; the failing repro test is
   the RED target; restore `prior_status`, never an Implementation Summary. `status: bug`
   without a `DIAGNOSED` Bug Report → STOP (run `/ck-code:fix`).
-- **P3 / P5 / P7 (PARALLEL MODE)** — team gate asked once per batch; "done" derived from git;
-  no branch merges without `QA: PASS`.
+- **P3 / P4 / P5 / P7 (PARALLEL MODE)** — team gate asked once per batch; every story
+  implemented by an agent, worktrees only for waves of ≥ 2; "done" derived from git; nothing
+  merged or accepted without `QA: PASS`.
 
 ## RULES
 
@@ -541,7 +556,11 @@ Uncommitted work cannot be merged and cannot be resumed. Commit messages are con
 The "Non-negotiable" column of the P-step map ([parallel-mode.md](references/parallel-mode.md))
 is the rest of this contract; these four are the traps it does not carry.
 
-- **Never orchestrate a single story** — one story in scope takes Phases 1–8 inline.
+- **Never orchestrate an explicitly-requested single story** — a story path, or a single story
+  picked from the 1.2 menu, takes Phases 1–8 inline. `--epic NN` is the exception: it always
+  orchestrates, dispatching even a lone remaining story solo (P4).
+- **Never cut a worktree for a one-story wave** — solo dispatch runs in the main checkout.
+  Worktrees are for concurrency; without a peer they buy nothing and cost a cold install.
 - **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
   names, statuses, SHAs, and structured returns only. Every implementation is a sub-agent.
 - **Never let a dispatched agent run `ck-index` or edit a generated index** — it changes

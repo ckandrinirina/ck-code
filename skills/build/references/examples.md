@@ -10,8 +10,9 @@ bug-fix sub-loop. The compact per-phase status/prompt templates live in
 
 The menu leads with the **parallel** option whenever ≥ 2 ready stories are conflict-free,
 then whole-epic wave builds, then single stories. Picking parallel or an epic enters
-SKILL.md § PARALLEL MODE at P1 with the scope already resolved — one worktree agent per
-story, and P3 does not re-ask which stories to build.
+SKILL.md § PARALLEL MODE at P1 with the scope already resolved, and P3 does not re-ask which
+stories to build. Every story is then implemented by a dispatched agent — one worktree agent
+per story in a wave of ≥ 2, one solo agent in the main checkout for a wave of exactly one.
 
 ```
 ## Stories Ready for Implementation

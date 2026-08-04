@@ -34,7 +34,19 @@ Integrity (derived from git — not the agents' self-report):
 ─────────────────────────────────────────────────────
 ```
 
+A **solo** wave reports the same three checks against the P4 base SHA:
+
+```
+Integrity (derived from git — not the agent's self-report):
+─────────────────────────────────────────────────────
+  01-04  →  ✓ complete   (+96 / -3 since <base-sha>, all criteria checked, clean tree)
+            branch epic/01-auth · no worktree
+─────────────────────────────────────────────────────
+```
+
 ## P6 — Conflict Report
+
+Skipped on a solo wave — print one line instead: `Conflicts: skipped (solo wave).`
 
 ```
 Conflict analysis (dry-run merges onto <$TARGET>):
@@ -75,8 +87,11 @@ Summary:
 What would you like to do?
   [1] Merge ready branches now (conflict-free order)
   [2] Review branches first, merge manually
-  [3] Re-dispatch blocked/failed stories from scratch (new worktree)
+  [3] Re-dispatch blocked/failed stories from scratch (new worktree; solo → same branch)
 ```
+
+A solo wave already sitting on `$TARGET` drops option 1 — say
+`Merge: none needed (solo on <$TARGET>).` and go straight to the regenerate.
 
 ## P8 — Post-Merge Check Prompt
 
@@ -95,13 +110,16 @@ merged), then re-ask.
 
 ## Wave Plan Table (wave mode)
 
+Every wave carries its dispatch shape: `(parallel)` fans out one worktree agent per story,
+`(solo)` sends one agent into the main checkout with no worktree.
+
 ```
 Epic 01 — Wave plan (4 stories, depth 3):
 
-  Wave 1  (parallel)   01-01  Login form         S
+  Wave 1  (parallel)   01-01  Login form          S
                        01-02  Session store       M
-  Wave 2               01-03  Auth middleware     M   ← needs 01-01, 01-02
-  Wave 3               01-04  Audit log           S   ← needs 01-03
+  Wave 2  (solo)       01-03  Auth middleware     M   ← needs 01-01, 01-02
+  Wave 3  (solo)       01-04  Audit log           S   ← needs 01-03
 
 Proceed with Wave 1? (PROCEED / DROP A STORY / ABORT)
 ```

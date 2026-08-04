@@ -23,7 +23,10 @@ An out-of-epic blocker that is not yet `done` makes the epic un-startable — re
 blocker is pending and stop. A story whose blocker never resolves (cycle, or a non-`done`
 out-of-scope dep) is `UNSCHEDULABLE` — exclude it and report at the end.
 
-Print the wave plan table ([conflict-format.md](conflict-format.md)). A deep chain means
+Print the wave plan table ([conflict-format.md](conflict-format.md)), labelling each wave
+`(parallel)` when it holds ≥ 2 stories and `(solo)` when it holds one — that label is the
+dispatch shape P4 will use, so the operator sees up front which waves cut worktrees. A deep
+chain means
 many sequential merge+dispatch cycles and heavy token use — if the plan runs more than
 ~3 waves, note that and let the operator re-scope. Create one Claude Task per scheduled
 story prefixed by wave (`W1 · Implement 01-01: …`) when the Task tools are available.
@@ -34,16 +37,19 @@ For each wave, in order:
 
 1. **Confirm** — the P3 question call, `PROCEED / DROP A STORY / ABORT` for this wave.
 2. **Dispatch** this wave's stories through [parallel-mode.md](parallel-mode.md) P4, then walk
-   each branch through P5 (integrity/resume) → P7 (QA) **as its agent returns** — those two are
-   per-branch and pipelined, never barriered on the wave. P6 (conflict, intra-wave only) is the
-   barrier: it starts once every branch has cleared P5. The worktrees are cut from
-   the target branch's current HEAD, which already carries prior waves' merged code. A
-   single-story wave inside a multi-wave run is still dispatched as a one-agent worktree run,
-   never inline — its work has to land on the shared target like every other wave.
-3. **Merge** this wave's merge-eligible branches into the target (P8 Option 1), then
-   **regenerate the indexes** — `ck-index tasks/<Plan>` —
-   so the next wave's re-resolve sees these stories as `done`. Run the post-merge QA on the
-   target via a `qa-validator` agent, not inline.
+   each through P5 (integrity/resume) → P7 (QA) **as its agent returns** — those two are
+   per-story and pipelined, never barriered on the wave. P6 (conflict, intra-wave only) is the
+   barrier: it starts once every branch has cleared P5.
+   - **A wave of ≥ 2 stories** fans out one worktree agent per story. The worktrees are cut
+     from the target branch's current HEAD, which already carries prior waves' merged code.
+   - **A wave of exactly 1 story** — including the last wave of a deep chain, where the shape
+     usually narrows to one — is dispatched **solo**: one agent, no worktree, working in the
+     main checkout on the wave's `$WORKBRANCH` (P4 § Solo). Still an agent, never inline: the
+     orchestrator's context stays free of build output either way. P6 is skipped for it.
+3. **Merge** this wave's merge-eligible branches into the target (P8 Option 1) — a solo wave
+   already on the target has nothing to merge — then **regenerate the indexes**,
+   `ck-index tasks/<Plan>`, so the next wave's re-resolve sees these stories as `done`. Run
+   the post-wave QA on the target via a `qa-validator` agent, not inline.
 4. **Verify** the merged wave on the target (the P8 manual gate) before the next wave builds
    on it. A reverted story returns to `todo`/`in-progress`, holds its dependents, and its
    branch is kept.
