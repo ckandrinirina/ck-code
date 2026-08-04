@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [5.9.1] — 2026-08-04
+
+### Changed
+- **build**: PARALLEL MODE picks isolation from wave width, not mode. A wave of two or more
+  stories still fans out one worktree agent per story; a wave holding exactly one story is
+  dispatched **solo** — one agent in the main checkout on the target branch, with no worktree,
+  no cold dependency install, and no conflict-and-merge stage. `--epic NN` therefore always
+  delegates every story to an agent, including a lone remaining one, instead of falling back
+  to an inline build. Solo dispatch cuts a `story/…` branch in the main checkout when the
+  target is a protected default branch, so implementation still never lands on `main`.
+  P5 derives a solo run's integrity from a base SHA recorded at dispatch and stops the wave on
+  branch drift; P6 is skipped; P7 QA runs without isolation; P8 skips the merge when the work
+  already sits on the target. `story-implementer` now documents both placements and enforces a
+  branch guard when it has no worktree holding it in place.
+
 ## [5.9.0] — 2026-07-31
 
 Optional integration with Claude Design (`claude.ai/design`). A project can link a design
