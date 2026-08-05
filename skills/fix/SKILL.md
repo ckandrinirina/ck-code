@@ -237,7 +237,7 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
    ck-project sync tasks/<slug>
    ```
 
-   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to Blocked, and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
+   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to Blocked unless it is sticky in the In Review column, and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
 
 ### 6.2 Auto-Build Eligibility Gate
 
@@ -283,7 +283,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Always use the same `Bug ID`** (`BUG-YYYYMMDD-NN`) across every in-scope story.
 - **Always record `prior_status`** in the story frontmatter so `build` can restore it.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Always regenerate the views** with `ck-index` in the same phase you change any frontmatter.
+- **Always regenerate the views** with `ck-index` and sync the board with `ck-project sync`, in the same phase you change any frontmatter ([`github-projects.md`](../../references/github-projects.md)).
 - **Always output in English.**
 
 ---

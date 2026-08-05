@@ -109,7 +109,7 @@ The manual-test bug-fix loop has run 3 times and issues remain:
 
 A) FIX MANUALLY — you apply the fix; I run Refactor + QA against it
 B) ACCEPT AS-IS — set `status: done`; #3 documented as known issue
-C) ABORT        — set `status: todo`; do not commit
+C) ABORT        — set `status: todo`, regenerate (`ck-index`, `ck-project sync`); do not commit
 ```
 
 (Delivered via `AskUserQuestion` — A / B / C are the options, not a typed reply.)

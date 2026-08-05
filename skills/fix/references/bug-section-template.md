@@ -150,7 +150,7 @@ run (no heading when empty).
 
 Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status to
 `FIXED`, restores the story frontmatter `status` from `prior_status`, and regenerates
-the views with `ck-index`.
+the views with `ck-index`, then syncs the board with `ck-project sync`.
 
 ```markdown
 ### Resolution
@@ -160,7 +160,7 @@ the views with `ck-index`.
 - **QA iterations:** [count]
 - **Manual-test cycles:** [count, or "none"] (count of `## Manual-Test Reports` entries; "none" if heading absent)
 - **Unplanned changes:** [count, or "none"]
-- **Status:** FIXED   <!-- frontmatter status restored from prior_status (done); views regenerated -->
+- **Status:** FIXED   <!-- frontmatter status restored from prior_status (done); views regenerated, board synced -->
 
 ### Files Touched
 [Precise reference of every file and line changed — no descriptions, just locations]

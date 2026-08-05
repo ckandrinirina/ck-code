@@ -514,7 +514,7 @@ that received an `issue:`. Never re-read the plan to build the summary.
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
 - **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index`; never cell-edit an index or flip an EPIC checkbox for status.
-- **Always run `ck-index` in the same phase** you change any story or epic frontmatter (SHIP MODE's status write; in `--to-issues`, `ck-issues` already runs it).
+- **Always run `ck-index` and `ck-project sync` in the same phase** you change any story or epic frontmatter (SHIP MODE's status write; in `--to-issues`, `ck-issues` already runs it) — [`github-projects.md`](../../references/github-projects.md).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
 - **Never ask the user for the PR base branch** — derive it from the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity.

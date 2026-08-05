@@ -161,10 +161,14 @@ Skip any story already `in-progress` (a resumed wave) or `bug` (Bug-Fix Mode own
 status and restores it at Phase 8.2).
 
 ```bash
-git commit -am "chore: mark wave <N> in progress"
 ck-index tasks/<Plan>
+git add <the story files just edited> tasks/<Plan>/STORIES_INDEX.md tasks/FEATURE_INDEX.md
+git commit -m "chore: mark wave <N> in progress"
 ck-project sync tasks/<Plan>
 ```
+
+On a resumed wave every story may already be `in-progress`, so nothing is staged — the
+commit is skipped rather than failed.
 
 One commit and one sync per wave, whatever the wave's width. This is the only place
 In Progress can be expressed: a dispatched agent writes `in-progress` inside its own

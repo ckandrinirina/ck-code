@@ -125,7 +125,7 @@ QA has run 3 times and issues remain:
 
 A) FIX MANUALLY  — apply specific fixes you suggest
 B) ACCEPT AS-IS  — proceed with known issues (documented)
-C) ABORT         — stop; set `status: todo` in frontmatter and regenerate
+C) ABORT         — stop; set `status: todo` in frontmatter and regenerate (`ck-index`, `ck-project sync`)
 ```
 
 ---

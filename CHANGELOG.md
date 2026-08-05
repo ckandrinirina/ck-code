@@ -26,6 +26,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
   been refused even once added.
 - **build**: restoring `prior_status` at the end of Bug-Fix Mode left the card stranded in
   Blocked.
+- **build**: the QA loop's 3rd-iteration ABORT path reverted a story's frontmatter to
+  `todo` without moving its card back, leaving it stranded wherever QA had last left it.
 
 ### Changed
 - **build**: a story with status `IN PROGRESS` and satisfied dependencies is now dispatchable

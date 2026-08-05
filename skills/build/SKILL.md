@@ -549,8 +549,8 @@ dirty for the orchestrator. Commit messages are conventional
 ## RULES
 
 - **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`,
-  `FEATURE_INDEX.md`, or `EPIC.md` — change `status:`, then run `ck-index` in the same phase
-  (the two are one atomic mutation).
+  `FEATURE_INDEX.md`, or `EPIC.md` — change `status:`, then run `ck-index` and `ck-project sync`
+  in the same phase (all three are one atomic mutation; [`github-projects.md`](../../references/github-projects.md)).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.

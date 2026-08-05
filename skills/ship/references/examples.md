@@ -77,6 +77,7 @@ EOF
 Set the story frontmatter `status: done`, then regenerate the views:
 ```bash
 ck-index tasks/2026-01-04_realtime-app
+ck-project sync tasks/2026-01-04_realtime-app
 ```
 
 The linked issue is resolved by the story frontmatter `issue: 42` (never by title).
