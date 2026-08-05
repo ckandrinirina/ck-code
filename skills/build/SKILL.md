@@ -184,7 +184,10 @@ is no index cell, `EPIC.md`, or rollup to touch. The board is one more generated
 the project has no `tasks/SETTINGS.md` or `github_issues` is off, and a board failure never
 blocks the build — report it and continue. **DELEGATED MODE skips both** — a worktree agent
 edits only its own story's frontmatter; the orchestrator regenerates and syncs once on the
-target branch after merge.
+target branch after merge. In that mode the frontmatter edit is normally a **no-op**: P4
+already flipped this story to `in-progress` on the target before cutting the worktree
+([parallel-mode.md](references/parallel-mode.md)). Finding `in-progress` where `todo` was
+expected is the normal case, never drift — leave it and carry on.
 
 ### 1.7 Effort Route (from frontmatter `size:`)
 
