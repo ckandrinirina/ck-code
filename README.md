@@ -50,7 +50,8 @@ issues stay valid.
 - **Frontmatter-driven story state** — one writable location per story; indexes are generated, never hand-maintained
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
-- **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back and epic→story relinking included); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice
+- **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice
+- **GitHub Projects board sync** — the board is a *generated view* of story frontmatter, like the indexes: `ck-project sync` computes the column each card belongs in and pushes only the differences, so it can't drift and is safe to re-run. ck-code adapts to whatever columns your board already has (an unmapped role is skipped, never an error) or provisions a five-column board for a new project. `/ck-code:config` sets it up; `build` and `ship` keep it current
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
 - **SOLID principle checks** — every implementation is reviewed against the five principles
 - **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
@@ -309,7 +310,8 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
 | `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
-| `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
+| `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
+| `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, pick or create the GitHub Project whose board mirrors story status, re-map board columns, or show what is configured | `show` / `board` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
 
 ## Why ck-code?
 
@@ -337,7 +339,8 @@ ck-code/
 ├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
 │   ├── ck-index                   # → scripts/ck-index.sh   (skills call the bare command)
 │   ├── ck-doctor                  # → scripts/ck-doctor.sh
-│   └── ck-issues                  # → scripts/ck-issues.sh
+│   ├── ck-issues                  # → scripts/ck-issues.sh
+│   └── ck-project                 # → scripts/ck-project.sh
 ├── workflows/                     # registered Workflow scripts, invoked by name (resumable)
 │   ├── team-research.js           # /ck-code:team --workflow, Phase 1.6a
 │   └── team-generate.js           # /ck-code:team --workflow, Phase 3.1
@@ -345,6 +348,7 @@ ck-code/
 │   ├── ck-index.sh                # regenerate the index views from story frontmatter
 │   ├── ck-doctor.sh               # read-only project health check (/ck-code:doctor)
 │   ├── ck-issues.sh               # publish a plan to GitHub Issues (ship --to-issues)
+│   ├── ck-project.sh              # reconcile the GitHub Projects board from frontmatter
 │   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
 │   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
@@ -361,6 +365,8 @@ ck-code/
 │   ├── track/                     # progress dashboard
 │   ├── guide/                     # state/intent/command router
 │   ├── migrate/                   # pre-v6 → v6 and ck-code-lite → v6 converter
+│   ├── doctor/                    # read-only project health report
+│   ├── config/                    # tasks/SETTINGS.md — issue tracking + board mapping
 │   └── explain/                   # post-implementation walkthrough
 └── README.md
 ```
