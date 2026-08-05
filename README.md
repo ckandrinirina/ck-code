@@ -50,7 +50,7 @@ issues stay valid.
 - **Frontmatter-driven story state** — one writable location per story; indexes are generated, never hand-maintained
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
-- **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues; the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching)
+- **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back and epic→story relinking included); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
 - **SOLID principle checks** — every implementation is reviewed against the five principles
 - **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
@@ -336,13 +336,15 @@ ck-code/
 ├── CHANGELOG.md
 ├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
 │   ├── ck-index                   # → scripts/ck-index.sh   (skills call the bare command)
-│   └── ck-doctor                  # → scripts/ck-doctor.sh
+│   ├── ck-doctor                  # → scripts/ck-doctor.sh
+│   └── ck-issues                  # → scripts/ck-issues.sh
 ├── workflows/                     # registered Workflow scripts, invoked by name (resumable)
 │   ├── team-research.js           # /ck-code:team --workflow, Phase 1.6a
 │   └── team-generate.js           # /ck-code:team --workflow, Phase 3.1
 ├── scripts/
 │   ├── ck-index.sh                # regenerate the index views from story frontmatter
 │   ├── ck-doctor.sh               # read-only project health check (/ck-code:doctor)
+│   ├── ck-issues.sh               # publish a plan to GitHub Issues (ship --to-issues)
 │   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
 │   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
