@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.1.0] — 2026-08-05
+
+### Added
+- **ck-issues** (`bin/ck-issues` → `scripts/ck-issues.sh`): publishes a `tasks/<slug>/`
+  plan to GitHub Issues in one call — labels, issue creation, `issue:` write-back, the
+  epic→story relink and the `ck-index` regeneration. Idempotent: an entry that already
+  carries an `issue:` is reused, so re-running is the supported way to finish a partial
+  publish. Supports `--mode feature|epics|stories`, `--dry-run`, `--repo`, `--pace`,
+  `--no-index`; exits `1` when any `gh` call failed.
+
+### Changed
+- **ship**: `--to-issues` now runs `ck-issues` instead of driving `gh` per issue. Hand-driving
+  a 12-epic plan was ~200 tool calls paced by a foreground `sleep` that agent harnesses
+  commonly block — a dead end that pushed agents into writing a throwaway publisher script
+  per run. Rate-limit pacing, ordering and write-back are now inside the script. P2 previews
+  the plan with `--dry-run` rather than reading every epic and story file into context.
+- **ship**: `issue-bodies.md` now documents what `ck-issues` emits per mode instead of
+  carrying `gh issue create` templates to run by hand.
+
 ## [6.0.0] — 2026-08-05
 
 ### Changed
