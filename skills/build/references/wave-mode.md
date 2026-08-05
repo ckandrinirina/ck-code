@@ -48,8 +48,9 @@ For each wave, in order:
      orchestrator's context stays free of build output either way. P6 is skipped for it.
 3. **Merge** this wave's merge-eligible branches into the target (P8 Option 1) — a solo wave
    already on the target has nothing to merge — then **regenerate the indexes**,
-   `ck-index tasks/<Plan>`, so the next wave's re-resolve sees these stories as `done`. Run
-   the post-wave QA on the target via a `qa-validator` agent, not inline.
+   `ck-index tasks/<Plan>` followed by `ck-project sync tasks/<Plan>`, so the next wave's
+   re-resolve sees these stories as `done` and their cards land in Done. Run the post-wave
+   QA on the target via a `qa-validator` agent, not inline.
 4. **Verify** the merged wave on the target (the P8 manual gate) before the next wave builds
    on it. A reverted story returns to `todo`/`in-progress`, holds its dependents, and its
    branch is kept.

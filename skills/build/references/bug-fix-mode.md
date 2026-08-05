@@ -59,10 +59,11 @@ smallest change that resolves the root cause; flag any unrelated edit.
 
    ```bash
    ck-index tasks/<slug>
+   ck-project sync tasks/<slug>
    ```
 
    The rollup recomputes automatically — a feature with no remaining `bug`/`in-progress`/`todo`
-   story rolls back to `DONE`. There is no index cell to edit and no `EPIC.md` to touch. In
+   story rolls back to `DONE`, and the sync moves the card out of Blocked into the column the restored status calls for. There is no index cell to edit and no `EPIC.md` to touch. In
    DELEGATED MODE the agent restores only its own frontmatter and skips `ck-index` — the
    orchestrator regenerates once on the target branch after merge.
 3. Do NOT append an Implementation Summary — the Bug Report Resolution is the record for a bug

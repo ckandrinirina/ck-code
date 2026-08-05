@@ -352,9 +352,10 @@ sole-writer hazard:
 
 ```bash
 ck-index tasks/<Plan>
+ck-project sync tasks/<Plan>
 ```
 
-Commit the regenerated views. Then dispatch **one** post-merge `ck-code:qa-validator` on
+Commit the regenerated views. The sync moves every story merged in this wave to Done and rolls the epic card up; a board failure is reported and never blocks the merge ([`github-projects.md`](../../../references/github-projects.md)). Then dispatch **one** post-merge `ck-code:qa-validator` on
 `$TARGET` in the main checkout (the union of the wave's stories' commands, de-duplicated) — a
 merge does not make integration failures cheap to find. `QA: FAIL` here is a cross-branch
 integration failure by construction; keep the branches and offer `git revert -m 1 <merge-sha>`
