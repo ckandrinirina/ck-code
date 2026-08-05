@@ -8,6 +8,13 @@ truth (see [`data-model.md`](data-model.md) for the frontmatter schema and the c
 Skills that select stories (`build`, `track`, `fix`) read this file
 for status, size, and dependencies instead of opening every story file.
 
+Columns: `Epic | ID | Title | Status | Delivery | Size | Blocked by | File`. **`Delivery`
+is the integration axis** — `—` (nothing open), `PR #<n>` (open), or `MERGED` (on the trunk
+branch) — rendered from the story's `delivery:`/`pr:` frontmatter
+([`data-model.md`](data-model.md#two-axes-status-is-work-delivery-is-integration)).
+`Status` is unchanged: a story reads `DONE` the moment its work is finished, whether or not
+it has reached the trunk, so selection and dependency logic behave exactly as before.
+
 ## The `ck-index` command
 
 Invoke the generator as the bare command **`ck-index`**, never by path. ck-code ships

@@ -143,13 +143,13 @@ set_fm() {
     { sub(/\r$/,"") }
     FNR==1 { inb=1; print; next }
     inb && $0=="---" {
-      if (!done) { print key ": " val; done=1 }
+      if (!done) { print (val=="" ? key ":" : key ": " val); done=1 }
       inb=0; print; next
     }
     inb {
       i=index($0,":")
       if (i>0) { k2=substr($0,1,i-1); gsub(/^[ \t]+|[ \t]+$/,"",k2)
-        if (k2==key) { print key ": " val; done=1; next } }
+        if (k2==key) { print (val=="" ? key ":" : key ": " val); done=1; next } }
       print; next
     }
     { print }

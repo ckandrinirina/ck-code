@@ -42,8 +42,10 @@ git branch --list "epic/<NN>-*"
 ## Resolution
 
 ```
-<default> = gh repo view --json defaultBranchRef -q .defaultBranchRef.name
+<trunk>   = tasks/SETTINGS.md `trunk_branch:` when set — the project's own answer
+            else gh repo view --json defaultBranchRef -q .defaultBranchRef.name
             fallback "main" when gh is missing or unauthenticated
+<default> = <trunk>                                  (one name, used everywhere below)
 
 resolve_parent(epic NN, plan <slug>)   the branch a story branch is cut from
                                        and merged back into
@@ -57,6 +59,13 @@ resolve_pr_base()  ->  <default>                       at every level
 
 The PR base is still **never asked for** — it is derived, now from `integration:` rather
 than from `defaultBranchRef` alone.
+
+**`trunk_branch` settles the `main`/`develop` question once.** A team whose integration
+branch is not the repo default sets it in `tasks/SETTINGS.md`
+([`data-model.md`](data-model.md#project-settings-taskssettingsmd)) and `ship` stops asking
+per PR. It is also the branch a PR must merge into for a story to reach
+`delivery: merged` ([`github-projects.md`](github-projects.md#reconciliation--how-delivery-merged-happens)):
+one trunk, one definition, no way for the PR base and the delivered test to disagree.
 
 ## Creation
 
@@ -123,6 +132,13 @@ Q: "Epic <NN> is complete (<done>/<total>). Promote it?"
 completion the user knows more than they did at epic start and can escalate a level on the
 spot. The escalation is written back to `EPIC.md`.
 
+**Every promotion PR records its number.** Opening a PR for `epic/<NN>-*` writes that
+number to the epic's `EPIC.md` as `pr:` with `delivery: pr`; opening the feature PR writes
+it to the `EPIC.md` of **every** `feature`-level epic in the plan. Those are the pointers a
+story with no PR of its own inherits, and without them a story that ships only through an
+epic PR could never leave *Ready to Ship*
+([`data-model.md`](data-model.md#two-axes-status-is-work-delivery-is-integration)).
+
 **Feature gate** — the feature branch only ever collects epics whose level is `feature`;
 epics left at `story` or `epic` land independently and neither block it nor appear in it.
 It fires when every `feature`-level epic of the plan is DONE and merged into
@@ -147,7 +163,8 @@ Q: "All <N> feature-level epics of <plan-slug> are merged into feat/<plan-slug>.
 
 - **Never store a branch name** in frontmatter — derive it from the epic number and plan slug.
 - **Never resolve an epic branch by slug** — glob the immutable number, `epic/<NN>-*`.
-- **Never ask for the PR base** — derive it.
+- **Never ask for the PR base** — derive it: `trunk_branch`, else the repo default.
+- **Never open a PR without recording its number** — a story PR writes the story's `pr:`, a promotion PR writes the epic's; an unrecorded PR is a story that can never reach Done.
 - **Never merge without the clean-tree guard**, and never leave a merge half-applied —
   `git merge --abort` and restore the prior branch.
 - **Never auto-open a PR** — promotion is always confirmed.

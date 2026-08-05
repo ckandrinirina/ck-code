@@ -69,6 +69,8 @@ One story file per `T-NN` at
 | `needs: T-01, T-03` | `blocked_by` | translate through the ID map → `[01-01, 02-01]`. `—` → `[]` |
 | `files: a.ts, b.ts` | `files` | `[a.ts, b.ts]`, `—` or absent → `[]` |
 | — | `issue` | empty |
+| — | `pr` | empty — `ck-project backfill` recovers it later from the linked issue |
+| — | `delivery` | empty ≡ pre-6.4 behaviour |
 | — | `prior_status` | empty |
 
 Frontmatter stays generator-readable: one `key: value` per line, inline `[…]` lists,

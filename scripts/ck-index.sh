@@ -75,7 +75,7 @@ emit_plan() {
       return s
     }
     # Emit + accumulate when the closing frontmatter fence is reached (FILENAME is still correct here).
-    function emit(   epicdir, eslug, edisp, n, parts, i, w, su, bl, relfile) {
+    function emit(   epicdir, eslug, edisp, n, parts, i, w, su, bl, relfile, dv) {
       if (id=="") { warn(FILENAME ": missing id in frontmatter — story skipped"); return }
       n=split(FILENAME, parts, "/")
       for (i=1;i<=n;i++) if (parts[i]=="epics" && i+1<=n) { epicdir=parts[i+1]; break }
@@ -89,15 +89,22 @@ emit_plan() {
       relfile=substr(FILENAME, length(plandir)+2)
       bl=blocked; sub(/^\[/,"",bl); sub(/\]$/,"",bl); gsub(/^[ \t]+|[ \t]+$/,"",bl); if(bl=="")bl="-"
       gsub(/\|/,"\\|",title)   # a raw | would break the generated markdown table
-      printf "S\t| %s · %s | %s | %s | %s | %s | %s | %s |\n", epic, edisp, id, title, su, size, bl, relfile
+      # Delivery cell — the integration axis. Rendered from delivery:/pr: alone; the
+      # walk-up to an epic PR is materialized onto the story by `ck-project sync`
+      # (references/github-projects.md), so nothing is inherited here.
+      dv="-"
+      if (delivery=="merged") dv="MERGED"
+      else if (delivery=="pr") dv=(pr!="" ? "PR #" pr : "PR")
+      printf "S\t| %s · %s | %s | %s | %s | %s | %s | %s | %s |\n", epic, edisp, id, title, su, dv, size, bl, relfile
       eslugOf[epic]=eslug; edispOf[epic]=edisp
       if (status!="skip") total[epic]++
-      if (status=="done") { done[epic]++; started[epic]=1 }
+      if (status=="done") { done[epic]++; started[epic]=1
+                            if (delivery=="merged") merged[epic]++ }
       else if (status=="in-progress") { inprog[epic]=1; started[epic]=1 }
       else if (status=="bug") { bug[epic]=1; started[epic]=1 }
     }
     FNR==1 { if (infm) warn(prevfile ": unterminated frontmatter — story skipped")
-             prevfile=FILENAME; infm=0; id=title=epic=status=size=blocked="";
+             prevfile=FILENAME; infm=0; id=title=epic=status=size=blocked=delivery=pr="";
              sub(/\r$/,"")
              if ($0=="---"){infm=1} else warn(FILENAME ": no frontmatter fence — story skipped")
              next }
@@ -106,12 +113,19 @@ emit_plan() {
     infm { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1);
              gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v);
              if(k=="id")id=unquote(v); else if(k=="title")title=unquote(v); else if(k=="epic")epic=unquote(v);
-             else if(k=="status")status=unquote(v); else if(k=="size")size=unquote(v); else if(k=="blocked_by")blocked=v } }
+             else if(k=="status")status=unquote(v); else if(k=="size")size=unquote(v); else if(k=="blocked_by")blocked=v;
+             else if(k=="delivery")delivery=unquote(v); else if(k=="pr")pr=unquote(v) } }
     END {
       if (infm) warn(prevfile ": unterminated frontmatter — story skipped")
       for (e in edispOf) {
-        t=total[e]+0; d=done[e]+0; st="TODO"
-        if (started[e]) { st=(d==t && !inprog[e] && !bug[e]) ? "DONE" : "IN PROGRESS" }
+        t=total[e]+0; d=done[e]+0; m=merged[e]+0; st="TODO"
+        # MERGED is DONE plus "all of it reached the trunk". Both are finished states —
+        # every unfinished set excludes both (references/feature-index.md). NOTE: no
+        # apostrophes in this awk body; it is a single-quoted shell string.
+        if (started[e]) {
+          if (d==t && !inprog[e] && !bug[e]) st=(m==t) ? "MERGED" : "DONE"
+          else st="IN PROGRESS"
+        }
         printf "F\t%s\t%s\t%s/%s\t%s\t%s\n", e, edispOf[e], d, t, st, eslugOf[e]
       }
     }
@@ -134,8 +148,8 @@ regen_stories_index() {
   rows="$(plan_rows "$plandir")"
   {
     printf '# Stories Index\n%s\n\n' "$STAMP"
-    printf '| Epic | ID | Title | Status | Size | Blocked by | File |\n'
-    printf '|------|----|-------|--------|------|------------|------|\n'
+    printf '| Epic | ID | Title | Status | Delivery | Size | Blocked by | File |\n'
+    printf '|------|----|-------|--------|----------|------|------------|------|\n'
     grep '^S	' "$rows" | cut -f2-
   } > "$plandir/STORIES_INDEX.md"
 }

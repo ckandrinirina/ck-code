@@ -239,6 +239,9 @@ still routes to 5.A, whose base is already fixed.
 1. AskUserQuestion — show PR (number, title, URL): "Push to `<branch>` and update PR
    #`<n>`?" options **Update PR**, **Skip push** (→ Phase 6), **New PR** (→ 5.B).
 2. `git push origin "$(git branch --show-current)"`.
+2b. Record the pointer when the story does not already carry it — an existing PR opened
+   before 6.4, or by hand, still needs `pr:` or it can never reach Done. Edit the story
+   frontmatter: `pr: <n>` and `delivery: pr`. Skip when both already read that.
 3. Read `existing_pr.body` and append under a `## Updates` section (create it if absent):
    `- <YYYY-MM-DD>: <commit subject> — <one-line plain-language summary>`. Write the
    **merged** body back — never overwrite prior content:
@@ -252,16 +255,20 @@ still routes to 5.A, whose base is already fixed.
 
 ### 5.B Create new PR
 
-1. **Resolve the base branch — never ask for it.** The repo already declares it:
+1. **Resolve the base branch — never ask for it.** The project answers first, the repo
+   second ([`branch-topology.md`](../../references/branch-topology.md#resolution)):
 
    ```bash
+   ck-project show | grep trunk_branch          # tasks/SETTINGS.md trunk_branch:
    gh repo view --json defaultBranchRef -q .defaultBranchRef.name
    ```
 
-   Use that as the PR base. If `gh` fails, fall back to `main`. Only when the repo has a
-   `develop` branch **and** the default is not `develop` is the target genuinely ambiguous
-   (`git rev-parse --verify --quiet origin/develop`) — in that case offer it as an option
-   inside the single question below rather than as a second prompt.
+   A non-empty `trunk_branch` **is** the base — ask nothing. Otherwise use the repo
+   default, falling back to `main` when `gh` fails. Only with no `trunk_branch`, a
+   `develop` branch present, and a default that is not `develop`
+   (`git rev-parse --verify --quiet origin/develop`) is the target genuinely ambiguous —
+   then offer it inside the single question below, and suggest setting `trunk_branch` so
+   the question never returns.
 2. AskUserQuestion — one call, "Open a PR into `<base>`?": **Yes** (create now),
    **Commit only** (→ Phase 6), **Push, PR later** (push branch, skip PR → Phase 6),
    **Different base** (only when step 1 found a genuine ambiguity — then ask for the base).
@@ -269,36 +276,40 @@ still routes to 5.A, whose base is already fixed.
 4. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
    — no story IDs, AC checkboxes, or test tallies. Bodies (feature / bug fix) + the exact
    `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
-5. Move the card to the review column — only when a `story_issue` is linked:
+5. **Record the PR in frontmatter — this is what moves the card.** Edit the story file:
+   `pr: <the new PR number>` and `delivery: pr`
+   ([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)).
+   Leave `status` alone; the two axes are independent.
 
-   ```bash
-   ck-project set <story_issue> in_review
-   ```
+   Do **not** push the card with `ck-project set … in_review`. In Review is now derived
+   from `delivery: pr` like every other column, so the Phase 6.1 sync places it. A story
+   whose PR is never recorded here is stranded in *Ready to Ship* forever.
 
-   This is the one board state that frontmatter cannot express (a story is `in-progress`
-   whether or not its PR is open), so it is pushed here and made sticky
-   ([`github-projects.md`](../../references/github-projects.md)). A no-op when the board is
-   unconfigured or has no review column; never block the PR on it.
+   At level `epic`/`feature` the PR belongs to the epic, so write `pr:`/`delivery: pr` to
+   that `EPIC.md` instead — its stories inherit it.
 
 ## PHASE 6: MARK DONE & UPDATE ISSUES
 
 ### 6.1 Mark the story done (frontmatter is the source of truth)
 
-**Skip when the frontmatter already reads `status: done`** — `/ck-code:build` Phase 8.6
-flips it and regenerates the views before invoking this skill; a second flip and
-regenerate here is duplicate work. Otherwise, if this ship completes the story's work:
-set the story frontmatter `status: done` (Edit the `status:` line — do **not** cell-edit
-any index or flip an EPIC checkbox), then regenerate views once:
+**Skip the status write when the frontmatter already reads `status: done`** —
+`/ck-code:build` Phase 8.6 flips it before invoking this skill; a second flip is duplicate
+work. Otherwise, if this ship completes the story's work: set the story frontmatter
+`status: done` (Edit the `status:` line — do **not** cell-edit any index or flip an EPIC
+checkbox).
+
+**Always regenerate and sync, even when the status write was skipped** — Phase 5 wrote
+`pr:`/`delivery:`, so frontmatter changed on every path through this skill:
 
 ```bash
 ck-index tasks/<slug>
 ck-project sync tasks/<slug>
 ```
 
-The sync moves the card out of the review column into Done — the only transition allowed
-to override stickiness ([`github-projects.md`](../../references/github-projects.md)). Run it
-even when 6.1 skipped the status write, because `/ck-code:build` Phase 8.6 already synced
-only if it ran in this session; a re-sync of an unchanged plan costs two `gh` calls.
+The sync places the card from both axes: `done` + `delivery: pr` is In Review, and it
+becomes Done by itself once the PR merges and any later sync re-asks GitHub
+([`github-projects.md`](../../references/github-projects.md)). Nothing here needs to
+predict the merge.
 
 If the story is not yet fully done, leave `status` as is and skip issue-close steps.
 
@@ -349,12 +360,19 @@ defined with their staleness handling in
 **Merge into `feat/<plan-slug>`** also writes `integration: feature` to that `EPIC.md`;
 regenerate the views in the same phase if any frontmatter changed.
 
+**A promotion PR records its number too.** Opening the epic PR writes `pr:` +
+`delivery: pr` to that `EPIC.md`; opening the feature PR writes them to every
+`feature`-level `EPIC.md` in the plan. Their stories inherit that pointer, which is the
+only way work shipped through an epic PR ever reaches Done.
+
 Declining is never a dead end — **Not yet** points at `/ck-code:ship --promote --epic NN`.
 
 ## PHASE 7: SUMMARY
 
 Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
-Story (status/path), Next steps. Worked shape: [examples.md](references/examples.md).
+Story (status + delivery/path), Next steps. State the delivery plainly — "in review, not
+yet on `<trunk>`" — so "done" is never mistaken for "shipped"; it turns to `merged` on the
+first sync after the PR lands. Worked shape: [examples.md](references/examples.md).
 
 - More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.
 - Epic complete → note the epic issue can be closed manually or auto-closes once all its
@@ -384,7 +402,9 @@ Resolution order:
 4. None promotable but the feature-gate condition holds → run the feature gate.
 5. Otherwise → report that there is nothing to promote, and why.
 
-No commit, no staging, no story frontmatter change — this mode only promotes branches.
+No commit, no staging, no *story* frontmatter change — this mode only promotes branches.
+The one write it does make is on `EPIC.md`: a promotion PR records its `pr:` +
+`delivery: pr` there (§6.5), then `ck-index` + `ck-project sync` in the same phase.
 
 ---
 
@@ -456,7 +476,7 @@ exist. Apply the answer after P4 publishes, since a board needs issues to place:
 
 ```bash
 ck-project init --project <N>            # adopt the board as it is
-ck-project init --create "<title>"       # create, link, provision the five columns
+ck-project init --create "<title>"       # create, link, provision the seven columns
 ```
 
 Full contract: [`github-projects.md`](../../references/github-projects.md).
@@ -514,10 +534,13 @@ that received an `issue:`. Never re-read the plan to build the summary.
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
 - **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index`; never cell-edit an index or flip an EPIC checkbox for status.
+- **Never open or update a PR without writing `pr:` + `delivery: pr`** to the story (or to `EPIC.md` at level `epic`/`feature`) — an unrecorded PR strands the story in Ready to Ship, and `ck-project sync` has no anchor to re-check.
+- **Never push a card to the review column with `ck-project set`** — In Review is derived from `delivery: pr`. The sticky rule is gone; a manual push is undone by the next sync.
+- **Never write `delivery: merged` by hand** — only `ck-project sync` promotes it, from GitHub's answer about the PR.
 - **Always run `ck-index` and `ck-project sync` in the same phase** you change any story or epic frontmatter (SHIP MODE's status write; in `--to-issues`, `ck-issues` already runs it) — [`github-projects.md`](../../references/github-projects.md).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
-- **Never ask the user for the PR base branch** — derive it from the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity.
+- **Never ask the user for the PR base branch** — derive it from `trunk_branch` and the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity with no `trunk_branch` set.
 - **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, three consumers.
 - **Never merge without the clean-tree guard**, and never leave a merge half-applied — `git merge --abort`, return to the story branch, report the conflicting paths, and stop.
 - **Never auto-open a promotion PR** — §6.5 always confirms, and a level change is never retroactive.

@@ -229,7 +229,7 @@ Present the proposed-fix prompt in `references/qa-dialogue.md` (Phase 5.3) and c
 
 For **every existing story in scope** (verdict A: one; B / D: all matched existing stories — never the `todo` stories created in Phase 2.6):
 
-1. Edit the story-file **frontmatter**: set `status: bug` and `prior_status: <the status before this bug>` (`done` or `in-progress`). This is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file.
+1. Edit the story-file **frontmatter**: set `status: bug` and `prior_status: <the status before this bug>` (`done` or `in-progress`). This is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent.
 2. Regenerate the views once, in this phase:
 
    ```bash
@@ -237,7 +237,7 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
    ck-project sync tasks/<slug>
    ```
 
-   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to Blocked unless it is sticky in the In Review column, and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
+   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to the **Bugs** column — its own column, because a diagnosed bug is actionable work, not something waiting on a dependency — and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
 
 ### 6.2 Auto-Build Eligibility Gate
 

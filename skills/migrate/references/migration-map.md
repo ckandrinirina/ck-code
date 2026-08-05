@@ -18,6 +18,8 @@ block and keeps the body untouched.
 | `blocked_by` | `## Dependencies` section (story IDs) | `[id, ...]`; none → `[]` |
 | `files` | `## Files to Create/Modify` table (backtick-wrapped paths) | `[path, ...]`; none → `[]` |
 | `issue` | a `#NNN` in the story body; else `gh issue list` match on the `[EE-SS]` title tag | the number, or empty |
+| `pr` | — | empty. The pointer is unknowable from the old layout; `ck-project backfill` recovers it from the linked issue after the migration |
+| `delivery` | — | empty ≡ pre-6.4 behaviour, so a migrated project keeps working untouched |
 | `prior_status` | the Bug Report's `Prior status:` (only when `status: bug`) | the recorded status, else empty |
 
 Result prepended above the existing `# Story …` heading:
@@ -32,6 +34,8 @@ size: M
 blocked_by: [01-01]
 files: [src/auth/login.tsx, src/auth/session.ts]
 issue: 123
+pr:
+delivery:
 prior_status:
 ---
 

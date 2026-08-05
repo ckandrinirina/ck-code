@@ -51,14 +51,14 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 |---|---|---|
 | `layout` | the stamp is missing or pre-v6; every change-producing skill will block | `/ck-code:migrate` |
 | `team layout` | skills sit in nested `experts/`/`guides/` folders, so Claude Code registers none of them | `/ck-code:migrate` |
-| `stories` | a story's frontmatter will not parse, or its status/size is outside the vocabulary | fix the frontmatter, then regenerate |
+| `stories` | a story's frontmatter will not parse, or its status/size/delivery is outside the vocabulary. `delivery` with no `pr:` is the common one — nothing anchors it, so `ck-project sync` can never re-check whether it merged | fix the frontmatter, then regenerate; `ck-project backfill` recovers a missing `pr:` from the linked issue |
 | `indexes` | a generated view disagrees with the story files — usually a hand-edit, or a regenerate that never ran | `ck-index` |
 | `dependencies` | a `blocked_by` id resolves to nothing, a story blocks itself, there is a cycle, or a `done` story still depends on open work | fix `blocked_by` in the frontmatter |
 | `feature docs` (WARN) | an epic slug has no `features/<slug>/index.md`, so its `FEATURE_INDEX.Docs` cell is `—` and `build` has no doc to read | `/ck-code:design sync` |
 | `team skills` (WARN) | none generated, or one is invalid — `build` and `fix` then run with no project expertise | `/ck-code:team` |
 | `branches` (WARN) | an `epic/NN-*` branch has no matching epic folder, usually left by a rename | delete it once merged |
 | `design system` (WARN) | a cached design-system card is missing or its content no longer matches the manifest digest, so `build` would copy markup that drifted from its source | `/ck-code:design ds` |
-| `board` (WARN) | a Projects card sits in a column its story's `status:` does not call for — a skill changed frontmatter without syncing, or someone dragged a card by hand | `ck-project sync` |
+| `board` (WARN) | a Projects card sits in a column the story's `status:` + `delivery:` do not call for — a skill changed frontmatter without syncing, someone dragged a card by hand, or a PR merged since the last sync | `ck-project sync` |
 
 ### 2.2 Report
 

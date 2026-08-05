@@ -97,7 +97,7 @@ command reference.
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/ with EPIC.md, stories/ with frontmatter, ROADMAP.md); flips feature doc to `design: planned`; regenerates the index views |
 | `build` | Source + tests in repo; the story file only (frontmatter `status`, plan, summary; Bug Report Resolution in Bug-Fix Mode); regenerates the index views. In PARALLEL MODE: every story implemented by a dispatched agent — per-story branches in native worktrees when a wave holds ≥ 2 stories, one solo agent on the target branch in the main checkout when it holds one — with the same story-file outputs, and the orchestrator regenerates the views once on the target branch after the wave |
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`); regenerates the views. Auto-invokes `build` for an easy fix; never writes the source fix itself |
-| `ship` | Git commit, PR, GitHub Issue updates; writes the created issue number back to story frontmatter `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
+| `ship` | Git commit, PR, GitHub Issue updates; writes the PR number + `delivery: pr` back to story frontmatter (`pr:`), or to `EPIC.md` for a promotion PR; writes the created issue number back to `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
 | `migrate` | Converts a pre-v6 project in place (one commit) — including flattening nested `experts/` + `guides/` skill folders; or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
 | `track`, `explain`, `guide`, `doctor` | Read-only |
 | `config` | Writes `tasks/SETTINGS.md` and the GitHub Project board only — never story state |
@@ -107,6 +107,11 @@ command reference.
 - **Story status** lives ONLY in the story-file frontmatter `status:`
   (`todo → in-progress → done`, lowercase). Every index is a generated view of it —
   see [`data-model.md`](data-model.md).
+- **Story delivery** is the second, orthogonal axis: frontmatter `delivery:`
+  (empty `→ pr → merged`) with `pr:` naming the PR. `status` says the work is finished;
+  `delivery` says how far it has travelled toward the trunk branch. `ship` writes `pr`,
+  `ck-project sync` promotes it to `merged` from GitHub. `blocked_by` resolves against
+  `status: done` only — never against `delivery`.
 - **Bug flow:** `done → bug` (set by `fix` when it diagnoses a bug on a shipped story,
   recording the previous status in frontmatter `prior_status:`) `→ done` (restored by
   `build` Bug-Fix Mode when the recorded fix lands). A `bug` story is actionable work —

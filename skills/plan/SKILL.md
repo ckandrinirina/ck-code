@@ -363,8 +363,9 @@ line (`Fan-out: 6 stories ≥ 3 → dispatching 6 agents.`):
 The content is identical on both branches: `epics/NN_<slug>/stories/SS_<story-slug>.md`
 from [templates.md#story-template](references/templates.md#story-template). Frontmatter is
 the source of truth: `id`, `title`, `epic`, `status: todo`, `size` (`S`/`M`), `blocked_by`
-(inline `[…]` or `[]`), `files` (inline `[…]` or `[]`), `issue:` empty, `prior_status:`
-empty. Body keeps `## Description`, `## Acceptance Criteria`, `## Implementation Tasks`,
+(inline `[…]` or `[]`), `files` (inline `[…]` or `[]`), and `issue:` / `pr:` / `delivery:` /
+`prior_status:` all empty — `ship` and `ck-project sync` own the last three.
+Body keeps `## Description`, `## Acceptance Criteria`, `## Implementation Tasks`,
 `## Technical Notes`.
 
 The overview (5.2) and every `EPIC.md` (5.3) are orchestrator-owned and already written
@@ -450,7 +451,7 @@ before Confirm.
 
 Path `tasks/<slug>/epics/NN_<epic-slug>/stories/SS_<story-slug>.md`, frontmatter
 (`status: todo`, `size` S/M, `blocked_by` `[]` unless a dependency was named, `files`,
-`issue:`/`prior_status:` empty) + body with `## Implementation Tasks`.
+`issue:`/`pr:`/`delivery:`/`prior_status:` empty) + body with `## Implementation Tasks`.
 
 ### Q.5 Regenerate the indexes
 

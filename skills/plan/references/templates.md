@@ -71,7 +71,9 @@ e.g. epics `03_keyboard-split-engine` and `04_keyboard-split-desktop` both get
 `slug: keyboard-split`); an unlinked `Docs` cell strands builders without their
 architecture doc. `title`/`description` must not contain `|` (table cells).
 Leave `integration:` empty — `build` fills it on the first story of the epic
-([`branch-topology.md`](../../../references/branch-topology.md)).
+([`branch-topology.md`](../../../references/branch-topology.md)). Leave `issue:`, `pr:` and
+`delivery:` empty too: `ship --to-issues` writes `issue`, `ship --promote` writes `pr` when
+it opens the epic PR, and `ck-project sync` owns `delivery`.
 
 ```markdown
 ---
@@ -79,6 +81,9 @@ epic: NN
 slug: [epic-slug]
 title: [Epic Title]
 description: [one-line goal — becomes the FEATURE_INDEX Description cell]
+issue:
+pr:
+delivery:
 integration:
 ---
 
@@ -138,6 +143,8 @@ size: [S|M]
 blocked_by: [id, ...]
 files: [path, ...]
 issue:
+pr:
+delivery:
 prior_status:
 ---
 
@@ -171,4 +178,7 @@ not generic TDD phases.
 - `blocked_by` / `files` — inline flow `[a, b]` or empty `[]`. `files` lists the paths the
   story creates or modifies (the conflict-detection key); `[]` when unknown (`build` fills it).
 - `issue:` / `prior_status:` — left empty by `plan`; `ship` writes `issue`, `fix`/`build` manage `prior_status`.
+- `pr:` / `delivery:` — the integration axis, also left empty by `plan`. `ship` writes both
+  when it opens a PR; `ck-project sync` promotes `delivery` to `merged`. Never set them by
+  hand ([`data-model.md`](../../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)).
 - `title` — no `Story EE-SS:` prefix (that lives in the body heading only).

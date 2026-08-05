@@ -21,19 +21,24 @@ Bracketed values are substituted from the index scan; never print them literally
 
 ### Epic 01: [Title] ([done]/[total])
 [==========----------] 50%
-  [x] 01-01: [Title] (S) — DONE
-  [x] 01-02: [Title] (M) — DONE
+  [x] 01-01: [Title] (S) — DONE · merged
+  [x] 01-02: [Title] (M) — DONE · PR #457
+  [x] 01-06: [Title] (S) — DONE · not shipped
   [>] 01-03: [Title] (M) — IN PROGRESS
   [ ] 01-04: [Title] (M) — TODO (ready)
   [~] 01-05: [Title] (S) — TODO (blocked by 01-03)
+  [🐛] 01-07: [Title] (S) — BUG · merged
 
 [... continue for all epics ...]
 
 ### Summary
-- DONE: [count] stories
+- DONE · merged: [count] stories          # on [trunk branch]
+- DONE · in review: [count] stories       # PR open
+- DONE · not shipped: [count] stories     # no PR yet
 - IN PROGRESS: [count] stories
 - TODO (ready): [count] stories
 - TODO (blocked): [count] stories
+- BUG: [count] stories
 
 ### Quick Actions
 - Next story: /ck-code:build [path to next recommended story]

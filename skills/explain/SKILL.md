@@ -69,7 +69,9 @@ Before generating output, read:
 
 1. **The most recently completed story file** — the newest story whose frontmatter
    `status: done` (or a `bug` story just restored to `done`) — for acceptance criteria
-   and its frontmatter `files:` list.
+   and its frontmatter `files:` list. Read its `delivery:` too: when it is not `merged`,
+   say so in one line, because the work explained here is not on the trunk branch yet and
+   the reader may be looking for it there.
 2. **The files themselves** (use Read on each created/modified file).
 3. **The diff for that story's work** — prefer the story branch's diff against its merge
    base (`git diff $(git merge-base HEAD main)...HEAD` when on a story branch); fall back

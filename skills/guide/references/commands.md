@@ -20,7 +20,8 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `track` | `[status\|next\|progress]` | Progress dashboard / next ready story (regenerates missing views) | read-only |
 | `build` | `[story-path] \| [story-ids...] \| --epic NN` | TDD-implement stories end-to-end — one inline, several in worktrees, or a whole epic in waves; also a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter + views; a branch per story in PARALLEL MODE |
 | `fix` | `[story-path]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
-| `ship` | `[story-path] [--issues]` | Commit, open PR, mirror plan/implementation to GitHub Issues | git + GitHub |
+| `ship` | `[story-path] [--issues]` | Commit, open PR, mirror plan/implementation to GitHub Issues | git + GitHub; story `pr:`/`delivery:` + views |
+| `config` | `[show \| board \| trunk <branch> \| on \| off]` | Project settings: issue tracking, the Projects board mapping, and the trunk branch every PR targets | `tasks/SETTINGS.md` + board |
 | `migrate` | — | Upgrade a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter, flat team-skill folders, unique epic numbers), then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
 | `doctor` | `[tasks/<slug>] [--quiet]` | Report what is broken in this project — layout stamp, story frontmatter, index drift, dependencies, feature docs, team skills | read-only |
 | `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |

@@ -438,9 +438,16 @@ AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never contin
 
 **Story Mode:** Edit the frontmatter: `status: in-progress` → `status: done`.
 
+**Touch `status` only — never `pr:` or `delivery:`.** They are the second, orthogonal axis
+([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)):
+`done` means the work is finished, not that it reached the trunk. `ship` writes `pr`, and
+`ck-project sync` promotes `delivery` to `merged`. In Bug-Fix Mode this matters twice — a
+defect found in already-merged code keeps `delivery: merged` while it is fixed, and the
+restore touches `status`/`prior_status` alone.
+
 Then regenerate the views in the same phase — one call recomputes `STORIES_INDEX.md` and the
-`FEATURE_INDEX.md` rollup (a feature whose stories are all `done` rolls up to `DONE`
-automatically):
+`FEATURE_INDEX.md` rollup (a feature whose stories are all `done` rolls up to `DONE`, or to
+`MERGED` once every one of them is on the trunk):
 
 ```bash
 ck-index tasks/<slug>

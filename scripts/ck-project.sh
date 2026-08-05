@@ -3,16 +3,24 @@
 #
 # The board is a GENERATED VIEW of story frontmatter, exactly like STORIES_INDEX.md
 # (see references/data-model.md). Nothing about a card is authoritative: `sync` reads
-# every story's `status:` and `issue:`, computes the column each card belongs in, and
-# pushes only the differences. That is why there is no "migrate" subcommand — a board
-# that was never synced and a board that is half-synced take the identical code path.
+# every story's `status:`, `delivery:` and `issue:`, computes the column each card
+# belongs in, and pushes only the differences. That is why there is no "migrate"
+# subcommand — a board that was never synced and a board that is half-synced take the
+# identical code path.
+#
+# Two axes decide a column: `status` (is the work finished?) and `delivery` (how far has
+# it travelled toward the trunk branch?). `delivery` is a cache over an immutable anchor
+# — the `pr:` number — so `sync` re-answers it from GitHub on every run and it cannot
+# drift. See references/github-projects.md.
 #
 # Usage:
 #   ck-project.sh discover [--repo O/R]              # projects + current settings, as JSON
 #   ck-project.sh init --project N [--extend]        # adopt an existing project
-#   ck-project.sh init --create "<title>"            # create one, provision the 5 columns
-#   ck-project.sh sync [tasks/<slug>] [--dry-run]    # reconcile every card
-#   ck-project.sh set <issue> <role>                 # push one card (used for in_review)
+#   ck-project.sh init --project N --reorder         # rewrite the column order to the preset
+#   ck-project.sh init --create "<title>"            # create one, provision the 7 columns
+#   ck-project.sh sync [tasks/<slug>] [--dry-run]    # refresh delivery, then every card
+#   ck-project.sh backfill [tasks/<slug>]            # recover pr: for pre-6.4 work
+#   ck-project.sh set <issue> <role>                 # push one card (manual escape hatch)
 #   ck-project.sh show                               # print resolved settings
 #
 # Options:
@@ -43,14 +51,17 @@ REPO_ARG=""
 PROJECT_ARG=""
 CREATE_TITLE=""
 EXTEND=0
+REORDER=0
 PACE="${CK_PROJECT_PACE:-1}"
 SET_ISSUE=""
 SET_ROLE=""
 
-# Roles, in board order. The order is the column order a provisioned board gets.
-ROLES="todo in_progress in_review blocked done"
+# Roles, in board order. The order is the column order a provisioned board gets, and
+# also the order map_columns claims live columns in — so a role that must win an
+# ambiguous name (bug over blocked) has to be listed before its rival.
+ROLES="blocked todo in_progress ready_to_ship in_review bug done"
 
-usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
+usage() { sed -n '2,30p;37,38p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -67,6 +78,10 @@ while [ $# -gt 0 ]; do
     --repo)     REPO_ARG="${2:-}"; shift 2 ;;
     --pace)     PACE="${2:-}"; shift 2 ;;
     --extend)   EXTEND=1; shift ;;
+    # Deliberately does NOT imply --extend: ensure_options matches preset NAMES, so on
+    # a board spelling them "Backlog"/"On hold" it would add duplicate columns. Reorder
+    # rearranges what is already there; pass both flags to do both.
+    --reorder)  REORDER=1; shift ;;
     --dry-run)  DRY=1; shift ;;
     -h|--help)  usage 0 ;;
     -*)         echo "ck-project: unknown option $1" >&2; usage 1 ;;
@@ -92,7 +107,7 @@ command -v gh >/dev/null 2>&1 || { echo "ck-project: gh not found on PATH" >&2; 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 trap 'exit 130' INT TERM
-mkdir -p "$WORK/opt" "$WORK/item" "$WORK/status" "$WORK/issue"
+mkdir -p "$WORK/opt" "$WORK/item" "$WORK/status" "$WORK/issue" "$WORK/pr"
 
 CHANGED=0
 ADDED=0
@@ -148,13 +163,13 @@ set_fm() {
     { sub(/\r$/,"") }
     FNR==1 { inb=1; print; next }
     inb && $0=="---" {
-      if (!done) { print key ": " val; done=1 }
+      if (!done) { print (val=="" ? key ":" : key ": " val); done=1 }
       inb=0; print; next
     }
     inb {
       i=index($0,":")
       if (i>0) { k2=substr($0,1,i-1); gsub(/^[ \t]+|[ \t]+$/,"",k2)
-        if (k2==key) { print key ": " val; done=1; next } }
+        if (k2==key) { print (val=="" ? key ":" : key ": " val); done=1; next } }
       print; next
     }
     { print }
@@ -201,6 +216,7 @@ write_settings() { # write_settings — create or update tasks/SETTINGS.md
 ---
 schema: 1
 github_issues: true
+trunk_branch:
 ---
 
 # Project Settings
@@ -215,19 +231,31 @@ re-resolved automatically whenever it stops matching the live board, so renaming
 a column in the GitHub UI needs no edit here. An **empty** `board_<role>` means
 this board has no such column — that transition is skipped rather than failed.
 
+Two frontmatter axes decide a column: `status` (is the work finished?) and
+`delivery` (empty → `pr` → `merged`: how far it has travelled toward the trunk).
+Columns are listed in board order; precedence is bug → blocked → delivery → status.
+
 | Role | Set when |
 |---|---|
+| `board_blocked` | story `status: todo` with an unmet `blocked_by` |
 | `board_todo` | story `status: todo` with every dependency met |
-| `board_in_progress` | story `status: in-progress` |
-| `board_in_review` | `ship` opened a PR — sticky until the story is done |
-| `board_blocked` | story `status: bug`, or an unmet `blocked_by` |
-| `board_done` | story `status: done` |
+| `board_in_progress` | story `status: in-progress`, no open PR |
+| `board_ready_to_ship` | story `status: done`, `delivery` empty — finished, no PR yet |
+| `board_in_review` | `delivery: pr` — a PR is open |
+| `board_bug` | story `status: bug`, at any delivery |
+| `board_done` | story `status: done` and `delivery: merged` |
 
 `board_archive_skip: true` archives the card of any `status: skip` story.
+
+`trunk_branch` names the branch a PR must merge into for a story to count as
+delivered, and the base every PR targets. Absent, it is the repository default.
 EOF
   fi
   set_fm "$f" schema 1
   set_fm "$f" github_issues true
+  # Rewriting trunk_branch with its own value inserts the key when it is absent and
+  # never overwrites the answer the user gave.
+  set_fm "$f" trunk_branch "$(fm "$f" trunk_branch)"
   set_fm "$f" github_repo "$REPO"
   set_fm "$f" github_project_owner "$OWNER"
   set_fm "$f" github_project_number "$NUMBER"
@@ -286,15 +314,22 @@ opt_id()   { [ -f "$WORK/opt/$(lc "$1")" ] && cut -f1 "$WORK/opt/$(lc "$1")"; }
 opt_name() { [ -f "$WORK/opt/$(lc "$1")" ] && cut -f2 "$WORK/opt/$(lc "$1")"; }
 
 # role_matches ROLE LOWERCASED-COLUMN-NAME — does this column play this role?
-# "review" is rejected for todo before "ready" is accepted, so a board with a
-# "Ready for review" column maps it to in_review rather than to todo.
+# Ambiguous words are REJECTED by the wrong role before the right one is offered
+# the column, because a column one role claims is never re-offered:
+#   *review* rejected for todo/in_progress  -> "Ready for review"  = in_review
+#   *bug*    rejected for blocked           -> "Bugs"              = bug
+#   *ship*   rejected for todo              -> "Ready to Ship"     = ready_to_ship
+# todo matches bare *ready* ("Ready", "Ready for dev"), which is why both "Ready for
+# review" and "Ready to Ship" need an explicit rejection there.
 role_matches() {
   case "$1" in
-    todo)        case "$2" in *review*) return 1 ;; *todo*|*"to do"*|backlog*|*ready*|new|*triage*) return 0 ;; esac ;;
-    in_progress) case "$2" in *review*) return 1 ;; *progress*|*wip*|*doing*|*active*|*building*) return 0 ;; esac ;;
-    in_review)   case "$2" in *review*|*qa*|*testing*|*verify*|*approval*) return 0 ;; esac ;;
-    blocked)     case "$2" in *block*|*bug*|*hold*|*stall*|*waiting*) return 0 ;; esac ;;
-    done)        case "$2" in *done*|*complete*|*shipped*|*closed*|*merged*) return 0 ;; esac ;;
+    todo)          case "$2" in *review*|*ship*|*merge*) return 1 ;; *todo*|*"to do"*|backlog*|*ready*|new|*triage*) return 0 ;; esac ;;
+    in_progress)   case "$2" in *review*) return 1 ;; *progress*|*wip*|*doing*|*active*|*building*) return 0 ;; esac ;;
+    ready_to_ship) case "$2" in *review*) return 1 ;; *ship*|*"to merge"*|*"ready to"*|*staged*) return 0 ;; esac ;;
+    in_review)     case "$2" in *review*|*qa*|*testing*|*verify*|*approval*) return 0 ;; esac ;;
+    bug)           case "$2" in *bug*|*defect*|*broken*|*regression*) return 0 ;; esac ;;
+    blocked)       case "$2" in *bug*|*defect*) return 1 ;; *block*|*hold*|*stall*|*waiting*) return 0 ;; esac ;;
+    done)          case "$2" in *done*|*complete*|*shipped*|*closed*|*merged*) return 0 ;; esac ;;
   esac
   return 1
 }
@@ -362,35 +397,183 @@ deps_met() { # deps_met FILE → 0 when every blocked_by story is done
   return 0
 }
 
-role_for_story() { # role_for_story FILE → role name, or "archive"
-  local st
+# role_for_story FILE → role name, or "archive".
+# Precedence: bug → blocked → delivery → status (references/github-projects.md).
+# Only `todo` is gated on dependencies: a finished or in-flight story is never
+# dragged back to Blocked by a dependency that has not landed.
+role_for_story() {
+  local st dv
   st=$(fm "$1" status)
+  dv=$(fm "$1" delivery)
   case "$st" in
-    done)        echo done ;;
-    skip)        echo archive ;;
-    bug)         echo blocked ;;
-    in-progress) echo in_progress ;;
-    *)           if deps_met "$1"; then echo todo; else echo blocked; fi ;;
+    skip) echo archive; return ;;
+    bug)  echo bug; return ;;
+    done)
+      case "$dv" in
+        merged) echo done ;;
+        pr)     echo in_review ;;
+        *)      echo ready_to_ship ;;
+      esac
+      return ;;
+    in-progress)
+      # A WIP PR is still under review, even though the work is unfinished.
+      if [ "$dv" = "pr" ]; then echo in_review; else echo in_progress; fi
+      return ;;
   esac
+  if deps_met "$1"; then echo todo; else echo blocked; fi
 }
 
 role_for_epic() { # role_for_epic EPICDIR → rollup role
-  local f st any_started all_done=1 any=0
-  any_started=0
+  local f st dv any=0 any_bug=0 any_pr=0 any_started=0 all_done=1 all_merged=1
   for f in $(find "$1/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
     st=$(fm "$f" status)
+    dv=$(fm "$f" delivery)
     [ "$st" = "skip" ] && continue
     any=1
+    [ "$dv" = "pr" ] && any_pr=1
     case "$st" in
-      done) ;;
-      in-progress|bug) any_started=1; all_done=0 ;;
-      *) all_done=0 ;;
+      done) [ "$dv" = "merged" ] || all_merged=0 ;;
+      bug)  any_bug=1; all_done=0; all_merged=0 ;;
+      in-progress) any_started=1; all_done=0; all_merged=0 ;;
+      *) all_done=0; all_merged=0 ;;
     esac
   done
   [ "$any" -eq 1 ] || { echo todo; return; }
-  [ "$all_done" -eq 1 ] && { echo done; return; }
+  [ "$any_bug" -eq 1 ] && { echo bug; return; }
+  if [ "$all_done" -eq 1 ]; then
+    if [ "$all_merged" -eq 1 ]; then echo done
+    elif [ "$any_pr" -eq 1 ]; then echo in_review
+    else echo ready_to_ship
+    fi
+    return
+  fi
+  [ "$any_pr" -eq 1 ] && { echo in_review; return; }
   [ "$any_started" -eq 1 ] && { echo in_progress; return; }
   echo todo
+}
+
+# ---------------------------------------------------------------------------
+# Delivery reconciliation — the second axis
+# ---------------------------------------------------------------------------
+#
+# `delivery` answers "how far has this work travelled toward the trunk branch?" It is
+# a CACHE over an immutable anchor: `pr:` is a number that cannot drift, and every
+# sync re-asks GitHub what that PR did. A PR merged on github.com with no ck-code
+# process running is exactly the case this repairs.
+
+TRUNK=""
+DELIV_CHANGED=0
+
+# resolve_trunk — the branch a PR must merge into to count as delivered. The project
+# gets the first word (tasks/SETTINGS.md), the repo default is the fallback. Same
+# resolution as references/branch-topology.md, so the PR base and the delivered test
+# can never disagree.
+resolve_trunk() {
+  [ -n "$TRUNK" ] && return 0
+  TRUNK=$(fm "$SETTINGS" trunk_branch)
+  [ -n "$TRUNK" ] && return 0
+  TRUNK=$(gh repo view "$REPO" --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+  [ -n "$TRUNK" ] || TRUNK="main"
+}
+
+# load_prs — ONE batched call for the whole run: number → "<state>\t<baseRef>".
+# Never one call per story.
+load_prs() {
+  gh pr list --repo "$REPO" --state all --limit 500 --json number,state,baseRefName --jq \
+    '.[] | [(.number|tostring), .state, .baseRefName] | @tsv' 2>/dev/null \
+    | while IFS="$(printf '\t')" read -r n st base; do
+        [ -n "$n" ] || continue
+        printf '%s\t%s' "$st" "$base" > "$WORK/pr/$n"
+      done
+}
+
+# pr_lookup N — guarantee the cache holds N, fetching the one PR the batch missed.
+# The batch is an optimisation, not a correctness limit: in a busy repo a plan's PR
+# can fall outside the newest 500, and it must still resolve.
+pr_lookup() {
+  [ -f "$WORK/pr/$1" ] && return 0
+  local out
+  out=$(gh pr view "$1" --repo "$REPO" --json state,baseRefName --jq '[.state, .baseRefName] | @tsv' 2>/dev/null)
+  [ -n "$out" ] || return 1
+  printf '%s' "$out" > "$WORK/pr/$1"
+  return 0
+}
+
+pr_state() { [ -f "$WORK/pr/$1" ] && cut -f1 "$WORK/pr/$1"; }
+pr_base()  { [ -f "$WORK/pr/$1" ] && cut -f2 "$WORK/pr/$1"; }
+
+# resolve_one FILE PRNUM — write the delivery this PR implies onto FILE.
+resolve_one() {
+  local f="$1" n="$2" st base want cur label
+  label=$(fm "$f" id); [ -n "$label" ] || label="epic $(fm "$f" epic)"
+  if ! pr_lookup "$n"; then
+    warn "PR #$n (referenced by $f) not found on $REPO — delivery left unchanged"
+    return 0
+  fi
+  st=$(pr_state "$n"); base=$(pr_base "$n")
+  case "$st" in
+    MERGED)
+      if [ "$base" = "$TRUNK" ]; then
+        want=merged
+      else
+        want=pr
+        warn "PR #$n merged into '$base', not the trunk '$TRUNK' — $label is not delivered yet"
+      fi ;;
+    OPEN)   want=pr ;;
+    CLOSED)
+      want=""
+      warn "PR #$n was closed without merging — clearing delivery for $label" ;;
+    *) return 0 ;;
+  esac
+  cur=$(fm "$f" delivery)
+  [ "$cur" = "$want" ] && return 0
+  echo "  delivery $label  ${cur:-(none)} → ${want:-(none)}  (PR #$n)"
+  [ "$DRY" -eq 1 ] && return 0
+  set_fm "$f" delivery "$want" && DELIV_CHANGED=$((DELIV_CHANGED+1))
+}
+
+# reconcile_delivery — refresh every delivery: in scope, materializing inheritance.
+# A story with no PR of its own resolves through its epic's (integration: epic or
+# feature never gives a story its own PR) and the answer is written onto the STORY,
+# so ck-index, track and ck-doctor each read one field on one file.
+reconcile_delivery() {
+  local dir ef epr sf spr
+  resolve_trunk
+  load_prs
+  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
+    case "$PLAN" in
+      "") ;;
+      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
+    esac
+    ef="$dir/EPIC.md"
+    [ -f "$ef" ] || continue
+    epr=$(fm "$ef" pr)
+    [ -n "$epr" ] && resolve_one "$ef" "$epr"
+    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+      spr=$(fm "$sf" pr)
+      if [ -n "$spr" ]; then
+        resolve_one "$sf" "$spr"
+      elif [ -n "$epr" ]; then
+        resolve_one "$sf" "$epr"
+      fi
+    done
+  done
+}
+
+# regen_views — the generated views are a function of frontmatter, so anything that
+# writes frontmatter regenerates them in the same phase (references/data-model.md).
+# stderr is deliberately NOT swallowed: ck-index WARN lines must reach the user.
+regen_views() {
+  [ "$DELIV_CHANGED" -gt 0 ] || return 0
+  local gen
+  gen="$(dirname "$0")/ck-index.sh"
+  if [ -f "$gen" ]; then
+    bash "$gen" ${PLAN:+"$PLAN"} >/dev/null || warn "ck-index failed — the generated views are stale"
+  elif command -v ck-index >/dev/null 2>&1; then
+    ck-index ${PLAN:+"$PLAN"} >/dev/null || warn "ck-index failed — the generated views are stale"
+  else
+    warn "ck-index not found — run it by hand to refresh the generated views"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -470,12 +653,10 @@ place() {
   iid=$(item_id "$issue")
   col=$(item_col "$issue")
 
-  # Sticky In Review: once ship has moved a card to the review column, only
-  # `done` may move it out. Without this, the next sync would drag an open PR's
-  # card back to In Progress, because frontmatter still reads in-progress.
-  if [ "$role" != "done" ] && [ -n "${ROLE_in_review:-}" ] && [ "$col" = "$ROLE_in_review" ]; then
-    SKIPPED=$((SKIPPED+1)); return 0
-  fi
+  # No stickiness. In Review used to be pinned here, because "a PR is open" was not
+  # expressible in frontmatter and the next sync would drag the card back to In
+  # Progress. `delivery: pr` is that fact now, so the column is derived like any
+  # other and cards move in both directions.
 
   if [ -z "$iid" ]; then
     echo "  add      #$issue → $want  $label"
@@ -563,16 +744,65 @@ EOF
   return 0
 }
 
+# reorder_options — rewrite the option ORDER to the preset: every role column in
+# ROLES order first, then any column no role claimed, keeping its existing position.
+# Colours and descriptions are carried over untouched.
+#
+# updateProjectV2Field replaces the whole option set, so if GitHub re-mints option
+# ids the cards lose their column. That is why the caller always runs a full sync
+# straight afterwards — it re-places every card from frontmatter, which is the
+# source of truth anyway.
+reorder_options() {
+  local existing name color desc opts="" r mapped
+  existing=$(gh api graphql -f query='
+    query($id: ID!) { node(id: $id) { ... on ProjectV2SingleSelectField {
+      options { name color description } } } }' -F id="$FIELD_ID" \
+    --jq '.data.node.options[] | [.name, .color, .description] | @tsv' 2>/dev/null)
+  [ -n "$existing" ] || { warn "could not read the board columns — order left as is"; return 1; }
+
+  : > "$WORK/ordered"
+  for r in $ROLES; do
+    mapped=$(rget "ROLE_$r")
+    [ -n "$mapped" ] && printf '%s\n' "$mapped" >> "$WORK/ordered"
+  done
+  while IFS="$(printf '\t')" read -r name color desc; do
+    [ -n "$name" ] || continue
+    grep -qxF "$name" "$WORK/ordered" || printf '%s\n' "$name" >> "$WORK/ordered"
+  done <<EOF
+$existing
+EOF
+
+  echo "  order    $(tr '\n' '|' < "$WORK/ordered" | sed 's/|$//; s/|/ · /g')"
+
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    color=$(printf '%s\n' "$existing" | awk -F'\t' -v n="$name" '$1==n{print $2; exit}')
+    desc=$(printf '%s\n' "$existing" | awk -F'\t' -v n="$name" '$1==n{print $3; exit}')
+    opts="$opts{name: \"$(jqesc "$name")\", color: ${color:-GRAY}, description: \"$(jqesc "${desc:-}")\"}, "
+  done < "$WORK/ordered"
+
+  [ "$DRY" -eq 1 ] && return 0
+  opts="${opts%, }"
+  gh api graphql -f query="
+    mutation { updateProjectV2Field(input: {fieldId: \"$FIELD_ID\", singleSelectOptions: [$opts]}) {
+      projectV2Field { ... on ProjectV2SingleSelectField { id } } } }" >/dev/null 2>&1 \
+    || { fail "could not reorder the columns — the board keeps its current order"; return 1; }
+  pace
+  return 0
+}
+
 preset_name() {
   case "$1" in
-    todo) echo "Todo" ;; in_progress) echo "In Progress" ;;
-    in_review) echo "In Review" ;; blocked) echo "Blocked" ;; done) echo "Done" ;;
+    blocked) echo "Blocked" ;; todo) echo "Todo" ;; in_progress) echo "In Progress" ;;
+    ready_to_ship) echo "Ready to Ship" ;; in_review) echo "In Review" ;;
+    bug) echo "Bugs" ;; done) echo "Done" ;;
   esac
 }
 preset_color() {
   case "$1" in
-    todo) echo GRAY ;; in_progress) echo YELLOW ;;
-    in_review) echo PURPLE ;; blocked) echo RED ;; done) echo GREEN ;;
+    blocked) echo GRAY ;; todo) echo BLUE ;; in_progress) echo YELLOW ;;
+    ready_to_ship) echo ORANGE ;; in_review) echo PURPLE ;;
+    bug) echo RED ;; done) echo GREEN ;;
   esac
 }
 
@@ -602,7 +832,7 @@ cmd_init() {
   fi
 
   if [ "$DRY" -eq 1 ] && [ "$NUMBER" = "(new)" ]; then
-    echo "  would create the project, link it to $REPO, and provision 5 columns"
+    echo "  would create the project, link it to $REPO, and provision 7 columns"
     return 0
   fi
 
@@ -612,6 +842,9 @@ cmd_init() {
   load_field || exit 1
   [ "$EXTEND" -eq 1 ] && { ensure_options; load_field || exit 1; }
   map_columns
+  if [ "$REORDER" -eq 1 ]; then
+    reorder_options && { load_field || exit 1; map_columns; }
+  fi
 
   local r
   echo "ck-project: project #$NUMBER ($OWNER) · field '$FIELD_NAME'"
@@ -624,6 +857,13 @@ cmd_init() {
   [ "$DRY" -eq 1 ] && return 0
   write_settings
   echo "ck-project: wrote $SETTINGS"
+
+  # A reorder may have re-minted the option ids, so every card is re-placed from
+  # frontmatter before anyone looks at the board.
+  if [ "$REORDER" -eq 1 ]; then
+    echo "ck-project: re-placing every card after the reorder"
+    cmd_sync
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -669,10 +909,16 @@ reconcile_ids() {
 
 cmd_sync() {
   require_board
-  build_status_map
-  load_items
 
   echo "ck-project: syncing $([ -n "$PLAN" ] && echo "$PLAN" || echo 'every plan') → project #$NUMBER ($OWNER)$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+
+  # Delivery first: a card cannot be placed correctly until we know what GitHub did
+  # with its PR. This is also the step that repairs a merge nobody told us about.
+  reconcile_delivery
+  regen_views
+
+  build_status_map
+  load_items
 
   local dir ef enum eissue sf sissue role
   for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
@@ -694,8 +940,61 @@ cmd_sync() {
     done
   done
 
-  echo "ck-project: $ADDED added, $CHANGED changed, $SKIPPED already correct, $FAILURES failures"
+  echo "ck-project: $ADDED added, $CHANGED changed, $SKIPPED already correct, $DELIV_CHANGED delivery updated, $FAILURES failures"
   return "$(( FAILURES == 0 ? 0 : 1 ))"
+}
+
+# ---------------------------------------------------------------------------
+# Subcommand: backfill
+# ---------------------------------------------------------------------------
+#
+# Work finished before 6.4 has no `pr:`, so it would sit in Ready to Ship forever.
+# GitHub still knows which PR closed each linked issue — `ship` always writes a
+# `Closes #<issue>` footer — so the pointer is recoverable rather than lost.
+
+cmd_backfill() {
+  require_board
+  local dir ef sf f issue prnum found=0 miss=0
+
+  echo "ck-project: backfilling pr: from closed issues$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+
+  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
+    case "$PLAN" in
+      "") ;;
+      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
+    esac
+    ef="$dir/EPIC.md"
+    for f in "$ef" $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+      [ -f "$f" ] || continue
+      [ -n "$(fm "$f" pr)" ] && continue          # never overwrite a known pointer
+      issue=$(fm "$f" issue)
+      [ -n "$issue" ] || continue
+      # The newest linking PR wins: a story reopened for a fix has more than one.
+      prnum=$(gh issue view "$issue" --repo "$REPO" \
+                --json closedByPullRequestsReferences \
+                --jq '[.closedByPullRequestsReferences[]?.number] | max // empty' 2>/dev/null)
+      if [ -z "$prnum" ]; then
+        miss=$((miss+1))
+        echo "  skip     issue #$issue — no linking PR found  ($f)"
+        continue
+      fi
+      found=$((found+1))
+      echo "  pr       issue #$issue ← PR #$prnum  ($f)"
+      [ "$DRY" -eq 1 ] || set_fm "$f" pr "$prnum"
+    done
+  done
+
+  if [ "$found" -eq 0 ] && [ "$miss" -eq 0 ]; then
+    echo "ck-project: nothing to backfill — every entry already carries a pr: or has no issue:"
+    return 0
+  fi
+
+  # Having recovered the anchors, answer the delivery question straight away; the
+  # caller then only needs a sync to place the cards.
+  [ "$DRY" -eq 1 ] || { reconcile_delivery; regen_views; }
+  echo "ck-project: $found recovered, $miss without a linking PR, $DELIV_CHANGED delivery updated"
+  echo "ck-project: run 'ck-project sync' to place the cards"
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -707,8 +1006,8 @@ cmd_set() {
   case " $ROLES " in *" $SET_ROLE "*) ;; *) echo "ck-project: unknown role '$SET_ROLE' ($ROLES)" >&2; exit 1 ;; esac
   require_board
   load_items
-  # A one-shot push is the only path that may move a card INTO in_review, so it
-  # bypasses the stickiness check that protects the card afterwards.
+  # A manual escape hatch: it moves one card and writes no frontmatter, so the next
+  # sync will move it back to whatever the two axes say. Prefer fixing `delivery:`.
   local want wantid iid
   want=$(rget "ROLE_$SET_ROLE")
   [ -n "$want" ] || { echo "ck-project: this board has no '$SET_ROLE' column — nothing to do"; exit 0; }
@@ -734,6 +1033,7 @@ cmd_show() {
   printf '  %-22s %s\n' "repo" "$(fm "$SETTINGS" github_repo)"
   printf '  %-22s %s (#%s)\n' "project" "$(fm "$SETTINGS" github_project_owner)" "$(fm "$SETTINGS" github_project_number)"
   printf '  %-22s %s\n' "board field" "$(fm "$SETTINGS" board_field)"
+  printf '  %-22s %s\n' "trunk_branch" "$(fm "$SETTINGS" trunk_branch)"
   for r in $ROLES; do
     printf '  %-22s %s\n' "$r" "$(fm "$SETTINGS" "board_$r")"
   done
@@ -745,6 +1045,7 @@ case "$CMD" in
   discover) cmd_discover ;;
   init)     cmd_init ;;
   sync)     cmd_sync ;;
+  backfill) cmd_backfill ;;
   set)      cmd_set ;;
   show)     cmd_show ;;
   -h|--help|help) usage 0 ;;

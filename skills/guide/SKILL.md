@@ -48,6 +48,11 @@ references it). A story is **READY** iff:
 Anything else (`todo` with an unmet dependency, `in-progress`, `done`, `skip`) is
 **not ready**.
 
+**Readiness reads `status` only, never `delivery`.** A dependency is satisfied the moment
+its work is `done` — waiting for it to reach the trunk would deadlock every epic-level
+plan, whose stories merge into an epic branch and never touch the trunk at all
+([`../../references/data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)).
+
 ---
 
 ## MODE A — STATE ROUTING (no argument)
@@ -80,6 +85,13 @@ count rows by the `Status` column, applying **The Ready rule**:
 - `n_in_progress` — `in-progress`
 - `n_done` — `done`
 
+Then count the `Delivery` column, which answers a different question — how far finished
+work travelled toward the trunk:
+
+- `n_unshipped` — `done` with an empty Delivery (`—`): finished, no PR opened
+- `n_in_review` — Delivery `PR #<n>`
+- `n_merged` — Delivery `MERGED`
+
 Do **not** run `ck-index` here (this skill writes nothing). If `tasks/` exists but
 `has_indexes` is false, the views just need regenerating — row 5 below routes to `track`.
 
@@ -97,7 +109,8 @@ First matching row wins; print only that recommendation.
 | `n_bug > 0` | **`/ck-code:track next`** → **`/ck-code:build <path>`** — an open bug outranks new work (Bug-Fix Mode). |
 | `n_ready > 0` | **`/ck-code:track next`** → **`/ck-code:build [path]`** — implement the next ready story. |
 | `n_in_progress > 0 && n_ready == 0` | **`/ck-code:ship <story-path>`** — ship the in-progress story, or **`/ck-code:build`** to keep going. |
-| `n_done > 0 && n_ready == 0 && n_in_progress == 0 && n_bug == 0` | **`/ck-code:track progress`** — review the milestone tracker, or plan the next feature with **`/ck-code:plan`** / **`/ck-code:spec`**. |
+| `n_unshipped > 0 && n_ready == 0 && n_in_progress == 0 && n_bug == 0` | **`/ck-code:ship <story-path>`** — `n_unshipped` finished stor(ies) have no PR yet; nothing is on the trunk until they do. |
+| `n_done > 0 && n_ready == 0 && n_in_progress == 0 && n_bug == 0` | **`/ck-code:track progress`** — review the milestone tracker, or plan the next feature with **`/ck-code:plan`** / **`/ck-code:spec`**. Note `n_in_review` stor(ies) still awaiting merge, if any. |
 | `has_tasks && all counts == 0` | **`/ck-code:plan`** appears not to have produced stories — re-check `tasks/<slug>/`. |
 
 Where two ready paths fit and the choice matters (e.g. 3+ independent ready stories),

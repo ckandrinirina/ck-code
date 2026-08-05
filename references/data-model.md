@@ -60,6 +60,8 @@ size: S
 blocked_by: [01-01]
 files: [src/auth/login.tsx, src/auth/session.ts]
 issue: 123
+pr:
+delivery:
 prior_status:
 ---
 
@@ -90,12 +92,45 @@ prior_status:
 | `blocked_by` | `[id, ...]` or `[]` | story IDs that must be `done` first; may name a story in another plan |
 | `files` | `[path, ...]` or `[]` | files the story creates/modifies — the conflict-detection and touched-files key |
 | `issue` | number or empty | linked GitHub issue, written by `ship` (incl. `--to-issues`); empty until pushed |
+| `pr` | number or empty | the **latest** PR carrying this story's work, written by `ship`; empty until a PR exists |
+| `delivery` | empty \| `pr` \| `merged` | how far that work has travelled toward the trunk branch — the second axis, below |
 | `prior_status` | status or empty | set to the pre-`bug` status when `status: bug`; restored on fix |
 
 **Format contract (so the generator can read it without a YAML library):** one key
 per line, `key: value`; list values are inline flow style `[a, b, c]` (or `[]`);
 no block/multiline scalars in frontmatter. Body prose is free-form Markdown below
 the closing `---`. `status` and `size` are lowercase/uppercase exactly as the enum.
+
+## Two axes: `status` is work, `delivery` is integration
+
+`status` answers *is the work finished?* — acceptance criteria met, QA green. `delivery`
+answers *how far has it travelled toward the trunk branch?* They are **orthogonal**, and
+conflating them was the flaw this pair replaces: a story was `done` the moment `build`
+finished it, whether it sat uncommitted on a local branch, in an open PR, or on `main`.
+
+| `delivery` | Means | Written by |
+|---|---|---|
+| *(empty)* | nothing open for review — committed locally at most | `plan` scaffolds it empty |
+| `pr` | PR `pr:` is open | `ship`, when it creates or updates the PR |
+| `merged` | PR `pr:` merged into the trunk branch | `ck-project sync` reconciliation |
+
+**`status: done` keeps its exact previous meaning, and nothing that reads it changes.**
+`blocked_by` still resolves against `done` alone — never against `delivery` — because at
+`integration: epic` a story merges into its epic branch and never touches the trunk
+([`branch-topology.md`](branch-topology.md)); gating dependencies on `merged` would
+deadlock every epic-level plan.
+
+**Empty `delivery` ≡ pre-6.4 behaviour**, exactly like the `integration:` field. A project
+carrying neither key behaves as it always did, so this is not a layout change and
+`/ck-code:migrate` has nothing to do.
+
+**Epic inheritance.** At `integration: epic` or `feature` a story never gets its own PR, so
+`EPIC.md` carries the same pair and resolution walks up: the story's own `pr:` → else its
+epic's `pr:` → else empty. A merged epic PR delivers every story of that epic.
+
+**`pr:` is the *latest* PR, not a permanent one.** A defect found in merged code keeps
+`delivery: merged` while `status: bug`; the fix PR overwrites `pr:` and resets
+`delivery: pr`. A PR closed **without** merging resets `delivery` to empty and warns.
 
 ## Epic file (`plan` output)
 
@@ -108,6 +143,8 @@ the closing `---`. `status` and `size` are lowercase/uppercase exactly as the en
 | `title` | text | epic display title |
 | `description` | text | one line — becomes the `FEATURE_INDEX` Description cell |
 | `issue` | number or empty | linked GitHub issue, written by `ship --to-issues` |
+| `pr` | number or empty | the epic's own PR (levels `epic`/`feature`), written by `ship --promote`; the stories of this epic inherit it |
+| `delivery` | empty \| `pr` \| `merged` | the epic PR's state — same enum and same writers as a story's |
 | `integration` | `story` \| `epic` \| `feature` \| empty | where this epic's work is proposed for review; empty ≡ `story`. Branch names are **derived, never stored** — see [`branch-topology.md`](branch-topology.md) |
 
 Same format contract as story frontmatter. `title` and `description` must not
@@ -140,8 +177,10 @@ first use. Flat frontmatter, same format contract as story files. It holds *proj
 configuration, never story state — nothing here is derived from, or feeds back into,
 any story's frontmatter.
 
-Today it configures GitHub issue tracking and the Projects board mapping
-([`github-projects.md`](github-projects.md)); it is the file future per-project
+Today it configures GitHub issue tracking, the Projects board mapping
+([`github-projects.md`](github-projects.md)) and `trunk_branch` — the branch a story must
+reach to count as delivered, and the base every PR targets
+([`branch-topology.md`](branch-topology.md#resolution)). It is the file future per-project
 settings belong in. Absent file ≡ every optional integration off, which is why no
 skill may require it to exist.
 
@@ -157,9 +196,12 @@ regenerates them in the same phase by running the script; it never edits a cell.
 - **`tasks/FEATURE_INDEX.md`** — one row per epic across all plans, rolled up from
   story statuses. `build` reads it first to pick a feature.
 
-Status rollup (computed, never stored): a feature is `DONE` when every non-`skip`
-story is `done`; `IN PROGRESS` when any story is `in-progress`/`bug` or some-but-not-all
-are `done`; `TODO` when none has started. A `bug` story counts as not-done.
+Status rollup (computed, never stored): a feature is `MERGED` when every non-`skip` story
+is `done` **and** `delivery: merged`; `DONE` when every non-`skip` story is `done` but at
+least one has not reached the trunk; `IN PROGRESS` when any story is `in-progress`/`bug`
+or some-but-not-all are `done`; `TODO` when none has started. A `bug` story counts as
+not-done. `MERGED` and `DONE` are both **finished** states — every consumer that computes
+an "unfinished set" excludes both ([`feature-index.md`](feature-index.md)).
 
 ## Regeneration contract
 
@@ -206,6 +248,8 @@ fast path; `migrate` writes it as its final step.
 
 - **Never hand-edit a generated view** — regenerate from frontmatter with `ck-index`.
 - **Never store status anywhere but story frontmatter** — every other status display is derived.
+- **Never redefine `status: done` as "merged"** — `done` is work-complete; delivery lives in `delivery`. `blocked_by` resolves against `done` alone.
+- **Never resolve `delivery` by hand** — `ship` writes `pr`/`delivery: pr`; only `ck-project sync` promotes it to `merged`, from GitHub's answer.
 - **Never write a delta/journal doc** — commits are the history.
 - **Always run `ck-index` in the same phase** you change any story's frontmatter.
 - **Frontmatter stays generator-readable** — one `key: value` per line, inline `[...]` lists, no block scalars.
