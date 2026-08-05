@@ -15,12 +15,30 @@ Whether you're building a new project from scratch or adding a feature to an exi
 ## One source of truth (v6)
 
 A story's state lives in **one** place: the YAML frontmatter of its story file
-(`id, title, epic, status, size, blocked_by, files, issue, prior_status`). The
-`STORIES_INDEX.md` and `FEATURE_INDEX.md` you see are **generated read-only views**,
+(`id, title, epic, status, size, blocked_by, files, issue, pr, delivery, prior_status`).
+The `STORIES_INDEX.md` and `FEATURE_INDEX.md` you see are **generated read-only views**,
 regenerated from that frontmatter by `scripts/ck-index.sh`. Because a view is a pure
 function of the frontmatter, it can never drift — so there is no reconciler skill and no
 hand-edited index tables. To change a story's status, a skill edits the frontmatter and
 regenerates; that's it.
+
+## Done is not shipped
+
+Two independent axes describe a story, because "finished" and "on the trunk branch" are
+different facts:
+
+- **`status`** — `todo → in-progress → done` (plus `skip`, `bug`). The work itself.
+- **`delivery`** — empty `→ pr → merged`. How far it travelled toward the trunk.
+
+So a story can be `done` with no PR (**Ready to Ship**), `done` with an open PR
+(**In Review**), or `done` and merged (**Done**). `ship` records the PR number in `pr:`;
+`ck-project sync` asks GitHub what became of it and updates `delivery` — which is why a
+PR merged in the browser, with nothing running locally, still lands correctly on the next
+sync. Set `trunk_branch:` in `tasks/SETTINGS.md` when your integration branch is not the
+repo default.
+
+Dependencies still resolve against `status: done` alone: work you can build on is finished
+work, not merged work.
 
 ## One id, one story (v6)
 
@@ -51,7 +69,7 @@ issues stay valid.
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
 - **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice
-- **GitHub Projects board sync** — the board is a *generated view* of story frontmatter, like the indexes: `ck-project sync` computes the column each card belongs in and pushes only the differences, so it can't drift and is safe to re-run. ck-code adapts to whatever columns your board already has (an unmapped role is skipped, never an error) or provisions a five-column board for a new project. `/ck-code:config` sets it up; `build` and `ship` keep it current
+- **GitHub Projects board sync** — the board is a *generated view* of story frontmatter, like the indexes: `ck-project sync` computes the column each card belongs in from `status` **and** `delivery`, and pushes only the differences, so it can't drift and is safe to re-run. Each sync re-asks GitHub what happened to every recorded PR, so a merge you clicked in the browser lands on the board with nothing running locally. ck-code adapts to whatever columns your board already has (an unmapped role is skipped, never an error) or provisions a seven-column board — Blocked · Todo · In Progress · Ready to Ship · In Review · Bugs · Done — for a new project. `/ck-code:config` sets it up; `build` and `ship` keep it current
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
 - **SOLID principle checks** — every implementation is reviewed against the five principles
 - **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
@@ -311,7 +329,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
 | `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
-| `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, pick or create the GitHub Project whose board mirrors story status, re-map board columns, or show what is configured | `show` / `board` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
+| `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, set the trunk branch every PR targets, pick or create the GitHub Project whose board mirrors story status, re-map or reorder board columns, or show what is configured | `show` / `board` / `trunk <branch>` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
 
 ## Why ck-code?
 
