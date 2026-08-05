@@ -5,6 +5,42 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.0.0] — 2026-08-05
+
+### Changed
+- **BREAKING — layout `v5` → `v6`: epic and story ids are now unique across every plan.**
+  Epic numbering restarted at `01` in each new plan folder, so two plans could both own
+  epic `01` and story `01-01`. Everything that consumes an id — `build --epic NN`,
+  `build EE-SS`, `blocked_by`, the `epic/<NN>-*` branch glob, `ck-doctor`'s dependency
+  graph — had no way to tell which plan was meant and silently resolved to whichever it
+  reached first. `EE-SS` now names exactly one story anywhere. The id *format* is
+  unchanged; only its scope widened.
+- **plan**: all three modes allocate the next epic from the project-wide maximum, derived
+  from the epic folders on every run and never stored. Continue mode changed too — it read
+  the extended folder's own last epic, which is wrong once a newer plan holds a higher
+  number. `--quick --epic NN` now resolves its plan from the number instead of asking.
+- **build**: PARALLEL MODE P1 resolves the plan from the epic number; more than one match
+  stops the run and routes to `migrate` rather than guessing or asking.
+- **version gate**: `LAYOUT` `v5` → `v6`, with a `DUPES` probe. A project whose epic
+  numbers already do not collide — every single-plan project — re-stamps silently and
+  never runs a migration.
+
+### Added
+- **migrate**: **Phase R** renumbers colliding epics, on every migration path. The oldest
+  plan keeps its numbers (so its merged branches and published issues stay valid), offsets
+  preserve gaps, and a re-run is a no-op. Hard-stops on any affected branch with an open
+  PR; rewrites folders and frontmatter mechanically but confirms prose id references one
+  by one; reports stale `[EE-SS]` issue titles without ever writing to GitHub.
+- **ck-doctor**: `epic ids` and `story ids` uniqueness checks, run ahead of the dependency
+  check so a collision reports its real cause instead of phantom dependency errors, plus a
+  guard for an `epics/` directory with no overview file (invisible to `ck-index` and to
+  `migrate`, yet still contributing story ids).
+
+### Fixed
+- **ck-doctor**: duplicate story ids were reported as malformed frontmatter, which named
+  no fix and mixed an identity fault in with parse errors. They are now their own check
+  and point at `/ck-code:migrate`.
+
 ## [5.9.1] — 2026-08-04
 
 ### Changed
