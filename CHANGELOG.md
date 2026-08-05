@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.3.0] — 2026-08-05
+
+### Added
+- **build** (`/ck-code:build`): a wave now marks its stories `in-progress` on the target
+  branch before dispatching them, so their Projects cards reach **In Progress** and the
+  epic card rolls up with them. Previously the status lived only inside each agent's
+  worktree, where the orchestrator could never see it, and cards jumped from Todo
+  straight to Done.
+- **doctor** (`/ck-code:doctor`): a `board` row reports cards sitting in a column their
+  story's `status:` does not call for, with `ck-project sync` as the fix. WARN only — a
+  board is a generated view, so drift can never fail a release gate.
+
+### Fixed
+- **build**: wave and parallel runs regenerated the indexes after a merge but never synced
+  the board, so a completed story's card stayed in Todo until someone ran `/ck-code:ship`
+  for it.
+- **fix** (`/ck-code:fix`): triaging a story to `bug` never moved its card to **Blocked**,
+  and `ck-project` was missing from the skill's `allowed-tools`, so the call would have
+  been refused even once added.
+- **build**: restoring `prior_status` at the end of Bug-Fix Mode left the card stranded in
+  Blocked.
+
+### Changed
+- **build**: a story with status `IN PROGRESS` and satisfied dependencies is now dispatchable
+  in PARALLEL MODE, alongside `TODO` and `BUG`. Without this an aborted wave would strand the
+  stories it had already marked in progress.
+
 ## [6.2.0] — 2026-08-05
 
 ### Added
