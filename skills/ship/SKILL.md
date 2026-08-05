@@ -21,7 +21,7 @@ never by matching issue titles.
 
 **CRITICAL RULE — No AI references in any artefact.** Full rule in [`no-ai-references.md`](../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
 
-References: [examples.md](references/examples.md) (worked ship walkthrough) · [pr-templates.md](references/pr-templates.md) (PR bodies + commands) · [issue-templates.md](references/issue-templates.md) (issue comment/close/checklist) · [issue-bodies.md](references/issue-bodies.md) (`--to-issues` issue-body templates per mode).
+References: [examples.md](references/examples.md) (worked ship walkthrough) · [pr-templates.md](references/pr-templates.md) (PR bodies + commands) · [issue-templates.md](references/issue-templates.md) (issue comment/close/checklist) · [issue-bodies.md](references/issue-bodies.md) (what `ck-issues` publishes per mode, + the P5 summary shape).
 
 ## ROUTING CHECK (do first)
 
@@ -397,70 +397,61 @@ gh repo view --json nameWithOwner -q .nameWithOwner
 
 If either fails, stop and tell the user what to fix.
 
-## PHASE P2: READ PLAN STRUCTURE
+## PHASE P2: PREVIEW THE PLAN
 
-1. Read `PROJECT_OVERVIEW.md` (or `FEATURE_OVERVIEW.md`) for the project name and summary.
-2. `Glob "tasks/<slug>/epics/*/EPIC.md"` — each epic (folder `NN_<slug>`, `EPIC.md` frontmatter).
-3. Per epic, `Glob "tasks/<slug>/epics/NN_*/stories/*.md"` — each story
-   (`SS_<slug>.md`, frontmatter `id,title,epic,size,blocked_by,issue`).
-4. Read each `EPIC.md` and story to extract titles, descriptions, acceptance criteria,
-   sizes, and dependencies. Build an in-memory map of the plan (keep each file's path so
-   Phase P5 can write `issue:` back).
+`ck-issues` parses the plan — **never read the epic and story files yourself**. One
+dry run reports everything the confirm prompt needs and creates nothing:
+
+```bash
+ck-issues tasks/<slug> --mode stories --dry-run
+```
+
+- the header line gives `N epics / M stories`, which is the issue count for **every**
+  mode (`feature`=1, `epics`=N, `stories`=N+M);
+- each `would create:` line is the exact title and label set;
+- each `reused` line is a plan file whose frontmatter already carries an `issue:` — it
+  will never be published twice, so a re-run after a partial publish is safe.
+
+Only when `reused` lines are absent but the repo already holds `epic`/`story` issues
+(a publish whose write-back was lost) check for strays:
+`gh issue list --state all --limit 200 --json number,title,labels`.
 
 ## PHASE P3: SELECT MODE & CONFIRM
 
 **Mode:** if `--mode` was passed, use it; else AskUserQuestion — "How to publish this
 plan?" options **feature** (1 issue), **epics** (1 per epic), **stories** (epics + one
-per story).
+per story), each labelled with its count from P2.
 
-**Duplicate check** before proposing: `gh issue list --label "epic" --state all --json title,number`
-(and `feature`/`story` for the mode). If matches exist, fold **Skip duplicates /
-Proceed anyway / Abort** into the confirm prompt below.
+**Confirm:** present the repo, project name, mode, and issue count. AskUserQuestion —
+"Proceed?" options **Create**, **Abort**. Fold a **Skip duplicates / Proceed anyway**
+choice into the same call when P2 found strays — never a second round-trip.
 
-**Confirm:** present the repo, project name, mode, labels to create, and the issue count
-(`feature`=1; `epics`=N; `stories`=N epics + M stories). AskUserQuestion — "Proceed?"
-options **Create**, **Dry-run** (print exactly what would be created, create nothing),
-**Abort**.
+## PHASE P4: PUBLISH
 
-## PHASE P4: CREATE LABELS
-
-Create only the labels the chosen mode needs (`--force` updates existing). In `stories`
-mode add one `size/<S>` label per size actually present.
+One call does labels, issue creation, `issue:` write-back, the epic→story relink, and
+the `ck-index` regeneration:
 
 ```bash
-gh label create "feature" --color "0E8A16" --description "Whole-feature tracking issue" --force
-gh label create "epic" --color "6F42C1" --description "Epic-level issue" --force
-gh label create "story" --color "0075CA" --description "Implementation story" --force
-gh label create "size/S" --color "C2E0C6" --description "Small story" --force
-gh label create "size/M" --color "BFDADC" --description "Medium story" --force
+ck-issues tasks/<slug> --mode stories
 ```
 
-## PHASE P5: CREATE ISSUES & WRITE BACK
+Options: `--repo OWNER/REPO` (default: current repo), `--pace N` (seconds between `gh`
+calls, default `1`), `--no-index`.
 
-Follow the chosen mode's section in [issue-bodies.md](references/issue-bodies.md). `sleep 1`
-between every `gh` call (GitHub rate-limits issue creation strictly).
+Exit `0` = every issue created. Exit `1` = at least one `gh` call failed; the failing
+titles are on stderr and everything else still published. **Re-run the identical command
+to finish a partial publish** — entries with an `issue:` are reused, and epic bodies are
+relinked from the current numbers on every run, so an interrupted run repairs itself.
 
-- **`feature`** — create the one issue. No frontmatter write-back.
-- **`epics`** — create each epic issue; for each, Edit its `EPIC.md` frontmatter `issue:`
-  to the new number (add the line if absent).
-- **`stories`** — create all epic issues first (record epic-slug → issue number and write
-  each into `EPIC.md` `issue:`), then create each story issue and Edit that story's
-  frontmatter `issue:` to the new number, then replace the `#TBD` placeholders in each
-  epic body with the real story-issue numbers.
+Relay any `ck-issues: WARN` or `ck-index: WARN` line to the user — a warned story is
+skipped by the publisher *and* invisible in every generated view.
 
-After all write-backs, regenerate the views once (frontmatter changed):
-
-```bash
-ck-index tasks/<slug>
-```
-
-If a single `gh issue create` fails, report it and continue; list all failures at the end.
-
-## PHASE P6: SUMMARY
+## PHASE P5: SUMMARY
 
 Fill the summary shape from [issue-bodies.md](references/issue-bodies.md) for the mode
-that ran (created issue numbers, quick links, total). Note which stories/epics got an
-`issue:` written back.
+that ran, using the script's own output lines (`epic NN #X created → path`,
+`story EE-SS #X created → path`) — they already name every issue number and every file
+that received an `issue:`. Never re-read the plan to build the summary.
 
 ---
 
@@ -469,7 +460,7 @@ that ran (created issue numbers, quick links, total). Note which stories/epics g
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
 - **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index`; never cell-edit an index or flip an EPIC checkbox for status.
-- **Always run `ck-index` in the same phase** you change any story or epic frontmatter (status write, or `--to-issues` `issue:` write-back).
+- **Always run `ck-index` in the same phase** you change any story or epic frontmatter (SHIP MODE's status write; in `--to-issues`, `ck-issues` already runs it).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
 - **Never ask the user for the PR base branch** — derive it from the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity.
@@ -482,9 +473,9 @@ that ran (created issue numbers, quick links, total). Note which stories/epics g
 - **Never overwrite a PR description** — append beneath the existing body and prior `## Updates` entries.
 - **Never open a second PR for a branch** that already has an open one (Phase 1.2).
 - **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only.
+- **Never publish `--to-issues` by hand** — no per-issue `gh issue create`, no throwaway publisher script, no `Edit` per `issue:` field. Run `ck-issues`: rate-limit pacing, ordering (epics before the story bodies that reference them), write-back, relink and `ck-index` all live inside it. Hand-driving a 12-epic plan is ~200 tool calls, and the `sleep` that paces them is blocked as a foreground call in most harnesses — that dead end is what makes agents improvise a fragile script.
 - **Never create issues outside the chosen `--to-issues` mode** — `feature`=1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
-- **Never create a story issue before every epic issue exists** — story bodies cross-reference epic numbers.
-- **Always `sleep 1` between every `gh` call** in `--to-issues` mode — GitHub rate-limits strictly.
+- **Never re-run `--to-issues` with a different mode against the same plan** — `issue:` holds one number per file, so a second mode publishes a parallel hierarchy the frontmatter cannot point at.
 - **Always close issues with a `Closes #X` footer**, and only when the work is complete.
 
 ## NEXT

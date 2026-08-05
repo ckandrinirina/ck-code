@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# ck-issues — publish a ck-code tasks/<slug>/ plan to GitHub Issues.
+#
+# Files in a plugin's bin/ are added to the Bash tool's PATH while the plugin is
+# enabled, so skills call `ck-issues` instead of spelling out
+# "${CLAUDE_PLUGIN_ROOT}"/scripts/ck-issues.sh on every invocation.
+#
+# Resolve the real script relative to this wrapper, not to $CLAUDE_PLUGIN_ROOT:
+# the wrapper is already inside the plugin, and the variable is not exported into
+# every Bash tool call.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-issues.sh" "$@"
