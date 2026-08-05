@@ -154,6 +154,7 @@ becomes the "Alternative".
 | Committing, opening a PR, publishing to GitHub Issues, "ship it", delivering work | `/ck-code:ship` |
 | Explaining what was just built or how to verify it | `/ck-code:explain` |
 | Something is wrong with the project itself — stale indexes, a story that vanished, "why is this broken" | `/ck-code:doctor` |
+| Setting up or changing issue tracking, the GitHub Project board, or board columns | `/ck-code:config` |
 | The project is on an old (pre-v6) layout and needs upgrading | `/ck-code:migrate` |
 | "I don't have a task — just tell me what's next" | run `/ck-code:guide` with no argument (Mode A) |
 

@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*)
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*)
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -175,12 +175,16 @@ views in the same phase:
 
 ```bash
 ck-index tasks/<slug>
+ck-project sync tasks/<slug>
 ```
 
 That is the whole mutation — the generator recomputes every view from frontmatter, so there
-is no index cell, `EPIC.md`, or rollup to touch. **DELEGATED MODE skips the regenerate** —
-a worktree agent edits only its own story's frontmatter; the orchestrator regenerates once
-on the target branch after merge.
+is no index cell, `EPIC.md`, or rollup to touch. The board is one more generated view
+([`github-projects.md`](../../references/github-projects.md)): `ck-project` is a no-op when
+the project has no `tasks/SETTINGS.md` or `github_issues` is off, and a board failure never
+blocks the build — report it and continue. **DELEGATED MODE skips both** — a worktree agent
+edits only its own story's frontmatter; the orchestrator regenerates and syncs once on the
+target branch after merge.
 
 ### 1.7 Effort Route (from frontmatter `size:`)
 
@@ -437,10 +441,13 @@ automatically):
 
 ```bash
 ck-index tasks/<slug>
+ck-project sync tasks/<slug>
 ```
 
 No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v5.
-**DELEGATED MODE skips the regenerate** (see 1.6).
+The sync moves this story's card to Done and rolls its epic card up
+([`github-projects.md`](../../references/github-projects.md)).
+**DELEGATED MODE skips both** (see 1.6).
 
 ### 8.7 Ship (Commit + PR + Issue Updates)
 

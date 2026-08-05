@@ -3,7 +3,7 @@ name: ship
 description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git push*) Bash(gh auth status*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*)
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git push*) Bash(gh auth status*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*)
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -269,6 +269,16 @@ still routes to 5.A, whose base is already fixed.
 4. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
    — no story IDs, AC checkboxes, or test tallies. Bodies (feature / bug fix) + the exact
    `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
+5. Move the card to the review column — only when a `story_issue` is linked:
+
+   ```bash
+   ck-project set <story_issue> in_review
+   ```
+
+   This is the one board state that frontmatter cannot express (a story is `in-progress`
+   whether or not its PR is open), so it is pushed here and made sticky
+   ([`github-projects.md`](../../references/github-projects.md)). A no-op when the board is
+   unconfigured or has no review column; never block the PR on it.
 
 ## PHASE 6: MARK DONE & UPDATE ISSUES
 
@@ -282,7 +292,13 @@ any index or flip an EPIC checkbox), then regenerate views once:
 
 ```bash
 ck-index tasks/<slug>
+ck-project sync tasks/<slug>
 ```
+
+The sync moves the card out of the review column into Done — the only transition allowed
+to override stickiness ([`github-projects.md`](../../references/github-projects.md)). Run it
+even when 6.1 skipped the status write, because `/ck-code:build` Phase 8.6 already synced
+only if it ran in this session; a re-sync of an unchanged plan costs two `gh` calls.
 
 If the story is not yet fully done, leave `status` as is and skip issue-close steps.
 
@@ -393,9 +409,15 @@ several → ask which; none → tell the user to run `/ck-code:plan` first.
 ```bash
 gh auth status
 gh repo view --json nameWithOwner -q .nameWithOwner
+ck-project discover
 ```
 
-If either fails, stop and tell the user what to fix.
+If either `gh` call fails, stop and tell the user what to fix.
+
+`ck-project discover` reports in one call whether `tasks/SETTINGS.md` exists and which
+GitHub Projects the owner already has. Store it — P3 folds the board choice into its
+existing confirm rather than asking a second time. If the token lacks the `project`
+scope, note it and continue: the publish itself does not need it, only the board does.
 
 ## PHASE P2: PREVIEW THE PLAN
 
@@ -426,6 +448,19 @@ per story), each labelled with its count from P2.
 "Proceed?" options **Create**, **Abort**. Fold a **Skip duplicates / Proceed anyway**
 choice into the same call when P2 found strays — never a second round-trip.
 
+**Board:** fold a third question into the *same* call when P1 found no `tasks/SETTINGS.md`
+— "Track these issues on a GitHub Project board?" with one option per existing project,
+plus **Create a new board**, plus **Not now**. `AskUserQuestion` takes up to 4 questions;
+this must not become its own round-trip. Skip the question entirely when settings already
+exist. Apply the answer after P4 publishes, since a board needs issues to place:
+
+```bash
+ck-project init --project <N>            # adopt the board as it is
+ck-project init --create "<title>"       # create, link, provision the five columns
+```
+
+Full contract: [`github-projects.md`](../../references/github-projects.md).
+
 ## PHASE P4: PUBLISH
 
 One call does labels, issue creation, `issue:` write-back, the epic→story relink, and
@@ -445,6 +480,25 @@ relinked from the current numbers on every run, so an interrupted run repairs it
 
 Relay any `ck-issues: WARN` or `ck-index: WARN` line to the user — a warned story is
 skipped by the publisher *and* invisible in every generated view.
+
+The same call also attaches every story issue to its epic as a **native sub-issue**, which
+is what gives the epic a progress bar and lets the board roll story cards up. Already-linked
+stories are skipped, so re-running a plan published before this existed back-fills the
+links and creates no issues.
+
+### P4.1 Place the cards
+
+Only when a board is configured (settings already existed, or P3's board answer was just
+applied):
+
+```bash
+ck-project sync tasks/<slug> --dry-run
+ck-project sync tasks/<slug>
+```
+
+Show the dry-run counts, then apply. Cards land in the column each story's `status:` calls
+for, so a plan whose stories are already `done` does not arrive as a wall of Todo. Board
+failures never fail the publish — the issues are created either way.
 
 ## PHASE P5: SUMMARY
 
@@ -472,7 +526,9 @@ that received an `issue:`. Never re-read the plan to build the summary.
 - **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language, read by non-engineers.
 - **Never overwrite a PR description** — append beneath the existing body and prior `## Updates` entries.
 - **Never open a second PR for a branch** that already has an open one (Phase 1.2).
-- **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only.
+- **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only. This covers the board too: a failed `ck-project` call is reported, never fatal.
+- **Never move a board card with `gh project`** — call `ck-project`, the only board interface ([github-projects.md](../../references/github-projects.md)).
+- **Never ask the board question as its own round-trip** — it folds into the P3 confirm, and is skipped outright when `tasks/SETTINGS.md` already exists.
 - **Never publish `--to-issues` by hand** — no per-issue `gh issue create`, no throwaway publisher script, no `Edit` per `issue:` field. Run `ck-issues`: rate-limit pacing, ordering (epics before the story bodies that reference them), write-back, relink and `ck-index` all live inside it. Hand-driving a 12-epic plan is ~200 tool calls, and the `sleep` that paces them is blocked as a foreground call in most harnesses — that dead end is what makes agents improvise a fragile script.
 - **Never create issues outside the chosen `--to-issues` mode** — `feature`=1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
 - **Never re-run `--to-issues` with a different mode against the same plan** — `issue:` holds one number per file, so a second mode publishes a parallel hierarchy the frontmatter cannot point at.

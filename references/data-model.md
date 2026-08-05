@@ -133,6 +133,18 @@ design: planned
 Delta/journal docs are **not** written in v5. A change's history is its commits.
 `index.md` always holds current truth.
 
+## Project settings (`tasks/SETTINGS.md`)
+
+Optional, one per project, written by `/ck-code:config` and by `ship --to-issues` on
+first use. Flat frontmatter, same format contract as story files. It holds *project*
+configuration, never story state — nothing here is derived from, or feeds back into,
+any story's frontmatter.
+
+Today it configures GitHub issue tracking and the Projects board mapping
+([`github-projects.md`](github-projects.md)); it is the file future per-project
+settings belong in. Absent file ≡ every optional integration off, which is why no
+skill may require it to exist.
+
 ## Generated views (read-only, never hand-edited)
 
 Both are produced by `scripts/ck-index.sh` (ships with the plugin). Each carries a

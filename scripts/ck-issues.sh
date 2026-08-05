@@ -99,6 +99,7 @@ FAILURES=0
 CREATED=0
 REUSED=0
 WRITTEN=0
+LINKED=0
 
 warn() { echo "ck-issues: WARN — $*" >&2; }
 fail() { echo "ck-issues: ERROR — $*" >&2; FAILURES=$((FAILURES + 1)); }
@@ -106,7 +107,7 @@ fail() { echo "ck-issues: ERROR — $*" >&2; FAILURES=$((FAILURES + 1)); }
 summary() {
   local verb="created"
   [ "$DRY" -eq 1 ] && verb="would be created"
-  echo "ck-issues: $CREATED $verb, $REUSED reused, $WRITTEN issue: fields written, $FAILURES failures"
+  echo "ck-issues: $CREATED $verb, $REUSED reused, $WRITTEN issue: fields written, $LINKED sub-issues linked, $FAILURES failures"
 }
 
 # fm FILE KEY — print a frontmatter scalar (between the first --- fences).
@@ -450,6 +451,62 @@ for dir in $EPIC_DIRS; do
     set_fm "$sf" issue "$num" && echo "story $id #$num created → $sf"
   done
 done
+
+# --- attach each story issue to its epic as a native sub-issue -------------
+# The `- [ ] #N` checklist in the epic body is a *description*; a sub-issue is a
+# real relation, which is what gives the epic a progress bar and lets a Projects
+# board roll story cards up to their epic.
+#
+# Runs on every publish, and is what back-fills a plan published before this
+# existed: already-attached stories are skipped, so re-running costs one read per
+# epic and creates nothing. The REST endpoint wants the sub-issue's *database id*,
+# not its number, so all ids are fetched in one paginated call rather than one
+# `issue view` per story.
+link_subissues() {
+  local dir ef enum eissue sf sid dbid attached n
+  [ "$DRY" -eq 1 ] && return 0
+
+  gh api --paginate "repos/$REPO/issues?state=all&per_page=100" \
+    --jq '.[] | select(.pull_request == null) | [(.number|tostring), (.id|tostring)] | @tsv' 2>/dev/null \
+    | while IFS="$(printf '\t')" read -r n dbid; do
+        [ -n "$n" ] && printf '%s' "$dbid" > "$WORK/dbid.$n"
+      done
+
+  ls "$WORK"/dbid.* >/dev/null 2>&1 || {
+    warn "could not read issue ids for $REPO — sub-issue links skipped"
+    return 0
+  }
+
+  for dir in $EPIC_DIRS; do
+    ef="$dir/EPIC.md"
+    [ -f "$ef" ] || continue
+    enum=$(fm "$ef" epic)
+    eissue=$(fm "$ef" issue)
+    [ -n "$eissue" ] || continue
+
+    attached=$(gh api "repos/$REPO/issues/$eissue/sub_issues" --jq '.[].number' 2>/dev/null)
+    pace
+
+    for sf in $(epic_stories "$dir"); do
+      sid=$(fm "$sf" issue)
+      [ -n "$sid" ] || continue
+      printf '%s\n' "$attached" | grep -qx "$sid" && continue
+      dbid=""
+      [ -f "$WORK/dbid.$sid" ] && dbid=$(cat "$WORK/dbid.$sid")
+      [ -n "$dbid" ] || { warn "no id for issue #$sid — not linked to epic #$eissue"; continue; }
+      if gh api --method POST "repos/$REPO/issues/$eissue/sub_issues" \
+           -F sub_issue_id="$dbid" >/dev/null 2>&1; then
+        LINKED=$((LINKED + 1))
+        echo "story #$sid linked as a sub-issue of epic $enum #$eissue"
+      else
+        warn "could not link #$sid under epic #$eissue"
+      fi
+      pace
+    done
+  done
+}
+
+link_subissues
 
 # --- relink epic bodies with the real story numbers -----------------------
 # Runs every time, from the current numbers: this is what repairs a run that died

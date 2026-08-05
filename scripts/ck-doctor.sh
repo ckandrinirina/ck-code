@@ -383,6 +383,80 @@ for c in json.load(open(sys.argv[1])).get("cards", []):
   fi
 }
 
+# ---- 9. project settings -----------------------------------------------------
+# Local parse always; the board is probed only when gh is available and issue
+# tracking is on. Settings are optional, so an absent file prints no row: most
+# projects have none and must see nothing.
+#
+# Never an ERROR. A board is a generated view (references/github-projects.md) —
+# a stale mapping costs a skipped card move, never a lost story, and must not
+# fail a release gate that also guards story integrity.
+check_settings() {
+  local f=tasks/SETTINGS.md on owner number field r name missing="" opts
+  [ -f "$f" ] || return 0
+
+  if [ "$(head -1 "$f" | tr -d '\r')" != "---" ]; then
+    row "settings" "tasks/SETTINGS.md has no frontmatter fence" WARN
+    note "run /ck-code:config board to rewrite it"
+    return 0
+  fi
+
+  fmv() { awk -v k="$2" '
+    { sub(/\r$/,"") } FNR==1 && $0!="---" { exit } FNR==1 { next } $0=="---" { exit }
+    { i=index($0,":"); if(i>0){ n=substr($0,1,i-1); v=substr($0,i+1);
+        gsub(/^[ \t]+|[ \t]+$/,"",n); gsub(/^[ \t]+|[ \t]+$/,"",v);
+        if(n==k){print v; exit} } }' "$1"; }
+
+  on=$(fmv "$f" github_issues)
+  if [ "$on" != "true" ]; then
+    row "settings" "issue tracking off (github_issues: ${on:-absent})" OK
+    return 0
+  fi
+
+  owner=$(fmv "$f" github_project_owner)
+  number=$(fmv "$f" github_project_number)
+  field=$(fmv "$f" board_field)
+  if [ -z "$owner" ] || [ -z "$number" ]; then
+    row "settings" "github_issues is on but no project is configured" WARN
+    note "run /ck-code:config board"
+    return 0
+  fi
+
+  for r in todo in_progress in_review blocked done; do
+    [ -n "$(fmv "$f" "board_$r")" ] || missing="$missing$r "
+  done
+
+  if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
+    row "settings" "project #$number ($owner), gh unavailable — not probed" OK
+    [ -n "$missing" ] && note "no column mapped for: ${missing% } (those transitions are skipped)"
+    return 0
+  fi
+
+  opts=$(gh project field-list "$number" --owner "$owner" --format json --limit 50 --jq \
+    '.fields[] | select(.type == "ProjectV2SingleSelectField") | .options[] | .name' 2>/dev/null)
+  if [ -z "$opts" ]; then
+    row "settings" "project #$number ($owner) is not reachable" WARN
+    note "check the project still exists, or run /ck-code:config board"
+    return 0
+  fi
+
+  local gone=""
+  for r in todo in_progress in_review blocked done; do
+    name=$(fmv "$f" "board_$r")
+    [ -n "$name" ] || continue
+    printf '%s\n' "$opts" | grep -qxF "$name" || gone="$gone$r → '$name' "
+  done
+
+  if [ -n "$gone" ]; then
+    row "settings" "board columns no longer on project #$number" WARN
+    printf '                   ✗ %s\n' "${gone% }"
+    note "run /ck-code:config board to re-map"
+  else
+    row "settings" "project #$number ($owner), field '${field:-Status}' verified" OK
+    [ -n "$missing" ] && note "no column mapped for: ${missing% } (those transitions are skipped)"
+  fi
+}
+
 # ---- run ---------------------------------------------------------------------
 echo
 if [ -n "$ONLY_PLAN" ] && [ ! -d "$ONLY_PLAN" ]; then
@@ -398,6 +472,7 @@ check_docs
 check_team
 check_branches
 check_design_system
+check_settings
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."

@@ -24,6 +24,7 @@ duplicating the workflow graph.
 
    /ck-code:migrate      (One-shot) Upgrade a pre-v6 or ck-code-lite project to the v6 layout
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
+   /ck-code:config       (Anytime) Project settings — issue tracking, GitHub Project board
 doctor       (Anytime) Report what is broken in the project + how to fix it
 ```
 
@@ -99,6 +100,7 @@ command reference.
 | `ship` | Git commit, PR, GitHub Issue updates; writes the created issue number back to story frontmatter `issue:` (`--to-issues` mode); no local writes outside git + frontmatter |
 | `migrate` | Converts a pre-v6 project in place (one commit) — including flattening nested `experts/` + `guides/` skill folders; or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
 | `track`, `explain`, `guide`, `doctor` | Read-only |
+| `config` | Writes `tasks/SETTINGS.md` and the GitHub Project board only — never story state |
 
 ## State conventions (v5)
 
