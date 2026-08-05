@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.4.1] — 2026-08-05
+
+### Fixed
+- **config** (`/ck-code:config board`): `ck-project backfill` was documented as a repair
+  step *after* the first sync was applied. Work merged before the delivery axis existed
+  carries no `pr:`, so it resolves as finished-but-never-shipped — applying first moved
+  every long-merged card out of Done into **Ready to Ship** in full view of anyone watching
+  the board, then repaired them on a second pass. Backfill now runs off the dry-run
+  preview, before anything is applied, and `github-projects.md` states the constraint
+  beside the command itself. Behaviour of `backfill` and `sync` is unchanged; only the
+  order the skill runs them in was wrong.
+
 ## [6.4.0] — 2026-08-05
 
 ### Added
