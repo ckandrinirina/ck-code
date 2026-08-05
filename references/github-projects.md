@@ -113,6 +113,10 @@ GitHub which PR closed each linked `issue:`
 writes a `Closes #<issue>` footer; a story with no `issue:`, or none that GitHub can link,
 is reported and skipped. Run it once per plan.
 
+**Run it before the first sync that has a Ready to Ship column to place cards into.** With
+no `pr:` recovered, that sync moves every long-merged card out of Done and into Ready to
+Ship — correct by the rules, and alarming to anyone watching the board.
+
 **`--reorder`** rewrites an existing board's option order to the preset, rearranging only
 the columns already there — it does **not** imply `--extend`, because `--extend` matches
 preset *names* and would add a duplicate "Todo" beside a board's own "Backlog". Plain
@@ -154,6 +158,7 @@ the missing columns at the end, unless `--reorder` is passed.
 - **Never let a board failure block a commit, a build, or a status write** — the board is a view; frontmatter is the record. Surface the error and carry on.
 - **Never mutate an existing board's columns without `--extend`** — the user's board shape is theirs, and `updateProjectV2Field` replaces the entire option set.
 - **Never reorder an adopted board without `--reorder`**, and never `--reorder` without the `sync` that follows it.
+- **Never add the Ready to Ship column to a board with pre-6.4 history without running `backfill` first** — the next sync would move every long-merged card out of Done.
 - **Never move a card by hand with `gh project item-edit`** — call `ck-project`, which resolves ids and skips no-op writes.
 - **Never treat a missing column as an error** — an empty `board_<role>` is a supported configuration, not a misconfiguration. A board with no Ready to Ship or Bugs column is fully supported.
 - **Never write board state into story frontmatter** — the board is derived from it, never the reverse. `delivery` is not board state: it is GitHub's answer about a PR, cached where every fact lives.

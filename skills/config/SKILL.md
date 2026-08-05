@@ -104,32 +104,39 @@ The command prints the resolved column per role and writes `tasks/SETTINGS.md`.
 board" is a transition that will be silently skipped forever, and this is the only
 moment the user sees it.
 
-### 5. Back-fill
+### 5. Preview
 
 Stories already carrying an `issue:` are not on the board yet, or sit in the wrong
-column. Preview, then confirm:
+column. Preview first — this changes nothing:
 
 ```bash
 ck-project sync --dry-run
 ```
 
-Report the counts, then `AskUserQuestion` — "Apply these board changes?" **Sync**,
-**Skip**. On **Sync**, run `ck-project sync`. A plan with many stories paces its calls;
-say roughly how long before starting.
+### 5.1 Recover delivery for work shipped before 6.4 (BEFORE applying)
 
-### 6. Recover delivery for work shipped before 6.4
-
-Only when the dry run showed finished stories landing in **Ready to Ship** that the user
-says are long since merged. They predate `pr:`, so nothing anchors their delivery:
+**Read the preview for stories moving *into* Ready to Ship.** Work merged before 6.4 has no
+`pr:`, so it reads as "finished, never shipped" and the sync would move long-merged cards
+out of Done — backwards, and visible to everyone watching the board. Recover the anchors
+first:
 
 ```bash
 ck-project backfill --dry-run
 ck-project backfill
+ck-project sync --dry-run          # re-preview: those cards should now say → Done
 ```
 
-It asks GitHub which PR closed each linked issue and writes it back as `pr:`, then a sync
-places the cards in Done. Stories with no `issue:`, or none GitHub can link, are listed and
-skipped — those need `pr:` set by the next `ship`. Run it once per project.
+`backfill` asks GitHub which PR closed each linked issue and writes it back as `pr:`, then
+resolves `delivery` from it. Stories with no `issue:`, or none GitHub can link, are listed
+and skipped — those get `pr:` from their next `ship`. Run it once per project.
+
+Skip this sub-step only when the preview moves nothing into Ready to Ship.
+
+### 6. Apply
+
+Report the counts from the latest preview, then `AskUserQuestion` — "Apply these board
+changes?" **Sync**, **Skip**. On **Sync**, run `ck-project sync`. A plan with many stories
+paces its calls; say roughly how long before starting.
 
 ## PHASE 4: TOGGLE (`on` / `off`)
 
@@ -164,6 +171,7 @@ as expected.
 - **Never set `trunk_branch` to a branch that does not exist** — verify with `git rev-parse` first; a wrong value silently mis-targets every future PR.
 - **Never split the project choice and the column choice into two `AskUserQuestion` calls** — both are known at the same time; one call takes up to 4 questions.
 - **Never run `ck-project sync` without showing `--dry-run` counts first** in this skill — the user is configuring, not shipping, and a first sync can move every card in the project.
+- **Never apply a sync that moves cards into Ready to Ship before running `ck-project backfill`** (5.1) — pre-6.4 work has no `pr:`, so applying first drags long-merged cards out of Done in full view, then repairs them on a second pass.
 - **Never enable `github_issues` without a resolvable project** — a `true` with no project makes every later board call fail noisily for no benefit.
 - **Always relay the resolved role→column mapping**, including roles with no column.
 
