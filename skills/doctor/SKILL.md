@@ -58,6 +58,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `team skills` (WARN) | none generated, or one is invalid — `build` and `fix` then run with no project expertise | `/ck-code:team` |
 | `branches` (WARN) | an `epic/NN-*` branch has no matching epic folder, usually left by a rename | delete it once merged |
 | `design system` (WARN) | a cached design-system card is missing or its content no longer matches the manifest digest, so `build` would copy markup that drifted from its source | `/ck-code:design ds` |
+| `board` (WARN) | a Projects card sits in a column its story's `status:` does not call for — a skill changed frontmatter without syncing, or someone dragged a card by hand | `ck-project sync` |
 
 ### 2.2 Report
 

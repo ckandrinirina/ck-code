@@ -56,6 +56,15 @@ plans() {
     | sed 's|/[^/]*$||' | sort -u
 }
 
+# fmv FILE KEY — read one frontmatter scalar. Shared by check_settings and
+# check_board; must stay at file scope because check_settings returns early
+# when tasks/SETTINGS.md is absent, before any nested definition would run.
+fmv() { awk -v k="$2" '
+  { sub(/\r$/,"") } FNR==1 && $0!="---" { exit } FNR==1 { next } $0=="---" { exit }
+  { i=index($0,":"); if(i>0){ n=substr($0,1,i-1); v=substr($0,i+1);
+      gsub(/^[ \t]+|[ \t]+$/,"",n); gsub(/^[ \t]+|[ \t]+$/,"",v);
+      if(n==k){print v; exit} } }' "$1"; }
+
 # ---- 1. layout stamp ---------------------------------------------------------
 check_layout() {
   local want="v6" got=""
@@ -401,12 +410,6 @@ check_settings() {
     return 0
   fi
 
-  fmv() { awk -v k="$2" '
-    { sub(/\r$/,"") } FNR==1 && $0!="---" { exit } FNR==1 { next } $0=="---" { exit }
-    { i=index($0,":"); if(i>0){ n=substr($0,1,i-1); v=substr($0,i+1);
-        gsub(/^[ \t]+|[ \t]+$/,"",n); gsub(/^[ \t]+|[ \t]+$/,"",v);
-        if(n==k){print v; exit} } }' "$1"; }
-
   on=$(fmv "$f" github_issues)
   if [ "$on" != "true" ]; then
     row "settings" "issue tracking off (github_issues: ${on:-absent})" OK
@@ -457,6 +460,43 @@ check_settings() {
   fi
 }
 
+# ---- 10. board drift ---------------------------------------------------------
+# The board is a generated view of frontmatter (references/github-projects.md).
+# `sync --dry-run` prints exactly what it would change and changes nothing, so it
+# is the authoritative drift probe and safe in a read-only report.
+#
+# Never an ERROR, for the same reason check_settings never is: a drifted card
+# costs one skipped move, never a lost story, and must not fail a release gate
+# that also guards story integrity. Silent unless a board is actually configured.
+check_board() {
+  local f=tasks/SETTINGS.md owner number out n
+  [ -f "$f" ] || return 0
+  [ "$(fmv "$f" github_issues)" = "true" ] || return 0
+  owner=$(fmv "$f" github_project_owner)
+  number=$(fmv "$f" github_project_number)
+  [ -n "$owner" ] && [ -n "$number" ] || return 0
+  command -v gh >/dev/null 2>&1 || return 0
+  gh auth status >/dev/null 2>&1 || return 0
+  [ -x "$SCRIPT_DIR/ck-project.sh" ] || return 0
+
+  out=$("$SCRIPT_DIR/ck-project.sh" sync --dry-run 2>/dev/null)
+  # An unreachable project or a missing field exits non-zero with no plan lines;
+  # check_settings has already reported that, so stay quiet rather than repeat it.
+  [ -n "$out" ] || return 0
+
+  n=$(printf '%s\n' "$out" | grep -cE '^  (add|move|archive) ')
+  if [ "$n" -gt 0 ]; then
+    row board "$n card(s) out of step with frontmatter" WARN
+    printf '%s\n' "$out" | grep -E '^  (add|move|archive) ' | head -8 \
+      | sed 's/^  /                   ✗ /'
+    [ "$n" -gt 8 ] && note "…and $((n - 8)) more"
+    note "run ck-project sync"
+  else
+    row board "every card matches frontmatter" OK
+  fi
+  return 0
+}
+
 # ---- run ---------------------------------------------------------------------
 echo
 if [ -n "$ONLY_PLAN" ] && [ ! -d "$ONLY_PLAN" ]; then
@@ -473,6 +513,7 @@ check_team
 check_branches
 check_design_system
 check_settings
+check_board
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."
