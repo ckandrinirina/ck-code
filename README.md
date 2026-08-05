@@ -12,15 +12,37 @@
 
 Whether you're building a new project from scratch or adding a feature to an existing codebase, ck-code keeps the architecture, plan, and implementation in lock-step — so AI-generated code stays grounded in your real design.
 
-## One source of truth (v5)
+## One source of truth (v6)
 
-In v5, a story's state lives in **one** place: the YAML frontmatter of its story file
+A story's state lives in **one** place: the YAML frontmatter of its story file
 (`id, title, epic, status, size, blocked_by, files, issue, prior_status`). The
 `STORIES_INDEX.md` and `FEATURE_INDEX.md` you see are **generated read-only views**,
 regenerated from that frontmatter by `scripts/ck-index.sh`. Because a view is a pure
-function of the frontmatter, it can never drift — so v5 has no reconciler skill and no
+function of the frontmatter, it can never drift — so there is no reconciler skill and no
 hand-edited index tables. To change a story's status, a skill edits the frontmatter and
 regenerates; that's it.
+
+## One id, one story (v6)
+
+**Epic numbers are unique across every plan in your project**, so a story id (`EE-SS`)
+names exactly one story anywhere in `tasks/`. Point at work directly and nothing has to
+ask you which plan you meant:
+
+```bash
+/ck-code:build --epic 07      # the whole epic, in dependency-ordered waves
+/ck-code:build 07-02          # one story
+```
+
+Through v5, numbering restarted at `01` in each new plan folder, so a second plan could
+own the same `01-01` as the first — and `--epic NN`, `blocked_by`, and the
+`epic/<NN>-*` branch lookup would quietly pick whichever they found first. Each new epic
+is now allocated from the project-wide maximum, so a feature plan added later starts at
+`05` rather than restarting at `01`. A dependency may also point at a story in another
+plan, because its id is unambiguous.
+
+If your project already has two plans with colliding numbers, `/ck-code:migrate`
+renumbers them — the oldest plan keeps its numbers, so its merged branches and published
+issues stay valid.
 
 ## Features
 
@@ -57,20 +79,27 @@ Restart your Claude Code session and the `/ck-code:*` commands are available.
 
 Then restart your Claude Code session for the updated commands to take effect.
 
-## Upgrading an older project to v5
+## Upgrading an older project to v6
 
-ck-code stores story state in story-file frontmatter and generates its index views, and
-`/ck-code:team` writes each generated skill to its own top-level folder. Projects created
-by an older ck-code upgrade in one step:
+ck-code stores story state in story-file frontmatter, generates its index views, writes
+each generated skill to its own top-level folder, and keeps epic numbers unique across
+plans. Projects created by an older ck-code upgrade in one step:
 
 ```bash
 /ck-code:migrate
 ```
 
 `migrate` is one-shot, idempotent, and safe: it refuses a dirty tree and lands every
-conversion in a single revertable commit. Every change-producing skill blocks a pre-v5
+conversion in a single revertable commit. Every change-producing skill blocks a pre-v6
 project until you run it, and the session-start hook reminds you. Pre-v3 projects are
 handled too — the converter chains the older layout migrations first.
+
+**Most v5 projects need nothing.** The upgrade only has work to do when two plan folders
+actually share an epic number, so a single-plan project re-stamps silently the next time
+you run any skill. When there is a collision, migration stays local: it renumbers the
+later plans, rewrites their frontmatter and dependencies, asks before touching any id
+mentioned in prose, refuses to rename a branch that has an open PR, and never edits
+anything on GitHub.
 
 ## Moving up from ck-code-lite
 
@@ -278,7 +307,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:ship` | Commit, PR, update GitHub Issues. Honours the epic's **integration level** — a PR per story, per epic, or one per feature — merging story branches up the hierarchy and offering promotion when a rollup completes (`--promote` runs that gate later, `--integration` sets the level). `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter | story file (optional) | commit + PR + issue updates; merged/promoted branches |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
-| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v5 **or ck-code-lite** project to the v5 layout (frontmatter + generated indexes + flat team-skill folders); stamps `tasks/VERSION.md` | — | converted project (one commit) |
+| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps | — | walkthrough + verification steps |
 | `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
 
@@ -329,7 +358,7 @@ ck-code/
 │   ├── ship/                      # commit + PR + Issue updates (+ --to-issues)
 │   ├── track/                     # progress dashboard
 │   ├── guide/                     # state/intent/command router
-│   ├── migrate/                   # pre-v5 → v5 and ck-code-lite → v5 converter
+│   ├── migrate/                   # pre-v6 → v6 and ck-code-lite → v6 converter
 │   └── explain/                   # post-implementation walkthrough
 └── README.md
 ```
@@ -350,6 +379,15 @@ apply adjustments — keeping the local file and the linked GitHub issue in sync
 
 ## Compatibility
 
+> **v6 — breaking (epic numbering only).** Epic numbers are now unique across every plan,
+> so a story id names exactly one story project-wide and `--epic NN` / `EE-SS` resolve
+> without a plan qualifier. `/ck-code:plan` allocates each new epic from the project-wide
+> maximum instead of restarting at `01` per folder. Nothing else changes — the id format,
+> stories, epics, and architecture docs are all untouched. **A project whose plans do not
+> already share an epic number needs no migration**: the version gate re-stamps it to
+> `layout: v6` silently. Where numbers do collide, `/ck-code:migrate` renumbers the later
+> plans (the oldest keeps its numbers) and rewrites their frontmatter and dependencies.
+>
 > **v5 — breaking (team skills only).** `/ck-code:team` now writes each generated skill to
 > its own top-level folder — `.claude/skills/expert-<role>/` and `guide-<tech>/` — instead of
 > nesting them under `experts/` and `guides/`. Claude Code discovers project skills at
