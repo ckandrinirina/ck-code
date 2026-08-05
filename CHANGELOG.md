@@ -5,6 +5,59 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.4.0] — 2026-08-05
+
+### Added
+- **Delivery — the second axis.** `status: done` meant "the work is finished" and nothing
+  more, so a story committed locally, a story with an open PR, and a story merged into the
+  trunk were indistinguishable. Two new story-frontmatter keys separate the questions:
+  `pr:` (the PR number carrying the work) and `delivery:` (empty → `pr` → `merged`).
+  `status` stays the work axis with its exact previous meaning — `blocked_by` still
+  resolves against `done` alone, because at `integration: epic` stories merge into an epic
+  branch and never touch the trunk, so gating dependencies on `merged` would deadlock every
+  epic-level plan. Both keys are optional and empty ≡ pre-6.4 behaviour: **no layout bump,
+  no `/ck-code:migrate` run**.
+- **Two new board columns, and a board order that follows the flow.** A provisioned board
+  now gets seven: **Blocked · Todo · In Progress · Ready to Ship · In Review · Bugs ·
+  Done**. *Ready to Ship* is finished work with no PR yet — the state that previously had
+  nowhere to live. *Bugs* leaves Blocked because they are opposites: a diagnosed bug is
+  always actionable and outranks all todo work in `track next`, while a blocked story
+  cannot be started at all; one column for both hid the most urgent item on the board.
+  An adopted board keeps its own shape, and an empty `board_<role>` is still skipped
+  rather than failed.
+- **`ck-project sync` reconciles delivery from GitHub.** A PR is merged in the browser with
+  no ck-code process running, so every sync re-asks: one batched `gh pr list` per plan
+  resolves every recorded `pr:`, writes back the delivery it implies, regenerates the views
+  and then places the cards. `delivery` is a cache over an immutable anchor, so it
+  self-heals. A PR closed without merging clears it and warns; one merged into a branch
+  that is not the trunk is reported rather than silently accepted.
+- **`ck-project backfill`** recovers `pr:` for work shipped before 6.4 by asking GitHub
+  which PR closed each linked issue, so an upgrading project does not show long-merged
+  stories as *Ready to Ship*. Run once per plan.
+- **`ck-project init --reorder`** rewrites an existing board's column order to the preset,
+  then re-places every card. It deliberately does **not** imply `--extend`, which matches
+  preset *names* and would add a duplicate "Todo" beside a board's own "Backlog".
+- **`trunk_branch:` in `tasks/SETTINGS.md`** (`/ck-code:config trunk <branch>`) — the
+  branch every PR targets and the one a story must merge into to count as delivered. One
+  definition, so the PR base and the delivered test cannot disagree; absent, it is the
+  repository default exactly as before. Setting it also retires `ship`'s per-PR
+  `main`/`develop` prompt.
+- **`STORIES_INDEX.md` gains a `Delivery` cell** (`—` / `PR #<n>` / `MERGED`) and
+  `FEATURE_INDEX.md` gains a **`MERGED`** tier above `DONE`. Both are finished states —
+  every unfinished set excludes both, so a shipped feature is never re-offered for building.
+- **doctor**: validates `delivery` against its vocabulary, and reports `delivery` with no
+  `pr:` — nothing anchors it, so sync can never re-check whether it merged.
+
+### Changed
+- **The sticky In Review rule is gone.** `ship` used to push a card with
+  `ck-project set <issue> in_review` and `sync` was forbidden from moving it back, because
+  "a PR is open" was not expressible in frontmatter. `delivery: pr` is that fact now, so In
+  Review is an ordinary derived column and cards move in both directions. `ship` records
+  the PR in frontmatter instead of pushing the card.
+- **Board adoption** learned the two new roles, and two name collisions are fixed: a
+  "Bugs" column was previously claimed by `blocked` (which matched `*bug*`), and a "Ready
+  to Ship" column would have been claimed by `todo` (which matches `*ready*`).
+
 ## [6.3.0] — 2026-08-05
 
 ### Added
