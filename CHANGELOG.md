@@ -5,6 +5,45 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.2.0] — 2026-08-05
+
+### Added
+- **config** (`/ck-code:config`): reads and writes `tasks/SETTINGS.md`, the new per-project
+  settings file — turn GitHub issue tracking on or off, pick or create the GitHub Project
+  whose board mirrors story status, re-map board columns, or show what is configured.
+  `show` / `board` / `on` / `off`.
+- **ck-project** (`bin/ck-project` → `scripts/ck-project.sh`): treats a Projects v2 board as
+  one more **generated view of story frontmatter**, like `STORIES_INDEX.md`. `sync` computes
+  the column each card belongs in and pushes only the differences, so the board cannot drift
+  and re-running is free — a re-sync of an unchanged plan costs two `gh` calls. Because the
+  reconcile is idempotent there is no board migration: the first sync of a plan published
+  before the board existed back-fills every card. Subcommands `discover`, `init`, `sync`,
+  `set`, `show`; `--dry-run` on `init`/`sync`.
+- **ck-project init**: adapts to whatever columns a board already has, matching option names
+  to roles case-insensitively and leaving unmatched roles empty — an empty role is a skipped
+  transition, never an error, so a three-column board and a five-column one are both driven
+  by the same code. An existing board is never mutated without `--extend`; `--create`
+  provisions Todo / In Progress / In Review / Blocked / Done by sending the option-set
+  **union**, since `updateProjectV2Field` replaces the whole set and would otherwise delete
+  the user's columns.
+- **ck-issues**: attaches every story issue to its epic issue as a **native sub-issue**,
+  which gives the epic a progress bar and lets a board roll story cards up. Already-attached
+  stories are skipped, so re-running back-fills a plan published before this existed and
+  creates nothing. All issue database ids are read in one paginated call.
+- **doctor**: check 9 — `tasks/SETTINGS.md` parses, the configured project is reachable, and
+  every mapped column still exists on the board. Never an ERROR: a stale mapping costs a
+  skipped card move, not a lost story.
+
+### Changed
+- **build** 1.6 / 8.6 and **ship** 5.B / 6.1 / P4: keep the board current alongside the
+  `ck-index` regeneration. `ship` 5.B pushes the card to the review column when it opens a
+  PR — the one board state frontmatter cannot express — and `sync` then never moves a card
+  out of that column except to Done. Every board call is a no-op when `tasks/SETTINGS.md` is
+  absent or `github_issues` is off, and a board failure never blocks a commit or a build.
+- **ship** `--to-issues`: offers board setup inside the existing P3 confirm rather than as a
+  second round-trip, and places the cards after publishing so a plan whose stories are
+  already `done` does not arrive as a wall of Todo.
+
 ## [6.1.0] — 2026-08-05
 
 ### Added
