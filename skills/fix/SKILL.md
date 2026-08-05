@@ -4,7 +4,7 @@ description: Use when the user reports a bug in already-built behavior tied to o
 argument-hint: "[path-to-story.md]"
 disable-model-invocation: true
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*)
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*)
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -234,9 +234,10 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
 
    ```bash
    ck-index tasks/<slug>
+   ck-project sync tasks/<slug>
    ```
 
-   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it.
+   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to Blocked, and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
 
 ### 6.2 Auto-Build Eligibility Gate
 
