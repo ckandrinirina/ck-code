@@ -73,8 +73,8 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
 layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
 this PASSes.
 
@@ -516,7 +516,7 @@ dirty for the orchestrator. Commit messages are conventional
 
 ## HARD GATES (cross-phase contract, in phase order)
 
-- **0** — version gate PASSes (`layout: v5`) before any project read/write.
+- **0** — version gate PASSes (`layout: v6`) before any project read/write.
 - **1.2.0** — feature index read first; ask when > 2 features unfinished.
 - **1.2** — interactive selection prefers the parallel set; an explicit path is single-story.
 - **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project

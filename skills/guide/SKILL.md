@@ -31,8 +31,8 @@ Pick the mode from `$ARGUMENTS`, then run only that section:
 
 ## VERSION GATE (hint only)
 
-Read `tasks/VERSION.md`. If `layout: v5` → proceed silently. Otherwise emit one line —
-`ℹ pre-v5 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
+Read `tasks/VERSION.md`. If `layout: v6` → proceed silently. Otherwise emit one line —
+`ℹ pre-v6 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
 [`../../references/version-gate.md`](../../references/version-gate.md).
 
 ## The Ready rule
@@ -154,7 +154,7 @@ becomes the "Alternative".
 | Committing, opening a PR, publishing to GitHub Issues, "ship it", delivering work | `/ck-code:ship` |
 | Explaining what was just built or how to verify it | `/ck-code:explain` |
 | Something is wrong with the project itself — stale indexes, a story that vanished, "why is this broken" | `/ck-code:doctor` |
-| The project is on an old (pre-v5) layout and needs upgrading | `/ck-code:migrate` |
+| The project is on an old (pre-v6) layout and needs upgrading | `/ck-code:migrate` |
 | "I don't have a task — just tell me what's next" | run `/ck-code:guide` with no argument (Mode A) |
 
 If nothing matches, say so plainly and point to Mode A (state routing) or

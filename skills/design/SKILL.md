@@ -36,7 +36,7 @@ If the request is actually something else, STOP and recommend the better skill:
 
 - No stakeholder spec yet and you want one → `/ck-code:spec` (first)
 - Breaking work into epics/stories → `/ck-code:plan` (design comes first)
-- Project is on a pre-v5 layout (nested team skills, layer/flat docs, no frontmatter) → `/ck-code:migrate`
+- Project is on a pre-v6 layout (nested team skills, layer/flat docs, no frontmatter) → `/ck-code:migrate`
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:team`.
@@ -60,8 +60,8 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
 layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
 this PASSes.
 

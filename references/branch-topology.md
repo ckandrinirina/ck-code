@@ -25,7 +25,9 @@ feature branch  feat/<plan-slug>                       = the tasks/<plan-slug>/ 
 ```
 
 Epic branches are **looked up by the immutable number**, so renaming an epic slug never
-orphans its branch:
+orphans its branch. The number is unique project-wide
+([`data-model.md`](data-model.md#epic-and-story-numbers-are-globally-unique)), so exactly
+one epic can ever claim a given `epic/<NN>-*`:
 
 ```bash
 git branch --list "epic/<NN>-*"
@@ -33,7 +35,9 @@ git branch --list "epic/<NN>-*"
 
 - exactly one match → use it
 - no match → create it (see Creation)
-- more than one → `AskUserQuestion` which one; never guess
+- more than one → **a stale branch**, not two epics. The epic was renamed and an old
+  branch survived, or a branch was hand-created. `AskUserQuestion` which one to use and
+  say the others look stale; never guess, and never delete one unasked.
 
 ## Resolution
 

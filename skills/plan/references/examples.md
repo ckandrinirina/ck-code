@@ -37,7 +37,9 @@ tasks/
 ## Feature Mode — Add Feature folder layout
 
 A feature-specific dated folder, prefixed `feature-` so it does not collide with the main
-project plan. Numbering restarts at `01` inside this folder.
+project plan. Epic numbering does **not** restart here — it continues from the
+project-wide maximum (SKILL.md 3.1), so the numbers below are illustrative of a project
+whose prior plans ended at epic `04`.
 
 ```
 tasks/
@@ -46,7 +48,7 @@ tasks/
     ├── FEATURE_OVERVIEW.md                  # instead of PROJECT_OVERVIEW.md
     ├── STORIES_INDEX.md                     # GENERATED (this plan)
     ├── epics/
-    │   ├── 01_<epic-slug>/
+    │   ├── 05_<epic-slug>/                  # continues the project, does not restart
     │   │   ├── EPIC.md
     │   │   └── stories/
     │   │       └── ...
@@ -60,7 +62,8 @@ tasks/
 ## Feature Mode — Continue Existing Plan layout
 
 Files are added inside the SAME existing dated folder. Epic numbering continues from the
-last existing epic (last was `04` → new ones start at `05`). `STORIES_INDEX.md` and
+**project-wide** maximum — which may sit in a *different, newer* plan folder than the one
+being extended, so never read it off this folder's own last epic. `STORIES_INDEX.md` and
 `FEATURE_INDEX.md` are regenerated; `PROJECT_OVERVIEW.md` is left unchanged.
 
 ```

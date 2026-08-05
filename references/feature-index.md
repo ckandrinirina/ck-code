@@ -10,7 +10,10 @@ See also: [`stories-index.md`](stories-index.md) — the per-plan story view thi
 
 ## Definition: feature = epic
 
-Each `epics/NN_<slug>/` in any plan is exactly one row. `Status` and `Stories` are
+Each `epics/NN_<slug>/` in any plan is exactly one row, and `NN` is unique across every
+plan ([`data-model.md`](data-model.md#epic-and-story-numbers-are-globally-unique)) — so
+the `Feature` cell identifies its epic on its own and the `Plan` cell is informational,
+never needed to disambiguate. `Status` and `Stories` are
 **computed** from that epic's story statuses (never stored): `DONE` when every non-`skip`
 story is `done`; `IN PROGRESS` when any story is `in-progress`/`bug` or some-but-not-all
 are `done`; `TODO` when none has started. A `bug` story counts as not-done. The `Docs`
@@ -44,7 +47,8 @@ Branch on the size of the unfinished set:
 - **> 2 unfinished (3+)** → **AskUserQuestion: "Which feature do you want to build?"** —
   list each unfinished feature as `NN · Name (Plan) — Status, done/total — Description`.
   Single-select; the choice scopes the run to that epic. A story-ID / `--epic` argument
-  bypasses this gate — explicit scope is always respected.
+  bypasses this gate — explicit scope is always respected, and a globally unique number
+  resolves its own plan with nothing to ask.
 
 ## Mutation (there is none — regenerate)
 

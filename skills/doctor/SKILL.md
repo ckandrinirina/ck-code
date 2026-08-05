@@ -22,7 +22,7 @@ prose; the script is the single source of truth for what "broken" means.
 
 ## VERSION GATE (hint only)
 
-Never block. The layout stamp is itself check 1 of the report, so a pre-v5 project is
+Never block. The layout stamp is itself check 1 of the report, so a pre-v6 project is
 diagnosed rather than refused. See [`version-gate.md`](../../references/version-gate.md).
 
 ## PHASE 1: RUN
@@ -49,7 +49,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 
 | Row | ERROR means | Fix |
 |---|---|---|
-| `layout` | the stamp is missing or pre-v5; every change-producing skill will block | `/ck-code:migrate` |
+| `layout` | the stamp is missing or pre-v6; every change-producing skill will block | `/ck-code:migrate` |
 | `team layout` | skills sit in nested `experts/`/`guides/` folders, so Claude Code registers none of them | `/ck-code:migrate` |
 | `stories` | a story's frontmatter will not parse, or its status/size is outside the vocabulary | fix the frontmatter, then regenerate |
 | `indexes` | a generated view disagrees with the story files — usually a hand-edit, or a regenerate that never ran | `ck-index` |

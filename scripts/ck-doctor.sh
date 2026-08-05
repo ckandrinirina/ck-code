@@ -58,7 +58,7 @@ plans() {
 
 # ---- 1. layout stamp ---------------------------------------------------------
 check_layout() {
-  local want="v5" got=""
+  local want="v6" got=""
   [ -f tasks/VERSION.md ] && got=$(awk -F: '/^layout:/{gsub(/[ \t]/,"",$2);print $2;exit}' tasks/VERSION.md)
   if [ -z "$got" ]; then
     row layout "tasks/VERSION.md missing" ERROR
@@ -83,7 +83,7 @@ check_stories() {
 import glob, re, sys
 STATUS = {'todo','in-progress','done','skip','bug'}
 SIZE = {'S','M'}
-bad, total, ids = [], 0, {}
+bad, total = [], 0
 for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
     total += 1
     t = open(f, encoding='utf-8', errors='replace').read()
@@ -105,11 +105,8 @@ for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
         bad.append(f"{f}: size `{sz}` is not S or M")
     if fm.get('status') == 'bug' and '## Bug Report' not in t:
         bad.append(f"{f}: status `bug` with no `## Bug Report` — build will stop; re-run /ck-code:fix")
-    if fm.get('id'):
-        ids.setdefault(fm['id'], []).append(f)
-for i, fs in ids.items():
-    if len(fs) > 1:
-        bad.append(f"duplicate id `{i}` in {len(fs)} stories: {', '.join(fs)}")
+    # Duplicate ids are reported by check_ids, not here: the stories are well-formed,
+    # it is the numbering that collided, and that has its own fix (/ck-code:migrate).
 print(total)
 print('\n'.join(bad))
 PY
@@ -162,7 +159,69 @@ check_indexes() {
   fi
 }
 
+# ---- 3b. id uniqueness -------------------------------------------------------
+# v6 requires epic numbers — and therefore story ids — to be unique across EVERY plan.
+# This must run BEFORE check_deps: that check keys its graph on the bare `EE-SS` id, so a
+# colliding project would otherwise surface as phantom missing-blocker or cycle errors
+# instead of the real cause.
+check_ids() {
+  local dupes orphans sdupes
+  dupes=$(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
+          | sed 's|.*/epics/||;s|_.*||' | grep -v '^$' | sort | uniq -d)
+
+  if [ -n "$dupes" ]; then
+    row "epic ids" "$(printf '%s\n' "$dupes" | awk 'END{print NR}') number(s) used by more than one plan" ERROR
+    printf '%s\n' "$dupes" | while IFS= read -r n; do
+      [ -n "$n" ] || continue
+      printf '                   ✗ epic %s: %s\n' "$n" \
+        "$(find tasks -mindepth 3 -maxdepth 3 -type d -path "tasks/*/epics/${n}_*" 2>/dev/null \
+           | sed 's|^tasks/||;s|/epics/.*||' | sort -u | tr '\n' ' ')"
+    done
+    note "epic numbers must be unique project-wide — /ck-code:migrate renumbers (Phase R)"
+  else
+    row "epic ids" "unique across all plans" OK
+  fi
+
+  # Story ids inherit epic uniqueness, but check directly: a collision here is what
+  # actually breaks build EE-SS, blocked_by, and the story/<EE>-<SS>-* branch name.
+  cat > "$TMP/ids.py" <<'PY'
+import glob, re
+ids = {}
+for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
+    m = re.match(r'---\n(.*?)\n---\n', open(f, encoding='utf-8', errors='replace').read(), re.S)
+    if not m: continue
+    fm = dict(re.findall(r'^([A-Za-z][\w-]*):\s*(.*)$', m.group(1), re.M))
+    sid = fm.get('id','').strip().strip('"\'')
+    if sid: ids.setdefault(sid, []).append(f)
+for i, fs in sorted(ids.items()):
+    if len(fs) > 1:
+        print(f"story id `{i}` used by {len(fs)} stories: {', '.join(fs)}")
+PY
+  sdupes=$(python3 "$TMP/ids.py")
+  if [ -n "$sdupes" ]; then
+    row "story ids" "$(printf '%s\n' "$sdupes" | awk 'END{print NR}') duplicated across plans" ERROR
+    printf '%s\n' "$sdupes" | sed 's/^/                   ✗ /'
+    note "an id must name one story anywhere — /ck-code:migrate renumbers (Phase R)"
+  else
+    row "story ids" "unique across all plans" OK
+  fi
+
+  # A directory holding epics but no overview file is invisible to ck-index's plans()
+  # and to migrate Phase R, yet still feeds check_deps below. Never renumber around it.
+  orphans=$(find tasks -mindepth 2 -maxdepth 2 -type d -name epics 2>/dev/null \
+            | sed 's|/epics$||' | while IFS= read -r d; do
+                [ -f "$d/PROJECT_OVERVIEW.md" ] || [ -f "$d/FEATURE_OVERVIEW.md" ] || printf '%s\n' "$d"
+              done)
+  if [ -n "$orphans" ]; then
+    row "plan overview" "$(printf '%s\n' "$orphans" | awk 'END{print NR}') epics dir(s) with no overview" ERROR
+    printf '%s\n' "$orphans" | sed 's/^/                   ✗ /'
+    note "add PROJECT_OVERVIEW.md or FEATURE_OVERVIEW.md — this plan is invisible to ck-index and migrate"
+  fi
+}
+
 # ---- 4. dependencies ---------------------------------------------------------
+# Safe to key on the bare `EE-SS` id because check_ids above proves it is globally
+# unique; on a colliding project that check has already reported the real fault.
 check_deps() {
   local out
   cat > "$TMP/deps.py" <<'PY'
@@ -333,6 +392,7 @@ printf '%s\n' "ck-code project health — $(basename "$PWD")"
 check_layout
 check_stories
 check_indexes
+check_ids
 check_deps
 check_docs
 check_team

@@ -73,8 +73,8 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v5` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v5
+Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
 layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
 this PASSes.
 
@@ -107,12 +107,14 @@ Options:
 
 - **Add Feature** — plan epics/stories for a new feature, reading existing architecture
   and prior plans as context. New dated folder `tasks/YYYY-MM-DD_feature-<slug>/`,
-  numbering restarts at `01`; `FEATURE_OVERVIEW.md` instead of `PROJECT_OVERVIEW.md`.
+  epic numbering continues from the project-wide maximum (3.1);
+  `FEATURE_OVERVIEW.md` instead of `PROJECT_OVERVIEW.md`.
 - **Full Project Plan** — replan the whole project from scratch (new dated folder;
   existing plans untouched).
 - **Continue Existing Plan** — append epics/stories to a prior plan. List `tasks/*/`
-  folders, ask which to extend, continue epic numbering from the last epic, write into
-  the SAME folder, update `ROADMAP.md`.
+  folders, ask which to extend, continue epic numbering from the **project-wide** maximum
+  (3.1) — which may live in a newer plan than the one being extended, so never read it
+  off that folder's own last epic — write into the SAME folder, update `ROADMAP.md`.
 
 ---
 
@@ -201,14 +203,33 @@ fewest epics that cleanly separate deliverables. Group cohesive work that shares
 milestone under one epic; never create an epic that marks neither a milestone nor a
 boundary — fold it into an existing one.
 
-Each epic: a coherent deliverable chunk, numbered sequentially (`01`, `02`, …), a short
-descriptive slug. **Set the epic slug to match its feature-doc slug** so the generated
-`FEATURE_INDEX.md` links its `Docs` cell.
+Each epic: a coherent deliverable chunk, numbered sequentially, a short descriptive slug.
+**Set the epic slug to match its feature-doc slug** so the generated `FEATURE_INDEX.md`
+links its `Docs` cell.
 
-- **Continue mode:** continue numbering from the last epic (last was `04` → new start `05`).
-- **Add Feature mode:** start at `01` in the new `tasks/YYYY-MM-DD_feature-<slug>/` folder.
+**Epic numbers are unique across the whole project, never per-folder.** Allocate the first
+new epic from the project-wide maximum — in **every** mode, including a brand-new plan
+folder — then number consecutively from there:
+
+```bash
+find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
+  | sed 's|.*/epics/||;s|_.*||' | sort -n | tail -1
+```
+
+First new epic = that + 1, zero-padded to two digits; `01` when the command prints
+nothing. Run it **once**, at the start of 3.1. `find`, not a `tasks/*/…` glob — an
+unmatched glob aborts the command under zsh and would silently return "no epics" on a
+project that has some.
+
+Never restart at `01` because the folder is new: two plans owning epic `01` make every
+`EE-SS` ambiguous, and `build --epic NN`, `blocked_by` and the `epic/<NN>-*` branch glob
+then resolve to whichever plan they reach first. See
+[`data-model.md`](../../references/data-model.md#epic-and-story-numbers-are-globally-unique).
+
 - **Cross-references:** when a story depends on existing plan/code, reference it
   explicitly (e.g. `blocked_by` an existing story ID, or a note citing the source file).
+  A globally unique ID means `blocked_by` may name a story in **another plan** — use it
+  when the dependency is real rather than duplicating the work.
 
 **Ordering:** infrastructure/foundation first; no-dependency epics before dependents;
 respect spec phases; within a phase — shared/core code, then feature code, then
@@ -267,8 +288,9 @@ parallel-safe siblings, and cross-epic dependencies.
 ### 3.6 Mandatory final Integration & E2E epic
 
 **Every plan run ends with a dedicated final epic that validates the whole feature (or
-project) end-to-end** — no plan is complete without it. Add it as the **last** (highest-
-numbered) epic, regardless of mode:
+project) end-to-end** — no plan is complete without it. Add it as this run's **last**
+epic, regardless of mode — which, since 3.1 allocates from the project-wide maximum, is
+also the highest-numbered epic in the project:
 
 - **New Project:** covers the whole project end-to-end.
 - **Add Feature:** covers the whole feature end-to-end, including its integration points.
@@ -388,12 +410,21 @@ Adds one small story to an **existing epic**, no full cycle. (Phase 0 already ga
 
 ### Q.1 Locate plan & target epic
 
-1. `Glob "tasks/*/PROJECT_OVERVIEW.md"` and `Glob "tasks/*/FEATURE_OVERVIEW.md"`; take
-   the most recent. **No plan → redirect:** "No `tasks/` plan found. Run
-   `/ck-code:plan <spec>` first." Stop. Multiple plans → ask which.
-2. List epic folders `tasks/<slug>/epics/NN_<slug>/`, each with its highest existing `SS`.
-   **No epic exists → redirect to full plan** (there is nothing to add to). If `--epic NN`
-   was given, validate the folder; on mismatch show the list and re-prompt. Else ask which epic.
+1. **`--epic NN` given** — resolve the plan **from the number**; it is unique
+   project-wide, so exactly one folder can match and there is nothing to ask:
+
+   ```bash
+   find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/NN_*'
+   ```
+
+   No match → show every epic with its plan and re-prompt. More than one match → the
+   project has colliding epic numbers; stop and say to run `/ck-code:migrate`.
+2. **No `--epic`** — `Glob "tasks/*/PROJECT_OVERVIEW.md"` and
+   `Glob "tasks/*/FEATURE_OVERVIEW.md"`; take the most recent. **No plan → redirect:**
+   "No `tasks/` plan found. Run `/ck-code:plan <spec>` first." Stop. Multiple plans → ask
+   which. Then list that plan's epic folders and ask which epic.
+3. Record the target epic's highest existing `SS` (Q.3 numbers the new story from it).
+   **No epic exists anywhere → redirect to full plan** — there is nothing to add to.
 
 ### Q.2 Capture intent
 
@@ -454,6 +485,9 @@ independent stories is a natural fit for `/ck-code:build --epic NN`.
 
 ## RULES
 
+- **Never restart epic numbering at `01` in a new plan folder** (3.1) — allocate from the project-wide maximum in every mode. Colliding epic numbers make every `EE-SS` ambiguous.
+- **Never store the next epic number** — derive it from the epic folders each run (3.1).
+- **Never ask which plan an `--epic NN` belongs to** (Q.1) — the number is unique project-wide; more than one match is a collision to migrate, not a question to ask.
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
 - **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
 - **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index` (5.7, Q.5).

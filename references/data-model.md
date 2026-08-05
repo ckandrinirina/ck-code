@@ -1,16 +1,50 @@
-# Data Model — v5 (Shared Source of Truth)
+# Data Model — v6 (Shared Source of Truth)
 
-The v5 layout has **one writable source of truth for story state: the story file's
+The v6 layout has **one writable source of truth for story state: the story file's
 YAML frontmatter.** Every index (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) is a
 **generated, read-only view** regenerated from frontmatter — never hand-edited,
 never independently mutated. This is what removes drift: a view is a pure function
-of the frontmatter, so it cannot disagree with it. There is no reconciler skill in
-v5 because there is nothing to reconcile — you regenerate.
+of the frontmatter, so it cannot disagree with it. There is no reconciler skill
+because there is nothing to reconcile — you regenerate.
 
-The layout constant is `v5` (see [`version-gate.md`](version-gate.md)). A pre-v5
-project is blocked and routed to `/ck-code:migrate`. v5 changes one artifact only:
-team-generated skills live in flat `.claude/skills/expert-*/` and `guide-*/` folders,
-never nested under `experts/` or `guides/`.
+The layout constant is `v6` (see [`version-gate.md`](version-gate.md)). A pre-v6
+project is blocked and routed to `/ck-code:migrate`.
+
+## Epic and story numbers are globally unique
+
+**An epic number is unique across every plan in the project, and therefore so is a
+story `id`.** `EE-SS` names exactly one story anywhere in `tasks/`.
+
+This is the whole of v6. Through v5, epic numbering restarted at `01` inside each new
+plan folder, so two plans could both own epic `01` and story `01-01`. Everything that
+consumes an ID — `build --epic NN`, `build EE-SS`, `blocked_by`, the `epic/<NN>-*`
+branch glob ([`branch-topology.md`](branch-topology.md)), `ck-doctor`'s dependency
+graph — then had no way to tell which plan was meant, and silently resolved to
+whichever it reached first.
+
+What the invariant buys, stated plainly:
+
+- **An ID never needs a plan qualifier.** `--epic 07` and `07-02` resolve on their
+  own — no feature gate, no "which plan?" prompt.
+- **`blocked_by` may cross plans**, because a dependency on any story in the project
+  is now expressible.
+- **`epic/<NN>-*` matching more than one branch means a stale branch**, never two plans.
+
+`plan` allocates each new epic from the project-wide maximum, derived from the folders
+on every run and never stored:
+
+```bash
+find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
+  | sed 's|.*/epics/||;s|_.*||' | sort -n | tail -1
+```
+
+Next epic is that + 1, zero-padded; `01` when it returns nothing. A stored counter
+would be a second source of truth that can drift from the folders — the exact failure
+class this data model exists to eliminate.
+
+The ID *format* is unchanged from v5; only its scope widened. Team-generated skills
+still live in flat `.claude/skills/expert-*/` and `guide-*/` folders, never nested
+under `experts/` or `guides/` (that was v5's change).
 
 ## Story file (the source of truth)
 
@@ -48,12 +82,12 @@ prior_status:
 
 | Key | Values | Meaning |
 |---|---|---|
-| `id` | `EE-SS` | epic + story number, zero-padded. The stable key. |
+| `id` | `EE-SS` | epic + story number, zero-padded. The stable key — **globally unique across every plan**. |
 | `title` | text | story title, no `Story EE-SS:` prefix |
 | `epic` | `NN` | parent epic number (matches the folder) |
 | `status` | `todo` \| `in-progress` \| `done` \| `skip` \| `bug` | the single status of record |
 | `size` | `S` \| `M` | one-dispatch sizing; larger work is split at a seam (no `L`/`XL`) |
-| `blocked_by` | `[id, ...]` or `[]` | story IDs that must be `done` first |
+| `blocked_by` | `[id, ...]` or `[]` | story IDs that must be `done` first; may name a story in another plan |
 | `files` | `[path, ...]` or `[]` | files the story creates/modifies — the conflict-detection and touched-files key |
 | `issue` | number or empty | linked GitHub issue, written by `ship` (incl. `--to-issues`); empty until pushed |
 | `prior_status` | status or empty | set to the pre-`bug` status when `status: bug`; restored on fix |
@@ -69,7 +103,7 @@ the closing `---`. `status` and `size` are lowercase/uppercase exactly as the en
 
 | Key | Values | Meaning |
 |---|---|---|
-| `epic` | `NN` | epic number — the rollup key; **must match the folder prefix** |
+| `epic` | `NN` | epic number — the rollup key; **must match the folder prefix**, and **unique across every plan** |
 | `slug` | text | routes the `FEATURE_INDEX` `Docs` cell to `docs/architecture/features/<slug>/index.md`; set it to the owning feature-doc dir name (defaults to the folder slug) |
 | `title` | text | epic display title |
 | `description` | text | one line — becomes the `FEATURE_INDEX` Description cell |
@@ -130,10 +164,20 @@ regenerates the views once on the target branch after merges.
 
 ## VERSION stamp
 
-`tasks/VERSION.md` records `layout: v5`. The version gate reads it for a one-line
+`tasks/VERSION.md` records `layout: v6`. The version gate reads it for a one-line
 fast path; `migrate` writes it as its final step.
 
-## What v3 had that v5 removes
+## What v5 had that v6 removes
+
+| v5 | v6 |
+|---|---|
+| epic numbering restarts at `01` in each new plan folder | every epic allocated from the project-wide maximum |
+| `EE-SS` unique only within its plan | `EE-SS` names one story anywhere in `tasks/` |
+| `--epic NN` / `EE-SS` need a plan to resolve against | they resolve on their own |
+| `blocked_by` confined to its own plan | may name any story in the project |
+| `epic/<NN>-*` matching twice = two plans, ask which | matching twice = a stale branch |
+
+## What v3 had that v5 removed
 
 | v3 | v5 |
 |---|---|
@@ -153,3 +197,6 @@ fast path; `migrate` writes it as its final step.
 - **Never write a delta/journal doc** — commits are the history.
 - **Always run `ck-index` in the same phase** you change any story's frontmatter.
 - **Frontmatter stays generator-readable** — one `key: value` per line, inline `[...]` lists, no block scalars.
+- **Never restart epic numbering in a new plan** — allocate from the project-wide maximum, or two plans collide and every ID consumer silently picks the wrong one.
+- **Never store the next epic number** — derive it from the epic folders on every run.
+- **Never qualify an ID with its plan** — `EE-SS` and `NN` are unique project-wide; a skill that asks which plan an ID belongs to is working around a collision that `/ck-code:migrate` should fix.

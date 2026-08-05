@@ -18,8 +18,8 @@ Produces two sections for the most recently implemented story or feature:
 1. **Manual verification** — exact commands to confirm it works
 2. **What was built** — learner-friendly explanation of every technology and pattern used
 
-Read `tasks/VERSION.md`. If `layout: v5` → proceed silently. Otherwise emit one line —
-`ℹ pre-v5 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
+Read `tasks/VERSION.md`. If `layout: v6` → proceed silently. Otherwise emit one line —
+`ℹ pre-v6 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
 [`../../references/version-gate.md`](../../references/version-gate.md).
 
 ---

@@ -36,7 +36,7 @@ see [`design-system.md`](design-system.md).
 is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run
 `/ck-code:design sync` to scaffold the missing feature doc. The retired layer docs
 (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) do not exist
-in a v5 project — the version gate migrates any pre-v5 project before this runs, and
+in a v6 project — the version gate migrates any pre-v6 project before this runs, and
 migrated originals live under `docs/architecture/archive/`. Never read them.
 
 Skip files absent on disk. Do NOT read `ROADMAP.md` here — it is loaded
