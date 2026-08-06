@@ -3,7 +3,7 @@ name: config
 description: Use when setting up or changing this project's ck-code settings in `tasks/SETTINGS.md` — turning GitHub issue tracking on or off, setting the trunk branch every PR targets, picking or creating the GitHub Project whose board mirrors story status, re-mapping board columns after the board changes, or just showing what is currently configured. Argument is `show`, `board`, `trunk <branch>`, `on`, or `off`. Board work needs `gh` authenticated with the `project` scope.
 argument-hint: "[show | board | trunk <branch> | on | off]"
 effort: low
-allowed-tools: Bash(ck-project*) Bash(ck-doctor*) Bash(gh auth status*) Bash(gh project list*) Bash(git rev-parse*) Read Edit Write
+allowed-tools: Bash(ck-project*) Bash(ck-doctor*) Bash(gh auth status*) Bash(gh project list*) Bash(git rev-parse*) Read Edit Write Skill
 ---
 
 # Config — Project Settings & Board Mapping

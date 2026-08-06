@@ -3,7 +3,7 @@ name: spec
 description: Use when the user wants a stakeholder-ready feature specification (descriptive, no code, no file paths, no tooling jargon) before any design or architecture work, or wants to revise an existing spec identified by a slug or a GitHub issue URL. Produces a reviewable feature-spec document, optionally published as a GitHub issue, that `/ck-code:design` later consumes. Runs before `/ck-code:design`.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
 effort: high
-allowed-tools: Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(mkdir*)
+allowed-tools: Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(mkdir*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash

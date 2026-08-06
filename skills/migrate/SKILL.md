@@ -3,7 +3,7 @@ name: migrate
 description: Use when a change-producing skill's version gate has blocked a pre-v6 ck-code project, when the user asks to upgrade a project to v6, when the same epic number is used by more than one plan folder, when team-generated skills sit in nested .claude/skills/experts/ or guides/ folders, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow.
 argument-hint: "[--dry-run]"
 effort: medium
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git mv*) Bash(git branch*) Bash(git rev-parse*) Bash(gh pr list*) Bash(find*) Bash(grep*) Bash(ls*) Bash(mkdir*) Bash(mv*)
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git mv*) Bash(git branch*) Bash(git rev-parse*) Bash(gh pr list*) Bash(find*) Bash(grep*) Bash(ls*) Bash(mkdir*) Bash(mv*) Skill
 ---
 
 # Migrate — Upgrade a Project to the v6 Layout

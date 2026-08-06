@@ -3,7 +3,7 @@ name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds` (link and refresh a Claude Design system cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync | ds]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer

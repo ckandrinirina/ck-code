@@ -3,7 +3,7 @@ name: plan
 description: Use when breaking a project spec or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle; redirects to full planning when no epic exists. Argument is the spec-file path, or the `--quick` flags.
 argument-hint: "<path-to-spec> | --quick [brief] [--epic NN]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git branch*) Bash(mkdir*)
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git branch*) Bash(mkdir*) Skill
 ---
 
 # Project Architect — Spec to Epics/Stories (+ Quick Single-Story)

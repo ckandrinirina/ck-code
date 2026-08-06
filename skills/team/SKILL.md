@@ -1,10 +1,9 @@
 ---
 name: team
-description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill.
+description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill. Requires docs/architecture/ to exist already — run design first if it does not. Runs only on an explicit request or a hand-off from another ck-code skill.
 argument-hint: "[--basic|--standard|--max] [--check|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
-disable-model-invocation: true
 effort: high
-allowed-tools: Bash(ls*) Bash(mkdir*) Bash(git status*)
+allowed-tools: Bash(ls*) Bash(mkdir*) Bash(git status*) Skill
 ---
 
 # Team — Project-Tailored Expert & Guide Skill Factory
