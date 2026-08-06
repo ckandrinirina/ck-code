@@ -87,3 +87,14 @@ If the user specifies a path or concept, focus on that instead.
 
 Supportive and encouraging (the user is learning); concrete and specific — never vague
 ("this handles the logic"); short paragraphs, one idea each.
+
+---
+
+## RULES
+
+- **Never** call the `Skill` tool — this skill runs forked and read-only, and an Explore
+  fork has no write tools.
+- **Never** emit a `NEXT:` directive — explaining finished work implies no next step. This
+  is the one read-only skill with no hand-off
+  ([`../../references/skill-invocation.md`](../../references/skill-invocation.md)).
+- **Always** output in English.

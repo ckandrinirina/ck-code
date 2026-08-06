@@ -228,7 +228,15 @@ If `<name>` is not a current command, say so and list the valid command names.
 
 ## RULES
 
-- **Never** invoke another skill via the `Skill` tool — this skill recommends only.
+- **Never** invoke another skill via the `Skill` tool — this skill runs forked and
+  read-only, and an Explore fork has no write tools, so the callee would fail at its first
+  file write.
+- **Always** end Mode A and Mode B with one directive line and nothing after it, per
+  [`../../references/skill-invocation.md`](../../references/skill-invocation.md) —
+  `NEXT: /ck-code:<skill> <resolved args>`. The main session offers it as a one-click run,
+  so the user never retypes the command this skill just chose for them. Emit none in Mode C
+  (syntax lookup), and none when the routing is genuinely ambiguous — list the candidates
+  as prose instead.
 - **Never** write, edit, or generate any file (including running `ck-index`) —
   Bash is for read-only probes only.
 - **Never** reference retired skills (`start`, `advise`, `help`, `sync`,

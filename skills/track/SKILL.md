@@ -151,4 +151,11 @@ Present the top story (a 🐛 bug if any is open); list the rest under *Also Rea
   never `parallel-build`, `start`, `advise`, `help`, `sync`, or `to-issues`.
 - **Always** return the rendered dashboard verbatim as the final output — this skill
   runs forked, so its result is relayed; summarizing it discards the template.
+- **Always** end a `next` run with one directive line and nothing after it, per
+  [`../../references/skill-invocation.md`](../../references/skill-invocation.md) —
+  `NEXT: /ck-code:build <path-to-the-selected-story>`. The main session offers it as a
+  one-click run so the user never retypes the path. Emit no directive for `status` or
+  `progress`, and none when no story is ready.
+- **Never** call the `Skill` tool — this skill runs forked and read-only, and an Explore
+  fork has no write tools; the `NEXT:` line is how it hands off.
 - **Always** output in English.
