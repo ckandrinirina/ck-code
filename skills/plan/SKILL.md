@@ -38,7 +38,10 @@ publish issues first.
 This skill builds a **full epic/story plan** (or, with `--quick`, adds one story to an
 existing epic). If the request is something else, STOP and recommend the better skill:
 
-- No architecture docs yet → `/ck-code:design` (first)
+- No architecture docs yet → hand off to `/ck-code:design <the spec path this run was
+  given>` per [`skill-invocation.md`](../../references/skill-invocation.md) — one question,
+  the path already resolved, so the spec path the user just supplied is not retyped. On
+  **Run it**, resume `plan` on the same spec once `design` returns. On **Skip**, stop cleanly.
 - A stakeholder-facing spec, not a task breakdown → `/ck-code:spec`
 - A bug in already-implemented code → `/ck-code:fix`
 - `--quick` but no `tasks/` plan or target epic exists → fall through to full plan (Phase 1.2)
@@ -478,9 +481,16 @@ Next steps (pick one):
 
 ## NEXT
 
-Run `/ck-code:ship` to publish the epics and stories to GitHub Issues, **or** skip
-publishing and run `/ck-code:track next` to find the first story to implement. An epic of
-independent stories is a natural fit for `/ck-code:build --epic NN`.
+When `tasks/SETTINGS.md` shows issue tracking is **on**, hand off to
+`/ck-code:ship --to-issues <the tasks/ folder just written>` per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question, the path
+already resolved — to publish the epics and stories to GitHub Issues.
+
+When issue tracking is **off**, ask nothing — an unwanted push to GitHub is exactly what the
+confirm gate exists to prevent, and asking every run is noise.
+
+Either way, close by naming `/ck-code:track next` to find the first story to implement. An
+epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 
 ---
 

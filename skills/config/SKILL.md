@@ -177,5 +177,9 @@ as expected.
 
 ## NEXT
 
-Publish a plan to Issues with `/ck-code:ship --to-issues`. Check settings and the
-rest of the project with `/ck-code:doctor`.
+After a board mapping is applied or re-mapped (BOARD MODE step 6), hand off to
+`/ck-code:doctor` per [`skill-invocation.md`](../../references/skill-invocation.md) — one
+question, no arguments — so the new mapping is verified immediately. Ask nothing in SHOW
+mode, which changed nothing.
+
+Publish a plan to Issues with `/ck-code:ship --to-issues`.
