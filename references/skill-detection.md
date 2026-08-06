@@ -133,9 +133,10 @@ Warn, then ask (`AskUserQuestion`, single-select):
     CONTINUE WITHOUT SKILLS
 ```
 
-- **RUN TEAM FIRST** → `Skill({ skill: "ck-code:team" })`. When it returns, re-run 4a
-  from the top and continue this procedure with the generated skills. Never hand-write a
-  skill file here as a substitute.
+- **RUN TEAM FIRST** → `Skill({ skill: "ck-code:team" })`, per the hand-off prompt in
+  [`skill-invocation.md`](skill-invocation.md). When it returns, re-run 4a from the top and
+  continue this procedure with the generated skills. Never hand-write a skill file here as a
+  substitute.
 - **CONTINUE WITHOUT SKILLS** → proceed to Step 5 and report the empty set. The user
   accepted the trade-off; do not re-ask later in the same run.
 
