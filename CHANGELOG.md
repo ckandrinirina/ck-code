@@ -5,6 +5,45 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.5.0] — 2026-08-06
+
+### Added
+- **Skills can hand off to each other.** Every ck-code skill can now hand off to any other
+  and have it actually run. A hand-off is one question with the arguments already filled
+  in — never a command retyped by hand. The user still decides every time; what is gone is
+  the labour of saying yes.
+- **New reference `skill-invocation.md`** — the hand-off contract. Two tiers (DIRECT, where
+  the skill calls `Skill` itself; DIRECTIVE, where a forked read-only skill emits a `NEXT:`
+  line the session picks up), the prompt shape, a depth-3 chain guard that forbids
+  revisiting a skill already on the chain, argument discipline, and failure handling.
+  `workflow-map.md` gains the matching invocation matrix.
+- **New executable edges** — `spec → design`, `design → team`, `team → plan`,
+  `plan → design`, `plan → ship --to-issues`, `config → doctor`. Each of these already
+  named its successor in prose and made you retype it with arguments you had just supplied.
+- **The read-only skills hand off too.** `guide`, `track` and `doctor` end with a `NEXT:`
+  line the session offers as a one-click run, while keeping their forked, read-only,
+  cheap-model execution exactly as it was. `explain` is the one read-only skill with no
+  hand-off — explaining finished work implies no next step.
+
+### Fixed
+- **`fix` and `team` were unreachable.** Both carried `disable-model-invocation`, which
+  removes a skill from the Skill tool's registry entirely. Every documented hand-off to
+  them silently never fired — including `build`'s team gate, which invoked `ck-code:team`
+  from three separate call sites (`skill-detection.md`, `build/SKILL.md`,
+  `build/references/parallel-mode.md`). None of the three could ever run.
+- **Hand-offs cost two prompts instead of one.** No skill listed `Skill` in `allowed-tools`,
+  so a skill's own confirmation was followed by a separate permission prompt for the
+  invocation itself. The nine write skills now list it.
+- **The version gate now self-heals.** A pre-v6 project used to cost two retypes — type
+  `/ck-code:migrate`, then retype the original command from memory afterwards. The gate
+  already invoked `migrate` and resumed the caller in its written procedure; it simply could
+  not execute it. It now offers migration once and resumes the original command with its
+  original arguments.
+- **`plugin-doctor` enforces the contract.** Four new release-blocking checks: every
+  hand-off target exists, no target is made unreachable by `disable-model-invocation`, every
+  write skill can call `Skill`, and no read-only skill does. The second check is the
+  permanent guard against the defect above returning.
+
 ## [6.4.1] — 2026-08-05
 
 ### Fixed

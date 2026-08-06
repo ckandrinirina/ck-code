@@ -331,6 +331,42 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
 | `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, set the trunk branch every PR targets, pick or create the GitHub Project whose board mirrors story status, re-map or reorder board columns, or show what is configured | `show` / `board` / `trunk <branch>` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
 
+## Hand-offs — one click, never a retype
+
+Every arrow in the diagram above is a **hand-off**, and every hand-off asks you exactly
+once. You decide whether it happens; what you don't do is retype the command.
+
+Before, saying yes to "next, run build" meant reading the path out of the output and typing
+`/ck-code:build tasks/2026-07-11_auth/stories/03-login.md` by hand — then approving a
+permission prompt on top. Now it is a single question with the path already filled in:
+
+```
+→ [fix → build] /ck-code:build tasks/2026-07-11_auth/stories/03-login.md
+  reason: fix plan recorded, story at status: bug
+
+  Run it            takes the reproduction test RED → GREEN per the recorded Fix Plan
+  Skip              the story stays at status: bug; run it later
+  Change arguments  same skill, different story or flags
+```
+
+Three things this guarantees:
+
+- **Skip is always safe.** A skill reaches a valid, resumable state *before* it offers a
+  hand-off, so declining never leaves the project half-done.
+- **Chains cannot run away.** Maximum depth 3, and a skill may never invoke one already on
+  the chain — so `fix → build → fix` is structurally impossible, not merely discouraged.
+- **Read-only stays read-only.** `guide`, `track` and `doctor` run in a cheap forked
+  context with no write tools. They never launch anything themselves; they end with a
+  `NEXT:` line the session offers you as the same one-click run.
+
+The biggest win is the version gate. A pre-v6 project used to cost *two* retypes — type
+`/ck-code:migrate`, then retype your original command from memory once it finished. It now
+offers migration once and resumes what you were doing, with the arguments you already gave.
+
+The full contract lives in [`references/skill-invocation.md`](references/skill-invocation.md);
+which hand-offs exist is the invocation matrix in
+[`references/workflow-map.md`](references/workflow-map.md).
+
 ## Why ck-code?
 
 If you've used Claude Code on a real project, you've felt the friction: the AI works at file-level but humans plan at architecture-level, and the two drift apart. Specs go stale. Stories get re-implemented. Tests are skipped under deadline pressure.
