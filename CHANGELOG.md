@@ -5,6 +5,55 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.6.0] — 2026-08-06
+
+Stabilisation (LTS) release: a full audit of the plugin — cross-skill contracts,
+per-skill consistency, and the shell tooling — with every confirmed finding fixed.
+
+### Fixed
+- **The status bar was invisible on every v6 project.** The Delivery column added in
+  6.4.0 widened the generated index row to 8 cells; `statusline.sh` still read Status at
+  the 7-cell offset, so every row was discarded and the script printed nothing. Offsets
+  now match the real row (verified end-to-end, including a `|` inside a story title).
+- **The spec → design contract was fiction.** `spec` promised that `design` would consume
+  `.metadata.json`, write `feature-spec.md` and bump the status — `design` implemented
+  none of it. `design` now closes the loop (new Phase 3.12: `status: design-in-progress`
+  plus `linkedDesign` pointing at the feature-doc folders), and `spec`/README describe
+  the real output location.
+- **`team` could never mint `expert-api`.** The guide-vs-expert litmus forbade the very
+  role its own catalog defines with detection globs and a full per-role delta (and cited
+  a nonexistent `expert-web` slug). The litmus now defers to the catalog's signal — a
+  public/external/versioned API contract surface.
+- **`guide` documented flags that do not exist.** The ship row advertised `--issues`
+  (which routes to SHIP MODE, not publish) and omitted `--promote`/`--integration`;
+  design gained `ds`, team its four maintenance flags, migrate `--dry-run`. `plan`'s
+  roadmap summary had the same bug: `ship <folder>` without `--to-issues`.
+- **`build`'s dispatch prompt disagreed with its own agent** on the return schema
+  (`success` vs `done`, string vs list, boolean vs ratio) — both now state the agent's
+  typed shape. Its fix/plan redirects are now real hand-offs per `skill-invocation.md`,
+  matching what the workflow-map matrix already claimed.
+- **`migrate` gave a v5-stamped project with nested skill folders opposite directives**
+  from Phase 1, Phase S and the RULES — the branch is now defined (Phase S, then R). The
+  lite-migration map and the superseded banner it writes into user repos said "v5" while
+  the same run stamps `layout: v6`.
+- A sweep of stale pointers: build 8.2→8.6 and the 7.4 heading, the 8.5/8.7 output
+  templates showing the forbidden two-question gate, fix 4.5→4.2, ship 2.2/3.1 and
+  pr-templates Phase 4→5, team's Phase 0 anchor, track's nonexistent filter argument,
+  the canonical hand-off example paths missing the `epics/NN_*/` level, and leftover
+  "v5" labels across build, design, track and workflow-map.
+
+### Changed
+- **`ck-doctor` no longer trusts silence.** Checks backed by python3 degrade to an
+  explicit WARN when python3 is missing instead of reading empty output as a pass; the
+  expected layout major is derived from `version-gate.md` at runtime (the fallback is
+  cross-checked by plugin-doctor); a new `plan naming` WARN flags whitespace plan
+  folders that the issue/board scripts would silently skip.
+- `version-gate`'s scope table now lists `config` (hard gate) and `doctor` (hint-only);
+  `doctor`'s finding table documents the `epic ids`, `story ids`, `plan overview`,
+  `settings` and `plan naming` rows it can emit.
+- The format hook no longer fires on `NotebookEdit` — it has no notebook formatter, so
+  every such spawn was a guaranteed no-op.
+
 ## [6.5.0] — 2026-08-06
 
 ### Added
