@@ -1,10 +1,9 @@
 ---
 name: team
-description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill.
+description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill. Requires docs/architecture/ to exist already — run design first if it does not. Runs only on an explicit request or a hand-off from another ck-code skill.
 argument-hint: "[--basic|--standard|--max] [--check|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
-disable-model-invocation: true
 effort: high
-allowed-tools: Bash(ls*) Bash(mkdir*) Bash(git status*)
+allowed-tools: Bash(ls*) Bash(mkdir*) Bash(git status*) Skill
 ---
 
 # Team — Project-Tailored Expert & Guide Skill Factory
@@ -558,9 +557,15 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 
 ## NEXT
 
-- `/ck-code:plan <spec-file>` — break the architecture into epics, stories, and a roadmap.
+Hand off to `/ck-code:plan <the spec file these docs were built from>` per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question, the path
+already resolved — to break the architecture into epics, stories, and a roadmap. Ask **only**
+when no `tasks/*/` plan folder exists yet; on a refresh run, name the command in prose and
+ask nothing.
+
 - `/ck-code:team --conventions` — **only if 2.4 skipped it** — capture your project's own code
-  structure, naming, style, and architectural rules into `guide-conventions`.
+  structure, naming, style, and architectural rules into `guide-conventions`. Recommend in
+  prose; never hand off to yourself.
 
 ---
 

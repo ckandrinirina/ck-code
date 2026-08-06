@@ -1,10 +1,9 @@
 ---
 name: fix
-description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Argument is an optional story-file path.
+description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Runs only on an explicit bug report or a hand-off from another ck-code skill, never speculatively. Argument is an optional story-file path.
 argument-hint: "[path-to-story.md]"
-disable-model-invocation: true
 effort: high
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*)
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -253,7 +252,7 @@ If **any** box is unchecked, it is a **MANUAL hand-off** (complex). Multi-story 
 
 ### 6.3 Route
 
-- **AUTO-BUILD** → announce with the Phase 6 auto-build prompt in `references/qa-dialogue.md`, then invoke `/ck-code:build <story-path>` via the Skill tool. `build` detects the `bug` status, enters **Bug-Fix Mode**, takes the reproduction test RED → GREEN per the Fix Plan, runs SOLID + QA + manual-test, ships, and restores the story's `prior_status`. `fix` ends here.
+- **AUTO-BUILD** → announce with the Phase 6 auto-build prompt in `references/qa-dialogue.md`, then hand off to `/ck-code:build <story-path>` per [`skill-invocation.md`](../../references/skill-invocation.md) — one question, the story path already resolved. On **Run it**, `build` detects the `bug` status, enters **Bug-Fix Mode**, takes the reproduction test RED → GREEN per the Fix Plan, runs SOLID + QA + manual-test, ships, and restores the story's `prior_status`. On **Skip**, the story stays at `status: bug` and everything is recorded. `fix` ends here either way.
 - **MANUAL hand-off** → print the manual-build prompt in `references/qa-dialogue.md` (Phase 6 manual). Recommend `/ck-code:build <primary-story>` (highest-scored story), or `/ck-code:build <ids>` (PARALLEL MODE) for a multi-story bug. **STOP** — everything is recorded; the user runs `build` when ready. Do NOT implement the fix inside `fix`.
 
 ## HARD GATES (cross-phase contract)

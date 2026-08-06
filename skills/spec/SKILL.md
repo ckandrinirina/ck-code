@@ -3,7 +3,7 @@ name: spec
 description: Use when the user wants a stakeholder-ready feature specification (descriptive, no code, no file paths, no tooling jargon) before any design or architecture work, or wants to revise an existing spec identified by a slug or a GitHub issue URL. Produces a reviewable feature-spec document, optionally published as a GitHub issue, that `/ck-code:design` later consumes. Runs before `/ck-code:design`.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
 effort: high
-allowed-tools: Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(mkdir*)
+allowed-tools: Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(mkdir*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -249,8 +249,14 @@ Brief block reporting:
 
 ## NEXT
 
-Once stakeholders sign off and the spec status is `ready-for-design`, run
-`/ck-code:design <path-to-pre-spec.md>` to produce the architecture docs.
+Once stakeholders sign off and the spec status is `ready-for-design`, hand off to
+`/ck-code:design <the pre-spec.md path just written>` per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question, the path
+already resolved.
+
+Ask **only** when the status reached `ready-for-design` in this run. While the spec is still
+in review the next step is stakeholder sign-off, not architecture; say so and stop. On
+**Skip**, print the full command so the user can run it later.
 
 ---
 

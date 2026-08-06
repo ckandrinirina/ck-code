@@ -3,7 +3,7 @@ name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds` (link and refresh a Claude Design system cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync | ds]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -303,9 +303,14 @@ Present a final summary block (New Project: created files, gaps remaining, next 
 Feature: UPDATED/CREATED/UNCHANGED files, impact, next steps). Exact blocks:
 [references/qna-examples.md](references/qna-examples.md).
 
-The final next step is: run `/ck-code:team` to generate the expert and guide skills from
-these docs. Then `/ck-code:plan` reads each feature doc's `design: pending` flag to pick up
-the unplanned work this run added and flips it to `planned`.
+The final next step is `/ck-code:team`, which generates the expert and guide skills from
+these docs. Hand off to it per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question, no arguments.
+Ask **only** when no `.claude/skills/expert-*/` exists yet; when experts are already present
+this run is a refresh, so name `/ck-code:team --regenerate` in prose and ask nothing.
+
+Then `/ck-code:plan` reads each feature doc's `design: pending` flag to pick up the unplanned
+work this run added and flips it to `planned`.
 
 ---
 

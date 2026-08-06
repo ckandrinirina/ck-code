@@ -132,7 +132,7 @@ Print exactly — for a `DUPES` marker (and no `OLD`/`LITE`/`NESTED`):
 ⛔ This project has the same epic number in more than one plan.
    A story id (EE-SS) must identify one story anywhere — while these collide,
    /ck-code:build --epic NN and blocked_by can resolve to the wrong plan.
-   Migrate with /ck-code:migrate  →  [Run it now? y/N]
+   Migrate with /ck-code:migrate  →  [see the hand-off prompt below]
 ```
 
 For a `NESTED` marker (and no `OLD`/`LITE`):
@@ -141,7 +141,7 @@ For a `NESTED` marker (and no `OLD`/`LITE`):
 ⛔ This project's team skills are nested (.claude/skills/experts/, guides/).
    Claude Code only finds skills at .claude/skills/<name>/SKILL.md, so none of
    them are registered — /ck-code:migrate flattens them to expert-*/ and guide-*/.
-   Migrate with /ck-code:migrate  →  [Run it now? y/N]
+   Migrate with /ck-code:migrate  →  [see the hand-off prompt below]
 ```
 
 For an `OLD` marker (it wins over `NESTED` — the full conversion covers both):
@@ -149,7 +149,7 @@ For an `OLD` marker (it wins over `NESTED` — the full conversion covers both):
 ```
 ⛔ This project uses a pre-v5 layout.
    ck-code stores story state in frontmatter and generates its indexes.
-   Migrate with /ck-code:migrate  →  [Run it now? y/N]
+   Migrate with /ck-code:migrate  →  [see the hand-off prompt below]
 ```
 
 For a `LITE` marker:
@@ -158,16 +158,17 @@ For a `LITE` marker:
 ⛔ This project uses the ck-code-lite layout (tasks/PLAN.md).
    ck-code needs epics, stories, and frontmatter — /ck-code:migrate converts it,
    keeping every task's status, acceptance criteria and history.
-   Migrate with /ck-code:migrate  →  [Run it now? y/N]
+   Migrate with /ck-code:migrate  →  [see the hand-off prompt below]
 ```
 
-Then ask (`y`/`N`):
+Then run the hand-off prompt from
+[`skill-invocation.md`](skill-invocation.md) for `Skill({ skill: "ck-code:migrate" })`:
 
-- **y** → invoke `Skill({ skill: "ck-code:migrate" })`. `migrate` writes the stamp as
-  its final step. When it returns, **re-run this gate from Tier 1** (now PASSes) and
-  continue the original skill.
-- **N** → stop the current skill. Do not read or write any project state. The stamp
-  is left unwritten, so the next session re-detects.
+- **Run it** → `migrate` writes the stamp as its final step. When it returns, **re-run this
+  gate from Tier 1** (now PASSes) and **continue the original skill with its original
+  arguments** — the user never retypes either command.
+- **Skip** → stop the current skill. Do not read or write any project state. The stamp is
+  left unwritten, so the next session re-detects.
 
 ## Stamp (writing `tasks/VERSION.md`)
 
@@ -194,7 +195,8 @@ restates the Tier-2 detection.
 
 - **Never read or write project state before this gate PASSes** in a change-producing skill.
 - **Never stamp `tasks/VERSION.md` while a pre-v6, nested, lite or `DUPES` marker is present** — stamp only after a clean detection or a successful `migrate`. A `tasks/PLAN.md` is a lite plan, not an empty `tasks/`.
-- **Never auto-migrate without the `y` confirmation** — BLOCK always asks.
+- **Never auto-migrate without confirmation** — BLOCK always asks, per [`skill-invocation.md`](skill-invocation.md).
+- **Never make the user retype the blocked command** — resume it automatically once `migrate` returns.
 - **Compare on `layout:` (the major), never the full `ck-code:` version.**
 - **Never treat a `NESTED`-only project as a full pre-v4 conversion** — its stories, epics and docs are already current; only the skill folders move.
 - **Never treat a `DUPES`-only project as needing story or doc conversion** — its layout is correct v5; only the epic numbers move (`migrate` Phase R).

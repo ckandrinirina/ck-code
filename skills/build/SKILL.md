@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*)
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -462,8 +462,9 @@ The sync moves this story's card to Done and rolls its epic card up
 ### 8.7 Ship (Commit + PR + Issue Updates)
 
 Apply the ship answer already collected at 8.5.1 Q2 — **do not ask again**: **SHIP** —
-invoke `/ck-code:ship` with the story file path (handles branch, staging, commit, PR, and
-GitHub Issue updates); **SKIP** — don't commit yet; remind the user they can run
+hand off to `/ck-code:ship` with the story file path per
+[`skill-invocation.md`](../../references/skill-invocation.md) (handles branch, staging,
+commit, PR, and GitHub Issue updates); **SKIP** — don't commit yet; remind the user they can run
 `/ck-code:ship [story-path]` later. Only ask here if 8.5.1 ran without Q2 (e.g. a
 non-interactive caller). **DELEGATED MODE never ships** — it commits inside its worktree and
 returns its verdict.

@@ -76,6 +76,15 @@ Close with the single highest-value next command, never a list of every fix at o
   project. The only permitted Bash call is `ck-doctor`, which is itself read-only.
 - **Never fix a finding in this skill** — report it and name the command. Repair belongs
   to `migrate`, `design`, `team`, or a deliberate `ck-index` run the user chooses.
+- **Never call the `Skill` tool** — this skill runs forked and read-only; an Explore fork
+  has no write tools, so the callee would fail at its first file write. Hand off with the
+  `NEXT:` line instead.
+- **Always** end with one directive line and nothing after it, per
+  [`skill-invocation.md`](../../references/skill-invocation.md) —
+  `NEXT: /ck-code:<skill> <args>` for the **single most severe** finding that carries a
+  repair command. The main session offers it as a one-click run, so the user does not
+  retype it. Emit none when the report is clean, and none when the top finding's repair is
+  a plain shell command (`ck-index`) rather than a skill — print that command instead.
 - **Never restate or re-derive a check in prose** — `ck-doctor` defines what is broken;
   this file only interprets its output.
 - **Never summarise the script output away** — return it verbatim, then interpret.

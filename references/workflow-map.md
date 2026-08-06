@@ -42,6 +42,39 @@ doctor       (Anytime) Report what is broken in the project + how to fix it
 | `fix` (complex) | `/ck-code:build <story>` or `/ck-code:build <ids>` (Bug-Fix Mode) |
 | `ship` | `/ck-code:track next` (more stories) or `/ck-code:explain` |
 
+## Invocation matrix
+
+Which hand-offs may actually *run*, and which side makes the call. The mechanics — the
+prompt, the chain guard, argument discipline — live in
+[`skill-invocation.md`](skill-invocation.md); this table is only the graph.
+
+**Both tiers ask the user exactly once.** The tier says *who runs the `Skill` call* — the
+skill itself (DIRECT) or the main session on its behalf (DIRECTIVE) — never *whether* the
+user is asked.
+
+| Caller | Callee | Tier | Trigger |
+|---|---|---|---|
+| `spec` | `design` | DIRECT | spec approved by the user |
+| `design` | `team` | DIRECT | feature docs written |
+| `team` | `plan` | DIRECT | expert + guide skills generated |
+| `plan` | `design` | DIRECT | no `docs/architecture/` exists |
+| `plan` | `ship --to-issues` | DIRECT | issue tracking enabled in `tasks/SETTINGS.md` |
+| `build` | `team` | DIRECT | project has no expert skills ([`skill-detection.md`](skill-detection.md) Step 4a.1) |
+| `build` | `plan --quick` | DIRECT | no story exists for the work in hand |
+| `build` | `fix` | DIRECT | a pre-existing bug blocks the story |
+| `build` | `ship` | DIRECT | story done and the user chose SHIP at 8.5.1 Q2 |
+| `fix` | `plan --quick` | DIRECT | a missing-functionality slot needs a story (Phase 2.6) |
+| `fix` | `build` | DIRECT | AUTO-BUILD eligible (Phase 6.3) |
+| `config` | `doctor` | DIRECT | board mapping changed |
+| any gated skill | `migrate` | DIRECT | version gate BLOCKed ([`version-gate.md`](version-gate.md)) |
+| `ship` | `explain` / `track next` | DIRECTIVE | after delivery |
+| `track next` | `build <path>` | DIRECTIVE | next ready story selected |
+| `doctor` | `migrate` / `config` | DIRECTIVE | a finding carries a repair command |
+| `guide` | any | DIRECTIVE | free-text task routed |
+
+No other pair may hand off. A skill that believes it needs an edge not listed here adds it
+to this table first.
+
 ## When to use which
 
 | Choice | Use this | Not this |
