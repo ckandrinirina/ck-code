@@ -16,16 +16,9 @@ proceed?" — with three options:
 - **FULL REFRESH** — Regenerate all architecture docs from scratch (existing docs are backed up first).
 - **DIFFERENT PROJECT** — Treat this as a new project.
 
-Branching:
-
-- **ADD FEATURE:** read the global docs (`overview.md`, `tech-stack.md`,
-  `folder-structure.md`, `_shared.md`) + the `README.md` index only — NOT every feature doc
-  (token-frugal, per SKILL.md Phase 1.1b); then read the spec from `$ARGUMENTS`, ask "What
-  new feature or capability do you want to add?", and continue Phase 1 feature-scoped.
-- **FULL REFRESH:** back up to a timestamped sibling with
-  `cp -r docs/architecture "docs/architecture.backup-$(date +%Y-%m-%d)"`, then proceed as
-  New Project Mode.
-- **DIFFERENT PROJECT:** proceed as New Project Mode.
+What each answer does is workflow, not script — branch per SKILL.md § "Feature Mode
+entry" (ADD FEATURE asks "What new feature or capability do you want to add?" after
+reading the globals).
 
 ---
 

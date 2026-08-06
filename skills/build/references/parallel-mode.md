@@ -158,7 +158,7 @@ selection was the confirmation, and re-asking it is a wasted round-trip.
 On `$TARGET`, set `status: in-progress` in the frontmatter of every story dispatching in
 **this wave** — never the whole run; a later wave's stories stay `todo` until their turn.
 Skip any story already `in-progress` (a resumed wave) or `bug` (Bug-Fix Mode owns that
-status and restores it at Phase 8.2).
+status and restores it at Phase 8.6).
 
 ```bash
 ck-index tasks/<Plan>
@@ -267,7 +267,7 @@ dispatch and `completed` when it merges and passes its gate. `TaskList` at P5, P
 ## P5 — Integrity and resume
 
 Verify each story **the moment its agent returns** — never hold a returned branch waiting on
-the wave. The failure to catch is an agent that did nothing yet reported success. Same three
+the wave. The failure to catch is an agent that did nothing yet reported `done`. Same three
 checks either way; only the baseline of the diff changes.
 
 **Fan-out** — using the returned `branch` and the story path:

@@ -34,10 +34,12 @@ Parallel-mode references, read **only** when two or more stories are in scope: [
 ## ROUTING CHECK (do first)
 
 This skill **TDD-implements stories** from `tasks/`. If the request is actually
-something else, STOP and recommend the better skill:
+something else, STOP and hand off per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question, arguments
+already filled, never a command the user must retype:
 
-- An **un-triaged** bug in shipped code → `/ck-code:fix` first (it diagnoses, writes the failing test + Fix Plan, and flips the story to `status: bug`). A story **already at `status: bug`** is triaged — implement it here in Bug-Fix Mode (Phase 1.3.5).
-- No story exists for the work yet → `/ck-code:plan` first.
+- An **un-triaged** bug in shipped code → offer `/ck-code:fix <bug details>` (it diagnoses, writes the failing test + Fix Plan, and flips the story to `status: bug`). A story **already at `status: bug`** is triaged — implement it here in Bug-Fix Mode (Phase 1.3.5).
+- No story exists for the work yet → offer `/ck-code:plan --quick <brief>` (it adds the one story, or routes to full planning when no epic exists to attach to).
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:ship`.
@@ -46,7 +48,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 `$ARGUMENTS` is empty, a story path, space-separated story IDs, or `--epic NN`:
 
-- **A story path** (`tasks/<slug>/epics/02/stories/02-05-*.md`) — build that one story
+- **A story path** (`tasks/<slug>/epics/02_<epic>/stories/05_<story>.md`) — build that one story
   inline through Phases 1–8. Validate it before anything else (Phase 1.1).
 - **Two or more story IDs** (`02-05 03-01`) — PARALLEL MODE, one wave.
 - **`--epic NN`** — PARALLEL MODE over every non-`done` story of that epic, in
@@ -160,7 +162,7 @@ If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuesti
 
 ### 1.5 Detect Linked GitHub Issue
 
-The story's `issue:` frontmatter field is the linkage (v5 uses the number, never a
+The story's `issue:` frontmatter field is the linkage (v6 uses the number, never a
 title-substring match). If `issue:` is set, present `Linked GitHub Issue: #<n>`; if empty,
 present `No linked issue found`. No `gh` search needed — `/ck-code:ship` re-reads the
 number from frontmatter itself.
@@ -454,7 +456,7 @@ ck-index tasks/<slug>
 ck-project sync tasks/<slug>
 ```
 
-No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v5.
+No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v6.
 The sync moves this story's card to Done and rolls its epic card up
 ([`github-projects.md`](../../references/github-projects.md)).
 **DELEGATED MODE skips both** (see 1.6).

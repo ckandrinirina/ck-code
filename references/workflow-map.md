@@ -25,7 +25,7 @@ duplicating the workflow graph.
    /ck-code:migrate      (One-shot) Upgrade a pre-v6 or ck-code-lite project to the v6 layout
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
    /ck-code:config       (Anytime) Project settings — issue tracking, GitHub Project board
-doctor       (Anytime) Report what is broken in the project + how to fix it
+   /ck-code:doctor       (Anytime) Report what is broken in the project + how to fix it
 ```
 
 ## Hand-offs
@@ -135,7 +135,7 @@ command reference.
 | `track`, `explain`, `guide`, `doctor` | Read-only |
 | `config` | Writes `tasks/SETTINGS.md` and the GitHub Project board only — never story state |
 
-## State conventions (v5)
+## State conventions (v6)
 
 - **Story status** lives ONLY in the story-file frontmatter `status:`
   (`todo → in-progress → done`, lowercase). Every index is a generated view of it —

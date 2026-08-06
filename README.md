@@ -432,8 +432,8 @@ Each skill folder is self-contained: the main `SKILL.md` is the entry point, and
 ```
 docs/specs/YYYY-MM-DD_<slug>/
 ├── pre-spec.md            # Stakeholder-friendly version (from /ck-code:spec)
-├── .metadata.json         # Slug, GitHub issue link, status, language
-└── feature-spec.md        # (later, optional) Design-pass output
+└── .metadata.json         # Slug, GitHub issue link, status, language
+                           # (linkedDesign points at docs/architecture/features/<slug>/ after a design pass)
 ```
 
 `/ck-code:spec` creates these on first run and re-uses them on subsequent invocations to

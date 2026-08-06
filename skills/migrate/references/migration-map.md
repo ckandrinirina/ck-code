@@ -1,6 +1,6 @@
-# Migration Map — v3 (and older) → v5 Field Conversion
+# Migration Map — v3 (and older) → v6 Field Conversion
 
-Exact source→target mappings for `/ck-code:migrate`. The v5 target layout is defined in
+Exact source→target mappings for `/ck-code:migrate`. The v6 target layout is defined in
 [`data-model.md`](../../../references/data-model.md).
 
 ## Story fields

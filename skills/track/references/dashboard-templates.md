@@ -134,5 +134,5 @@ Show each plan separately, prefixed by its folder name; feature plans render as
 1. tasks/YYYY-MM-DD_<your-project>/ (main project — 4 epics, 18 stories)
 2. tasks/YYYY-MM-DD_feature-<feature-name>/ (feature — 2 epics, 7 stories)
 
-Showing status for: ALL (use /ck-code:track status tasks/YYYY-MM-DD_<your-project> to filter)
+Showing status for: ALL plans
 ```

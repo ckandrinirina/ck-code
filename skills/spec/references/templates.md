@@ -28,8 +28,9 @@
 }
 ```
 
-`github` is `null` when no issue is linked. `linkedDesign` becomes a path
-to the design output once `/ck-code:design` runs.
+`github` is `null` when no issue is linked. `linkedDesign` becomes the
+`docs/architecture/features/<slug>/` folder (or folders) once `/ck-code:design`
+runs (its Phase 3.12).
 
 ### Status enum
 

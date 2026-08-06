@@ -11,11 +11,11 @@ greps prose:
 
 ```json
 {
-  "status": "success | partial | blocked",
+  "status": "done | partial | blocked",
   "branch": "<the git branch the work is committed on>",
   "commits": <number of commits made>,
-  "remaining": "<unfinished acceptance criteria, or 'none'>",
-  "criteria_met": true | false
+  "remaining": ["<unfinished acceptance criterion>", "…"],
+  "criteria_met": "<checked>/<total>"
 }
 ```
 
@@ -58,8 +58,8 @@ prompt: |
     ck-index — the orchestrator regenerates them once after merge.
 
   Return the structured object {status, branch, commits, remaining, criteria_met}. Read
-  `branch` from `git branch --show-current`. Report success only if build finished with
-  every criterion checked and QA green.
+  `branch` from `git branch --show-current`. Report `status: done` only if build finished
+  with every criterion checked and QA green.
 ```
 
 ## Per-story implementer, solo (P4, wave of exactly 1)

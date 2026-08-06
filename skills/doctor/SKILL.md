@@ -53,6 +53,11 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `team layout` | skills sit in nested `experts/`/`guides/` folders, so Claude Code registers none of them | `/ck-code:migrate` |
 | `stories` | a story's frontmatter will not parse, or its status/size/delivery is outside the vocabulary. `delivery` with no `pr:` is the common one — nothing anchors it, so `ck-project sync` can never re-check whether it merged | fix the frontmatter, then regenerate; `ck-project backfill` recovers a missing `pr:` from the linked issue |
 | `indexes` | a generated view disagrees with the story files — usually a hand-edit, or a regenerate that never ran | `ck-index` |
+| `epic ids` | the same epic number is used by more than one plan — the v6-defining collision; branches and `blocked_by` are ambiguous | `/ck-code:migrate` (Phase R renumbers) |
+| `story ids` | one story id names two stories across plans — breaks `build EE-SS`, `blocked_by`, and branch names | `/ck-code:migrate` (Phase R renumbers) |
+| `plan overview` | an `epics/` dir has no `PROJECT_OVERVIEW.md`/`FEATURE_OVERVIEW.md`, so the plan is invisible to `ck-index` and `migrate` yet still feeds dependency checks | add the overview file |
+| `plan naming` (WARN) | a hand-made plan folder name contains whitespace — `ck-issues`/`ck-project` silently skip spaced paths | rename to a hyphenated slug |
+| `settings` (WARN) | `tasks/SETTINGS.md` has no frontmatter fence, issue tracking is on with no project configured, or the mapped board/columns are gone or unreachable | `/ck-code:config board` |
 | `dependencies` | a `blocked_by` id resolves to nothing, a story blocks itself, there is a cycle, or a `done` story still depends on open work | fix `blocked_by` in the frontmatter |
 | `feature docs` (WARN) | an epic slug has no `features/<slug>/index.md`, so its `FEATURE_INDEX.Docs` cell is `—` and `build` has no doc to read | `/ck-code:design sync` |
 | `team skills` (WARN) | none generated, or one is invalid — `build` and `fix` then run with no project expertise | `/ck-code:team` |

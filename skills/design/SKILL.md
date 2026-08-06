@@ -16,7 +16,7 @@ The architecture is a few **global** docs (overview, folder-structure, tech-stac
 feature at `docs/architecture/features/<slug>/index.md`. Each feature doc carries
 frontmatter `slug: <slug>` and `design: pending`; a later `build`/`fix` story routes to
 the one doc it needs. There are **no journal/delta docs and no `DESIGN_LEDGER.md`** in
-v5 — git is the design history, and the `design:` flag (which `plan` flips to `planned`)
+v6 — git is the design history, and the `design:` flag (which `plan` flips to `planned`)
 is the whole design→plan bridge. The retired layer docs (`components.md`,
 `api-contracts.md`, `database-schema.md`, `data-flow.md`) are not generated — their
 content lives in each feature's doc so a story reads only that doc.
@@ -295,6 +295,14 @@ At greenfield time there are no epics yet, so the script exits cleanly with noth
 route; `plan` fills the `Docs` column when it creates the epics. In Feature Mode (epics
 already exist) it resolves the new doc's `Docs` cell immediately. Never hand-edit an index.
 
+### 3.12 Close the spec loop (spec-folder input only)
+
+When the spec argument was a `docs/specs/*_<slug>/pre-spec.md` (a `/ck-code:spec` folder —
+a sibling `.metadata.json` exists), record the pass back into that metadata: set `status`
+to `design-in-progress` and `linkedDesign` to the feature-doc folder(s) this run wrote
+(e.g. `docs/architecture/features/<slug>/`). Touch no other field, and skip this step
+entirely for any other spec source.
+
 ---
 
 ## PHASE 4: SUMMARY
@@ -419,7 +427,7 @@ instead). Every line here is re-read by every story that touches the feature.
   the `optimize` measurement pass (PHASE O step 2).
 - **Never invent information** — mark anything undetermined `[TO BE DEFINED]`; `sync`
   scaffolds stubs only, it does not author technical detail.
-- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v5 has
+- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v6 has
   none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
   writes or updates is left `design: pending`; `plan` flips it to `planned`.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).

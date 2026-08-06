@@ -1,6 +1,6 @@
 # PR Templates
 
-PR descriptions used by Phase 4. PR title is the same as the commit first
+PR descriptions used by Phase 5. PR title is the same as the commit first
 line (keep under 70 chars).
 
 These bodies are read by PMs, designers, and leadership — not just

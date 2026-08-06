@@ -60,6 +60,8 @@ Determine how old the project is — it decides which conversion steps run:
    the stories, epics, docs and skill folders are all current. Skip Phases 2–4 and S
    entirely, run **Phase R**, then Phase 5. Report "v5 → v6 (epic renumbering)", or
    "v5 → v6 (re-stamp only)" when R finds no collision.
+   `layout: v5` WITH nested `experts/`/`guides/` folders → the stamp overstates the
+   layout; run **Phase S**, then **Phase R**, then Phase 5, exactly as for v4.
    `layout: v6` → already current; Phase R (a no-op check) plus Phase 5, report
    "already v6".
 2. **v4 already?** `layout: v4` AND every `tasks/*/epics/*/stories/*.md` starts with
@@ -79,7 +81,7 @@ Report the detected source layout before converting.
 
 ## PHASE 2: CONVERT STORIES
 
-For every `tasks/*/epics/NN_<slug>/stories/*.md`, prepend v5 frontmatter derived from
+For every `tasks/*/epics/NN_<slug>/stories/*.md`, prepend v6 frontmatter derived from
 the v3 prose, then leave the body intact.
 
 **Dispatch decision first.** Count the story files and announce the branch **before
@@ -95,7 +97,7 @@ Use the mapping in
 - `status`: `TODO`→`todo`, `IN PROGRESS`→`in-progress`, `DONE`→`done`, `SKIP`→`skip`,
   `BUG`→`bug` (carry the recorded `Prior status` into `prior_status`).
 - `size`: `S`/`M` kept; **`L`/`XL`→`M`** and flag the story in the report as
-  "was L/XL — consider splitting" (v5 sizes are S/M only).
+  "was L/XL — consider splitting" (v6 sizes are S/M only).
 - `blocked_by`: the story IDs from the `## Dependencies` section as `[id, ...]` (or `[]`).
 - `files`: the paths from the `## Files to Create/Modify` table as `[path, ...]` (or `[]`).
 - `issue`: a `#NNN` reference found in the story, else empty. When `gh` is available and
@@ -132,11 +134,12 @@ flag replaces it.
   **left in place** as historical files (never deleted — they may hold notes a user
   values); v5 simply stops writing new ones. Note in the report that they are now inert.
 
-## PHASE S: FLATTEN THE TEAM SKILL FOLDERS (every path)
+## PHASE S: FLATTEN THE TEAM SKILL FOLDERS
 
-Runs on **every** migration path, including after Phase L. It is the v4 → v5 step of the
-conversion (Phase R carries it the rest of the way to v6), and a no-op when the project
-has no nested folders.
+Runs on every migration path where nested folders can still exist — including after
+Phase L — and is a no-op when there are none. Phase 1 step 1 skips it only for a
+v5/v6 project already verified flat. It is the v4 → v5 step of the conversion
+(Phase R carries it the rest of the way to v6).
 
 `/ck-code:team` used to write `.claude/skills/experts/<role>/SKILL.md` and
 `.claude/skills/guides/<tech>/SKILL.md`. Claude Code discovers project skills at
@@ -426,7 +429,7 @@ every task ID in the project changed.
 - **Always list unparseable files** in the report — a skipped file must be visible, never silent.
 - **Idempotent** — an already-v6 project re-stamps and regenerates with no other change; Phase R finds no collision and rewrites nothing.
 - **Never run Phases 2–4 on a v4 project** — its stories, epics and docs are already correct; v4 → v6 is Phase S, Phase R, and the stamp.
-- **Never run Phases 2–4 or S on a v5 project** — v5 → v6 is Phase R plus the stamp.
+- **Never run Phases 2–4 on a v5 project** — v5 → v6 is Phase R plus the stamp; Phase S joins only when Phase 1 found nested skill folders the v5 stamp should have ruled out.
 - **Always run Phase R on every path** — a v3 conversion can surface collisions too, and the stamp must never claim v6 over colliding epic numbers.
 - **Never renumber the oldest plan** — it takes offset 0 so its merged branches and published issues stay valid (R2).
 - **Never rename a branch that has an open PR** — R3 stops and lists them instead.

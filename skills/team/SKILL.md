@@ -152,7 +152,7 @@ in ALL mode. Otherwise:
    `owned` (GENERATED marker present) or `protected` (marker absent).
 4. Compute `MISSING = EXPECTED − EXISTING`; `EXTRA = owned EXISTING − EXPECTED` (tech no
    longer detected). **Protected files are never EXTRA** — they are hand-authored.
-5. Show the state table ([examples.md#phase-0-state-table](references/examples.md#phase-0-state-table)).
+5. Show the state table ([examples.md#phase-05-state-table](references/examples.md#phase-05-state-table)).
 6. `--check` → STOP (report only).
 7. `MISSING` empty → inform the user; suggest `--regenerate` if a refresh is wanted → STOP.
 8. `MISSING` non-empty → ask via **AskUserQuestion** (single question, options):
@@ -275,8 +275,9 @@ always a **guide** folded under the expert that owns the surrounding code — no
 expert. Litmus:
 
 - "How do I write idiomatic X?" → **guide-x**. Even at `--max`, do **not** mint
-  `expert-analytics`, `expert-i18n`, `expert-styling`, or `expert-api` — these are guides
-  under `expert-web`/`expert-backend`.
+  `expert-analytics`, `expert-i18n`, or `expert-styling` — these are guides under
+  `expert-frontend`/`expert-backend`. API *idioms* are a guide too; `expert-api` is
+  minted only on the catalog's signal — a public/external/versioned API contract surface.
 - "Who owns this whole subsystem end-to-end?" → **expert-x** — only a distinct body of
   work with its own files and lifecycle. Cross-cutting *qualities* like performance live in
   `expert-analyst` + guides, not a standalone `expert-performance` — unless there is a

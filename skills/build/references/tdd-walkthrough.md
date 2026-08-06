@@ -142,7 +142,7 @@ Issue handling and common refactorings: rules in SKILL.md Phase 6.2.
 
 ---
 
-## Phase 7.4 — Code Quality Checks by Stack
+## Phase 7 — Code Quality Checks by Stack
 
 Detect which tools are available in the project and run them:
 

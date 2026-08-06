@@ -137,7 +137,7 @@ The longest sequential chain is:
 
 ### Next Steps
 1. Review the feature plan in tasks/
-2. Use `/ck-code:ship tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
+2. Use `/ck-code:ship --to-issues tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
 3. Start with `/ck-code:build` on the first story in the feature roadmap
 ```
 

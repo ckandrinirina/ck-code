@@ -1,10 +1,10 @@
-# Lite → v5 Migration Map
+# Lite → v6 Migration Map
 
 Field-by-field conversion of a **ck-code-lite** project (`docs/ARCHITECTURE.md` +
-`tasks/PLAN.md`) into the ck-code **v5 layout**. Read by `migrate` PHASE L only.
+`tasks/PLAN.md`) into the ck-code **v6 layout**. Read by `migrate` PHASE L only.
 
 The two plugins are alternatives, not companions — this is the one-way upgrade path.
-Nothing here converts v5 back to lite.
+Nothing here converts v6 back to lite.
 
 Source contracts (in the ck-code-lite plugin): `references/plan-format.md` and
 `skills/start/references/architecture-template.md`.
@@ -34,7 +34,7 @@ ls -d tasks/*/epics 2>/dev/null | grep -q . && echo HAS_EPICS
 
 ## Epic grouping
 
-A lite plan is flat; v5 requires epics. Infer them from task titles and their `files:`
+A lite plan is flat; v6 requires epics. Infer them from task titles and their `files:`
 paths (tasks touching the same directory usually belong together), then present the
 proposal using the **Phase 4 Plan Confirmation Format** in
 [`roadmap-format.md`](../../plan/references/roadmap-format.md), extended with a
@@ -56,7 +56,7 @@ within each epic, following PLAN order.
 One story file per `T-NN` at
 `tasks/<plan-folder>/epics/NN_<epic-slug>/stories/SS_<story-slug>.md`.
 
-| lite field | v5 frontmatter | Rule |
+| lite field | v6 frontmatter | Rule |
 |---|---|---|
 | `T-NN` | `id` | `EE-SS` from the grouping. Record every pair in the ID map — `blocked_by` and the report both need it. |
 | Title | `title` | verbatim, no `Story EE-SS:` prefix |
@@ -64,7 +64,7 @@ One story file per `T-NN` at
 | `todo` | `status` | `todo` |
 | `doing` | `status` | `in-progress` |
 | `done` | `status` | `done` |
-| `blocked` | `status` | **`todo`** — v5 has no `blocked` status. Append a `## Technical Notes` line: `Was \`blocked\` in the lite plan — re-triage.` List every such story in the report. |
+| `blocked` | `status` | **`todo`** — v6 has no `blocked` status. Append a `## Technical Notes` line: `Was \`blocked\` in the lite plan — re-triage.` List every such story in the report. |
 | `S` / `M` | `size` | unchanged — both vocabularies are S/M, so no re-sizing is ever needed |
 | `needs: T-01, T-03` | `blocked_by` | translate through the ID map → `[01-01, 02-01]`. `—` → `[]` |
 | `files: a.ts, b.ts` | `files` | `[a.ts, b.ts]`, `—` or absent → `[]` |
@@ -80,7 +80,7 @@ no block scalars.
 
 Moved **verbatim** — checkbox state included, so completed work stays completed.
 
-| lite section | v5 section |
+| lite section | v6 section |
 |---|---|
 | (task title) | `## Description` — the title as a sentence; add nothing the plan does not say |
 | `### Acceptance` | `## Acceptance Criteria` |
@@ -103,7 +103,7 @@ A lite task has no description prose beyond its title. Never invent one — a th
 Every target file comes from
 [`architecture-templates.md`](../../design/references/architecture-templates.md).
 
-| lite section | v5 destination |
+| lite section | v6 destination |
 |---|---|
 | intro paragraph | `overview.md` → `## Vision` |
 | `## Stack` | `tech-stack.md` → `## Overview` table |
@@ -146,7 +146,7 @@ Content is kept; only the live plan is stood down.
 1. `git mv tasks/PLAN.md tasks/PLAN.superseded.md`, then prepend:
 
    ```markdown
-   > **Superseded.** Migrated to the ck-code v5 layout on <date>.
+   > **Superseded.** Migrated to the ck-code v6 layout on <date>.
    > The live plan is `tasks/<plan-folder>/` — see its `STORIES_INDEX.md`.
    > Kept for reference; nothing reads this file.
    ```

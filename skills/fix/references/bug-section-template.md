@@ -69,7 +69,7 @@ concrete enough to execute without re-diagnosing.
 ### Fix Plan
 - **Strategy:** [minimal change and why it fixes the root cause]
 - **Files to modify:** [exact paths — minimal]
-- **Test target:** [the Phase 4.5 reproduction test that must go GREEN]
+- **Test target:** [the Phase 4.2 reproduction test that must go GREEN]
 - **Risk:** [LOW | MEDIUM | HIGH]
 - **SOLID note:** [none, or the smallest abstraction if the minimal fix bends a principle]
 ```

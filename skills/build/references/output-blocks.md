@@ -139,19 +139,18 @@ Please manually test the feature:
 - [Specific test scenario 1 from acceptance criteria]
 - [Specific test scenario 2]
 - [Edge case to try]
-
-Result? PASS / ISSUES
 ```
+
+Then **one** `AskUserQuestion` call carrying both gates (SKILL.md 8.5.1 — never two calls):
+
+1. "Manual test result?" — **PASS** / **ISSUES**
+2. "If it passes, ship now?" — **SHIP** / **SKIP**
 
 ---
 
-## Phase 8.7 — Ship Prompt
+## Phase 8.7 — Ship
 
-```
-Ready to ship!
-```
-
-Then `AskUserQuestion`:
+No new question — apply the ship answer already given at 8.5.1:
 
 - **SHIP** — run `/ck-code:ship` to commit, open the PR, and update the linked GitHub Issue.
-- **SKIP** — don't commit yet (run `/ck-code:ship [story-path]` later).
+- **SKIP** — don't commit yet; print `/ck-code:ship [story-path]` so the user can run it later.

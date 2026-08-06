@@ -147,7 +147,7 @@ Present the top story (a 🐛 bug if any is open); list the rest under *Also Rea
   any `ck-index: WARN` line a regenerate printed
   ([stories-index.md](../../references/stories-index.md)): a skipped story is invisible
   in every view while its file still exists.
-- **Always** reference v5 skills only (`build`, `fix`, `ship`, `plan`, `migrate`);
+- **Always** reference current skills only (`build`, `fix`, `ship`, `plan`, `migrate`);
   never `parallel-build`, `start`, `advise`, `help`, `sync`, or `to-issues`.
 - **Always** return the rendered dashboard verbatim as the final output — this skill
   runs forked, so its result is relayed; summarizing it discards the template.

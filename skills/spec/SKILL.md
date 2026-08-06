@@ -49,8 +49,7 @@ Per-feature folder, shared with later design output:
 ```
 docs/specs/YYYY-MM-DD_<slug>/
 ├── pre-spec.md       # this skill writes here
-├── .metadata.json    # see references/templates.md for the schema
-└── feature-spec.md   # (later) /ck-code:design output, adjacent
+└── .metadata.json    # see references/templates.md for the schema
 ```
 
 `.metadata.json#status` evolves through exactly three states:
@@ -263,10 +262,10 @@ in review the next step is stakeholder sign-off, not architecture; say so and st
 ## CROSS-SKILL CONVENTION — feeding /ck-code:design
 
 When the user marks the spec ready (Phase 4 readiness gate), `status` becomes
-`ready-for-design`. `/ck-code:design` looks for `.metadata.json` files with that
-status, treats the `pre-spec.md` as input, writes its output to `feature-spec.md`
-in the same folder, sets `linkedDesign` accordingly, and bumps status to
-`design-in-progress`.
+`ready-for-design`. The NEXT hand-off passes `pre-spec.md` to `/ck-code:design`, which
+treats it as its input spec, writes the architecture docs under
+`docs/architecture/features/`, sets `linkedDesign` to the feature-doc folder(s) it
+wrote, and bumps status to `design-in-progress` (design Phase 3.12).
 
 ---
 

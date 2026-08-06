@@ -183,7 +183,7 @@ PROTECTED file (`guide-conventions`, custom `--new` skills) and every `MANUAL` f
 
 ---
 
-## Phase 0 State Table
+## Phase 0.5 State Table
 
 Shown when existing skills are found and `--regenerate` is not set.
 

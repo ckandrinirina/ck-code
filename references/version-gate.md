@@ -183,8 +183,8 @@ and omit the `ck-code:` line).
 
 | Skills | Gate behavior |
 |---|---|
-| `design`, `plan`, `build`, `fix`, `spec`, `ship` (incl. `--to-issues`), `team` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
-| `explain`, `guide`, `track` | **Hint only** — run Tier 1 + Tier 2, but on a marker emit one line (`ℹ pre-v6 layout — run /ck-code:migrate`) and continue read-only. Never block, never stamp. |
+| `design`, `plan`, `build`, `fix`, `spec`, `ship` (incl. `--to-issues`), `team`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
+| `explain`, `guide`, `track`, `doctor` | **Hint only** — run Tier 1 + Tier 2, but on a marker emit one line (`ℹ pre-v6 layout — run /ck-code:migrate`) and continue read-only. Never block, never stamp. (`doctor` reports the stamp as its own check 1.) |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here.

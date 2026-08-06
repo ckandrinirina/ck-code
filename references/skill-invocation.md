@@ -10,7 +10,7 @@ and restates neither.
 
 The user always decides whether the hand-off happens. What this contract removes is not the
 decision, it is the *labour* of the decision. Before it, saying yes meant reading a command
-out of the output, typing `/ck-code:build tasks/2026-07-11_auth/stories/03-login.md` by
+out of the output, typing `/ck-code:build tasks/2026-07-11_auth/epics/01_login/stories/03_login-form.md` by
 hand, and then approving a `Skill` permission prompt on top. After it, saying yes is
 selecting **Run it** once.
 
@@ -35,7 +35,7 @@ makes the consent one click instead of two.
 Print one announce block, then ask one question.
 
 ```
-→ [fix → build] /ck-code:build tasks/2026-07-11_auth/stories/03-login.md
+→ [fix → build] /ck-code:build tasks/2026-07-11_auth/epics/01_login/stories/03_login-form.md
   reason: fix plan recorded, story at status: bug
 ```
 
@@ -57,7 +57,7 @@ the caller must already have reached a valid, resumable state before it asks.
 A read-only skill ends its output with one line, and nothing after it:
 
 ```
-NEXT: /ck-code:build tasks/2026-07-11_auth/stories/03-login.md
+NEXT: /ck-code:build tasks/2026-07-11_auth/epics/01_login/stories/03_login-form.md
 ```
 
 Emit **at most one** `NEXT:` line per run, and only when a single next step is unambiguous.
@@ -77,7 +77,7 @@ prompt above. A read-only skill never calls `Skill` itself.
 
 ## Argument discipline
 
-A caller passes a **concrete path or ID** — `tasks/2026-07-11_auth/stories/03-login.md`,
+A caller passes a **concrete path or ID** — `tasks/2026-07-11_auth/epics/01_login/stories/03_login-form.md`,
 `--epic 07`, `03-01`. Never a referential phrase ("the current story", "that epic"). The
 callee resolves nothing on the caller's behalf.
 

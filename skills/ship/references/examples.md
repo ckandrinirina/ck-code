@@ -5,7 +5,7 @@ stay in conventional-commit format for changelog and CI tooling.
 
 ## Example: Full Feature Ship (Commit + PR + Issue Updates)
 
-### Phase 2.2 — Commit Message
+### Phase 3.2 — Commit Message
 
 ```
 feat(realtime): live updates without refresh
@@ -21,7 +21,7 @@ needing to refresh the page.
 Closes #42
 ```
 
-### Phase 3.1 — Execute Commit (HEREDOC)
+### Phase 4.1 — Execute Commit (HEREDOC)
 
 ```bash
 git commit -m "$(cat <<'EOF'
