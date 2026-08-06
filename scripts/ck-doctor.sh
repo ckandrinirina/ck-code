@@ -33,6 +33,16 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ERRORS=0
 WARNS=0
+
+# python3 backs the story-frontmatter checks. Without this guard an absent python3
+# yields empty output, which the checks below would read as a PASS for a check that
+# never ran — degrade to an explicit WARN per check instead.
+HAVE_PY=1
+command -v python3 >/dev/null 2>&1 || HAVE_PY=0
+
+# Used only when version-gate.md is unreadable (a copied-out script); plugin-doctor's
+# layout-const check keeps this in lockstep with the gate.
+FALLBACK_LAYOUT="v6"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -67,7 +77,12 @@ fmv() { awk -v k="$2" '
 
 # ---- 1. layout stamp ---------------------------------------------------------
 check_layout() {
-  local want="v6" got=""
+  # The expected layout major is read from the plugin's own version-gate.md so this
+  # script can never drift from it; the literal fallback only covers a copied-out
+  # script run away from the plugin tree. plugin-doctor cross-checks the fallback.
+  local want got=""
+  want=$(awk '/^LAYOUT[ \t]*=/{print $NF; exit}' "$SCRIPT_DIR/../references/version-gate.md" 2>/dev/null)
+  [ -n "$want" ] || want="$FALLBACK_LAYOUT"
   [ -f tasks/VERSION.md ] && got=$(awk -F: '/^layout:/{gsub(/[ \t]/,"",$2);print $2;exit}' tasks/VERSION.md)
   if [ -z "$got" ]; then
     row layout "tasks/VERSION.md missing" ERROR
@@ -88,6 +103,7 @@ check_layout() {
 # ---- 2. story frontmatter ----------------------------------------------------
 check_stories() {
   local out total
+  [ "$HAVE_PY" -eq 1 ] || { row stories "python3 missing — check skipped" WARN; return 0; }
   cat > "$TMP/stories.py" <<'PY'
 import glob, re, sys
 STATUS = {'todo','in-progress','done','skip','bug'}
@@ -186,7 +202,7 @@ check_indexes() {
 # colliding project would otherwise surface as phantom missing-blocker or cycle errors
 # instead of the real cause.
 check_ids() {
-  local dupes orphans sdupes
+  local dupes orphans sdupes spaced
   dupes=$(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
           | sed 's|.*/epics/||;s|_.*||' | grep -v '^$' | sort | uniq -d)
 
@@ -218,13 +234,17 @@ for i, fs in sorted(ids.items()):
     if len(fs) > 1:
         print(f"story id `{i}` used by {len(fs)} stories: {', '.join(fs)}")
 PY
-  sdupes=$(python3 "$TMP/ids.py")
-  if [ -n "$sdupes" ]; then
-    row "story ids" "$(printf '%s\n' "$sdupes" | awk 'END{print NR}') duplicated across plans" ERROR
-    printf '%s\n' "$sdupes" | sed 's/^/                   ✗ /'
-    note "an id must name one story anywhere — /ck-code:migrate renumbers (Phase R)"
+  if [ "$HAVE_PY" -eq 1 ]; then
+    sdupes=$(python3 "$TMP/ids.py")
+    if [ -n "$sdupes" ]; then
+      row "story ids" "$(printf '%s\n' "$sdupes" | awk 'END{print NR}') duplicated across plans" ERROR
+      printf '%s\n' "$sdupes" | sed 's/^/                   ✗ /'
+      note "an id must name one story anywhere — /ck-code:migrate renumbers (Phase R)"
+    else
+      row "story ids" "unique across all plans" OK
+    fi
   else
-    row "story ids" "unique across all plans" OK
+    row "story ids" "python3 missing — check skipped" WARN
   fi
 
   # A directory holding epics but no overview file is invisible to ck-index's plans()
@@ -238,6 +258,15 @@ PY
     printf '%s\n' "$orphans" | sed 's/^/                   ✗ /'
     note "add PROJECT_OVERVIEW.md or FEATURE_OVERVIEW.md — this plan is invisible to ck-index and migrate"
   fi
+
+  # Generated slugs never contain whitespace, but a hand-made plan folder can — and
+  # ck-issues/ck-project iterate file lists in a way that silently drops spaced paths.
+  spaced=$(find tasks -maxdepth 1 -type d -name '* *' 2>/dev/null)
+  if [ -n "$spaced" ]; then
+    row "plan naming" "folder name(s) contain whitespace" WARN
+    printf '%s\n' "$spaced" | sed 's/^/                   ✗ /'
+    note "rename to a hyphenated slug — spaced paths are skipped by ck-issues and ck-project"
+  fi
 }
 
 # ---- 4. dependencies ---------------------------------------------------------
@@ -245,6 +274,7 @@ PY
 # unique; on a colliding project that check has already reported the real fault.
 check_deps() {
   local out
+  [ "$HAVE_PY" -eq 1 ] || { row dependencies "python3 missing — check skipped" WARN; return 0; }
   cat > "$TMP/deps.py" <<'PY'
 import glob, re
 ids, deps, status = set(), {}, {}
@@ -368,6 +398,7 @@ check_branches() {
 check_design_system() {
   local ds=docs/architecture/design-system
   [ -d "$ds" ] || return 0
+  [ "$HAVE_PY" -eq 1 ] || { row "design system" "python3 missing — check skipped" WARN; return 0; }
   if [ ! -f "$ds/manifest.json" ]; then
     row "design system" "cards/ present, manifest.json missing" WARN
     note "run /ck-code:design ds to rebuild the cache manifest"

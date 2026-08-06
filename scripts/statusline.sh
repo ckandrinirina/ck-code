@@ -181,8 +181,8 @@ plan_score() {
     # always has a story that is not DONE.
     open=$(awk -F'|' -v e="$epic_id" '
       function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-      FNR == 1 || NF < 9 { next }
-      { id = trim($3); st = trim($(NF - 4))
+      FNR == 1 || NF < 10 { next }
+      { id = trim($3); st = trim($(NF - 5))
         if (index(id, e "-") == 1 && st != "DONE" && st != "SKIP") n++ }
       END { print n+0 }' "$p/STORIES_INDEX.md" 2>/dev/null)
     [ "${open:-0}" -gt 0 ] && { echo 1; return; }
@@ -195,7 +195,7 @@ plan_score() {
   # appearing in the row's title or file path.
   awk -F'|' -v want="$story_id" -v bslug="$bslug" '
     function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-    FNR == 1 || NF < 9 { next }
+    FNR == 1 || NF < 10 { next }
     trim($3) == want {
       s = 1
       if (bslug != "") {
@@ -303,13 +303,14 @@ tmax=32
 
 # One awk pass over every plan's index: aggregate counts AND resolve the active
 # story plus its epic's roll-up. Row shape is
-# `| Epic | ID | Title | Status | Size | Blocked by | File |`, so with -F'|' a clean
-# row has NF==9 ($1 and $9 are the empty ends). The `Blocked by` column is no longer
-# read — it only ever fed the `next` suggestion the line has dropped.
+# `| Epic | ID | Title | Status | Delivery | Size | Blocked by | File |`, so with
+# -F'|' a clean row has NF==10 ($1 and $10 are the empty ends). The `Delivery` and
+# `Blocked by` columns are not read — delivery is ship's axis, and blocked-by only
+# ever fed the `next` suggestion the line has dropped.
 #
 # Fields are addressed from the RIGHT because a title may legitimately contain a
 # `|` (ck-index.sh escapes it as `\|`, which awk still splits on, inflating NF).
-# Status/Size/Blocked by/File can never contain one, so NF-4 is always Status.
+# Status/Delivery/Size/Blocked by/File can never contain one, so NF-5 is always Status.
 #
 # awk emits ONE tab-separated record rather than the finished line: the criteria
 # count, the integration level and the worktree count are cheap shell probes that
@@ -322,7 +323,7 @@ record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epi
   # Rejoin the title fields an escaped pipe was split across, then unescape.
   function title(   i, t) {
     t = $4
-    for (i = 5; i <= NF - 5; i++) t = t "|" $i
+    for (i = 5; i <= NF - 6; i++) t = t "|" $i
     gsub(/\\\|/, "|", t)
     return trim(t)
   }
@@ -347,9 +348,9 @@ record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epi
   function plandir(   d) { d = FILENAME; sub(/\/[^\/]*$/, "", d); return d }
 
   FNR == 1 { next }
-  NF < 9   { next }
+  NF < 10  { next }
   {
-    st = trim($(NF - 4))
+    st = trim($(NF - 5))
     if      (st == "TODO")        todo++
     else if (st == "IN PROGRESS") ip++
     else if (st == "DONE")        dn++
