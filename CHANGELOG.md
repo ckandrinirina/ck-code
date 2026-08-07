@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.8.2] — 2026-08-07
+
+### Added
+- **build**: claims the linked GitHub Issue for the account running the build — Phase 1.5 assigns the story's `issue:` inline, and PARALLEL MODE P4 assigns the whole wave's story issues plus the epic issue on an `--epic NN` run, so the board shows who owns the work while it is in flight. Uses `--add-assignee`, so an existing assignee is never removed, and a `gh` failure is reported without stopping the build.
+
 ## [6.8.1] — 2026-08-07
 
 ### Fixed
