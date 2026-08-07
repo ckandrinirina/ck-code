@@ -49,7 +49,11 @@ layout: v6
 ```
 
 - `layout:` — compared against `LAYOUT`.
-- `ck-code:` — the full running version, informational; restamped opportunistically.
+- `ck-code:` — the full running version, informational. **Restamped by the SessionStart
+  hook**, not by skills: a session start is exactly the first run after a plugin update, and
+  doing it there costs no model tokens and no tool call. The hook only ever rewrites an
+  existing `v6` stamp — it never creates one, because a stamp it wrote would mark an
+  unmigrated project as clean.
 
 Location: `tasks/VERSION.md`, sibling to `FEATURE_INDEX.md`.
 
@@ -70,7 +74,8 @@ Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/V
 1. Read the injected stamp — **never spend a `Read` tool call on `tasks/VERSION.md`**.
    The turn is already paid for; a Read here is pure waste.
 2. `layout:` == `LAYOUT` (`v6`) → **PASS**. Proceed; no scan, no loading this file.
-   (If `ck-code:` differs from the running version, optionally restamp that one line.)
+   Ignore `ck-code:` entirely — `session-start.sh` owns that line. A skill that restamped it
+   would spend a read and a write to duplicate work already done for free.
 3. `ABSENT`, or `layout:` ≠ `v6` → read this file and run Tier 2.
 
 The injection resolves from the **git repo root**, not the cwd, so a skill invoked from a
@@ -198,6 +203,7 @@ restates the Tier-2 detection.
 - **Never auto-migrate without confirmation** — BLOCK always asks, per [`skill-invocation.md`](skill-invocation.md).
 - **Never make the user retype the blocked command** — resume it automatically once `migrate` returns.
 - **Compare on `layout:` (the major), never the full `ck-code:` version.**
+- **Never restamp `ck-code:` from a skill** — `session-start.sh` does it on the first session after a plugin update, for free. An "optional" restamp spread across every skill is nobody's job, which is why projects sat at their install-time version through every release.
 - **Never treat a `NESTED`-only project as a full pre-v4 conversion** — its stories, epics and docs are already current; only the skill folders move.
 - **Never treat a `DUPES`-only project as needing story or doc conversion** — its layout is correct v5; only the epic numbers move (`migrate` Phase R).
 - **Never stamp `v6` on a stale `v5` stamp without running Tier 2** — the collision that v6 forbids leaves no trace in the stamp itself, so only the `DUPES` probe can clear it.

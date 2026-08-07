@@ -43,6 +43,39 @@ if [ -n "$has_plan" ] && [ "$layout" != "$LAYOUT" ]; then
   exit 0
 fi
 
+# Re-stamp the informational `ck-code:` line.
+#
+# The gate compares `layout:` alone; `ck-code:` records which plugin version last
+# touched the project. Leaving it to "each skill may optionally restamp" made it
+# nobody's job, so a project stamped at 6.0.0 stayed there through every release.
+# A session start IS "the first run after a plugin update", so it happens here:
+# no model tokens, no tool call, and never before the v6 check above has passed.
+#
+# It only ever REWRITES an existing stamp. Creating one is the version gate's job —
+# a stamp written here would mark an unmigrated project as clean.
+RESTAMPED=""
+restamp() {
+  [ "$layout" = "$LAYOUT" ] || return 0
+  [ -f tasks/VERSION.md ] && [ -w tasks/VERSION.md ] || return 0
+  local pj running cur tmp
+  pj="$(dirname "$0")/../.claude-plugin/plugin.json"
+  [ -f "$pj" ] || return 0
+  running=$(awk -F'"' '/"version"[[:space:]]*:/{print $4; exit}' "$pj" 2>/dev/null)
+  # Anything that is not a bare dotted number is not a version — leave the file alone.
+  case "$running" in ""|*[!0-9.]*) return 0 ;; esac
+  cur=$(awk -F: '/^ck-code:/{gsub(/[ \t]/,"",$2); print $2; exit}' tasks/VERSION.md 2>/dev/null)
+  [ "$cur" = "$running" ] && return 0
+  tmp="tasks/.VERSION.md.$$"
+  awk -v v="$running" '
+    /^ck-code:/      { if (!seen) { print "ck-code: " v; seen=1 } ; next }
+    /^layout:/ && !seen { print "ck-code: " v; seen=1 }
+    { print }
+  ' tasks/VERSION.md > "$tmp" 2>/dev/null && cat "$tmp" > tasks/VERSION.md 2>/dev/null
+  rm -f "$tmp"
+  RESTAMPED="${cur:-unstamped} → $running"
+}
+restamp
+
 # Current-layout project: aggregate story counts across ALL plans (Status is the 5th
 # |-field, Delivery the 6th). ck-index.sh escapes a literal pipe in a title as `\|`;
 # splitting on a bare `|` would count that as a column and read the wrong field, so
@@ -74,14 +107,19 @@ if [ -n "$counts" ]; then
   # All-zero means the indexes carry no story rows — say nothing rather than
   # emit a vacuous "0 TODO, 0 IN PROGRESS, 0 DONE".
   if [ $((todo + ip + done + bug)) -eq 0 ]; then
-    emit_plain
+    if [ -n "$RESTAMPED" ]; then emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."; else emit_plain; fi
     exit 0
   fi
   msg="ck-code project: $todo TODO, $ip IN PROGRESS, $done DONE"
   [ "${bug:-0}" -gt 0 ] && msg="$msg, $bug BUG"
   msg="$msg. Run /ck-code:track for the next step."
   [ "${pend:-0}" -gt 0 ] && msg="$msg $pend awaiting merge confirmation — run 'ck-project sync' to reconcile them, or /ck-code:ship, which syncs first."
+  # Named rather than silent: the restamp is a one-line change to a tracked file, so the
+  # user should learn it from here and not from an unexplained diff in `git status`.
+  [ -n "$RESTAMPED" ] && msg="$msg ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
   emit "$msg"
+elif [ -n "$RESTAMPED" ]; then
+  emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
 else
   emit_plain
 fi
