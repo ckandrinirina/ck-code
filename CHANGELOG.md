@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.8.1] — 2026-08-07
+
+### Fixed
+- **`tasks/VERSION.md` never left the version it was installed at.** Its `ck-code:` line
+  records which plugin version last touched the project, but nothing rewrote it: the
+  version gate's Tier-1 procedure said a skill *"may optionally restamp that one line"*,
+  which made it nobody's job. A project stamped `6.0.0` still reported `6.0.0` after every
+  release since.
+
+  `session-start.sh` now owns it — a session start *is* the first run after a plugin
+  update, the version is one `awk` away in `plugin.json`, and it costs no model tokens and
+  no tool call, where a per-skill restamp would spend a read and a write on every
+  invocation. The change is named in the session summary rather than made silently, since
+  it edits a tracked file.
+
+  It only ever rewrites an **existing** `v6` stamp; creating one stays the version gate's
+  job, because a stamp written by a hook would mark an unmigrated project as clean and let
+  it past the gate.
+
 ## [6.8.0] — 2026-08-07
 
 `build`, `fix` and `ship` each reconcile as a side effect of their own job, so a project
