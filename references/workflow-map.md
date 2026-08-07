@@ -26,6 +26,7 @@ duplicating the workflow graph.
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
    /ck-code:config       (Anytime) Project settings — issue tracking, GitHub Project board
    /ck-code:doctor       (Anytime) Report what is broken in the project + how to fix it
+   /ck-code:sync         (Anytime) Reconcile indexes, delivery, board and Issues with GitHub
 ```
 
 ## Hand-offs
@@ -41,6 +42,7 @@ duplicating the workflow graph.
 | `fix` (easy) | auto-runs `/ck-code:build` → `/ck-code:ship` |
 | `fix` (complex) | `/ck-code:build <story>` or `/ck-code:build <ids>` (Bug-Fix Mode) |
 | `ship` | `/ck-code:track next` (more stories) or `/ck-code:explain` |
+| `sync` | `/ck-code:track` (refreshed picture) or `/ck-code:doctor` (confirm nothing is left) |
 
 ## Invocation matrix
 
@@ -109,6 +111,9 @@ the last column instead.
 | `build` | an **un-triaged** bug in already-implemented code | `fix` (first — a `bug`-status story is already triaged and stays in `build` Bug-Fix Mode) |
 | `build` | no story exists for the work | `plan --quick` or `plan` |
 | `fix` | new functionality / new acceptance criteria (not a bug) | `plan --quick` then `build` |
+| `sync` | you only want to know what is broken, changing nothing | `doctor` (read-only) |
+| `sync` | finished code to commit and put in a PR | `ship` |
+| `doctor` | the findings are stale bookkeeping and you want them fixed | `sync` |
 | `fix` | just committing a finished change | `ship` |
 | `fix` | implementing a fix already diagnosed (story at `bug`) | `build` (Bug-Fix Mode) |
 | `ship` | the story isn't implemented yet | `build` / `fix` (first) |
@@ -134,6 +139,7 @@ command reference.
 | `migrate` | Converts a pre-v6 project in place (one commit) — including flattening nested `experts/` + `guides/` skill folders; or converts a ck-code-lite project (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md`; regenerates the views |
 | `track`, `explain`, `guide`, `doctor` | Read-only |
 | `config` | Writes `tasks/SETTINGS.md` and the GitHub Project board only — never story state |
+| `sync` | Reconciles derived state only — `delivery:`/`pr:` frontmatter, the generated index views, board columns, and GitHub Issue/PR state; commits the `tasks/` diff. Never writes `status:`, a story body, or source |
 
 ## State conventions (v6)
 

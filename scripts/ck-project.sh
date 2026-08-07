@@ -21,6 +21,7 @@
 #   ck-project.sh sync [tasks/<slug>] [--dry-run]    # refresh delivery, then every card
 #   ck-project.sh backfill [tasks/<slug>]            # recover pr: for pre-6.4 work
 #   ck-project.sh closes <story|epic-dir|plan-dir>   # print the PR body's Closes footer
+#   ck-project.sh issues [tasks/<slug>] [--dry-run]  # close delivered issues, tick epics
 #   ck-project.sh set <issue> <role>                 # push one card (manual escape hatch)
 #   ck-project.sh show                               # print resolved settings
 #
@@ -62,7 +63,7 @@ SET_ROLE=""
 # ambiguous name (bug over blocked) has to be listed before its rival.
 ROLES="blocked todo in_progress ready_to_ship in_review bug done"
 
-usage() { sed -n '2,31p;38,39p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
+usage() { sed -n '2,32p;39,40p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -113,7 +114,7 @@ esac
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 trap 'exit 130' INT TERM
-mkdir -p "$WORK/opt" "$WORK/item" "$WORK/status" "$WORK/issue" "$WORK/pr"
+mkdir -p "$WORK/opt" "$WORK/item" "$WORK/status" "$WORK/issue" "$WORK/pr" "$WORK/prseen"
 
 CHANGED=0
 ADDED=0
@@ -999,6 +1000,14 @@ cmd_backfill() {
     for f in "$ef" $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
       [ -f "$f" ] || continue
       [ -n "$(fm "$f" pr)" ] && continue          # never overwrite a known pointer
+      # Only finished work can have been delivered by a PR. Asking GitHub about a `todo`
+      # story costs a network round-trip to learn nothing, and a plan is mostly todo —
+      # unfiltered, a 60-story plan spent ~60 calls to recover four pointers. The same
+      # holds for an epic no story of which has started.
+      case "$f" in
+        */EPIC.md) [ "$(role_for_epic "$dir")" = "todo" ] && continue ;;
+        *) case "$(fm "$f" status)" in todo|in-progress|skip) continue ;; esac ;;
+      esac
       issue=$(fm "$f" issue)
       [ -n "$issue" ] || continue
       # The newest linking PR wins: a story reopened for a fix has more than one.
@@ -1099,6 +1108,198 @@ cmd_closes() {
 }
 
 # ---------------------------------------------------------------------------
+# Subcommand: issues
+# ---------------------------------------------------------------------------
+#
+# The GitHub side of reconciliation. `sync` answers "where does this card belong";
+# this answers "does GitHub still show work that the plan says is delivered".
+#
+# It exists because closing keywords are best-effort: a squash merge rewrites commit
+# messages, a PR opened by hand never had a footer, and a keyword only fires when the
+# PR merges into the default branch. Any of those leaves a merged story with an issue
+# still open, which nothing else in ck-code ever repairs.
+#
+# Frontmatter is the authority in one direction only: a story that is `done` AND
+# `delivery: merged` may close its issue. Nothing here ever re-opens one, and nothing
+# here writes frontmatter — GitHub is the follower in this subcommand.
+
+ISS_CLOSED=0
+ISS_TICKED=0
+ISS_FOOTER=0
+ISS_MISS=0
+
+require_repo() {
+  load_settings
+  if [ -f "$SETTINGS" ] && [ "$ISSUES_ON" != "true" ]; then
+    echo "ck-project: github_issues is not enabled in $SETTINGS — nothing to do"
+    exit 0
+  fi
+  resolve_repo || exit 1
+}
+
+# load_issues — ONE batched call for the whole run: number → state.
+load_issues() {
+  gh issue list --repo "$REPO" --state all --limit 500 --json number,state --jq \
+    '.[] | [(.number|tostring), .state] | @tsv' 2>/dev/null \
+    | while IFS="$(printf '\t')" read -r n st; do
+        [ -n "$n" ] || continue
+        printf '%s' "$st" > "$WORK/issue/$n"
+      done
+}
+
+# issue_state N — guarantee the cache holds N; the batch is an optimisation, not a
+# correctness limit (a long-lived repo can push a plan's issues past the newest 500).
+issue_state() {
+  [ -f "$WORK/issue/$1" ] && { cat "$WORK/issue/$1"; return 0; }
+  local s
+  s=$(gh issue view "$1" --repo "$REPO" --json state -q .state 2>/dev/null)
+  [ -n "$s" ] || return 1
+  printf '%s' "$s" > "$WORK/issue/$1"
+  printf '%s' "$s"
+}
+
+delivered() { # delivered FILE → 0 when the work is done AND on the trunk
+  [ "$(fm "$1" status)" = "done" ] && [ "$(fm "$1" delivery)" = "merged" ]
+}
+
+close_issue() { # close_issue NUM LABEL REASON
+  local n="$1" label="$2" why="$3" st
+  st=$(issue_state "$n") || { warn "issue #$n ($label) not found on $REPO"; return 0; }
+  [ "$st" = "CLOSED" ] && return 0
+  echo "  close    #$n  $label — $why"
+  ISS_CLOSED=$((ISS_CLOSED+1))
+  [ "$DRY" -eq 1 ] && return 0
+  gh issue close "$n" --repo "$REPO" --comment "$why" >/dev/null 2>&1 || fail "could not close #$n"
+  pace
+}
+
+# tick_epic EPICDIR NUM — flip the checklist item of every delivered story to [x].
+# Items are matched by `#<story issue>` when the story has one, else by the bracketed
+# padded id `[EE-SS]` — the same tokens `ship` writes, and `[02-01]` never collides
+# with `[02-10]`.
+tick_epic() {
+  local dir="$1" n="$2" sf tok body cnt tf bf
+  tf="$WORK/tokens"; bf="$WORK/body"
+  : > "$tf"
+  for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+    delivered "$sf" || continue
+    tok=$(fm "$sf" issue)
+    if [ -n "$tok" ]; then tok="#$tok"; else tok="[$(fm "$sf" id)]"; fi
+    printf '%s\n' "$tok" >> "$tf"
+  done
+  [ -s "$tf" ] || return 0
+  body=$(gh issue view "$n" --repo "$REPO" --json body -q .body 2>/dev/null)
+  [ -n "$body" ] || return 0
+  # An epic body carries TWO kinds of unchecked box: the story links this owns, and the
+  # epic's own acceptance criteria, which it must never touch. Matching on the story
+  # token is what separates them. `#13` is anchored against a following digit so it
+  # cannot tick `#130`; `[EE-SS]` needs no anchor — the brackets already delimit it,
+  # and they are why `[02-01]` never matches `[02-10]`.
+  cnt=$(printf '%s\n' "$body" | awk -v tf="$tf" -v out="$bf" '
+    BEGIN { while ((getline t < tf) > 0) if (t != "") toks[++nt] = t }
+    {
+      if ($0 ~ /^[ \t]*[-*][ \t]*\[[ ]\]/) {
+        for (i = 1; i <= nt; i++) {
+          t = toks[i]
+          if (substr(t, 1, 1) == "#") { if (!match($0, t "([^0-9]|$)")) continue }
+          else if (index($0, t) == 0) continue
+          sub(/\[[ ]\]/, "[x]"); n++; break
+        }
+      }
+      print > out
+    }
+    END { print n+0 }
+  ')
+  [ "${cnt:-0}" -gt 0 ] || return 0
+  echo "  tick     #$n  epic $(fm "$dir/EPIC.md" epic) — $cnt item(s) now checked"
+  ISS_TICKED=$((ISS_TICKED + cnt))
+  [ "$DRY" -eq 1 ] && return 0
+  gh issue edit "$n" --repo "$REPO" --body-file "$bf" >/dev/null 2>&1 || fail "could not edit epic issue #$n"
+  pace
+}
+
+# repair_footer PRNUM SCOPE LABEL — add any Closes line an OPEN PR body is missing.
+# A body is never rewritten, only appended to: a footer that is already there in any
+# closing form (`closes #17`, `Fixes #17`) is left exactly as the author wrote it.
+repair_footer() {
+  local n="$1" scope="$2" label="$3" want body missing line num bf
+  [ -f "$WORK/prseen/$n" ] && return 0
+  : > "$WORK/prseen/$n"
+  pr_lookup "$n" || return 0
+  [ "$(pr_state "$n")" = "OPEN" ] || return 0
+
+  if [ -f "$scope" ]; then want=$(emit_closes "$scope" "$label" 2>/dev/null)
+  else want=$(closes_epic "$scope" 2>/dev/null); fi
+  [ -n "$want" ] || return 0
+
+  body=$(gh pr view "$n" --repo "$REPO" --json body -q .body 2>/dev/null) || return 0
+  bf="$WORK/prbody"
+  printf '%s\n' "$body" > "$bf"
+  missing=""
+  for line in $(printf '%s' "$want" | awk '{print $2}'); do
+    num=${line#\#}
+    grep -Eiq "(clos(e|es|ed)|fix(|es|ed)|resolv(e|es|ed))[[:space:],:]*#$num([^0-9]|\$)" "$bf" && continue
+    missing="$missing${missing:+ }#$num"
+  done
+  [ -n "$missing" ] || return 0
+
+  echo "  footer   PR #$n  $label — adding Closes $missing"
+  ISS_FOOTER=$((ISS_FOOTER+1))
+  [ "$DRY" -eq 1 ] && return 0
+  { echo; for line in $missing; do echo "Closes $line"; done; } >> "$bf"
+  gh pr edit "$n" --repo "$REPO" --body-file "$bf" >/dev/null 2>&1 || fail "could not edit PR #$n"
+  pace
+}
+
+cmd_issues() {
+  require_repo
+  echo "ck-project: reconciling GitHub issues for $([ -n "$PLAN" ] && echo "$PLAN" || echo 'every plan') on $REPO$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+  resolve_trunk
+  load_issues
+  load_prs
+
+  local dir ef sf enum eissue sissue spr epr
+  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
+    case "$PLAN" in
+      "") ;;
+      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
+    esac
+    ef="$dir/EPIC.md"
+    [ -f "$ef" ] || continue
+    enum=$(fm "$ef" epic); eissue=$(fm "$ef" issue); epr=$(fm "$ef" pr)
+
+    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+      [ "$(fm "$sf" status)" = "skip" ] && continue
+      sissue=$(fm "$sf" issue)
+      spr=$(fm "$sf" pr)
+      if [ -z "$sissue" ]; then
+        ISS_MISS=$((ISS_MISS+1))
+        echo "  no issue story $(fm "$sf" id) — publish the plan to give it one  ($sf)"
+      elif delivered "$sf"; then
+        close_issue "$sissue" "story $(fm "$sf" id)" "Delivered in PR #${spr:-$epr}."
+      fi
+      [ -n "$spr" ] && [ "$spr" != "$epr" ] && repair_footer "$spr" "$sf" "story $(fm "$sf" id)"
+    done
+
+    [ -n "$epr" ] && repair_footer "$epr" "$dir" "epic $enum"
+
+    if [ -z "$eissue" ]; then
+      ISS_MISS=$((ISS_MISS+1))
+      echo "  no issue epic $enum — publish the plan to give it one  ($ef)"
+      continue
+    fi
+    # Tick before closing: a closed issue still accepts an edit, but a reader seeing the
+    # close notification should already find every box checked.
+    tick_epic "$dir" "$eissue"
+    [ "$(role_for_epic "$dir")" = "done" ] && \
+      close_issue "$eissue" "epic $enum" "Every story in this epic is delivered."
+  done
+
+  echo "ck-project: $ISS_CLOSED closed, $ISS_TICKED checklist item(s) ticked, $ISS_FOOTER PR footer(s) repaired, $ISS_MISS without an issue, $FAILURES failures"
+  return "$(( FAILURES == 0 ? 0 : 1 ))"
+}
+
+# ---------------------------------------------------------------------------
 # Subcommand: set
 # ---------------------------------------------------------------------------
 
@@ -1148,6 +1349,7 @@ case "$CMD" in
   sync)     cmd_sync ;;
   backfill) cmd_backfill ;;
   closes)   cmd_closes ;;
+  issues)   cmd_issues ;;
   set)      cmd_set ;;
   show)     cmd_show ;;
   -h|--help|help) usage 0 ;;

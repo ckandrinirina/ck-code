@@ -107,11 +107,12 @@ ck-project init --create "My Roadmap"    # create, link to the repo, provision 7
 ck-project sync [tasks/<slug>]           # reconcile delivery from GitHub, then every card
 ck-project backfill [tasks/<slug>]       # recover pr: for work shipped before 6.4
 ck-project closes <story|epic-dir|plan>  # print a PR body's Closes footer
+ck-project issues [tasks/<slug>]         # close delivered issues, tick epic checklists
 ck-project set <issue> <role>            # one-shot push (manual escape hatch)
 ck-project show                          # print resolved settings
 ```
 
-`--dry-run` on `init`, `sync` and `backfill` prints every change and makes none.
+`--dry-run` on `init`, `sync`, `backfill` and `issues` prints every change and makes none.
 
 **`backfill`** exists because a project upgrading to 6.4 has stories that are `done` and
 long since merged, but carry no `pr:` — so they would land in *Ready to Ship*. It asks
@@ -120,6 +121,10 @@ GitHub which PR closed each linked `issue:`
 `pr:`, and lets the following `sync` mark them `merged`. It works because `ship` always
 writes a `Closes #<issue>` footer; a story with no `issue:`, or none that GitHub can link,
 is reported and skipped. Run it once per plan.
+
+It asks GitHub **only about work that could plausibly have shipped** — a story past `todo`,
+an epic past `todo`. A plan is mostly `todo`, so the filter is the difference between one
+call and sixty.
 
 **Run it before the first sync that has a Ready to Ship column to place cards into.** With
 no `pr:` recovered, that sync moves every long-merged card out of Done and into Ready to
@@ -147,6 +152,33 @@ messages**, so a `Closes` living only in a commit footer can vanish; and closing
 fire **only when the PR merges into the default branch**, so a story PR into `epic/NN-*`
 closes nothing by itself — which is exactly why the epic footer enumerates its stories.
 
+## `issues` — the GitHub side of reconciliation
+
+`sync` answers *where does this card belong*. `issues` answers *does GitHub still show
+work the plan says is delivered*. It exists because closing keywords are best-effort — a
+squash merge rewrites commit messages, a hand-opened PR never had a footer, and a keyword
+fires only on a merge into the default branch. Any of those strands a merged story with an
+open issue, which nothing else repairs.
+
+| Repair | Condition |
+|---|---|
+| close a story issue | story is `status: done` **and** `delivery: merged`, issue still OPEN |
+| close an epic issue | every non-`skip` story of the epic rolls up to `done` |
+| tick an epic checklist | a delivered story's item is still `- [ ]` |
+| append a `Closes` line | an **OPEN** PR in the plan whose body names none of the issues it delivers |
+
+Frontmatter is authoritative in **one direction only**: it may close an issue, never
+re-open one, and never un-tick a box. It writes no frontmatter at all — here GitHub is the
+follower.
+
+Checklist items are matched by `#<story issue>`, else the padded `[EE-SS]` — the tokens
+`ship` writes. `#13` is anchored against a following digit so it cannot tick `#130`, and
+the brackets are why `[02-01]` never matches `[02-10]`. An epic body's own acceptance
+criteria carry no such token, which is what keeps them untouched.
+
+A PR body is **appended to, never rewritten**: a footer already present in any closing form
+(`closes #17`, `Fixes #17`) is left exactly as its author wrote it.
+
 ## Who triggers reconciliation
 
 Nothing in ck-code observes a merge as it happens, so `delivery: merged` is always found
@@ -157,9 +189,15 @@ later. Three places look:
 | `session-start.sh` | local read of `STORIES_INDEX.md`, no network | counts rows whose Delivery cell reads `PR #<n>` and names the count in the session summary — a nudge, never a write |
 | `ship` §2.5 | one `sync` before staging | applies the flip so it rides the commit already being made, instead of needing its own PR |
 | `ck-doctor` `board` row | one board read | reports a card sitting in a column the two axes do not call for |
+| `/ck-code:sync` | the full pass | `backfill` + `sync` + `issues`, previewed and confirmed once, then commits the `tasks/` diff |
 
 The hook stays a nudge on purpose: a `SessionStart` hook that called the network would
 delay every session start and fail on an unauthenticated machine.
+
+`build`, `fix` and `ship` reconcile as a side effect of their own job, so a project used
+normally stays correct. `/ck-code:sync` is for when it has not been: work merged in the
+browser, issues closed by hand, a plan published after the fact, or a repo adopted from
+someone else.
 
 **`--reorder`** rewrites an existing board's option order to the preset, rearranging only
 the columns already there — it does **not** imply `--extend`, because `--extend` matches
