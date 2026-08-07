@@ -181,6 +181,23 @@ In Progress automatically, since `role_for_epic` reports `in_progress` when any 
 
 A board failure here is reported and never stops the dispatch.
 
+### Claim the linked issues (same pass)
+
+Assign the issues this wave will touch to the account running the build, so GitHub shows who
+owns the work while it is in flight:
+
+```bash
+gh issue edit <story issue> --add-assignee @me   # each dispatched story whose issue: is set
+gh issue edit <epic issue>  --add-assignee @me   # --epic NN scope only, once per run
+```
+
+Story numbers come from each dispatched story's `issue:` (empty → skipped); the epic number
+from the epic's `EPIC.md` `issue:`, and **only when the run's scope is `--epic NN`** — an
+explicit story-ID run claims those stories and nothing else. `--add-assignee` is additive, so
+an existing assignee is never removed and a resumed wave re-running it changes nothing. Like
+the board sync, a failure here is reported and never stops the dispatch — and the dispatched
+agents skip the claim themselves (SKILL.md 1.5).
+
 ### Shape
 
 Count the wave's stories first — that count, and nothing else, picks the shape.

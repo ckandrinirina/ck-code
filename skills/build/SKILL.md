@@ -160,12 +160,27 @@ If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuesti
   (do NOT run 1.6) and enter [PARALLEL MODE](#parallel-mode) at P1 with scope `--epic NN`.
 - **Stay on this story** — proceed to 1.5.
 
-### 1.5 Detect Linked GitHub Issue
+### 1.5 Detect and Claim the Linked GitHub Issue
 
 The story's `issue:` frontmatter field is the linkage (v6 uses the number, never a
-title-substring match). If `issue:` is set, present `Linked GitHub Issue: #<n>`; if empty,
-present `No linked issue found`. No `gh` search needed — `/ck-code:ship` re-reads the
-number from frontmatter itself.
+title-substring match). If `issue:` is set, present `Linked GitHub Issue: #<n>` and claim it
+for the account running the build:
+
+```bash
+gh issue edit <n> --add-assignee @me
+```
+
+`--add-assignee` is additive — an assignee already on the issue is never removed, so a
+teammate's claim survives. The call is never fatal: no `gh` auth, no GitHub remote, or an
+account GitHub refuses to assign (assignees need repo access) is one reported line, then
+carry on building.
+
+If `issue:` is empty, present `No linked issue found` — no `gh` search, `/ck-code:ship`
+re-reads the number from frontmatter itself.
+
+**DELEGATED MODE skips the claim** — the orchestrator assigned the whole wave at P4 before
+cutting worktrees ([parallel-mode.md](references/parallel-mode.md)); repeating it per agent
+is duplicate API calls on the same account.
 
 ### 1.6 Set Status → in-progress (frontmatter + regenerate)
 
@@ -567,6 +582,9 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
 - **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else.
+- **Never let an issue claim block the build, and never remove an existing assignee** — the
+  claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
+  failure is one reported line, not a stop.
 - **Never edit a test to force GREEN.**
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
