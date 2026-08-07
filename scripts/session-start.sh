@@ -44,24 +44,33 @@ if [ -n "$has_plan" ] && [ "$layout" != "$LAYOUT" ]; then
 fi
 
 # Current-layout project: aggregate story counts across ALL plans (Status is the 5th
-# |-field). ck-index.sh escapes a literal pipe in a title as `\|`; splitting on a bare
-# `|` would count that as a column and read the wrong field, so neutralise it first.
+# |-field, Delivery the 6th). ck-index.sh escapes a literal pipe in a title as `\|`;
+# splitting on a bare `|` would count that as a column and read the wrong field, so
+# neutralise it first.
+#
+# The Delivery tally is the merge probe. A row reading `PR #<n>` has an anchor GitHub
+# may already have merged, and nothing in ck-code observes a merge as it happens — so
+# the count is surfaced here and reconciled by `ck-project sync`. This stays a LOCAL
+# read of a generated file: a hook that called the network would delay every session
+# start and fail on an unauthenticated machine.
 counts=$(awk '
   FNR==1{next}
   {
     line=$0; gsub(/\\\|/,"\001",line)
     n=split(line,f,"|")
-    if (n>=6) {
+    if (n>=7) {
       s=f[5]; gsub(/^[ \t]+|[ \t]+$/,"",s)
       if(s=="TODO")todo++; else if(s=="IN PROGRESS")ip++; else if(s=="DONE")done++; else if(s=="BUG")bug++
+      d=f[6]; gsub(/^[ \t]+|[ \t]+$/,"",d)
+      if(d ~ /^PR/) pend++
     }
   }
-  END{ printf "%d %d %d %d", todo, ip, done, bug }
+  END{ printf "%d %d %d %d %d", todo, ip, done, bug, pend }
 ' tasks/*/STORIES_INDEX.md 2>/dev/null)
 
 if [ -n "$counts" ]; then
   set -- $counts
-  todo=${1:-0}; ip=${2:-0}; done=${3:-0}; bug=${4:-0}
+  todo=${1:-0}; ip=${2:-0}; done=${3:-0}; bug=${4:-0}; pend=${5:-0}
   # All-zero means the indexes carry no story rows — say nothing rather than
   # emit a vacuous "0 TODO, 0 IN PROGRESS, 0 DONE".
   if [ $((todo + ip + done + bug)) -eq 0 ]; then
@@ -71,6 +80,7 @@ if [ -n "$counts" ]; then
   msg="ck-code project: $todo TODO, $ip IN PROGRESS, $done DONE"
   [ "${bug:-0}" -gt 0 ] && msg="$msg, $bug BUG"
   msg="$msg. Run /ck-code:track for the next step."
+  [ "${pend:-0}" -gt 0 ] && msg="$msg $pend awaiting merge confirmation — run 'ck-project sync' to reconcile them, or /ck-code:ship, which syncs first."
   emit "$msg"
 else
   emit_plain

@@ -74,9 +74,16 @@ before it places any card:
 4. regenerate the views, then place the cards.
 
 **Inheritance is materialized, never re-derived.** A story that resolved its state through
-its epic's `pr:` gets that answer written onto its **own** `delivery:`. So `ck-index`,
-`track` and `ck-doctor` each read one field on one file and no consumer implements the
-walk-up a second time — the rule lives in `sync` alone.
+its epic's `pr:` gets **both** fields written onto itself — `delivery:` *and* the `pr:`
+number it resolved through. So `ck-index`, `track` and `ck-doctor` each read one field on
+one file and no consumer implements the walk-up a second time; the rule lives in `sync`
+alone. Writing only `delivery:` is what left epic-level stories rendering a bare `PR` in
+`STORIES_INDEX.md` and tripping `ck-doctor`'s "delivery with no `pr:`" ERROR, which then
+had to be repaired by a hand-made "anchor delivered work" commit.
+
+A materialized anchor is dropped again if its PR is **closed without merging**: the story
+falls back to whatever `pr:` its epic carries now, so a replaced epic PR flows through
+instead of the story re-resolving a dead number on every sync.
 
 `delivery` is therefore a **cache with an immutable anchor**: `pr:` is a pointer that
 cannot drift, and every sync re-answers the question from GitHub. This is the same
@@ -99,6 +106,7 @@ ck-project init --project 7 --reorder    # rewrite the existing option order to 
 ck-project init --create "My Roadmap"    # create, link to the repo, provision 7 columns
 ck-project sync [tasks/<slug>]           # reconcile delivery from GitHub, then every card
 ck-project backfill [tasks/<slug>]       # recover pr: for work shipped before 6.4
+ck-project closes <story|epic-dir|plan>  # print a PR body's Closes footer
 ck-project set <issue> <role>            # one-shot push (manual escape hatch)
 ck-project show                          # print resolved settings
 ```
@@ -116,6 +124,42 @@ is reported and skipped. Run it once per plan.
 **Run it before the first sync that has a Ready to Ship column to place cards into.** With
 no `pr:` recovered, that sync moves every long-merged card out of Done and into Ready to
 Ship — correct by the rules, and alarming to anyone watching the board.
+
+## `closes` — the PR footer is derived, not authored
+
+GitHub closes an issue on merge only when the PR **body** names it with a closing keyword,
+and the set of issues differs by PR level. Leaving that to be composed per PR is why one
+promotion PR closed every issue, the next closed all but the epic issue, and the one after
+closed none. `ck-project closes` answers it from frontmatter instead:
+
+| Argument | Footer |
+|---|---|
+| a story `.md` | `Closes #<story issue>` |
+| an epic directory (or its `EPIC.md`) | the epic issue, then every non-`skip` story issue under it |
+| a plan directory `tasks/<slug>` | every `integration: feature` epic of the plan, each with its stories |
+
+It reads frontmatter only — no `gh`, no network, no board — so `ship` can build a body on a
+machine that never authenticated. No output means no linked issues (a valid answer, printed
+on stderr); a `WARN` names an entry that will not close on merge.
+
+Two GitHub behaviours the footer works around: a **squash or rebase merge rewrites commit
+messages**, so a `Closes` living only in a commit footer can vanish; and closing keywords
+fire **only when the PR merges into the default branch**, so a story PR into `epic/NN-*`
+closes nothing by itself — which is exactly why the epic footer enumerates its stories.
+
+## Who triggers reconciliation
+
+Nothing in ck-code observes a merge as it happens, so `delivery: merged` is always found
+later. Three places look:
+
+| Trigger | Cost | What it does |
+|---|---|---|
+| `session-start.sh` | local read of `STORIES_INDEX.md`, no network | counts rows whose Delivery cell reads `PR #<n>` and names the count in the session summary — a nudge, never a write |
+| `ship` §2.5 | one `sync` before staging | applies the flip so it rides the commit already being made, instead of needing its own PR |
+| `ck-doctor` `board` row | one board read | reports a card sitting in a column the two axes do not call for |
+
+The hook stays a nudge on purpose: a `SessionStart` hook that called the network would
+delay every session start and fail on an unauthenticated machine.
 
 **`--reorder`** rewrites an existing board's option order to the preset, rearranging only
 the columns already there — it does **not** imply `--extend`, because `--extend` matches

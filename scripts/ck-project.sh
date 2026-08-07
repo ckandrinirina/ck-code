@@ -20,6 +20,7 @@
 #   ck-project.sh init --create "<title>"            # create one, provision the 7 columns
 #   ck-project.sh sync [tasks/<slug>] [--dry-run]    # refresh delivery, then every card
 #   ck-project.sh backfill [tasks/<slug>]            # recover pr: for pre-6.4 work
+#   ck-project.sh closes <story|epic-dir|plan-dir>   # print the PR body's Closes footer
 #   ck-project.sh set <issue> <role>                 # push one card (manual escape hatch)
 #   ck-project.sh show                               # print resolved settings
 #
@@ -61,7 +62,7 @@ SET_ROLE=""
 # ambiguous name (bug over blocked) has to be listed before its rival.
 ROLES="blocked todo in_progress ready_to_ship in_review bug done"
 
-usage() { sed -n '2,30p;37,38p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
+usage() { sed -n '2,31p;38,39p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -102,7 +103,12 @@ if [ ! -d tasks ]; then
 fi
 SETTINGS="$SETTINGS_REL"
 
-command -v gh >/dev/null 2>&1 || { echo "ck-project: gh not found on PATH" >&2; exit 1; }
+# `closes` answers from frontmatter alone, so it must work with no gh and no network —
+# ship pastes its output into a PR body on a machine that may never have authenticated.
+case "$CMD" in
+  closes) ;;
+  *) command -v gh >/dev/null 2>&1 || { echo "ck-project: gh not found on PATH" >&2; exit 1; } ;;
+esac
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -502,9 +508,15 @@ pr_lookup() {
 pr_state() { [ -f "$WORK/pr/$1" ] && cut -f1 "$WORK/pr/$1"; }
 pr_base()  { [ -f "$WORK/pr/$1" ] && cut -f2 "$WORK/pr/$1"; }
 
-# resolve_one FILE PRNUM — write the delivery this PR implies onto FILE.
+# resolve_one FILE PRNUM [INHERIT] — write the delivery this PR implies onto FILE.
+# With INHERIT set, FILE reached this PR through its epic and does not own the pointer
+# yet, so the number is written onto FILE too. Materializing BOTH fields is the whole
+# contract: ck-index.sh renders the Delivery cell from `delivery:`/`pr:` on the story
+# alone, and ck-doctor.sh reports a `delivery:` with no `pr:` as an ERROR. Writing one
+# without the other is what left epic-level stories rendering a bare `PR` and needing a
+# hand-made "anchor delivered work" commit.
 resolve_one() {
-  local f="$1" n="$2" st base want cur label
+  local f="$1" n="$2" inherit="${3:-}" st base want cur label
   label=$(fm "$f" id); [ -n "$label" ] || label="epic $(fm "$f" epic)"
   if ! pr_lookup "$n"; then
     warn "PR #$n (referenced by $f) not found on $REPO — delivery left unchanged"
@@ -525,6 +537,16 @@ resolve_one() {
       warn "PR #$n was closed without merging — clearing delivery for $label" ;;
     *) return 0 ;;
   esac
+  # Anchor first. A CLOSED-unmerged PR is not an anchor — it is cleared alongside the
+  # delivery it can no longer justify, which returns the story to plain inheritance.
+  if [ -n "$inherit" ] && [ "$(fm "$f" pr)" != "$n" ]; then
+    if [ "$st" = "CLOSED" ]; then
+      :
+    else
+      echo "  anchor   $label  → PR #$n  (inherited from epic)"
+      [ "$DRY" -eq 1 ] || { set_fm "$f" pr "$n" && DELIV_CHANGED=$((DELIV_CHANGED+1)); }
+    fi
+  fi
   cur=$(fm "$f" delivery)
   [ "$cur" = "$want" ] && return 0
   echo "  delivery $label  ${cur:-(none)} → ${want:-(none)}  (PR #$n)"
@@ -551,10 +573,20 @@ reconcile_delivery() {
     [ -n "$epr" ] && resolve_one "$ef" "$epr"
     for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
       spr=$(fm "$sf" pr)
+      # A materialized anchor that was closed without merging is stale, not authoritative:
+      # drop it so the story falls back to whatever PR the epic carries now. Without this
+      # the story would re-resolve the dead number on every sync and never see its
+      # replacement.
+      if [ -n "$spr" ] && [ -n "$epr" ] && [ "$spr" != "$epr" ] \
+         && pr_lookup "$spr" && [ "$(pr_state "$spr")" = "CLOSED" ]; then
+        echo "  anchor   $(fm "$sf" id)  PR #$spr closed unmerged → re-inheriting from epic"
+        [ "$DRY" -eq 1 ] || set_fm "$sf" pr ""
+        spr=""
+      fi
       if [ -n "$spr" ]; then
         resolve_one "$sf" "$spr"
       elif [ -n "$epr" ]; then
-        resolve_one "$sf" "$epr"
+        resolve_one "$sf" "$epr" inherit
       fi
     done
   done
@@ -998,6 +1030,75 @@ cmd_backfill() {
 }
 
 # ---------------------------------------------------------------------------
+# Subcommand: closes
+# ---------------------------------------------------------------------------
+#
+# GitHub closes an issue on merge only when the PR body names it with a closing
+# keyword. Leaving that footer to be composed by hand is why a promotion PR closed
+# every issue one time, all but the epic issue the next, and none the time after —
+# the set is derived from frontmatter, so derive it.
+#
+# Scope follows the argument, which mirrors what the PR actually delivers:
+#   a story file  → that story's issue
+#   an epic dir   → the epic issue + every non-skip story issue under it
+#   a plan dir    → every `feature`-level epic of the plan, with its stories
+#
+# Reads frontmatter only: no gh, no network, safe to run before a repo has issues.
+
+emit_closes() { # emit_closes FILE LABEL → print one footer line, count it
+  local n; n=$(fm "$1" issue)
+  [ -n "$n" ] || { CLOSES_MISS=$((CLOSES_MISS+1)); warn "$2 has no issue: — it will not close on merge ($1)"; return 0; }
+  case "$n" in
+    *[!0-9]*) CLOSES_MISS=$((CLOSES_MISS+1)); warn "$2 has a non-numeric issue: '$n' — skipped ($1)"; return 0 ;;
+  esac
+  echo "Closes #$n"
+  CLOSES_N=$((CLOSES_N+1))
+}
+
+closes_epic() { # closes_epic EPICDIR — the epic issue, then its stories in id order
+  local dir="$1" sf
+  [ -f "$dir/EPIC.md" ] && emit_closes "$dir/EPIC.md" "epic $(fm "$dir/EPIC.md" epic)"
+  for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+    [ "$(fm "$sf" status)" = "skip" ] && continue
+    emit_closes "$sf" "story $(fm "$sf" id)"
+  done
+}
+
+CLOSES_N=0
+CLOSES_MISS=0
+
+cmd_closes() {
+  local target="$PLAN" dir
+  [ -n "$target" ] || { echo "ck-project: closes needs a story file, an epic directory, or a plan directory" >&2; exit 1; }
+  # An EPIC.md path means the epic, not "a file with an issue:" — resolve it to its dir
+  # so the caller gets the whole promotion set either way.
+  case "$target" in */EPIC.md) target="${target%/EPIC.md}" ;; esac
+
+  if [ -f "$target" ]; then
+    emit_closes "$target" "story $(fm "$target" id)"
+  elif [ -d "$target/stories" ] || [ -f "$target/EPIC.md" ]; then
+    closes_epic "$target"
+  elif [ -d "$target/epics" ]; then
+    # Feature PR: only `feature`-level epics ride the feature branch. Epics left at
+    # `story` or `epic` land independently and must not be closed by this PR.
+    for dir in $(find "$target/epics" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort); do
+      [ "$(fm "$dir/EPIC.md" integration)" = "feature" ] || continue
+      closes_epic "$dir"
+    done
+    [ "$CLOSES_N" -eq 0 ] && [ "$CLOSES_MISS" -eq 0 ] && \
+      warn "no epic in $target is at integration: feature — a feature PR closes nothing"
+  else
+    echo "ck-project: '$target' is not a story file, an epic directory, or a plan directory" >&2
+    exit 1
+  fi
+
+  # Nothing on stdout is a valid answer (an unpublished plan), and the caller must be
+  # able to tell it apart from a failure — so it is stderr plus exit 0, never an error.
+  [ "$CLOSES_N" -eq 0 ] && warn "no linked issues — the PR body gets no Closes footer"
+  return 0
+}
+
+# ---------------------------------------------------------------------------
 # Subcommand: set
 # ---------------------------------------------------------------------------
 
@@ -1046,6 +1147,7 @@ case "$CMD" in
   init)     cmd_init ;;
   sync)     cmd_sync ;;
   backfill) cmd_backfill ;;
+  closes)   cmd_closes ;;
   set)      cmd_set ;;
   show)     cmd_show ;;
   -h|--help|help) usage 0 ;;

@@ -155,14 +155,41 @@ Store `story_issue` and `epic_issue` (both may be empty).
 
 `git log --oneline -10` — match the repo's existing commit-message style.
 
+### 2.5 Reconcile merged PRs before staging (skip in STANDALONE MODE)
+
+A PR merges on github.com with no skill running, so the `delivery: pr → merged` flip is
+always discovered later. Run it **here**, before 3.1 picks files, and the flip rides the
+commit this run was already making instead of needing a branch and PR of its own:
+
+```bash
+ck-project sync --dry-run          # what GitHub says changed since the last sync
+ck-project sync                    # apply it; also runs ck-index
+```
+
+Skip both when `tasks/SETTINGS.md` is absent or `github_issues` is not `true`. Never
+fatal: report a failure and continue to 3.1 — a board that is down must not block a commit.
+
+`sync` writes two frontmatter fields and no more: `delivery:`, and the `pr:` it
+materializes onto a story that inherits its epic's PR. Both are derived from the PR number
+already in the plan, so they need no confirmation of their own — 3.1 stages them and 3.3
+shows them.
+
 ## PHASE 3: PREPARE COMMIT
 
 ### 3.1 Select files to stage (no prompt yet)
 
-Run `git status`. **Auto-select** the story's modified/new source files, test files, and
-the story-file frontmatter change. **Never stage** `.env`, credentials, secrets,
-`.DS_Store`, or IDE configs. Build the grouped lists (Source / Tests / Docs / Excluded)
-but do **not** ask yet — 3.3 confirms the file set and the message in one round-trip.
+Run `git status`. **Auto-select** the story's modified/new source files, test files, the
+story-file frontmatter change, and any `tasks/` file 2.5 just rewrote (story/`EPIC.md`
+frontmatter, `STORIES_INDEX.md`, `FEATURE_INDEX.md`) — list those under a **Plan** group so
+the user sees plan bookkeeping travelling with the code. **Never stage** `.env`,
+credentials, secrets, `.DS_Store`, or IDE configs. Build the grouped lists (Source / Tests /
+Docs / Plan / Excluded) but do **not** ask yet — 3.3 confirms the file set and the message
+in one round-trip.
+
+**When 2.5's flip is the *only* change** (a merge landed, no code in flight), there is
+nothing to ride along. Do not open a PR for it: offer a single commit on the current branch
+— `chore(plan): record merged delivery` — then go to Phase 6. Bookkeeping derived from an
+already-merged PR never needs review.
 
 ### 3.2 Craft commit message
 
@@ -243,8 +270,13 @@ still routes to 5.A, whose base is already fixed.
    before 6.4, or by hand, still needs `pr:` or it can never reach Done. Edit the story
    frontmatter: `pr: <n>` and `delivery: pr`. Skip when both already read that.
 3. Read `existing_pr.body` and append under a `## Updates` section (create it if absent):
-   `- <YYYY-MM-DD>: <commit subject> — <one-line plain-language summary>`. Write the
-   **merged** body back — never overwrite prior content:
+   `- <YYYY-MM-DD>: <commit subject> — <one-line plain-language summary>`.
+3b. **Repair a missing `Closes` footer in the same edit.** Run `ck-project closes` for this
+   PR's level and add any line the body does not already contain, as its last block. A PR
+   opened by hand, or before the footer was generated, closes nothing on merge — and this
+   is the last moment ship can still fix that. Never remove a `Closes` line already there.
+
+   Write the **merged** body back — never overwrite prior content:
    ```bash
    gh pr edit <pr-number> --body "$(cat <<'EOF'
    <merged body>
@@ -276,6 +308,19 @@ still routes to 5.A, whose base is already fixed.
 4. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
    — no story IDs, AC checkboxes, or test tallies. Bodies (feature / bug fix) + the exact
    `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
+
+   **The `Closes` footer is generated, never written by hand** — GitHub closes an issue on
+   merge only when the PR body names it, and an author-composed footer is exactly what let
+   a promotion PR close every issue once, all but the epic issue the next time, and none
+   the time after:
+
+   ```bash
+   ck-project closes <story-path>
+   ```
+
+   Paste its stdout verbatim as the body's last block. Empty output is a valid answer (no
+   footer); relay any `WARN` — it names an entry that will **not** close on merge. Argument
+   forms per PR level and the merge caveats: [pr-templates.md](references/pr-templates.md#the-closes-footer).
 5. **Record the PR in frontmatter — this is what moves the card.** Edit the story file:
    `pr: <the new PR number>` and `delivery: pr`
    ([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)).
@@ -365,7 +410,40 @@ regenerate the views in the same phase if any frontmatter changed.
 `feature`-level `EPIC.md` in the plan. Their stories inherit that pointer, which is the
 only way work shipped through an epic PR ever reaches Done.
 
+Then **run `ck-index` + `ck-project sync` again, in this phase** — the 6.1 sync ran before
+the `EPIC.md` write and cannot have seen it. This second pass is what pushes the new `pr:`
+down onto every story of the epic, so no story is left with a `delivery:` and no anchor.
+
+Its body takes the generated footer for the whole epic — one call, not a story-by-story
+guess:
+
+```bash
+ck-project closes tasks/<slug>/epics/NN_<slug>
+```
+
 Declining is never a dead end — **Not yet** points at `/ck-code:ship --promote --epic NN`.
+
+### 6.6 Commit the plan state onto the branch
+
+6.1 and 6.5 wrote frontmatter and regenerated views, so `tasks/` is dirty again after the
+Phase 4 commit:
+
+```bash
+git status --porcelain tasks/
+```
+
+Clean → nothing to do. Otherwise commit those files **on the current branch** and say so:
+
+```bash
+git add tasks/
+git commit -m "chore(plan): record delivery pointers"
+```
+
+No PR, no confirmation, no branch — every one of these values is derived from a PR number
+the plan already holds. When 6.5 just opened a promotion PR, `git push` after this so the
+pointers travel *inside* that PR rather than becoming a chore PR against the trunk later.
+
+Skip this step in STANDALONE MODE (no `tasks/` writes) and when the repo has no `tasks/`.
 
 ## PHASE 7: SUMMARY
 
@@ -402,9 +480,11 @@ Resolution order:
 4. None promotable but the feature-gate condition holds → run the feature gate.
 5. Otherwise → report that there is nothing to promote, and why.
 
-No commit, no staging, no *story* frontmatter change — this mode only promotes branches.
-The one write it does make is on `EPIC.md`: a promotion PR records its `pr:` +
-`delivery: pr` there (§6.5), then `ck-index` + `ck-project sync` in the same phase.
+No staging of source, and no *authored* story change — this mode only promotes branches.
+The writes it does make are all derived: a promotion PR records its `pr:` + `delivery: pr`
+on `EPIC.md` (§6.5), then `ck-index` + `ck-project sync` materialize that anchor down onto
+the epic's stories, and §6.6 commits the result onto the branch so it rides the promotion
+PR. Run §6.5 then §6.6; skip every other phase.
 
 ---
 
@@ -537,6 +617,10 @@ that received an `issue:`. Never re-read the plan to build the summary.
 - **Never open or update a PR without writing `pr:` + `delivery: pr`** to the story (or to `EPIC.md` at level `epic`/`feature`) — an unrecorded PR strands the story in Ready to Ship, and `ck-project sync` has no anchor to re-check.
 - **Never push a card to the review column with `ck-project set`** — In Review is derived from `delivery: pr`. The sticky rule is gone; a manual push is undone by the next sync.
 - **Never write `delivery: merged` by hand** — only `ck-project sync` promotes it, from GitHub's answer about the PR.
+- **Never compose a `Closes #` footer by hand** — run `ck-project closes <story|epic-dir|plan-dir>` and paste its output. GitHub closes an issue on merge only when the PR body names it, and a hand-written footer silently omits the epic issue, or every issue.
+- **Never open a promotion PR without re-running `ck-project sync` after recording `pr:` on `EPIC.md`** (§6.5) — the sync is what materializes the anchor onto the epic's stories; without it they carry a `delivery:` with no `pr:`, which `ck-doctor` reports as an ERROR and `STORIES_INDEX.md` renders as a bare `PR`.
+- **Always commit a dirty `tasks/` before finishing** (§6.6) — plan bookkeeping is derived from PR numbers already in the plan, so it belongs on the current branch with no PR and no prompt. Leaving it uncommitted is what forces a hand-made "record merged delivery" PR later.
+- **Never open a PR whose only content is a `delivery:`/`pr:` change** — it is derived state; commit it on the current branch (§3.1, §6.6).
 - **Always run `ck-index` and `ck-project sync` in the same phase** you change any story or epic frontmatter (SHIP MODE's status write; in `--to-issues`, `ck-issues` already runs it) — [`github-projects.md`](../../references/github-projects.md).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).

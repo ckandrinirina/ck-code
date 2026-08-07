@@ -128,6 +128,11 @@ carrying neither key behaves as it always did, so this is not a layout change an
 `EPIC.md` carries the same pair and resolution walks up: the story's own `pr:` → else its
 epic's `pr:` → else empty. A merged epic PR delivers every story of that epic.
 
+The walk-up happens in `ck-project sync` and **nowhere else**: it writes both the resolved
+`delivery:` *and* the `pr:` it resolved through onto the story, so every other consumer
+reads one field on one file. Consequently `delivery:` and `pr:` are either both set or both
+empty — a `delivery:` with no `pr:` is a defect `ck-doctor` reports, not a valid state.
+
 **`pr:` is the *latest* PR, not a permanent one.** A defect found in merged code keeps
 `delivery: merged` while `status: bug`; the fix PR overwrites `pr:` and resets
 `delivery: pr`. A PR closed **without** merging resets `delivery` to empty and warns.
@@ -249,7 +254,8 @@ fast path; `migrate` writes it as its final step.
 - **Never hand-edit a generated view** — regenerate from frontmatter with `ck-index`.
 - **Never store status anywhere but story frontmatter** — every other status display is derived.
 - **Never redefine `status: done` as "merged"** — `done` is work-complete; delivery lives in `delivery`. `blocked_by` resolves against `done` alone.
-- **Never resolve `delivery` by hand** — `ship` writes `pr`/`delivery: pr`; only `ck-project sync` promotes it to `merged`, from GitHub's answer.
+- **Never resolve `delivery` by hand** — `ship` writes `pr`/`delivery: pr`; only `ck-project sync` promotes it to `merged`, from GitHub's answer, and only it materializes an inherited epic `pr:` onto a story.
+- **Never open a PR for a `delivery:`/`pr:` change alone** — both are derived from a PR number the plan already holds, so they are committed on the current branch with no review.
 - **Never write a delta/journal doc** — commits are the history.
 - **Always run `ck-index` in the same phase** you change any story's frontmatter.
 - **Frontmatter stays generator-readable** — one `key: value` per line, inline `[...]` lists, no block scalars.
