@@ -5,6 +5,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.8.0] — 2026-08-07
+
+`build`, `fix` and `ship` each reconcile as a side effect of their own job, so a project
+used normally stays correct. This release covers the case where it has not been: work
+merged in the browser, issues closed by hand, a plan published after the fact, or a repo
+adopted from someone else.
+
+### Added
+- **`/ck-code:sync`** — one pass that reconciles indexes, `delivery:`/`pr:`, the Projects
+  board and GitHub Issues, then commits the `tasks/` diff on the current branch. Previews
+  every local and GitHub change and asks **once**; `--dry-run` writes nothing, `--apply`
+  skips the gate, `--local` makes no GitHub call at all.
+- **`ck-project issues`** performs three repairs that previously had no project-wide
+  path — only the per-story equivalents inside `ship`: closing an issue whose story is
+  `done` + `delivery: merged` but is still open (a closing keyword that never fired —
+  squash merge, hand-opened PR, or a merge into a non-default base); ticking an epic
+  checklist still showing merged stories unchecked; and appending the missing `Closes`
+  lines to an **open** PR whose body names none of the issues it delivers.
+
+  Frontmatter authorises closing in one direction only: it never re-opens an issue, never
+  un-ticks a box, appends to a PR body rather than rewriting it, and writes no frontmatter.
+  Checklist items match on `#N` — anchored so `#13` cannot tick `#130` — or the padded
+  `[EE-SS]`, so an epic's own acceptance criteria are never touched.
+
+### Fixed
+- **`ck-project backfill` asked GitHub about work that cannot have shipped.** It queried
+  every story carrying an `issue:` and no `pr:`, which on a mostly-`todo` plan meant one
+  network round-trip per story to learn nothing — 55 calls and a two-minute timeout on a
+  real 70-story project. Now scoped to stories and epics past `todo`: 0 calls, 6 seconds,
+  same answer.
+
 ## [6.7.0] — 2026-08-07
 
 Issue-sync automation: the four places an epic-level delivery had to be repaired by hand
