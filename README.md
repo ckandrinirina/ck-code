@@ -37,6 +37,11 @@ PR merged in the browser, with nothing running locally, still lands correctly on
 sync. Set `trunk_branch:` in `tasks/SETTINGS.md` when your integration branch is not the
 repo default.
 
+You rarely run that sync yourself. `ship` runs it **before** it stages, so a merge that
+happened while you were away rides the next commit instead of needing a chore PR of its
+own; the session summary counts anything still awaiting confirmation; and a story that
+ships through an epic PR has that PR's number written onto it, not just inherited.
+
 Dependencies still resolve against `status: done` alone: work you can build on is finished
 work, not merged work.
 
@@ -323,7 +328,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:plan` | Create epics, single-dispatch S/M stories, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
 | `/ck-code:build` | Implement stories (TDD + QA): one inline, several at once in parallel worktrees (story IDs), or a whole epic in dependency-ordered waves (`--epic NN`); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`) | story file / story IDs / `--epic NN` | source code + tests; regenerated index views; in PARALLEL MODE a branch per story plus a conflict report for waves of ≥ 2, or commits straight on the target branch for a single-story wave |
 | `/ck-code:fix` | Diagnose a bug tied to a story, write a failing test + Fix Plan, flip it to `bug` — then auto-run `build` for an easy fix or hand off when complex. Never writes the source fix itself | story file (optional) | failing test + Bug Report + `bug` status → `build` |
-| `/ck-code:ship` | Commit, PR, update GitHub Issues. Honours the epic's **integration level** — a PR per story, per epic, or one per feature — merging story branches up the hierarchy and offering promotion when a rollup completes (`--promote` runs that gate later, `--integration` sets the level). `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter | story file (optional) | commit + PR + issue updates; merged/promoted branches |
+| `/ck-code:ship` | Commit, PR, update GitHub Issues. Honours the epic's **integration level** — a PR per story, per epic, or one per feature — merging story branches up the hierarchy and offering promotion when a rollup completes (`--promote` runs that gate later, `--integration` sets the level). `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter. Reconciles merged PRs before staging, generates the `Closes` footer from frontmatter so a PR always closes every issue it delivers, and commits plan bookkeeping on the current branch instead of opening a chore PR for it | story file (optional) | commit + PR + issue updates; merged/promoted branches |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
 | `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
