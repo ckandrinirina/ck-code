@@ -5,6 +5,43 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.7.0] — 2026-08-07
+
+Issue-sync automation: the four places an epic-level delivery had to be repaired by hand
+are now closed. Everything derived from a PR number the plan already holds is written,
+committed and reconciled without a prompt.
+
+### Fixed
+- **A story that inherited its epic's PR got a `delivery:` but no `pr:`.** `ck-project
+  sync` materialized only half the answer, contradicting `ck-index.sh`'s own comment,
+  rendering the Delivery cell as a bare `PR`, and tripping `ck-doctor`'s "delivery with no
+  `pr:`" ERROR on every `integration: epic` project the moment its epic PR opened —
+  repairable only by a hand-made "anchor delivered work" commit. Both fields are now
+  written. An anchor whose PR was closed **without** merging is dropped so the story
+  re-inherits, instead of re-resolving a dead number on every sync.
+- **`Closes #` footers were composed by hand, so issues closed at random.** One promotion
+  PR closed all five of its issues, the next closed its stories but not the epic issue,
+  the one after closed nothing.
+
+### Added
+- **`ck-project closes <story|epic-dir|plan-dir>`** derives a PR body's `Closes` footer
+  from frontmatter: a story's issue; an epic's issue plus every non-`skip` story under it;
+  or, for a plan, every `integration: feature` epic with its stories. Reads frontmatter
+  only — no `gh`, no network — so a body can be built on a machine that never
+  authenticated. `ship` pastes it verbatim and never authors one.
+- **`ship` Phase 2.5** reconciles merged PRs *before* staging, so a `delivery: pr → merged`
+  flip rides the commit already being made rather than needing a branch and PR of its own.
+- **`ship` Phase 6.6** commits a dirty `tasks/` onto the current branch with no PR and no
+  prompt. When a promotion PR was just opened, the pointers travel inside it.
+- **`ship` 5.A repairs a missing `Closes` footer** on a PR opened by hand or before this
+  release — the last moment ship can still make it close its issues.
+
+### Changed
+- **`session-start.sh` counts work awaiting merge confirmation** — index rows still
+  reading `PR #<n>` — and names it in the session summary. A local read of a generated
+  file: a `SessionStart` hook that called the network would delay every session start and
+  fail on an unauthenticated machine.
+
 ## [6.6.0] — 2026-08-06
 
 Stabilisation (LTS) release: a full audit of the plugin — cross-skill contracts,
