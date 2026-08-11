@@ -11,7 +11,8 @@
 # Two axes decide a column: `status` (is the work finished?) and `delivery` (how far has
 # it travelled toward the trunk branch?). `delivery` is a cache over an immutable anchor
 # — the `pr:` number — so `sync` re-answers it from GitHub on every run and it cannot
-# drift. See references/github-projects.md.
+# drift. Work merged straight to the trunk has no such anchor and answers `direct`
+# instead, from git alone. See references/github-projects.md.
 #
 # Usage:
 #   ck-project.sh discover [--repo O/R]              # projects + current settings, as JSON
@@ -19,6 +20,7 @@
 #   ck-project.sh init --project N --reorder         # rewrite the column order to the preset
 #   ck-project.sh init --create "<title>"            # create one, provision the 7 columns
 #   ck-project.sh sync [tasks/<slug>] [--dry-run]    # refresh delivery, then every card
+#   ck-project.sh landed [tasks/<slug>]              # find work merged to trunk with no PR
 #   ck-project.sh backfill [tasks/<slug>]            # recover pr: for pre-6.4 work
 #   ck-project.sh closes <story|epic-dir|plan-dir>   # print the PR body's Closes footer
 #   ck-project.sh issues [tasks/<slug>] [--dry-run]  # close delivered issues, tick epics
@@ -30,6 +32,7 @@
 #   --repo O/R       target repository (default: the current repo)
 #   --pace N         seconds between mutating gh calls (default 1; env CK_PROJECT_PACE)
 #   --dry-run        print every change that would be made; change nothing
+#   --include-likely (landed) also write the candidates git cannot prove — see below
 #
 # Config lives in tasks/SETTINGS.md as flat frontmatter, read by the same awk helpers
 # ck-issues.sh uses. Column NAMES are authoritative; the *_id values beside them are a
@@ -57,13 +60,14 @@ REORDER=0
 PACE="${CK_PROJECT_PACE:-1}"
 SET_ISSUE=""
 SET_ROLE=""
+INCLUDE_LIKELY=0
 
 # Roles, in board order. The order is the column order a provisioned board gets, and
 # also the order map_columns claims live columns in — so a role that must win an
 # ambiguous name (bug over blocked) has to be listed before its rival.
 ROLES="blocked todo in_progress ready_to_ship in_review bug done"
 
-usage() { sed -n '2,32p;39,40p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
+usage() { sed -n '2,35p;42,43p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -85,6 +89,7 @@ while [ $# -gt 0 ]; do
     # rearranges what is already there; pass both flags to do both.
     --reorder)  REORDER=1; shift ;;
     --dry-run)  DRY=1; shift ;;
+    --include-likely) INCLUDE_LIKELY=1; shift ;;
     -h|--help)  usage 0 ;;
     -*)         echo "ck-project: unknown option $1" >&2; usage 1 ;;
     *)
@@ -104,10 +109,11 @@ if [ ! -d tasks ]; then
 fi
 SETTINGS="$SETTINGS_REL"
 
-# `closes` answers from frontmatter alone, so it must work with no gh and no network —
-# ship pastes its output into a PR body on a machine that may never have authenticated.
+# `closes` answers from frontmatter alone and `landed` from frontmatter plus git, so both
+# must work with no gh and no network — ship pastes a footer into a PR body on a machine
+# that may never have authenticated, and a direct merge is a purely local event.
 case "$CMD" in
-  closes) ;;
+  closes|landed) ;;
   *) command -v gh >/dev/null 2>&1 || { echo "ck-project: gh not found on PATH" >&2; exit 1; } ;;
 esac
 
@@ -417,9 +423,11 @@ role_for_story() {
     bug)  echo bug; return ;;
     done)
       case "$dv" in
-        merged) echo done ;;
-        pr)     echo in_review ;;
-        *)      echo ready_to_ship ;;
+        # `direct` is on the trunk with no PR behind it — the same arrival as `merged`,
+        # reached without review, so it lands in the same column and never sees In Review.
+        merged|direct) echo done ;;
+        pr)            echo in_review ;;
+        *)             echo ready_to_ship ;;
       esac
       return ;;
     in-progress)
@@ -439,7 +447,7 @@ role_for_epic() { # role_for_epic EPICDIR → rollup role
     any=1
     [ "$dv" = "pr" ] && any_pr=1
     case "$st" in
-      done) [ "$dv" = "merged" ] || all_merged=0 ;;
+      done) case "$dv" in merged|direct) ;; *) all_merged=0 ;; esac ;;
       bug)  any_bug=1; all_done=0; all_merged=0 ;;
       in-progress) any_started=1; all_done=0; all_merged=0 ;;
       *) all_done=0; all_merged=0 ;;
@@ -555,6 +563,147 @@ resolve_one() {
   set_fm "$f" delivery "$want" && DELIV_CHANGED=$((DELIV_CHANGED+1))
 }
 
+# ---------------------------------------------------------------------------
+# Direct landings — work that reached the trunk with no PR behind it
+# ---------------------------------------------------------------------------
+#
+# Merging a story branch into the trunk locally and pushing leaves `pr:` empty forever:
+# reconcile_delivery has no anchor to ask GitHub about, so the card sits in Ready to Ship
+# with the work long since shipped. `delivery: direct` is the missing answer — on the
+# trunk, no PR — and it is the one delivery value with no `pr:` behind it, which is why
+# ck-doctor exempts it from the "delivery with no anchor" check.
+#
+# The evidence is git, not GitHub: the trunk's OWN COPY of the story file. `ship` stages
+# the frontmatter flip with the code it describes, so a trunk already carrying the story
+# marked `done` carries the work too. That test costs one `git show`, needs no network,
+# and — unlike branch ancestry — still answers after the branch was deleted, which is what
+# most people do the moment a merge lands.
+#
+#   CERTAIN  the trunk's copy reads `status: done` AND that flip travelled with code (its
+#            commit touched something outside tasks/, or every `files:` path is present).
+#            Applied automatically, exactly like a PR sync finds merged.
+#   LIKELY   no such proof, but a story/fix branch for this id is an ancestor of the
+#            trunk, or every `files:` path exists there. Consistent with a direct commit
+#            on main — and equally consistent with a later story having created those
+#            files. Reported always, written only under --include-likely.
+#
+# The tasks/-only exclusion is what stops `/ck-code:sync`'s own bookkeeping commit from
+# reading as a delivery: that commit carries the story file to the trunk and nothing else.
+
+TRUNK_REF=""
+LANDED_N=0
+LANDED_LIKELY=0
+
+# resolve_trunk_ref — the ref the ancestry and content tests run against. origin/<trunk>
+# is the truth, because "pushed" is what the user is claiming; a clone with no remote
+# falls back to the local branch.
+resolve_trunk_ref() {
+  [ -n "$TRUNK_REF" ] && return 0
+  resolve_trunk
+  git rev-parse --verify -q "refs/remotes/origin/$TRUNK" >/dev/null 2>&1 && {
+    TRUNK_REF="origin/$TRUNK"; return 0; }
+  git rev-parse --verify -q "refs/heads/$TRUNK" >/dev/null 2>&1 && {
+    TRUNK_REF="$TRUNK"; return 0; }
+  return 1
+}
+
+# landed_done_on_trunk FILE → 0 when the trunk's copy of FILE reads `status: done`.
+landed_done_on_trunk() {
+  # `exit` in a main rule still runs END, so the verdict travels in a flag rather than
+  # in the exit status of the rule that found it.
+  git show "$TRUNK_REF:$1" 2>/dev/null | awk '
+    { sub(/\r$/,"") }
+    FNR==1 && $0!="---" { exit }
+    FNR==1 { next }
+    $0=="---" { exit }
+    { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1)
+        gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v)
+        gsub(/^["'"'"']|["'"'"']$/,"",v)
+        if(k=="status"){ if(v=="done") ok=1; exit } } }
+    END { exit (ok ? 0 : 1) }'
+}
+
+# landed_with_code FILE → 0 when the newest trunk commit touching FILE also touched a
+# path outside tasks/. A plan-only commit is bookkeeping, not a delivery.
+landed_with_code() {
+  local c
+  c=$(git log -1 --format=%H "$TRUNK_REF" -- "$1" 2>/dev/null)
+  [ -n "$c" ] || return 1
+  git show --name-only --format= "$c" 2>/dev/null | grep -q -v -e '^$' -e '^tasks/'
+}
+
+# landed_files_present FILE → 0 when `files:` is non-empty and every path is on the trunk.
+landed_files_present() {
+  local raw p n=0
+  raw=$(fm "$1" files)
+  raw=${raw#[}; raw=${raw%]}
+  for p in $(printf '%s' "$raw" | tr ',' ' '); do
+    p=$(printf '%s' "$p" | sed 's/^["'"'"']//; s/["'"'"']$//')
+    [ -n "$p" ] || continue
+    n=$((n+1))
+    git cat-file -e "$TRUNK_REF:$p" 2>/dev/null || return 1
+  done
+  [ "$n" -gt 0 ]
+}
+
+# landed_branch ID → print a story/fix branch for ID whose tip is already in the trunk.
+# Local and origin both count: the branch may have been merged from either side.
+landed_branch() {
+  local ref
+  for ref in $(git for-each-ref --format='%(refname:short)' \
+        "refs/heads/story/$1-*" "refs/heads/fix/$1-*" \
+        "refs/remotes/origin/story/$1-*" "refs/remotes/origin/fix/$1-*" 2>/dev/null); do
+    git merge-base --is-ancestor "$ref" "$TRUNK_REF" 2>/dev/null && { printf '%s' "$ref"; return 0; }
+  done
+  return 1
+}
+
+# detect_landed TIER — TIER is `certain` (the automatic pass inside sync) or `all`
+# (the `landed` subcommand, which also reports and optionally writes the likely tier).
+# Only a story that is finished, unanchored and undelivered is a candidate: anything with
+# a `pr:` of its own or an epic's is resolve_one's business, and re-deciding it here would
+# fight the PR state GitHub just gave us.
+detect_landed() {
+  local tier="$1" dir ef epr sf id dv spr ev why branch
+  if ! resolve_trunk_ref; then
+    [ "$tier" = "all" ] && warn "no '$TRUNK' branch in this clone — cannot tell what has landed"
+    return 0
+  fi
+  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
+    case "$PLAN" in
+      "") ;;
+      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
+    esac
+    ef="$dir/EPIC.md"
+    [ -f "$ef" ] || continue
+    epr=$(fm "$ef" pr)
+    [ -n "$epr" ] && continue
+    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+      [ "$(fm "$sf" status)" = "done" ] || continue
+      dv=$(fm "$sf" delivery); [ -n "$dv" ] && continue
+      spr=$(fm "$sf" pr); [ -n "$spr" ] && continue
+      id=$(fm "$sf" id)
+      if landed_done_on_trunk "$sf" && { landed_with_code "$sf" || landed_files_present "$sf"; }; then
+        ev=certain; why="$TRUNK_REF already carries it as done"
+      elif branch=$(landed_branch "$id"); then
+        ev=likely; why="branch $branch is merged into $TRUNK_REF"
+      elif landed_files_present "$sf"; then
+        ev=likely; why="every files: path exists on $TRUNK_REF"
+      else
+        continue
+      fi
+      if [ "$ev" = certain ] || [ "$INCLUDE_LIKELY" -eq 1 ]; then
+        echo "  landed   ${id:-$sf}  (none) → direct  ($why)"
+        LANDED_N=$((LANDED_N+1))
+        [ "$DRY" -eq 1 ] || { set_fm "$sf" delivery direct && DELIV_CHANGED=$((DELIV_CHANGED+1)); }
+      else
+        LANDED_LIKELY=$((LANDED_LIKELY+1))
+        [ "$tier" = "all" ] && echo "  likely   ${id:-$sf}  $why — not written without --include-likely"
+      fi
+    done
+  done
+}
+
 # reconcile_delivery — refresh every delivery: in scope, materializing inheritance.
 # A story with no PR of its own resolves through its epic's (integration: epic or
 # feature never gives a story its own PR) and the answer is written onto the STORY,
@@ -591,6 +740,9 @@ reconcile_delivery() {
       fi
     done
   done
+  # Whatever GitHub could not answer for — because there was no PR to ask about — git
+  # can. Runs last so it only ever sees stories the PR pass left undelivered.
+  detect_landed certain
 }
 
 # regen_views — the generated views are a function of frontmatter, so anything that
@@ -974,7 +1126,46 @@ cmd_sync() {
   done
 
   echo "ck-project: $ADDED added, $CHANGED changed, $SKIPPED already correct, $DELIV_CHANGED delivery updated, $FAILURES failures"
+  [ "$LANDED_LIKELY" -gt 0 ] && \
+    echo "ck-project: $LANDED_LIKELY story(ies) look merged to $TRUNK_REF but git cannot prove it — run 'ck-project landed' to review them"
   return "$(( FAILURES == 0 ? 0 : 1 ))"
+}
+
+# ---------------------------------------------------------------------------
+# Subcommand: landed
+# ---------------------------------------------------------------------------
+#
+# The full two-tier scan, reported. `sync` already applies the certain tier on every run,
+# so this exists for the half git cannot prove — work committed straight onto the trunk
+# with no branch left behind — which a human confirms once and then applies.
+#
+# Pure git and frontmatter: no board, no network, no gh. It runs in a project that never
+# enabled github_issues, because STORIES_INDEX.md renders `delivery:` either way.
+
+cmd_landed() {
+  load_settings >/dev/null 2>&1
+  git rev-parse --git-dir >/dev/null 2>&1 || { echo "ck-project: not a git repository" >&2; exit 1; }
+  [ -d tasks ] || { echo "ck-project: no tasks/ in this project" >&2; exit 1; }
+
+  resolve_trunk_ref || {
+    echo "ck-project: no '$TRUNK' branch in this clone — nothing to compare against" >&2
+    exit 1
+  }
+  echo "ck-project: scanning $([ -n "$PLAN" ] && echo "$PLAN" || echo 'every plan') against $TRUNK_REF$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+
+  detect_landed all
+
+  if [ "$LANDED_N" -eq 0 ] && [ "$LANDED_LIKELY" -eq 0 ]; then
+    echo "ck-project: nothing landed unrecorded — every finished story is already delivered or still in flight"
+    return 0
+  fi
+  [ "$DELIV_CHANGED" -gt 0 ] && [ "$DRY" -eq 0 ] && regen_views
+  echo "ck-project: $LANDED_N marked direct$([ "$DRY" -eq 1 ] && echo ' (dry run)'), $LANDED_LIKELY unproven"
+  [ "$LANDED_LIKELY" -gt 0 ] && \
+    echo "ck-project: re-run with --include-likely to apply the unproven ones"
+  [ "$DELIV_CHANGED" -gt 0 ] && [ "$DRY" -eq 0 ] && \
+    echo "ck-project: run 'ck-project sync' to move the cards"
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -1159,7 +1350,9 @@ issue_state() {
 }
 
 delivered() { # delivered FILE → 0 when the work is done AND on the trunk
-  [ "$(fm "$1" status)" = "done" ] && [ "$(fm "$1" delivery)" = "merged" ]
+  [ "$(fm "$1" status)" = "done" ] || return 1
+  case "$(fm "$1" delivery)" in merged|direct) return 0 ;; esac
+  return 1
 }
 
 close_issue() { # close_issue NUM LABEL REASON
@@ -1276,7 +1469,13 @@ cmd_issues() {
         ISS_MISS=$((ISS_MISS+1))
         echo "  no issue story $(fm "$sf" id) — publish the plan to give it one  ($sf)"
       elif delivered "$sf"; then
-        close_issue "$sissue" "story $(fm "$sf" id)" "Delivered in PR #${spr:-$epr}."
+        # A direct landing has no PR to name — say where it went instead, so the close
+        # comment never reads "Delivered in PR #" with nothing after it.
+        if [ -n "${spr:-$epr}" ]; then
+          close_issue "$sissue" "story $(fm "$sf" id)" "Delivered in PR #${spr:-$epr}."
+        else
+          close_issue "$sissue" "story $(fm "$sf" id)" "Delivered directly on $TRUNK."
+        fi
       fi
       [ -n "$spr" ] && [ "$spr" != "$epr" ] && repair_footer "$spr" "$sf" "story $(fm "$sf" id)"
     done
@@ -1347,6 +1546,7 @@ case "$CMD" in
   discover) cmd_discover ;;
   init)     cmd_init ;;
   sync)     cmd_sync ;;
+  landed)   cmd_landed ;;
   backfill) cmd_backfill ;;
   closes)   cmd_closes ;;
   issues)   cmd_issues ;;

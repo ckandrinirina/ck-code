@@ -94,12 +94,15 @@ emit_plan() {
       # (references/github-projects.md), so nothing is inherited here.
       dv="-"
       if (delivery=="merged") dv="MERGED"
+      else if (delivery=="direct") dv="DIRECT"
       else if (delivery=="pr") dv=(pr!="" ? "PR #" pr : "PR")
       printf "S\t| %s · %s | %s | %s | %s | %s | %s | %s | %s |\n", epic, edisp, id, title, su, dv, size, bl, relfile
       eslugOf[epic]=eslug; edispOf[epic]=edisp
       if (status!="skip") total[epic]++
       if (status=="done") { done[epic]++; started[epic]=1
-                            if (delivery=="merged") merged[epic]++ }
+                            # DIRECT reached the trunk without a PR — same arrival as
+                            # MERGED, so it counts toward the epic rollup identically.
+                            if (delivery=="merged" || delivery=="direct") merged[epic]++ }
       else if (status=="in-progress") { inprog[epic]=1; started[epic]=1 }
       else if (status=="bug") { bug[epic]=1; started[epic]=1 }
     }

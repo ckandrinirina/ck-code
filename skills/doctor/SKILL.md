@@ -51,7 +51,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 |---|---|---|
 | `layout` | the stamp is missing or pre-v6; every change-producing skill will block | `/ck-code:migrate` |
 | `team layout` | skills sit in nested `experts/`/`guides/` folders, so Claude Code registers none of them | `/ck-code:migrate` |
-| `stories` | a story's frontmatter will not parse, or its status/size/delivery is outside the vocabulary. `delivery` with no `pr:` is the common one — nothing anchors it, so `ck-project sync` can never re-check whether it merged | fix the frontmatter, then regenerate; `/ck-code:sync` recovers a missing `pr:` from the linked issue |
+| `stories` | a story's frontmatter will not parse, or its status/size/delivery is outside the vocabulary. `delivery: pr`/`merged` with no `pr:` is the common one — nothing anchors it, so `ck-project sync` can never re-check whether it merged. `delivery: direct` is the opposite case and legal with no `pr:` (it means no PR ever existed), but an ERROR *with* one | fix the frontmatter, then regenerate; `/ck-code:sync` recovers a missing `pr:` from the linked issue |
 | `indexes` | a generated view disagrees with the story files — usually a hand-edit, or a regenerate that never ran | `ck-index` |
 | `epic ids` | the same epic number is used by more than one plan — the v6-defining collision; branches and `blocked_by` are ambiguous | `/ck-code:migrate` (Phase R renumbers) |
 | `story ids` | one story id names two stories across plans — breaks `build EE-SS`, `blocked_by`, and branch names | `/ck-code:migrate` (Phase R renumbers) |

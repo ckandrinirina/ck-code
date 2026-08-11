@@ -24,7 +24,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `config` | `[show \| board \| trunk <branch> \| on \| off]` | Project settings: issue tracking, the Projects board mapping, and the trunk branch every PR targets | `tasks/SETTINGS.md` + board |
 | `migrate` | `[--dry-run]` | Upgrade a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter, flat team-skill folders, unique epic numbers), then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
 | `doctor` | `[tasks/<slug>] [--quiet]` | Report what is broken in this project — layout stamp, story frontmatter, index drift, dependencies, feature docs, team skills | read-only |
-| `sync` | `[tasks/<slug>] [--apply\|--dry-run\|--local]` | Reconcile indexes, `delivery:`/`pr:`, the board and GitHub Issues with what GitHub actually did; commits the `tasks/` diff | `tasks/` frontmatter + views, board, Issues/PRs |
+| `sync` | `[tasks/<slug>] [--apply\|--dry-run\|--local]` | Reconcile indexes, `delivery:`/`pr:`, the board and GitHub Issues with what GitHub actually did — including work merged straight to the trunk with no PR; commits the `tasks/` diff | `tasks/` frontmatter + views, board, Issues/PRs |
 | `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
 
 ## Examples

@@ -45,7 +45,7 @@ places the card up to "finished", `delivery` carries it the rest of the way to t
 | 4 | `ready_to_ship` | Ready to Ship | `status: done` and `delivery` empty — finished, nothing opened yet |
 | 5 | `in_review` | In Review | `delivery: pr` — a PR is open |
 | 6 | `bug` | Bugs | `status: bug`, at any delivery |
-| 7 | `done` | Done | `status: done` and `delivery: merged` |
+| 7 | `done` | Done | `status: done` and `delivery: merged` **or** `direct` |
 | — | *(archive)* | — | `status: skip`, when `board_archive_skip: true` |
 
 **Precedence, first match wins: `bug` → `blocked` → `delivery` → `status`.** A bug story
@@ -56,9 +56,14 @@ Bugs and Blocked are separate columns because they are opposites: a bug is **alw
 actionable** and outranks all `todo` work in `track next`, while a blocked story cannot be
 started at all. One column for both hides the most urgent item on the board.
 
+`direct` shares Done with `merged` because it is the same arrival — the work is on the
+trunk — reached without review. A story that never had a PR has nothing to be *in review*
+for, and nothing left to *ship*, so it skips both columns rather than resting in one.
+
 An epic issue is placed by rollup over its non-`skip` stories: all `done` **and**
-`delivery: merged` → `done`; all `done` otherwise → `ready_to_ship`; any `bug` → `bug`;
-any `delivery: pr` → `in_review`; any `in-progress` → `in_progress`; else `todo`.
+`delivery: merged`/`direct` → `done`; all `done` otherwise → `ready_to_ship`; any `bug` →
+`bug`; any `delivery: pr` → `in_review`; any `in-progress` → `in_progress`; else `todo`.
+An epic needs no `delivery` of its own for this: the rollup reads its stories.
 
 ## Reconciliation — how `delivery: merged` happens
 
@@ -85,6 +90,29 @@ A materialized anchor is dropped again if its PR is **closed without merging**: 
 falls back to whatever `pr:` its epic carries now, so a replaced epic PR flows through
 instead of the story re-resolving a dead number on every sync.
 
+### Work that never had a PR
+
+Steps 1–3 can only answer for a story the plan holds a PR number for. Merge a story branch
+into the trunk yourself and push, and there is no number to hold — so that story is invisible
+to the whole loop above and its card stays in *Ready to Ship* with the code already on
+`main`. `delivery: direct` ([data-model.md](data-model.md#two-axes-status-is-work-delivery-is-integration))
+is the answer for that case, and git supplies it:
+
+| Tier | Evidence | Applied |
+|---|---|---|
+| certain | the trunk's own copy of the story file reads `status: done`, and that flip arrived with code (its commit touched a path outside `tasks/`, or every `files:` path is present on the trunk) | automatically, inside step 4 of every `sync` |
+| likely | no such proof, but a `story/EE-SS-*`/`fix/EE-SS-*` branch is an ancestor of the trunk, or every `files:` path exists there | reported by `ck-project landed`; written only under `--include-likely` |
+
+The certain test reads the **story file on the trunk**, not the branch graph, because
+`ship` stages the frontmatter flip with the code it describes — and because the branch is
+usually deleted the moment the merge lands, which leaves ancestry with nothing to test. The
+"arrived with code" clause is what stops `/ck-code:sync`'s own `chore(plan)` commit from
+reading as a delivery: that commit carries the story file to the trunk and nothing else.
+
+The likely tier is never automatic. "Every `files:` path exists on `main`" is equally true
+of files a later story created, and a false positive marks unshipped work as delivered and
+closes its issue.
+
 `delivery` is therefore a **cache with an immutable anchor**: `pr:` is a pointer that
 cannot drift, and every sync re-answers the question from GitHub. This is the same
 "authoritative name, cached id" shape as the `board_*_id` fields below. The cache exists so
@@ -105,6 +133,8 @@ ck-project init --project 7 --extend     # adopt it AND add any missing preset c
 ck-project init --project 7 --reorder    # rewrite the existing option order to the preset
 ck-project init --create "My Roadmap"    # create, link to the repo, provision 7 columns
 ck-project sync [tasks/<slug>]           # reconcile delivery from GitHub, then every card
+ck-project landed [tasks/<slug>]         # find work merged to the trunk with no PR
+ck-project landed --include-likely       # also apply the candidates git cannot prove
 ck-project backfill [tasks/<slug>]       # recover pr: for work shipped before 6.4
 ck-project closes <story|epic-dir|plan>  # print a PR body's Closes footer
 ck-project issues [tasks/<slug>]         # close delivered issues, tick epic checklists
@@ -112,7 +142,10 @@ ck-project set <issue> <role>            # one-shot push (manual escape hatch)
 ck-project show                          # print resolved settings
 ```
 
-`--dry-run` on `init`, `sync`, `backfill` and `issues` prints every change and makes none.
+`--dry-run` on `init`, `sync`, `landed`, `backfill` and `issues` prints every change and
+makes none. **`landed` needs neither `gh` nor a board** — it reads git and frontmatter, so
+it works in a project that never enabled `github_issues`, where `STORIES_INDEX.md` still
+renders the Delivery cell.
 
 **`backfill`** exists because a project upgrading to 6.4 has stories that are `done` and
 long since merged, but carry no `pr:` — so they would land in *Ready to Ship*. It asks
@@ -162,7 +195,7 @@ open issue, which nothing else repairs.
 
 | Repair | Condition |
 |---|---|
-| close a story issue | story is `status: done` **and** `delivery: merged`, issue still OPEN |
+| close a story issue | story is `status: done` **and** `delivery: merged` or `direct`, issue still OPEN |
 | close an epic issue | every non-`skip` story of the epic rolls up to `done` |
 | tick an epic checklist | a delivered story's item is still `- [ ]` |
 | append a `Closes` line | an **OPEN** PR in the plan whose body names none of the issues it delivers |
@@ -189,7 +222,7 @@ later. Three places look:
 | `session-start.sh` | local read of `STORIES_INDEX.md`, no network | counts rows whose Delivery cell reads `PR #<n>` and names the count in the session summary — a nudge, never a write |
 | `ship` §2.5 | one `sync` before staging | applies the flip so it rides the commit already being made, instead of needing its own PR |
 | `ck-doctor` `board` row | one board read | reports a card sitting in a column the two axes do not call for |
-| `/ck-code:sync` | the full pass | `backfill` + `sync` + `issues`, previewed and confirmed once, then commits the `tasks/` diff |
+| `/ck-code:sync` | the full pass | `backfill` + `landed` + `sync` + `issues`, previewed and confirmed once, then commits the `tasks/` diff |
 
 The hook stays a nudge on purpose: a `SessionStart` hook that called the network would
 delay every session start and fail on an unauthenticated machine.
@@ -244,5 +277,7 @@ the missing columns at the end, unless `--reorder` is passed.
 - **Never move a card by hand with `gh project item-edit`** — call `ck-project`, which resolves ids and skips no-op writes.
 - **Never treat a missing column as an error** — an empty `board_<role>` is a supported configuration, not a misconfiguration. A board with no Ready to Ship or Bugs column is fully supported.
 - **Never write board state into story frontmatter** — the board is derived from it, never the reverse. `delivery` is not board state: it is GitHub's answer about a PR, cached where every fact lives.
+- **Never apply the likely tier of `landed` without a human confirming it** — `--include-likely` exists for a person to answer, not for a skill to pass by default. Marking unshipped work `direct` moves its card to Done and closes its issue.
+- **Never set `delivery: direct` by hand, and never on a story that has a `pr:`** — a story with a PR is `pr` or `merged`, and only `sync` decides which; `ck-doctor` reports the combination.
 - **Never resolve PR state one story at a time** — one batched `gh pr list` per plan, never a `gh pr view` per card.
 - **Always run `ck-project sync` in the same phase** as the `ck-index` that follows a status change, so the view and the board move together.

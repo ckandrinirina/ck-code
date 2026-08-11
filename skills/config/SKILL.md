@@ -130,7 +130,21 @@ ck-project sync --dry-run          # re-preview: those cards should now say → 
 resolves `delivery` from it. Stories with no `issue:`, or none GitHub can link, are listed
 and skipped — those get `pr:` from their next `ship`. Run it once per project.
 
-Skip this sub-step only when the preview moves nothing into Ready to Ship.
+Work that never had a PR at all — merged to the trunk by hand — is invisible to `backfill`,
+because there is no closing PR for GitHub to name. That is `landed`'s half of the same
+repair, and the first sync of such a project would otherwise pile every one of those
+stories into Ready to Ship:
+
+```bash
+ck-project landed --dry-run        # proven landings + the ones only you can confirm
+ck-project landed                  # applies the proven half
+```
+
+Read its `likely` lines before applying anything with `--include-likely`
+([github-projects.md](../../references/github-projects.md#work-that-never-had-a-pr)) — that
+tier is a guess, and here it would move a card to Done and close an issue.
+
+Skip both sub-steps only when the preview moves nothing into Ready to Ship.
 
 ### 6. Apply
 

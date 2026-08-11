@@ -109,8 +109,9 @@ import glob, re, sys
 STATUS = {'todo','in-progress','done','skip','bug'}
 SIZE = {'S','M'}
 # The second axis. Empty is the pre-6.4 default and always legal, so the key itself
-# is never required — only its value, and only when one is present.
-DELIVERY = {'', 'pr', 'merged'}
+# is never required — only its value, and only when one is present. `direct` is the one
+# value with no `pr:` behind it: work merged to the trunk without ever opening a PR.
+DELIVERY = {'', 'pr', 'merged', 'direct'}
 bad, total = [], 0
 for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
     total += 1
@@ -133,13 +134,15 @@ for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
         bad.append(f"{f}: size `{sz}` is not S or M")
     dv, pr = fm.get('delivery', ''), fm.get('pr', '')
     if dv not in DELIVERY:
-        bad.append(f"{f}: delivery `{dv}` is not one of pr|merged (or empty)")
+        bad.append(f"{f}: delivery `{dv}` is not one of pr|merged|direct (or empty)")
     if dv in ('pr','merged') and not pr:
         bad.append(f"{f}: delivery `{dv}` with no `pr:` — nothing anchors it, so sync can never re-check it")
+    if dv == 'direct' and pr:
+        bad.append(f"{f}: delivery `direct` with `pr: {pr}` — a PR exists, so this is `pr` or `merged`; sync decides which")
     if pr and not pr.isdigit():
         bad.append(f"{f}: pr `{pr}` is not a number")
-    if dv == 'merged' and fm.get('status') == 'todo':
-        bad.append(f"{f}: delivery `merged` with status `todo` — merged work is not todo")
+    if dv in ('merged','direct') and fm.get('status') == 'todo':
+        bad.append(f"{f}: delivery `{dv}` with status `todo` — delivered work is not todo")
     if fm.get('status') == 'bug' and '## Bug Report' not in t:
         bad.append(f"{f}: status `bug` with no `## Bug Report` — build will stop; re-run /ck-code:fix")
     # Duplicate ids are reported by check_ids, not here: the stories are well-formed,

@@ -93,7 +93,7 @@ prior_status:
 | `files` | `[path, ...]` or `[]` | files the story creates/modifies — the conflict-detection and touched-files key |
 | `issue` | number or empty | linked GitHub issue, written by `ship` (incl. `--to-issues`); empty until pushed |
 | `pr` | number or empty | the **latest** PR carrying this story's work, written by `ship`; empty until a PR exists |
-| `delivery` | empty \| `pr` \| `merged` | how far that work has travelled toward the trunk branch — the second axis, below |
+| `delivery` | empty \| `pr` \| `merged` \| `direct` | how far that work has travelled toward the trunk branch — the second axis, below |
 | `prior_status` | status or empty | set to the pre-`bug` status when `status: bug`; restored on fix |
 
 **Format contract (so the generator can read it without a YAML library):** one key
@@ -113,6 +113,7 @@ finished it, whether it sat uncommitted on a local branch, in an open PR, or on 
 | *(empty)* | nothing open for review — committed locally at most | `plan` scaffolds it empty |
 | `pr` | PR `pr:` is open | `ship`, when it creates or updates the PR |
 | `merged` | PR `pr:` merged into the trunk branch | `ck-project sync` reconciliation |
+| `direct` | on the trunk branch, no PR ever opened | `ck-project landed`, from git |
 
 **`status: done` keeps its exact previous meaning, and nothing that reads it changes.**
 `blocked_by` still resolves against `done` alone — never against `delivery` — because at
@@ -130,8 +131,26 @@ epic's `pr:` → else empty. A merged epic PR delivers every story of that epic.
 
 The walk-up happens in `ck-project sync` and **nowhere else**: it writes both the resolved
 `delivery:` *and* the `pr:` it resolved through onto the story, so every other consumer
-reads one field on one file. Consequently `delivery:` and `pr:` are either both set or both
-empty — a `delivery:` with no `pr:` is a defect `ck-doctor` reports, not a valid state.
+reads one field on one file. Consequently `delivery: pr|merged` and `pr:` are either both
+set or both empty — a `pr`/`merged` with no `pr:` is a defect `ck-doctor` reports, not a
+valid state.
+
+**`direct` is the exception, and the only one: it is the value that means "no PR".** Merge
+a story branch into the trunk yourself and push, and there is no PR number to record —
+nothing anchors that work, so before `direct` existed it stayed `delivery:` empty and its
+card sat in *Ready to Ship* forever, with the code long since on `main`. `direct` says the
+work arrived without review, which is exactly what happened, and it goes straight to Done:
+`ready_to_ship` and `in_review` are states a PR passes through, and there was no PR.
+`ck-doctor` therefore exempts `direct` from the anchor rule and reports the reverse — a
+`direct` **with** a `pr:` — because a story with a PR is `pr` or `merged`, and only `sync`
+decides which.
+
+It is derived from git, never authored: `ck-project landed` (and every `sync`, which runs
+its provable tier) asks whether the trunk's own copy of the story file already reads
+`status: done`, having arrived with code rather than in a bookkeeping commit. Work with no
+such proof — committed straight onto the trunk with no branch left behind — is reported as
+a candidate and written only on confirmation, because "the files exist on `main`" is also
+true of files a later story created.
 
 **`pr:` is the *latest* PR, not a permanent one.** A defect found in merged code keeps
 `delivery: merged` while `status: bug`; the fix PR overwrites `pr:` and resets
@@ -149,7 +168,7 @@ empty — a `delivery:` with no `pr:` is a defect `ck-doctor` reports, not a val
 | `description` | text | one line — becomes the `FEATURE_INDEX` Description cell |
 | `issue` | number or empty | linked GitHub issue, written by `ship --to-issues` |
 | `pr` | number or empty | the epic's own PR (levels `epic`/`feature`), written by `ship --promote`; the stories of this epic inherit it |
-| `delivery` | empty \| `pr` \| `merged` | the epic PR's state — same enum and same writers as a story's |
+| `delivery` | empty \| `pr` \| `merged` \| `direct` | the epic PR's state — same enum and same writers as a story's |
 | `integration` | `story` \| `epic` \| `feature` \| empty | where this epic's work is proposed for review; empty ≡ `story`. Branch names are **derived, never stored** — see [`branch-topology.md`](branch-topology.md) |
 
 Same format contract as story frontmatter. `title` and `description` must not
