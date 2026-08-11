@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Skill
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -282,32 +282,56 @@ tools are unavailable, fall back to an in-session checklist (never written to th
 — never skip the breakdown. **Never persist the plan itself to the story file** — the file
 records only frontmatter status, the final summary, and unplanned changes.
 
-### 3.5 Confirm Plan + Branch (single gate)
+### 3.5 Confirm Plan + Base Branch (single gate)
 
-Present the plan (template in [output-blocks.md](references/output-blocks.md)), then run
-`git branch --show-current` and ask **one** `AskUserQuestion` that both confirms the plan and
-chooses where the work lands:
+**Never start on whatever branch this run was launched from.** Resolve the base first, in one
+batched call:
 
-- **New branch** — cut from `resolve_parent(...)`
-  ([`branch-topology.md`](../../references/branch-topology.md#resolution)), creating the
-  parent chain first if absent:
-  `git checkout -b story/<EE>-<SS>-<slug> <parent>` (or `fix/<EE>-<SS>-<slug>` for a bug
-  story); slug = kebab-case of the title. Verify with `git branch --show-current`.
-  At level `story` the parent is the default branch, exactly as before.
-- **Current branch `<name>`** — ship will commit here. Omit this option when `<name>` is
-  `main`/`develop` (implementation on protected branches is forbidden).
-- **Adjust plan** — revise the plan, then re-ask.
+```bash
+git fetch origin --quiet
+git branch --show-current
+git branch --list "story/<EE>-<SS>-*" "fix/<EE>-<SS>-*"
+```
 
-**Third field, only when the epic's `EPIC.md` `integration:` is empty** — fold it into the
+`resolve_base(...)`
+([`branch-topology.md`](../../references/branch-topology.md#start-point--the-base-a-new-story-branch-is-cut-from))
+returns the suggested base; that section also owns the four signals that change it — an open
+epic PR the story would silently join, a base behind its remote, another story's branch
+checked out, and "I don't want this on `<trunk>`". Do not restate them here; run them.
+
+Present the plan **and** `Base: <branch> — <reason>` (template in
+[output-blocks.md](references/output-blocks.md)), then ask **one** `AskUserQuestion` that
+confirms the plan and picks where the work lands. `AskUserQuestion` takes **at most 4 options**
+— offer the resolved base first, then the highest-ranked alternatives that actually exist for
+this project, and always keep **Adjust plan** last (the user can type any other base via
+*Other*):
+
+| Option | Offered when | Effect |
+|---|---|---|
+| **New branch from `<base>`** | always (recommended) | `git checkout -b story/<EE>-<SS>-<slug> <base>` — `fix/…` for a bug story, slug = kebab-case of the title; creates the parent chain first if absent ([Creation](../../references/branch-topology.md#creation)). Verify with `git branch --show-current` |
+| **Resume `story/<EE>-<SS>-*`** | that branch already exists | `git checkout` it — never re-cut a branch that has commits |
+| **Sync base from `origin/<base>` first** | the base is behind its remote | `git merge origin/<base>` on the base, then cut |
+| **Cut from `<trunk>` instead** | level is `epic`/`feature` | this story gets its own PR into `<trunk>` rather than joining the epic's |
+| **Cut from `epic/<NN>-*`** or **`feat/<plan-slug>`** | that branch exists or the level reaches it | say which PR the story then joins |
+| **Current branch `<name>`** | `<name>` is a legal base (`resolve_base` step 3) | ship commits here. **Never** offered for `main`/`develop`/`<trunk>`, nor for another story's branch |
+| **Adjust plan** | always | revise the plan, then re-ask |
+
+**A further field, only when the epic's `EPIC.md` `integration:` is empty** — fold it into the
 *same* `AskUserQuestion` call (the tool takes 4 questions; splitting a known question into a
 second call is forbidden by RULES): "How should epic `<NN>` land?" → **a PR per story**
 (`story`) · **one PR per epic** (`epic`) · **one PR for the whole feature** (`feature`).
-Write the answer to `EPIC.md` `integration:` in this phase, then resolve the parent from it.
+Write the answer to `EPIC.md` `integration:` in this phase, then re-resolve the base from it.
 Answering `story` writes the literal `story`, so the question never returns for that epic.
 
+**When the user's real objection is `<trunk>`, change the level, not the base.** A request to
+keep this work off the trunk — stated in the answer, or implied by picking an epic/feature base
+under a `story`-level epic — is an escalation: offer to write `epic`/`feature` to `EPIC.md` and
+re-resolve, in the same gate. A hand-picked base with a stale level leaves `ship` opening the PR
+against `<trunk>` anyway. The change applies from this story onward, never retroactively.
+
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
-touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the branch
-question** — the run is already on the branch the orchestrator chose (worktree or solo) — but
+touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the whole base
+resolution** — the run is already on the branch the orchestrator chose (worktree or solo) — but
 still presents the plan.
 
 ---
@@ -558,7 +582,7 @@ dirty for the orchestrator. Commit messages are conventional
   skills → warn + ask (`/ck-code:team` first) rather than proceed silently.
 - **1.7** — effort route fixed from `size:` and announced; it scales ceremony only, never a
   guarantee, and escalates LEAN → FULL when the work outgrows its size.
-- **3.5** — plan, branch and (first story of an epic only) integration level confirmed in one gate before any code; the story branch is cut from the resolved parent; never `main`/`develop`.
+- **3.5** — plan, base branch and (first story of an epic only) integration level confirmed in one gate before any code; the base is **resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`.
 - **3.3 + 6.1** — SOLID applied at design, verified after refactor (lean or full per 1.7).
 - **4** — failing tests before implementation (trivial boilerplate exempt).
 - **5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
@@ -585,6 +609,11 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
   claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
   failure is one reported line, not a stop.
+- **Never treat the checked-out branch as the base** — resolve it (3.5), show it with its
+  reason, and offer the alternatives; the launch branch is a legal base only when it is the one
+  that resolved ([`branch-topology.md`](../../references/branch-topology.md#start-point--the-base-a-new-story-branch-is-cut-from)).
+- **Never keep work off `<trunk>` by picking a different base** — escalate the epic's
+  `integration:` level instead, or `ship` targets `<trunk>` from the stored level regardless.
 - **Never edit a test to force GREEN.**
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.

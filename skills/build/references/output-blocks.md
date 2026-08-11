@@ -35,10 +35,10 @@ Then `AskUserQuestion`: **Continue without these** / **Generate first**.
 
 ---
 
-## Phase 3.5 — Plan + Branch Confirmation (single gate)
+## Phase 3.5 — Plan + Base Branch Confirmation (single gate)
 
-Present the plan data, then run `git branch --show-current` and ask **one**
-`AskUserQuestion` that confirms the plan and picks the branch:
+Present the plan data **with the resolved base and its reason**, then ask **one**
+`AskUserQuestion`:
 
 ```
 ## Implementation Plan for [Story Title]
@@ -48,13 +48,26 @@ Present the plan data, then run `git branch --show-current` and ask **one**
 **Files to modify:** [list from frontmatter `files:`]
 **SOLID approach:** [summary]
 **Estimated subtasks:** [count]
-**Current branch:** [name]
+
+**Base:** [branch] — [reason]
+**Current branch:** [name][ (not the base)]
+[**Note:** this story joins open PR #[n] — it is not reviewed on its own.]
+[**Note:** [base] is [n] commits behind origin/[base].]
 ```
 
-`AskUserQuestion` options:
+The `Base:` reason is one of the four rows in
+[`branch-topology.md`](../../../references/branch-topology.md#start-point--the-base-a-new-story-branch-is-cut-from);
+the two `Note:` lines appear only when their signal fires. `Current branch` carries
+`(not the base)` whenever the two differ, so an inherited branch is never mistaken for a
+deliberate one.
 
-- **New branch** — `story/<EE>-<SS>-<slug>` (`fix/…` for a bug story).
-- **Current branch `[name]`** — omit when `[name]` is `main`/`develop`.
+`AskUserQuestion` options — **at most 4**, resolved base first, `Adjust plan` last; the full
+conditional set is the table in SKILL.md 3.5:
+
+- **New branch from `[base]`** — `story/<EE>-<SS>-<slug>` (`fix/…` for a bug story).
+- **Resume `story/<EE>-<SS>-…`** / **Sync base from origin first** / **Cut from `[trunk]`
+  instead** / **Cut from `epic/<NN>-…`** — each only when its condition holds.
+- **Current branch `[name]`** — only when it is a legal base; never `main`/`develop`/trunk.
 - **Adjust plan** — revise, then re-ask.
 
 ---

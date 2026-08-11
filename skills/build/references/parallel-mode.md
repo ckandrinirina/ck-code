@@ -36,7 +36,7 @@ detailed in its section below.
 
 | Step | What this context does | Non-negotiable |
 |---|---|---|
-| **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run) and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main`, and never into whatever branch happened to be checked out |
+| **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run), **announce it with its reason and staleness**, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main`, and never into whatever branch happened to be checked out |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
 | **P3** | Team gate (`ls .claude/skills/{expert,guide}-*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
 | **P4** | Dispatch the wave: **fan-out** (≥ 2) = one worktree `Agent` per story in a single message; **solo** (= 1) = one `Agent` on `$WORKBRANCH`, no worktree. Both `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` | Every story goes to an agent; a worktree only when a peer runs beside it. Tier the model by reasoning complexity, never `size` |
@@ -67,6 +67,20 @@ absent — **not** whatever branch is currently checked out. At level `story` th
 the default branch; at `epic`/`feature` to `epic/<NN>-*`. This mode is already scoped to a
 single epic, so exactly one `$TARGET` resolves. Every later phase merges into it, never a
 hardcoded `main`.
+
+**Announce it, with its reason** — one line, before any wave is planned, so a run launched on
+an unrelated branch is visible rather than surprising at merge time:
+
+```
+Target: epic/02-payments — level epic, all 4 stories land in epic 02's single PR
+        (current branch story/01-03-login is not the target)
+```
+
+Then `git fetch origin --quiet` and check staleness once for the whole run
+(`git rev-list --count $TARGET..origin/$TARGET`). When it is behind, say so on a second line
+and carry the **Sync `$TARGET` from origin first** option into P3's single question — never a
+prompt of its own, never a silent merge. If `$TARGET` already has an open PR (`EPIC.md` `pr:`),
+add one line naming it: every story of this run lands inside PR #`<n>`.
 
 Resolving the scope set, by argument shape:
 
@@ -145,11 +159,14 @@ generic code with no project experts, guides, or QA rules. Warn per
 (recommended) → `Skill({ skill: "ck-code:team" })`, then dispatch with the generated skills
 in place; **CONTINUE WITHOUT SKILLS** → dispatch as-is. Never dispatch without asking.
 
-Fold that question, the wave-plan confirmation (`PROCEED` / `DROP A STORY` / `ABORT`), and
-any genuine acceptance-criteria ambiguity into **one `AskUserQuestion`, at most 4 questions**
-— the dispatched agents have no user, so ambiguity is resolved here or not at all. Skip the
+Fold that question, the wave-plan confirmation (`PROCEED` / `DROP A STORY` / `ABORT`), the P1
+**Sync `$TARGET` from origin first** option when the target is behind, and any genuine
+acceptance-criteria ambiguity into **one `AskUserQuestion`, at most 4 questions** — the
+dispatched agents have no user, so ambiguity is resolved here or not at all. Skip the
 wave-plan question when the SKILL.md 1.2 menu already resolved this exact scope; that
-selection was the confirmation, and re-asking it is a wasted round-trip.
+selection was the confirmation, and re-asking it is a wasted round-trip. When all four slots
+are contended, the team gate and the sync offer win — both change what every dispatched agent
+starts from.
 
 ## P4 — Dispatch
 
