@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.8.3] — 2026-08-11
+
+### Changed
+- **build**: the story branch is now cut from a **resolved** base instead of whatever branch the run was launched on. Phase 3.5 shows `Base: <branch> — <reason>` before asking, and offers the alternatives that actually exist — resume an existing `story/<EE>-<SS>-*`, cut from the trunk for an independent PR, cut from the epic or feature branch, sync a base that is behind its remote, or stay on the current branch when that is a legal base. It also says outright when the story would silently join an epic's already-open PR, and when the real objection is "not on trunk" it offers to escalate the epic's `integration:` level rather than let a hand-picked base drift from what `ship` will target.
+- **build (PARALLEL MODE)**: P1 announces the resolved `$TARGET` with its reason, its staleness against `origin`, and any open epic PR every story of the run will land in; the sync-first option folds into P3's existing single question.
+- **branch-topology**: new `Start point` section — `resolve_base()` (resume an existing story branch → `resolve_parent()` → the checked-out branch only when it equals one of those), the reason shown for each outcome, and the four signals that change the suggestion.
+
 ## [6.8.2] — 2026-08-07
 
 ### Added
