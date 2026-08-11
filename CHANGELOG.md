@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.9.0] — 2026-08-11
+
+### Added
+- **delivery: `direct`** — a fourth `delivery` value for work merged into the trunk without ever opening a PR. It maps to **Done**, skipping *In Review* and *Ready to Ship* (both are states a PR passes through), and closes the linked issue. Until now such a story had no `pr:` for `sync` to resolve, so it stayed `delivery`-empty and its card sat in *Ready to Ship* with the code long since on `main`. It is the one delivery value legal with no `pr:`; `ck-doctor` accepts it and reports the reverse — `direct` **with** a `pr:` — instead.
+- **`ck-project landed`** — derives that value from git, in two tiers. Certain: the trunk's own copy of the story file already reads `status: done` and arrived with code (its commit touched a path outside `tasks/`, or every `files:` path is present) — applied automatically inside every `sync`, and unlike branch ancestry it still answers after the branch was deleted. Likely: a `story/`/`fix/` branch is an ancestor of the trunk, or only the files are there — reported, and written only under `--include-likely`. Needs no `gh` and no board.
+
+### Changed
+- **sync**: previews `landed` alongside `backfill`, and adds a second question to its single confirm gate — naming each unprovable candidate — when git cannot prove a landing. `--apply` and `--local` both default that answer to *leave them*. `landed` now runs on every apply path, because `sync` stops early without a configured board.
+- **config**: the pre-apply repair step covers work that never had a PR, not just pre-6.4 work missing its `pr:` — a first board sync would otherwise pile every hand-merged story into *Ready to Ship*.
+- **ck-index**: renders the Delivery cell as `DIRECT` and counts it toward the epic rollup exactly like `MERGED`.
+
 ## [6.8.3] — 2026-08-11
 
 ### Changed
