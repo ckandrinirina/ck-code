@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.9.2] — 2026-08-31
+
+### Added
+- **build / qa-validation**: Phase 6.1 now runs a redundancy scan on every story diff —
+  reimplementation of code the repo already has, copy-paste inside the diff, dead code,
+  single-caller wrappers, and surface no acceptance criterion asked for. The five checks live
+  once in `reuse-first.md`; Phase 6.2 collapses each hit, and QA Step 3.5 verifies the scan ran
+  (findings are ordinary QA issues under the existing 3-iteration cap, never a new gate).
+- **native-commands**: `/simplify` documented — the cross-story pass to run after a wave merges,
+  where per-story 6.1 cannot see duplication between branches.
+
 ## [6.9.1] — 2026-08-31
 
 ### Added
