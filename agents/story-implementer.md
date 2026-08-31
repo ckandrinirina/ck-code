@@ -2,6 +2,9 @@
 name: story-implementer
 description: Use when `/ck-code:build` PARALLEL MODE dispatches a story for end-to-end TDD implementation — inside its own native git worktree when peers run beside it, or solo on a prepared branch in the main checkout when it is the only story of its wave.
 model: sonnet
+effort: high
+experimental:
+  cacheTtl: "1h"
 ---
 
 # story-implementer

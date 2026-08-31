@@ -3,6 +3,9 @@ name: conflict-analyzer
 description: Use when `/ck-code:build` PARALLEL MODE needs to know whether multiple completed worktree branches will merge cleanly. Returns a conflict report and a safe merge order.
 tools: Read, Bash, Grep
 model: sonnet
+effort: low
+experimental:
+  cacheTtl: "5m"
 ---
 
 # conflict-analyzer

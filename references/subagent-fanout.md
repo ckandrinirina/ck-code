@@ -72,6 +72,12 @@ only these four literal aliases — a tier name like `balanced` is an invalid va
 Omitting `model:` makes the subagent inherit the orchestrator's tier — the most expensive
 model in play — for work that rarely needs it. Never omit it.
 
+**Precedence, highest first:** the `model:` passed on the dispatch call → the registered agent's
+own `model:` frontmatter → `CLAUDE_CODE_SUBAGENT_MODEL` → the session model. The env var is a
+*default*, not an override, so a registered agent (`story-implementer`, `qa-validator`,
+`conflict-analyzer`) keeps its declared tier even when the var is set. Verify a wave's real tiers
+in `/tasks`, which reports the model **and** effort level each subagent ran on.
+
 ## The orchestrator-owns-shared-writes rule (non-negotiable)
 
 The orchestrator (the skill thread) — never a subagent — does all of:
