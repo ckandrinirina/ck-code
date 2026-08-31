@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.9.1] — 2026-08-31
+
+### Added
+- **story-implementer / qa-validator / conflict-analyzer**: `effort:` frontmatter (`high`, `low`, `low`) so each agent runs at its own reasoning tier instead of inheriting the dispatcher's, and `experimental.cacheTtl:` — a new per-agent prompt-cache TTL. `story-implementer` and `qa-validator` hold `"1h"`, so a PARALLEL MODE wave no longer re-caches their system prompts on every dispatch; the one-shot `conflict-analyzer` keeps `"5m"`.
+
+### Changed
+- **references/native-commands.md**: `/code-review` now documents its effort levels (`low`…`max`, `ultra`), the `/review` alias, `--comment`, and when to reach for each before `ship`; adds `/tasks` as the way to verify a fan-out's real model and effort tiers, `/loop`, `/effort`'s new per-model default, and the built-in "Concise" output style.
+- **references/subagent-fanout.md**: states the model precedence chain — per-spawn `model:` > the registered agent's frontmatter > `CLAUDE_CODE_SUBAGENT_MODEL` > the session model — since the env var is now a default rather than an override, and points at `/tasks` for verifying a wave.
+
+
 ## [6.9.0] — 2026-08-11
 
 ### Added
