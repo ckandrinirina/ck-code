@@ -42,6 +42,17 @@ per project; full command list (TypeScript / Rust / Python / C++ / JUCE)
 lives in the `build` skill's `references/tdd-walkthrough.md`. Zero
 compiler warnings in project-owned files is the bar.
 
+## Step 3.5 — Redundancy check
+
+Verify Phase 6.1's redundancy scan actually ran, then spot-check the diff against the
+same five checks — [`reuse-first.md`](reuse-first.md#redundancy-scan-implementation)
+owns them; never restate the list here. QA re-runs the scan only when Phase 6 shows no
+evidence of it (no scan line, no collapse/delete in 6.2) or when the diff grew after it.
+
+Anything found is an ordinary QA finding in the Issues Found table under the existing
+iteration cap — never a new gate. Cite `file:line` and the existing code the diff should
+have used.
+
 ## Step 4 — Architecture compliance
 
 Check the implementation against the story's **feature doc**
@@ -73,6 +84,7 @@ Emit a QA Report with:
 - Per-criterion PASS / FAIL.
 - Test totals + new regressions.
 - Code-quality results.
+- Redundancy check (scan ran; findings, if any).
 - Architecture compliance.
 - Edge-case coverage.
 - Issues Found table (severity).
@@ -125,5 +137,7 @@ Rules and lookup order: [`design-system.md`](design-system.md) § Fidelity rules
   without them is not QA.
 - **Tests must stay green throughout** — if Step 2 turns up regressions,
   fix them before moving on.
+- **Never accept a duplicate because the tests are green** — Step 3.5 findings are real
+  issues; a passing suite says nothing about code the repo already had.
 - **Never skip Step 4** (architecture compliance) — the bug or feature
   may have introduced an architectural drift even if tests pass.

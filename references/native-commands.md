@@ -51,6 +51,22 @@ last one you typed, so you set it once per session.
 `--fix` applies the findings to the working tree; `--comment` posts them as inline PR comments.
 It is user-triggered — a ck-code skill cannot launch it for you.
 
+## `/simplify` — the redundancy pass, applied
+
+`/simplify` reviews the changed code for reuse, simplification, efficiency and altitude, then
+**applies** the fixes. Quality only — it does not hunt for bugs, which is `/code-review`'s job.
+It is the native equivalent of `build` Phase 6.1's redundancy scan
+([`reuse-first.md`](reuse-first.md#redundancy-scan-implementation)), run over the whole working
+diff instead of one story's.
+
+| Situation | Reach for it? |
+|---|---|
+| one story just built | ❌ skip — Phase 6.1 + QA Step 3.5 already scanned that diff |
+| a wave of stories merged, before `ship --promote` | ✅ `/simplify` — cross-story duplication is what no single 6.1 could see |
+| a long-lived epic branch where the same helper grew twice | ✅ `/simplify` |
+
+User-triggered like `/code-review` — a ck-code skill cannot launch it for you.
+
 ## `/tasks` — verify a fan-out actually used the right tiers
 
 `/tasks` (and the agent detail dialogs) now show **the model and effort level each subagent ran

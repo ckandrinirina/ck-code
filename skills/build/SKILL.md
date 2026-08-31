@@ -384,16 +384,21 @@ green. Report GREEN as **one line** (output-blocks); mark implementation task(s)
 
 Improve quality without changing behavior. **Tests stay green throughout.**
 
-**6.1 SOLID review.** Per the 1.7 route: **FULL** reviews all new/modified code with the SOLID
-Compliance Check template in [tdd-walkthrough.md](references/tdd-walkthrough.md), every
-principle checked. **LEAN** spot-checks the principles named in the 3.3 note plus any the diff
-newly put at stake. Either way, record every violation as an ISSUE to fix in 6.2 — a LEAN
+**6.1 SOLID + redundancy review.** Per the 1.7 route: **FULL** reviews all new/modified code
+with the SOLID Compliance Check template in [tdd-walkthrough.md](references/tdd-walkthrough.md),
+every principle checked. **LEAN** spot-checks the principles named in the 3.3 note plus any the
+diff newly put at stake. Either way, record every violation as an ISSUE to fix in 6.2 — a LEAN
 review that uncovers a structural problem escalates to the FULL template before continuing.
+**Then run the redundancy scan on the diff** — the five checks in
+[`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)
+(reimplementation, copy-paste, dead code, needless indirection, unasked-for surface), at both
+routes, no template. Each hit is an ISSUE for 6.2 like any SOLID violation.
 
 **6.2 Apply refactorings.** For each issue: apply the refactoring, run tests (must stay green),
-revert and reconsider if they break. Common refactorings: extract function, rename, introduce
-interface/trait for dependency inversion, split large functions, move code to the correct
-module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
+revert and reconsider if they break. Common refactorings: collapse a reimplementation into
+the existing code, delete dead code, inline a single-caller wrapper, extract function, rename,
+introduce interface/trait for dependency inversion, split large functions, move code to the
+correct module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
 also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
 
 **6.3 Final green check.** Run the full suite once more; report REFACTOR as **one line**
@@ -605,7 +610,8 @@ dirty for the orchestrator. Commit messages are conventional
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
-- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else.
+- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy scan runs in full at both routes.
+- **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)).
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
   claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
   failure is one reported line, not a stop.
@@ -643,4 +649,5 @@ If more stories remain, follow with `/ck-code:track next`.
 **Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
 `/goal "all acceptance criteria in <story> pass and the suite is green"` autonomises the
 Phase 7–8 loops; `/fast` suits **`S`** stories (off for `M`/SOLID-heavy); `/code-review --fix`
-is a deeper pre-ship diff pass.
+is a deeper pre-ship diff pass; `/simplify` catches the cross-story duplication one story's 6.1
+cannot see — after a wave merges, not per story.

@@ -1,10 +1,11 @@
 # Reuse-First & Simplest-Viable Rule — Shared Constraint
 
-Linked by the upstream authoring skills (`design`, `plan`, `team`, `spec`), which
-own the decisions this rule governs. `build` and `fix` encode the same ethos inline
-at the point of use (build 5.2 "reuse existing code"), so they do not link here.
-One ethos: read what already exists, reuse before you rebuild, and pick the
-simplest approach that satisfies the requirement.
+Linked by the upstream authoring skills (`design`, `plan`, `team`, `spec`), which own
+the decisions this rule governs, and by `build` — Phase 6.1 runs the redundancy scan
+below, Phase 7 verifies it ran ([`qa-validation.md`](qa-validation.md) Step 3.5). `fix`
+encodes the same ethos inline (the smallest possible change). One ethos: read what
+already exists, reuse before you rebuild, and pick the simplest approach that satisfies
+the requirement.
 
 ## The rule
 
@@ -21,6 +22,28 @@ simplest approach that satisfies the requirement.
   skip research on well-known basics. Spend effort only on genuine gaps.
 - **Effort scales depth, not busywork.** A higher effort level means more depth on real
   ambiguities — never more ceremony, more questions, or more re-derivation of settled facts.
+
+## Redundancy scan (implementation)
+
+Run against the story's diff — the code added or changed in this run, never the whole
+repo. Five checks, in order:
+
+1. **Reimplementation** — the diff writes logic that already exists elsewhere. Before
+   accepting a new function as new, grep the repo for its verb + noun and for a
+   distinctive line of its body. A hit means call the existing one, or extend it.
+2. **Copy-paste inside the diff** — the same block appears twice in the changed files.
+   Two occurrences differing only by a value are a parameter; three are a helper.
+3. **Dead code** — anything added this run with no caller: an export nothing imports, a
+   parameter no body reads, an import no line uses, a branch no test reaches.
+4. **Needless indirection** — a wrapper, adapter, or interface with exactly one caller
+   and no behaviour of its own. Inline it unless the feature doc names it as a seam.
+5. **Unasked-for surface** — an option, flag, config key, or generality no acceptance
+   criterion requires. Delete it; the story is the scope.
+
+**Not a finding:** duplication the architecture docs make deliberate (a boundary the feature
+doc draws), test setup repeated for readability, or two similar-looking blocks that change
+for different reasons. DRY without over-abstraction — collapsing those costs more than it
+saves.
 
 ## Why
 

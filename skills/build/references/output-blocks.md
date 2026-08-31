@@ -104,6 +104,7 @@ because that *is* actionable.
 
 ### Code Quality
 - Type checking / Linting / Formatting: PASS / FAIL
+- Redundancy scan (6.1): ran — [N] collapsed / CLEAN
 
 ### Architecture Compliance: PASS / FAIL
 [Notes on deviations]
