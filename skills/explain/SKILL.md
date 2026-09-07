@@ -1,7 +1,7 @@
 ---
 name: explain
-description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works. Triggers on "explain", "what was implemented", "how do I check", "how does this work".
-argument-hint: "[file-or-concept]"
+description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works, or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how does this work", "what is epic NN about".
+argument-hint: "[file-or-concept] | --epic NN"
 effort: low
 model: haiku
 context: fork
@@ -11,12 +11,17 @@ allowed-tools: Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git status*) 
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
-# Explain — Implementation Details & Manual Verification
+# Explain — Implementation Details, Manual Verification & Epic Intent
 
-Produces two sections for the most recently implemented story or feature:
+Two modes, chosen by `$ARGUMENTS`:
 
-1. **Manual verification** — exact commands to confirm it works
-2. **What was built** — learner-friendly explanation of every technology and pattern used
+| `$ARGUMENTS` | Mode | Produces |
+|---|---|---|
+| empty, or a file/concept | **STORY MODE** (default) | manual-verification commands + a learner-friendly walkthrough of what was built |
+| `--epic NN` | **EPIC MODE** | the goal of epic `NN` and the goal of every story in it |
+
+STORY MODE is everything below down to *Reading Context (STORY MODE)*; EPIC MODE is its own
+section further down. The two share only the Tone and RULES blocks.
 
 Read `tasks/VERSION.md`. If `layout: v6` → proceed silently. Otherwise emit one line —
 `ℹ pre-v6 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
@@ -28,15 +33,20 @@ Read `tasks/VERSION.md`. If `layout: v6` → proceed silently. Otherwise emit on
 
 Invoke with `/ck-code:explain` after a story completes, or any time the user asks to understand what was built.
 
-Optional argument: a specific file, class, or concept to focus on.
+Optional argument: a specific file, class, or concept to focus on — or `--epic NN` to
+explain an epic and its stories instead.
 
 - `/ck-code:explain` → explains the last implemented story
 - `/ck-code:explain CMakeLists.txt` → explains just that file
 - `/ck-code:explain FetchContent` → explains just that CMake concept
+- `/ck-code:explain --epic 03` → EPIC MODE — the goal of epic 03 and of each of its stories
+
+`--epic` with no number, or a number that is not `NN`, is an error — say so and stop; never
+guess an epic.
 
 ---
 
-## Output Format
+## Output Format (STORY MODE)
 
 ### Section 1 — Manual Verification
 
@@ -63,7 +73,7 @@ Explain every file, technology, and pattern that was introduced, grouped by logi
 
 ---
 
-## Reading Context
+## Reading Context (STORY MODE)
 
 Before generating output, read:
 
@@ -83,6 +93,62 @@ If the user specifies a path or concept, focus on that instead.
 
 ---
 
+## EPIC MODE — `--epic NN`
+
+Explains **intent, not implementation**: why the epic exists and what each of its stories is
+for. No diffs, no code walkthrough, no verification commands — none of the STORY MODE
+sections apply here.
+
+### E.1 Resolve the epic
+
+Zero-pad `NN` to two digits (`3` → `03`), then locate its folder with Glob:
+
+```
+tasks/*/epics/NN_*/EPIC.md
+```
+
+Epic numbers are unique across every plan
+([`../../references/data-model.md`](../../references/data-model.md#epic-and-story-numbers-are-globally-unique)),
+so exactly one match is expected:
+
+- **one match** → its `tasks/<Plan>/epics/NN_<slug>/` is the epic; proceed
+- **no match** → list the epic numbers that do exist (Glob `tasks/*/epics/*/EPIC.md`) and stop
+- **more than one match** → colliding epic numbers. Stop, tell the user to run
+  `/ck-code:migrate`, and never pick one
+
+### E.2 Read
+
+1. `EPIC.md` — frontmatter `title`, `description`, `slug`, `integration`, plus the body.
+2. Every `stories/*.md` in that folder, in filename order — frontmatter `id`, `title`,
+   `status`, `size`, `blocked_by`, and the body's **Description** and **Acceptance Criteria**.
+3. `docs/architecture/features/<slug>/index.md` (from the epic's `slug`) **only if it
+   exists** — one read, for the product context behind the epic. Skip silently if absent.
+
+Never read the story indexes (they carry no goal text) and never run git — EPIC MODE
+explains the plan, which is true whether or not any code exists yet.
+
+### E.3 Output Format
+
+**`## Epic NN — <title>`**, then:
+
+1. **Goal** — 2–4 sentences on the outcome this epic delivers and who it is for. Ground it
+   in `EPIC.md` plus the feature doc; never restate the title back as a goal.
+2. **Stories** — one `### NN-SS — <title>` block per story, in ID order, each with:
+   - a `Status` line (`todo` / `in-progress` / `done` / `skip` / `bug`, and `blocked by X`
+     when `blocked_by` is non-empty)
+   - **2–4 sentences on that story's goal** — what it makes possible and why the epic needs
+     it, derived from its Description and Acceptance Criteria. Never a bullet dump of the
+     criteria, and never a list of files or tasks
+3. **How they fit together** — 2–5 bullets on the order the stories unlock each other
+   (from `blocked_by`) and what the epic looks like once all are `done`.
+4. **Where it stands** — one line — `X of Y done, Z in progress, W blocked` — plus the
+   next story that is actionable, if any.
+
+A story whose body has no Description yet is explained from its title and acceptance
+criteria alone, marked `(not yet detailed)`. Never invent a goal for an empty story.
+
+---
+
 ## Tone
 
 Supportive and encouraging (the user is learning); concrete and specific — never vague
@@ -97,4 +163,8 @@ Supportive and encouraging (the user is learning); concrete and specific — nev
 - **Never** emit a `NEXT:` directive — explaining finished work implies no next step. This
   is the one read-only skill with no hand-off
   ([`../../references/skill-invocation.md`](../../references/skill-invocation.md)).
+- **Never** mix the modes — `--epic NN` produces no verification commands and no code
+  walkthrough; a story/file/concept argument produces no epic rollup.
+- **Never** guess which plan an `--epic NN` belongs to when the Glob matches more than one
+  folder — that is colliding epic numbers, and the fix is `/ck-code:migrate`.
 - **Always** output in English.
