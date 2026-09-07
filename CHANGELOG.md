@@ -5,6 +5,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.10.0] — 2026-09-07
+
+### Added
+- **vendor** (new skill): `/ck-code:vendor` copies ck-code into the project itself, so a
+  repo carries its own plugin and a clone on any machine runs every `/ck-code:*` command
+  with no marketplace and no plugin cache. Claude Code adopts any directory under
+  `<project>/.claude/skills/` holding a `.claude-plugin/plugin.json` as a project-scope
+  plugin (`ck-code@skills-dir`) — skills, agents, hooks and `workflows/` register, `bin/`
+  joins the Bash PATH, `${CLAUDE_PLUGIN_ROOT}` resolves to the vendored folder, and it is
+  enabled by default. Command and agent names are unchanged, because the namespace comes
+  from `plugin.json`'s `name` rather than the folder's location. A fresh clone needs only
+  the workspace trust dialog accepted, then `/reload-plugins`.
+- **ck-vendor** (new script + `bin/` wrapper): the deterministic engine behind the skill.
+  `install` vendors the running version (runtime components only — no README/CHANGELOG,
+  ~1 MB) and records a sha256 baseline per file; `update` does a **3-way sync** against a
+  newer release, resolved from the local plugin cache or downloaded from the newest
+  published tag, applying only what changed (`~` updated, `+` added, `+ (restored)` for a
+  file that had gone missing, `-` removed) and **never overwriting a file the user
+  edited** — those are reported as `!` and keep their old baseline so the next update
+  still recognises them. Also `check`, `status`, `dedupe`, `gitignore [--fix]`, `remove`.
+- **Automatic update notice**: the `SessionStart` hook fires a detached, once-a-day GitHub
+  probe and reads the *previous* cached result, so a new release surfaces as one line at
+  session start without ever making a session wait on a socket, and stays correct offline.
+  Bounded by `curl --max-time` and pre-stamped so a hung probe cannot pile up behind
+  itself. Silenced with `"autoCheck": false` in `.ck-vendor.json`.
+- **doctor**: four new vendor rows — `vendor version` (a newer release exists),
+  `vendor dupes` (`ck-code@ck-marketplace` not pinned off, so every `/ck-code:*` command
+  is listed twice), `vendor git` (the vendored copy is gitignored or uncommitted, so a
+  clone would get no plugin at all) and `vendor edits`. Silent in a project that has not
+  vendored; never an ERROR.
+
+### Fixed
+- **Duplicate slash commands**: `ck-code@skills-dir` and `ck-code@ck-marketplace` are
+  distinct plugin ids, so neither shadows the other and both load — as does the same
+  marketplace id enabled at two scopes at once (a per-project install beside the user
+  one), which also pinned such projects to an old version through every release.
+  `vendor install`/`dedupe` write `"ck-code@ck-marketplace": false` plus
+  `"ck-code@skills-dir": true` into the committed `.claude/settings.json`; project
+  settings override user settings, so the fix travels with the repo.
+- **`.gitignore` that excludes `.claude/`**: git cannot re-include a path underneath an
+  excluded directory, so a bare `.claude/` rule silently made the vendored copy
+  uncommittable — defeating the entire point. `ck-vendor gitignore --fix` rewrites it into
+  the per-child form (`.claude/*` + negations for `settings.json` and the vendored
+  folder), after showing the diff; a rule in a global excludesfile or `.git/info/exclude`
+  is reported rather than rewritten.
+
 ## [6.9.3] — 2026-09-07
 
 ### Added
