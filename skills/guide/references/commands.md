@@ -23,10 +23,9 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `ship` | `[story-path] \| --promote [--epic NN] \| --integration <level> \| --to-issues [tasks-folder] [--mode feature\|epics\|stories]` | Commit, open PR (`--promote` for a whole epic/feature), set an epic's integration level, or publish a plan to GitHub Issues | git + GitHub; story `pr:`/`delivery:` + views |
 | `config` | `[show \| board \| trunk <branch> \| on \| off]` | Project settings: issue tracking, the Projects board mapping, and the trunk branch every PR targets | `tasks/SETTINGS.md` + board |
 | `migrate` | `[--dry-run]` | Upgrade a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter, flat team-skill folders, unique epic numbers), then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
-| `doctor` | `[tasks/<slug>] [--quiet]` | Report what is broken in this project — layout stamp, story frontmatter, index drift, dependencies, feature docs, team skills, vendored-copy drift | read-only |
+| `doctor` | `[tasks/<slug>] [--quiet]` | Report what is broken in this project — layout stamp, story frontmatter, index drift, dependencies, feature docs, team skills, the committed ck-code-required guard | read-only |
 | `sync` | `[tasks/<slug>] [--apply\|--dry-run\|--local]` | Reconcile indexes, `delivery:`/`pr:`, the board and GitHub Issues with what GitHub actually did — including work merged straight to the trunk with no PR; commits the `tasks/` diff | `tasks/` frontmatter + views, board, Issues/PRs |
 | `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
-| `vendor` | `[install \| update [--to vX.Y.Z] \| check \| status \| dedupe \| gitignore \| remove]` | Vendor ck-code into the project so the repo carries its own plugin; `update` 3-way syncs a release without overwriting your edits; `dedupe` stops doubled `/ck-code:*` entries | `.claude/skills/ck-code/`, `.claude/settings.json`, `.gitignore` |
 
 ## Examples
 

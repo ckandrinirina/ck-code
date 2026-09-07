@@ -543,63 +543,56 @@ check_board() {
   return 0
 }
 
-# ---- 11. vendored plugin delivery -------------------------------------------
-# Only speaks when the project vendored ck-code into .claude/skills/ck-code/. That
-# folder is the project's own copy of the plugin, so a problem with it is a project
-# problem, not a marketplace one — and every finding here is silent for the far more
-# common project that just uses an installed plugin.
+# ---- 11. the committed ck-code-required guard --------------------------------
+# A ck-code project is unusable without the plugin: its plan, stories and architecture
+# live in a layout only /ck-code:* commands maintain. A clone on a machine that never
+# installed ck-code cannot be told that BY ck-code -- the plugin is what is absent -- so
+# the warning has to be committed into the repo. `ck-bootstrap install` writes it; this
+# check reports whether it is there and whether it will actually travel.
 #
-# Never an ERROR: a vendored copy that is stale, duplicated or uncommitted still runs.
-# What it costs is portability and a doubled slash menu, which is a warning.
-check_vendor() {
-  local vdir=".claude/skills/ck-code" have latest mods n rule
-  [ -f "$vdir/.ck-vendor.json" ] || return 0
+# Never an ERROR: a project missing the guard builds perfectly well on this machine.
+# What it loses is the next machine, which is a warning.
+check_bootstrap() {
+  local guard=".claude/ck-code-required.sh" want have rule
+  [ -f tasks/VERSION.md ] || return 0
 
-  have=$(awk -F'"' '/"version"[[:space:]]*:/{print $4; exit}' "$vdir/.ck-vendor.json" 2>/dev/null)
-  row vendor "ck-code ${have:-unknown} vendored in-project" OK
+  want=$(awk -F= '/^GUARD_VERSION=/{print $2; exit}' "$SCRIPT_DIR/ck-bootstrap.sh" 2>/dev/null)
+  have=$(awk '/^# ck-code-guard:/{print $3; exit}' "$guard" 2>/dev/null)
 
-  # A newer release, from whatever the SessionStart probe last cached. Local read only:
-  # ck-doctor must stay usable offline and must never wait on a socket.
-  latest=$(awk 'NR==1{print $1}' "$vdir/.ck-vendor-latest" 2>/dev/null)
-  if [ -n "$latest" ] && [ "$latest" != "unknown" ] && [ "${latest#v}" != "$have" ]; then
-    if [ "$(printf '%s\n%s\n' "${latest#v}" "$have" | LC_ALL=C sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "${latest#v}" ]; then
-      row "vendor version" "$have vendored, $latest released" WARN
-      note "run ck-vendor update"
+  if [ -z "$have" ]; then
+    row bootstrap "$guard missing" WARN
+    note "run ck-bootstrap install — without it a clone with no ck-code gets no warning"
+  elif [ -n "$want" ] && [ "$have" != "$want" ]; then
+    row bootstrap "guard v$have, current is v$want" WARN
+    note "run ck-bootstrap install"
+  elif ! grep -q 'ck-code-required.sh' .claude/settings.json 2>/dev/null; then
+    row bootstrap "guard present but not wired in .claude/settings.json" WARN
+    note "run ck-bootstrap install — an unwired guard never fires"
+  else
+    row bootstrap "ck-code-required guard v$have wired" OK
+  fi
+
+  # Uncommitted or ignored, the guard protects only the machine that already has the
+  # plugin -- precisely the one case it is not for.
+  if [ -n "$have" ]; then
+    rule=$(git check-ignore -v --no-index "$guard" 2>/dev/null | head -1)
+    if [ -n "$rule" ]; then
+      row "bootstrap git" "ignored by ${rule%%$'\t'*}" WARN
+      note "a bare .claude/ rule cannot be negated — use .claude/* plus !.claude/settings.json and !$guard"
+    elif git rev-parse --git-dir >/dev/null 2>&1 &&
+         ! git ls-files --error-unmatch "$guard" >/dev/null 2>&1; then
+      row "bootstrap git" "not committed" WARN
+      note "run: git add $guard .claude/settings.json"
     fi
   fi
 
-  # Two enabled copies of the same plugin: ck-code@skills-dir and ck-code@ck-marketplace
-  # are distinct ids, so neither shadows the other and every /ck-code:* command is listed
-  # twice. Only a project-settings pin fixes it, because project settings override user.
-  if [ ! -f .claude/settings.json ] ||
-     ! grep -q '"ck-code@ck-marketplace"[[:space:]]*:[[:space:]]*false' .claude/settings.json 2>/dev/null; then
-    row "vendor dupes" "marketplace copy not pinned off" WARN
-    note "run ck-vendor dedupe — otherwise every /ck-code:* command appears twice"
-  fi
-
-  # Vendored but untracked travels nowhere, which defeats the entire point.
-  rule=$(git check-ignore -v --no-index "$vdir/.claude-plugin/plugin.json" 2>/dev/null | head -1)
-  if [ -n "$rule" ]; then
-    row "vendor git" "ignored by ${rule%%$'\t'*}" WARN
-    note "run ck-vendor gitignore --fix — a fresh clone would get no plugin at all"
-  elif git rev-parse --git-dir >/dev/null 2>&1 &&
-       ! git ls-files --error-unmatch "$vdir/.claude-plugin/plugin.json" >/dev/null 2>&1; then
-    row "vendor git" "not committed" WARN
-    note "run: git add $vdir .claude/settings.json"
-  fi
-
-  # Local edits are legitimate, but they are silently skipped by every future update,
-  # so the user has to know they exist.
-  if [ -f "$vdir/.ck-vendor.sums" ] && command -v shasum >/dev/null 2>&1; then
-    mods=$( ( cd "$vdir" && awk -F'\t' 'NF>=2{printf "%s  %s\n", $1, $2}' .ck-vendor.sums \
-              | shasum -a 256 -c 2>/dev/null | sed -n 's/: FAILED.*$//p' ) )
-    n=$(printf '%s' "$mods" | grep -c . 2>/dev/null || true)
-    if [ "${n:-0}" -gt 0 ]; then
-      row "vendor edits" "$n file(s) differ from the release" WARN
-      printf '%s\n' "$mods" | head -5 | sed 's/^/                   ! /'
-      [ "$n" -gt 5 ] && note "…and $((n - 5)) more"
-      note "ck-vendor update keeps them; ck-vendor install --force discards them"
-    fi
+  # Left by the vendor skill, removed in 6.11.0. ck-code@skills-dir and
+  # ck-code@ck-marketplace are distinct plugin ids, so neither shadows the other: both
+  # load, every /ck-code:* command is listed twice, and the vendored one never updates.
+  if [ -f .claude/skills/ck-code/.claude-plugin/plugin.json ]; then
+    row "vendored copy" "left by the removed vendor skill" WARN
+    note "delete .claude/skills/ck-code/ and the ck-code@skills-dir key in .claude/settings.json"
+    note "then: /plugin install ck-code@ck-marketplace"
   fi
   return 0
 }
@@ -621,7 +614,7 @@ check_branches
 check_design_system
 check_settings
 check_board
-check_vendor
+check_bootstrap
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."

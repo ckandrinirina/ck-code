@@ -4,8 +4,8 @@
 #       invocable in the same session — no restart required.
 #   (2) Inject a one-line workflow summary aggregated across every plan's
 #       STORIES_INDEX.md, and a migration notice when the project is pre-v6.
-#   (3) Tell a project that vendored ck-code into .claude/skills/ck-code/ when a
-#       newer release exists, and when two copies of the plugin are live at once.
+#   (3) Keep the committed ".claude/ck-code-required.sh" guard current, so a clone
+#       of this repo on a machine with no ck-code is told to install it first.
 #
 # Best-effort by design: this must NEVER fail or block session startup, so it
 # avoids `set -e` and swallows every probe error. Output is a single JSON line.
@@ -29,44 +29,51 @@ emit_plain() {
   printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","reloadSkills":true}}\n'
 }
 
-# ---- vendored-copy notice ----------------------------------------------------
-# A project that vendored ck-code into .claude/skills/ck-code/ has no marketplace
-# behind it, so a new release can only be learnt from the network. The probe is fired
-# DETACHED and carries its own once-a-day throttle (inside `ck-vendor refresh`); this
-# hook only ever reads the cache a previous probe left behind. A session start must
-# never wait on a socket, and must stay correct offline — so a fresh release surfaces
-# at most one session late, which is the right trade.
+# ---- ck-code-required guard --------------------------------------------------
+# A ck-code project keeps its state in a layout only the plugin maintains, so a clone on
+# a machine that never installed ck-code has no /ck-code:* command and nothing in the
+# plugin able to say so -- the plugin is what is missing. The guarantee therefore lives
+# in the repo: .claude/ck-code-required.sh, committed, wired as the project's own
+# SessionStart hook by ck-bootstrap.
 #
-# Computed before the tasks/ check: a vendored project may have no plan yet and still
-# needs the notice.
-VENDOR_NOTE=""
-vendor_notice() {
-  local vdir=".claude/skills/ck-code" sh self vabs auto
-  [ -f "$vdir/.ck-vendor.json" ] || return 0
-  auto=$(awk -F'[:,]' '/"autoCheck"/{gsub(/[ \t"]/,"",$2); print $2; exit}' "$vdir/.ck-vendor.json" 2>/dev/null)
-  [ "$auto" = "false" ] && return 0
-
-  sh="$(dirname "$0")/ck-vendor.sh"
+# Installed from here rather than left to the user because it is the one write that
+# cannot wait for "the next time you run a skill": a project stamped before this release
+# short-circuits the version gate at Tier 1 and never reaches its stamp step again.
+# Purely local, idempotent, and announced -- never silent.
+#
+# Computed before the tasks/ check: the leftover-vendor warning applies to a project with
+# no plan yet.
+CK_NOTE=""
+guard_notice() {
+  local sh want have
+  sh="$(dirname "$0")/ck-bootstrap.sh"
   [ -x "$sh" ] || return 0
-  ( "$sh" refresh >/dev/null 2>&1 & ) >/dev/null 2>&1 &
-  # `check --quiet` prints the one-line "a newer version exists" notice, or nothing.
-  # It reads only the cached probe result, so it makes no network call of its own.
-  VENDOR_NOTE=$("$sh" check --quiet 2>/dev/null | head -1)
 
-  # Two live copies of the same plugin double every /ck-code:* entry in the slash
-  # menu — the normal state of a freshly vendored project, because ck-code@skills-dir
-  # and ck-code@ck-marketplace are distinct ids that do not shadow each other. If this
-  # hook is running from anywhere but the vendored folder, both are loaded.
-  self=$(CDPATH= cd -- "$(dirname "$0")/.." 2>/dev/null && pwd -P)
-  vabs=$(CDPATH= cd -- "$vdir" 2>/dev/null && pwd -P)
-  if [ -n "$self" ] && [ -n "$vabs" ] && [ "$self" != "$vabs" ]; then
-    VENDOR_NOTE="${VENDOR_NOTE:+$VENDOR_NOTE }ck-code is loaded from BOTH the marketplace and this project's vendored copy, so every /ck-code:* command is listed twice — run 'ck-vendor dedupe' to keep only the vendored one."
+  # Only a stamped project gets the guard -- the guard's own trigger is tasks/VERSION.md,
+  # so installing it anywhere else would commit a permanent no-op.
+  if [ -f tasks/VERSION.md ]; then
+    want=$(awk -F= '/^GUARD_VERSION=/{print $2; exit}' "$sh" 2>/dev/null)
+    have=$(awk '/^# ck-code-guard:/{print $3; exit}' .claude/ck-code-required.sh 2>/dev/null)
+    if [ -n "$want" ] && [ "$have" != "$want" ]; then
+      if "$sh" install >/dev/null 2>&1; then
+        CK_NOTE="ck-code wrote .claude/ck-code-required.sh and a SessionStart entry in .claude/settings.json, so a clone of this repo on a machine without ck-code is told to install it first -- commit both."
+      fi
+    fi
+  fi
+
+  # Vendoring was removed in 6.11.0. A copy left behind by it still loads as
+  # ck-code@skills-dir, a *different* plugin id from ck-code@ck-marketplace -- neither
+  # shadows the other, so both run and every /ck-code:* command is listed twice, one of
+  # them frozen at whatever version was vendored. Reported only: the tree is committed
+  # project content, and deleting it is the user's call.
+  if [ -f .claude/skills/ck-code/.claude-plugin/plugin.json ]; then
+    CK_NOTE="${CK_NOTE:+$CK_NOTE }This project still carries a vendored copy of ck-code at .claude/skills/ck-code/. Vendoring was removed in 6.11.0; while that folder is present every /ck-code:* command is listed twice and one copy never updates. Delete the folder, remove the ck-code@skills-dir key from .claude/settings.json, then run /plugin install ck-code@ck-marketplace."
   fi
 }
-vendor_notice
+guard_notice
 
-# No tasks/ at all → nothing to summarise (the vendor notice may still be worth saying).
-[ -d tasks ] || { if [ -n "$VENDOR_NOTE" ]; then emit "$VENDOR_NOTE"; else emit_plain; fi; exit 0; }
+# No tasks/ at all → nothing to summarise (the guard notice may still be worth saying).
+[ -d tasks ] || { if [ -n "$CK_NOTE" ]; then emit "$CK_NOTE"; else emit_plain; fi; exit 0; }
 
 # Pre-v6 detection: a project with tasks/ content but no `layout: v6` stamp.
 # LAYOUT must track references/version-gate.md — a stale value here nags every
@@ -77,7 +84,7 @@ layout=""
 has_plan=$(ls tasks/*/STORIES_INDEX.md tasks/*/epics 2>/dev/null | head -1)
 
 if [ -n "$has_plan" ] && [ "$layout" != "$LAYOUT" ]; then
-  emit "ck-code detected a pre-$LAYOUT project layout. Run /ck-code:migrate to upgrade it (one-shot, safe) before using design/plan/build/fix.${VENDOR_NOTE:+ $VENDOR_NOTE}"
+  emit "ck-code detected a pre-$LAYOUT project layout. Run /ck-code:migrate to upgrade it (one-shot, safe) before using design/plan/build/fix.${CK_NOTE:+ $CK_NOTE}"
   exit 0
 fi
 
@@ -147,7 +154,7 @@ if [ -n "$counts" ]; then
   if [ $((todo + ip + done + bug)) -eq 0 ]; then
     msg=""
     [ -n "$RESTAMPED" ] && msg="ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
-    msg="${msg}${msg:+ }${VENDOR_NOTE}"
+    msg="${msg}${msg:+ }${CK_NOTE}"
     if [ -n "$msg" ]; then emit "$msg"; else emit_plain; fi
     exit 0
   fi
@@ -158,12 +165,12 @@ if [ -n "$counts" ]; then
   # Named rather than silent: the restamp is a one-line change to a tracked file, so the
   # user should learn it from here and not from an unexplained diff in `git status`.
   [ -n "$RESTAMPED" ] && msg="$msg ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
-  [ -n "$VENDOR_NOTE" ] && msg="$msg $VENDOR_NOTE"
+  [ -n "$CK_NOTE" ] && msg="$msg $CK_NOTE"
   emit "$msg"
 elif [ -n "$RESTAMPED" ]; then
-  emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped).${VENDOR_NOTE:+ $VENDOR_NOTE}"
-elif [ -n "$VENDOR_NOTE" ]; then
-  emit "$VENDOR_NOTE"
+  emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped).${CK_NOTE:+ $CK_NOTE}"
+elif [ -n "$CK_NOTE" ]; then
+  emit "$CK_NOTE"
 else
   emit_plain
 fi

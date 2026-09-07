@@ -57,6 +57,24 @@ layout: v6
 
 Location: `tasks/VERSION.md`, sibling to `FEATURE_INDEX.md`.
 
+### The stamp is also what makes ck-code *required*
+
+A project carrying this file keeps its plan, stories and architecture in a layout only
+the plugin maintains — so a clone of it on a machine with no ck-code has no command
+that can read or write that state, and nothing in the plugin able to say so, because
+the plugin is what is missing. The stamp therefore travels with a committed guard:
+
+```bash
+ck-bootstrap install
+```
+
+It writes `.claude/ck-code-required.sh` and wires it as the project's own
+`SessionStart` hook in `.claude/settings.json` (which it also opts into the plugin).
+On a machine that has ck-code the guard is silent; on one that does not it stops the
+session and asks for `/plugin install ck-code@ck-marketplace` before any work starts.
+Both files must be **committed** to be worth anything — `ck-doctor` reports it when
+they are missing, stale, gitignored or untracked.
+
 ## Procedure
 
 ### Tier 1 — fast path (the common case, zero reads)
@@ -179,7 +197,9 @@ Then run the hand-off prompt from
 
 Write only when the layout is confirmed clean v6 — after a Tier-2 "no marker found",
 or as the final step of `migrate`. Never before migration. `mkdir -p tasks` first if
-absent (greenfield `design`). Content: the template above with `layout: v6` and
+absent (greenfield `design`). Run `ck-bootstrap install` immediately after writing the
+stamp — the two belong together, and the SessionStart hook only re-installs the guard
+on a project that already carries a stamp. Content: the template above with `layout: v6` and
 `ck-code:` set to the running plugin version (from
 `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`; if unavailable, write `layout: v6`
 and omit the `ck-code:` line).
@@ -191,7 +211,6 @@ and omit the `ck-code:` line).
 | `design`, `plan`, `build`, `fix`, `spec`, `ship` (incl. `--to-issues`), `team`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
 | `explain`, `guide`, `track`, `doctor` | **Hint only** — run Tier 1 + Tier 2, but on a marker emit one line (`ℹ pre-v6 layout — run /ck-code:migrate`) and continue read-only. Never block, never stamp. (`doctor` reports the stamp as its own check 1.) |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. |
-| `vendor` | **Never gates** — it writes only `.claude/` and `.gitignore`, never project state, and a pre-v6 project on a machine with no plugin must be able to vendor first and migrate second. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here.
 It inlines the Tier-1 stamp check so the common case costs one small read; it never
@@ -200,6 +219,7 @@ restates the Tier-2 detection.
 ## Rules
 
 - **Never read or write project state before this gate PASSes** in a change-producing skill.
+- **Always run `ck-bootstrap install` in the same step that writes the stamp** — a stamped project with no committed guard is one a clone cannot detect is broken.
 - **Never stamp `tasks/VERSION.md` while a pre-v6, nested, lite or `DUPES` marker is present** — stamp only after a clean detection or a successful `migrate`. A `tasks/PLAN.md` is a lite plan, not an empty `tasks/`.
 - **Never auto-migrate without confirmation** — BLOCK always asks, per [`skill-invocation.md`](skill-invocation.md).
 - **Never make the user retype the blocked command** — resume it automatically once `migrate` returns.

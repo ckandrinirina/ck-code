@@ -27,7 +27,6 @@ duplicating the workflow graph.
    /ck-code:config       (Anytime) Project settings — issue tracking, GitHub Project board
    /ck-code:doctor       (Anytime) Report what is broken in the project + how to fix it
    /ck-code:sync         (Anytime) Reconcile indexes, delivery, board and Issues with GitHub
-   /ck-code:vendor       (Anytime) Vendor ck-code into the project so the repo carries its own plugin
 ```
 
 ## Hand-offs
