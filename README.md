@@ -90,6 +90,7 @@ issues stay valid.
 - **Claude Design system fidelity (optional)** — link a [claude.ai/design](https://claude.ai/design) design system with `/ck-code:design ds`; ck-code caches its tokens and component sources into the repo, generates a `guide-design-system` skill that auto-loads on UI stories, and builds components exactly against it. Fully offline after one sync, and entirely absent from projects that never opt in
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge. A wave that narrows to a single story drops the worktree and runs one agent straight on the target branch — same delegation, none of the isolation overhead
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
+- **Portable projects — the repo carries the plugin** — `/ck-code:vendor install` copies ck-code into `.claude/skills/ck-code/` and commits it. Claude Code adopts any folder there holding a `.claude-plugin/plugin.json` as a project-scope plugin, so a clone on a machine that never installed anything still has every `/ck-code:*` command, every agent and every hook — no marketplace, no plugin cache, no network. `vendor update` then 3-way syncs the vendored copy against a new release, applying only the files that changed and never overwriting one you edited
 - **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
 
 ## Install
@@ -111,6 +112,57 @@ Restart your Claude Code session and the `/ck-code:*` commands are available.
 ```
 
 Then restart your Claude Code session for the updated commands to take effect.
+
+## Or skip the install — vendor ck-code into the project
+
+The install above is per machine. A project that must work on *any* machine — a teammate's
+laptop, a fresh clone, CI — can carry ck-code itself instead:
+
+```bash
+/ck-code:vendor install
+```
+
+That copies the runtime plugin (~1 MB, no README/CHANGELOG) into
+`.claude/skills/ck-code/` and commits it. Claude Code adopts any directory under
+`<project>/.claude/skills/` that contains `.claude-plugin/plugin.json` as a full
+project-scope plugin, id `ck-code@skills-dir`: skills, agents, hooks and `workflows/`
+register, `bin/` joins the Bash PATH, `${CLAUDE_PLUGIN_ROOT}` points at the vendored
+folder, and it is enabled by default. Command names are unchanged — the namespace comes
+from `plugin.json`'s `name`, not from the folder's location.
+
+On a fresh clone the only step is **accepting the workspace trust dialog**, then
+`/reload-plugins`. Until trust is accepted Claude Code skips project-scope plugin
+directories entirely.
+
+| Command | What it does |
+|---|---|
+| `ck-vendor install` | vendor the running version, record file digests, pin the plugin ids, report the `.gitignore` situation |
+| `ck-vendor update` | 3-way sync to a newer release — `~` updated, `+` added, `-` removed, `!` **a file you edited, left untouched** |
+| `ck-vendor check` | vendored vs. available version, plus any local edits |
+| `ck-vendor dedupe` | pin `ck-code@ck-marketplace` off so commands stop appearing twice |
+| `ck-vendor gitignore --fix` | rewrite a bare `.claude/` rule into the per-child form, so the vendored copy is actually committed |
+| `ck-vendor remove` | un-vendor and go back to the installed plugin |
+
+**Updates stay automatic.** The `SessionStart` hook fires a detached, once-a-day GitHub
+probe and reads the *previous* result, so a new release shows up as one line at session
+start — never at the cost of a slow start, and correct offline. Silence it by setting
+`"autoCheck": false` in `.claude/skills/ck-code/.ck-vendor.json`.
+
+**No duplicate commands.** `ck-code@skills-dir` and `ck-code@ck-marketplace` are distinct
+plugin ids, so neither shadows the other and both would load — every `/ck-code:*` command
+listed twice. `vendor install` writes the fix into the committed `.claude/settings.json`:
+
+```json
+{
+  "enabledPlugins": {
+    "ck-code@skills-dir": true,
+    "ck-code@ck-marketplace": false
+  }
+}
+```
+
+Project settings override user settings, so that holds on every machine that clones the
+repo — and it is also the cure if you already had ck-code enabled at two scopes at once.
 
 ## Upgrading an older project to v6
 
@@ -163,7 +215,7 @@ Enable the plugin explicitly per project in that project's `.claude/settings.jso
 }
 ```
 
-Without this entry the plugin stays dormant in that project.
+Without this entry the plugin stays dormant in that project. A **vendored** project sets the opposite (`"ck-code@ck-marketplace": false`) plus `"ck-code@skills-dir": true`, so only the copy inside the repo loads — see [Or skip the install](#or-skip-the-install--vendor-ck-code-into-the-project).
 
 ## Settings
 
@@ -342,9 +394,10 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
 | `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps; `--epic NN` instead explains that epic's goal and the goal of every story in it | `[file-or-concept]` / `--epic NN` | walkthrough + verification steps, or epic + story goals |
-| `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
+| `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping, a vendored copy that is stale, duplicated or uncommitted. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
 | `/ck-code:sync` | Reconcile everything with GitHub in one pass — recover missing `pr:` anchors, refresh `delivery:` from merged PRs, record stories merged straight to the trunk with no PR, place board cards, close issues a merged PR failed to close, tick epic checklists, and add a missing `Closes` footer to an open PR; commits the `tasks/` diff. Previews and asks once | `[tasks/<slug>] [--apply\|--dry-run\|--local]` | `tasks/` + views, board, Issues/PRs, one commit |
 | `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, set the trunk branch every PR targets, pick or create the GitHub Project whose board mirrors story status, re-map or reorder board columns, or show what is configured | `show` / `board` / `trunk <branch>` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
+| `/ck-code:vendor` | Copy ck-code into the project itself so the repo carries its own plugin — a clone on any machine runs every `/ck-code:*` command with no marketplace install. `update` 3-way syncs the vendored copy to a newer release and never overwrites a file you edited; `dedupe` stops the doubled slash menu two live copies produce | `install` / `update` / `check` / `status` / `dedupe` / `gitignore` / `remove` | `.claude/skills/ck-code/` + `.claude/settings.json` |
 
 ## Hand-offs — one click, never a retype
 
