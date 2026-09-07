@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: Use when checking a ck-code project for problems — a stale layout stamp, story frontmatter that will not parse, generated indexes that disagree with the story files, unresolvable blocked_by dependencies, feature-doc slug drift, unregistered team skills, or orphan epic branches. Read-only; reports each finding with the command that fixes it.
+description: Use when checking a ck-code project for problems — a stale layout stamp, story frontmatter that will not parse, generated indexes that disagree with the story files, unresolvable blocked_by dependencies, feature-doc slug drift, unregistered team skills, orphan epic branches, or a vendored ck-code copy that is stale, duplicated or uncommitted. Read-only; reports each finding with the command that fixes it.
 argument-hint: "[tasks/<slug>] [--quiet]"
 effort: low
 model: haiku
@@ -64,6 +64,10 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `branches` (WARN) | an `epic/NN-*` branch has no matching epic folder, usually left by a rename | delete it once merged |
 | `design system` (WARN) | a cached design-system card is missing or its content no longer matches the manifest digest, so `build` would copy markup that drifted from its source | `/ck-code:design ds` |
 | `board` (WARN) | a Projects card sits in a column the story's `status:` + `delivery:` do not call for — a skill changed frontmatter without syncing, someone dragged a card by hand, or a PR merged since the last sync | `/ck-code:sync` |
+| `vendor version` (WARN) | the project's vendored copy of ck-code is behind the newest release the update probe has seen | `ck-vendor update` |
+| `vendor dupes` (WARN) | `.claude/settings.json` does not pin `ck-code@ck-marketplace` off, so a marketplace copy loads beside the vendored one and every `/ck-code:*` command is listed twice | `ck-vendor dedupe` |
+| `vendor git` (WARN) | the vendored copy is gitignored or uncommitted, so a fresh clone of this repo gets no plugin at all — the one thing vendoring exists to prevent | `ck-vendor gitignore --fix`, then `git add` |
+| `vendor edits` (WARN) | vendored files differ from the release; every future `update` will skip them | keep them, or `ck-vendor install --force` to take the release |
 
 ### 2.2 Report
 

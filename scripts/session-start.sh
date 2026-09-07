@@ -4,6 +4,8 @@
 #       invocable in the same session — no restart required.
 #   (2) Inject a one-line workflow summary aggregated across every plan's
 #       STORIES_INDEX.md, and a migration notice when the project is pre-v6.
+#   (3) Tell a project that vendored ck-code into .claude/skills/ck-code/ when a
+#       newer release exists, and when two copies of the plugin are live at once.
 #
 # Best-effort by design: this must NEVER fail or block session startup, so it
 # avoids `set -e` and swallows every probe error. Output is a single JSON line.
@@ -27,8 +29,44 @@ emit_plain() {
   printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","reloadSkills":true}}\n'
 }
 
-# No tasks/ at all → nothing to summarise.
-[ -d tasks ] || { emit_plain; exit 0; }
+# ---- vendored-copy notice ----------------------------------------------------
+# A project that vendored ck-code into .claude/skills/ck-code/ has no marketplace
+# behind it, so a new release can only be learnt from the network. The probe is fired
+# DETACHED and carries its own once-a-day throttle (inside `ck-vendor refresh`); this
+# hook only ever reads the cache a previous probe left behind. A session start must
+# never wait on a socket, and must stay correct offline — so a fresh release surfaces
+# at most one session late, which is the right trade.
+#
+# Computed before the tasks/ check: a vendored project may have no plan yet and still
+# needs the notice.
+VENDOR_NOTE=""
+vendor_notice() {
+  local vdir=".claude/skills/ck-code" sh self vabs auto
+  [ -f "$vdir/.ck-vendor.json" ] || return 0
+  auto=$(awk -F'[:,]' '/"autoCheck"/{gsub(/[ \t"]/,"",$2); print $2; exit}' "$vdir/.ck-vendor.json" 2>/dev/null)
+  [ "$auto" = "false" ] && return 0
+
+  sh="$(dirname "$0")/ck-vendor.sh"
+  [ -x "$sh" ] || return 0
+  ( "$sh" refresh >/dev/null 2>&1 & ) >/dev/null 2>&1 &
+  # `check --quiet` prints the one-line "a newer version exists" notice, or nothing.
+  # It reads only the cached probe result, so it makes no network call of its own.
+  VENDOR_NOTE=$("$sh" check --quiet 2>/dev/null | head -1)
+
+  # Two live copies of the same plugin double every /ck-code:* entry in the slash
+  # menu — the normal state of a freshly vendored project, because ck-code@skills-dir
+  # and ck-code@ck-marketplace are distinct ids that do not shadow each other. If this
+  # hook is running from anywhere but the vendored folder, both are loaded.
+  self=$(CDPATH= cd -- "$(dirname "$0")/.." 2>/dev/null && pwd -P)
+  vabs=$(CDPATH= cd -- "$vdir" 2>/dev/null && pwd -P)
+  if [ -n "$self" ] && [ -n "$vabs" ] && [ "$self" != "$vabs" ]; then
+    VENDOR_NOTE="${VENDOR_NOTE:+$VENDOR_NOTE }ck-code is loaded from BOTH the marketplace and this project's vendored copy, so every /ck-code:* command is listed twice — run 'ck-vendor dedupe' to keep only the vendored one."
+  fi
+}
+vendor_notice
+
+# No tasks/ at all → nothing to summarise (the vendor notice may still be worth saying).
+[ -d tasks ] || { if [ -n "$VENDOR_NOTE" ]; then emit "$VENDOR_NOTE"; else emit_plain; fi; exit 0; }
 
 # Pre-v6 detection: a project with tasks/ content but no `layout: v6` stamp.
 # LAYOUT must track references/version-gate.md — a stale value here nags every
@@ -39,7 +77,7 @@ layout=""
 has_plan=$(ls tasks/*/STORIES_INDEX.md tasks/*/epics 2>/dev/null | head -1)
 
 if [ -n "$has_plan" ] && [ "$layout" != "$LAYOUT" ]; then
-  emit "ck-code detected a pre-$LAYOUT project layout. Run /ck-code:migrate to upgrade it (one-shot, safe) before using design/plan/build/fix."
+  emit "ck-code detected a pre-$LAYOUT project layout. Run /ck-code:migrate to upgrade it (one-shot, safe) before using design/plan/build/fix.${VENDOR_NOTE:+ $VENDOR_NOTE}"
   exit 0
 fi
 
@@ -107,7 +145,10 @@ if [ -n "$counts" ]; then
   # All-zero means the indexes carry no story rows — say nothing rather than
   # emit a vacuous "0 TODO, 0 IN PROGRESS, 0 DONE".
   if [ $((todo + ip + done + bug)) -eq 0 ]; then
-    if [ -n "$RESTAMPED" ]; then emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."; else emit_plain; fi
+    msg=""
+    [ -n "$RESTAMPED" ] && msg="ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
+    msg="${msg}${msg:+ }${VENDOR_NOTE}"
+    if [ -n "$msg" ]; then emit "$msg"; else emit_plain; fi
     exit 0
   fi
   msg="ck-code project: $todo TODO, $ip IN PROGRESS, $done DONE"
@@ -117,9 +158,12 @@ if [ -n "$counts" ]; then
   # Named rather than silent: the restamp is a one-line change to a tracked file, so the
   # user should learn it from here and not from an unexplained diff in `git status`.
   [ -n "$RESTAMPED" ] && msg="$msg ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
+  [ -n "$VENDOR_NOTE" ] && msg="$msg $VENDOR_NOTE"
   emit "$msg"
 elif [ -n "$RESTAMPED" ]; then
-  emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped)."
+  emit "ck-code updated: $RESTAMPED (tasks/VERSION.md restamped).${VENDOR_NOTE:+ $VENDOR_NOTE}"
+elif [ -n "$VENDOR_NOTE" ]; then
+  emit "$VENDOR_NOTE"
 else
   emit_plain
 fi

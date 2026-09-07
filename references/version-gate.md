@@ -191,6 +191,7 @@ and omit the `ck-code:` line).
 | `design`, `plan`, `build`, `fix`, `spec`, `ship` (incl. `--to-issues`), `team`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
 | `explain`, `guide`, `track`, `doctor` | **Hint only** — run Tier 1 + Tier 2, but on a marker emit one line (`ℹ pre-v6 layout — run /ck-code:migrate`) and continue read-only. Never block, never stamp. (`doctor` reports the stamp as its own check 1.) |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. |
+| `vendor` | **Never gates** — it writes only `.claude/` and `.gitignore`, never project state, and a pre-v6 project on a machine with no plugin must be able to vendor first and migrate second. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here.
 It inlines the Tier-1 stamp check so the common case costs one small read; it never
