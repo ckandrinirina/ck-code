@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.11.0] — 2026-09-07
+
+### Removed
+- **vendor**: the `/ck-code:vendor` skill, `scripts/ck-vendor.sh` and `bin/ck-vendor` are gone. Vendoring copied the whole plugin into `.claude/skills/ck-code/`, where it loaded as `ck-code@skills-dir` beside `ck-code@ck-marketplace` — two distinct plugin ids that never shadow each other, so both ran, every `/ck-code:*` command was listed twice, and the vendored copy froze at whatever version it was cut from.
+
+### Added
+- **bootstrap**: `ck-bootstrap` commits a ~1 KB guard into the project instead — `.claude/ck-code-required.sh`, wired as the project's own `SessionStart` hook in `.claude/settings.json` (which it also opts into the plugin). The guard fires on any clone that carries `tasks/VERSION.md`, stays silent wherever ck-code is installed, and stops the session with `/plugin marketplace add ckandrinirina/ck-code` + `/plugin install ck-code@ck-marketplace` wherever it is not — the one failure the plugin can never report itself, because the plugin is what is missing.
+
+### Changed
+- **version-gate**: the Stamp step now runs `ck-bootstrap install` in the same step that writes `tasks/VERSION.md`; the `vendor` row is dropped from the scope table.
+- **session-start**: the vendored-copy update probe is replaced by a guard installer — it writes the guard on an already-stamped project (which short-circuits the gate at Tier 1 and would otherwise never get one) and announces it, and warns when a vendored tree left by 6.10.0 or earlier is still present.
+- **doctor**: `vendor version` / `vendor dupes` / `vendor git` / `vendor edits` are replaced by `bootstrap` (guard missing, stale, or not wired), `bootstrap git` (gitignored or uncommitted, so it protects only this machine), and `vendored copy` (a leftover tree from the removed skill).
+
 ## [6.10.0] — 2026-09-07
 
 ### Added
