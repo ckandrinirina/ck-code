@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.9.3] — 2026-09-07
+
+### Added
+- **explain**: `--epic NN` mode — resolves the epic folder by its globally unique number,
+  reads `EPIC.md` plus every story (and the feature doc when present), and explains the
+  epic's goal, each story's goal, how the stories unlock each other, and where the epic
+  stands. Called with no argument or a file/concept, the skill behaves exactly as before.
+
 ## [6.9.2] — 2026-08-31
 
 ### Added
