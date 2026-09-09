@@ -80,6 +80,7 @@ issues stay valid.
 
 - **Spec-driven development workflow** — single source of truth from specification to merged PR
 - **Frontmatter-driven story state** — one writable location per story; indexes are generated, never hand-maintained
+- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the indexes *and* syncs the board in one call. None of it costs model tokens, none of it can drift, and a graph or percentage cannot come out silently wrong
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
 - **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice. Starting a story assigns its linked issue to whoever runs `build` (an `--epic NN` run claims the epic issue too), so GitHub shows who owns the work in flight — additive, so an existing assignee is never removed
@@ -457,6 +458,8 @@ ck-code/
 ├── CHANGELOG.md
 ├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
 │   ├── ck-index                   # → scripts/ck-index.sh   (skills call the bare command)
+│   ├── ck-view                    # → scripts/ck-view.sh
+│   ├── ck-story                   # → scripts/ck-story.sh
 │   ├── ck-doctor                  # → scripts/ck-doctor.sh
 │   ├── ck-issues                  # → scripts/ck-issues.sh
 │   └── ck-project                 # → scripts/ck-project.sh
@@ -465,6 +468,8 @@ ck-code/
 │   └── team-generate.js           # /ck-code:team --workflow, Phase 3.1
 ├── scripts/
 │   ├── ck-index.sh                # regenerate the index views from story frontmatter
+│   ├── ck-view.sh                 # render the dashboards / state / wave plan (zero model tokens)
+│   ├── ck-story.sh                # set story state + regenerate + sync, in one call
 │   ├── ck-doctor.sh               # read-only project health check (/ck-code:doctor)
 │   ├── ck-issues.sh               # publish a plan to GitHub Issues (ship --to-issues)
 │   ├── ck-project.sh              # reconcile the GitHub Projects board from frontmatter
