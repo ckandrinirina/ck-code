@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.13.1] — 2026-09-09
+
+### Changed
+- **`plan`**: epics are now ordered **demo-first** by default — the first epic makes the app
+  run with its primary surface rendering fixture data, feature UI/CLI/endpoints follow
+  against one typed seam each, and backend epics implement those seams afterwards, so a
+  project is exercisable from epic 01 instead of only after the backend lands. A project
+  with no human-facing surface (library, daemon, pure API) says so and keeps foundation-first
+  ordering. Every fixture-backed seam must be owned by a later story that removes it, linked
+  by `blocked_by` and recorded in the new `ROADMAP.md` **Stub Ledger**; the Phase 4
+  confirmation now shows the ordering strategy and which epic first yields a runnable demo.
+
 ## [6.13.0] — 2026-09-09
 
 ### Added
