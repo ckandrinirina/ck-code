@@ -7,7 +7,7 @@ model: haiku
 context: fork
 agent: Explore
 background: false
-allowed-tools: Bash(ls*) Bash(git branch*) Bash(git status*)
+allowed-tools: Bash(ck-view*) Bash(ls*) Bash(git branch*) Bash(git status*)
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -57,85 +57,53 @@ plan, whose stories merge into an epic branch and never touch the trunk at all
 
 ## MODE A — STATE ROUTING (no argument)
 
-### A.1 Probe project state (read-only)
-
-Run once, in parallel; record what each block shows:
+### A.1 Probe the project (one call)
 
 ```bash
-echo "== specs =="; ls -d docs/specs/*/ 2>/dev/null | head -5
-echo "== architecture =="; find docs/architecture -name '*.md' 2>/dev/null | head -3
-echo "== team skills =="; ls -d .claude/skills/expert-*/ .claude/skills/guide-*/ 2>/dev/null | head -3
-echo "== tasks =="; ls -d tasks/*/ 2>/dev/null | head -5
-echo "== feature index =="; ls tasks/FEATURE_INDEX.md 2>/dev/null
-echo "== stories index =="; ls tasks/*/STORIES_INDEX.md 2>/dev/null | head -5
-echo "== version =="; head -5 tasks/VERSION.md 2>/dev/null
-echo "== design system =="; ls -d docs/architecture/design-system 2>/dev/null
-echo "== design link =="; grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null | head -3
+ck-view state
 ```
 
-Derive: `has_specs`, `has_architecture`, `has_team_skills`, `has_tasks`,
-`has_indexes` (a `FEATURE_INDEX.md` **and** at least one `STORIES_INDEX.md`),
-`ds_linked` (the design-system directory exists), and `ds_pending` (count of specs
-awaiting a Claude Design link, meaningful only when `ds_linked` is false).
+`ck-view state` is the whole of A.1–A.3: it probes the layout, counts every story row
+across every plan applying **The Ready rule** above, and applies the routing table in
+[`references/state-routing.md`](references/state-routing.md) — the same first-match-wins
+table this skill has always used, now implemented once in `scripts/ck-view.sh` instead of
+re-derived per run. It **writes nothing** (unlike the other `ck-view` modes it never
+regenerates an index), which is what keeps this skill read-only.
 
-### A.2 Story status snapshot (only if `has_indexes`)
-
-Read each `tasks/*/STORIES_INDEX.md` (the generated view — never glob story files) and
-count rows by the `Status` column, applying **The Ready rule**:
-
-- `n_ready` — `todo` and every `Blocked by` id is `done`
-- `n_bug` — `bug`
-- `n_blocked` — `todo` with an unmet `Blocked by`
-- `n_in_progress` — `in-progress`
-- `n_done` — `done`
-
-Then count the `Delivery` column, which answers a different question — how far finished
-work travelled toward the trunk:
-
-- `n_unshipped` — `done` with an empty Delivery (`—`): finished, no PR opened
-- `n_in_review` — Delivery `PR #<n>`
-- `n_merged` — Delivery `MERGED`
-
-Do **not** run `ck-index` here (this skill writes nothing). If `tasks/` exists but
-`has_indexes` is false, the views just need regenerating — row 5 below routes to `track`.
-
-### A.3 Recommend
-
-First matching row wins; print only that recommendation.
-
-| State | Recommend |
-|---|---|
-| `!has_architecture && !has_specs` | **`/ck-code:spec "<feature description>"`** — start with a stakeholder-friendly spec; or skip to `/ck-code:design <spec-file>` if you already have a written spec. |
-| `!has_architecture` | **`/ck-code:design <spec-file>`** — refine the spec into architecture docs. |
-| `has_architecture && !has_team_skills` | **`/ck-code:team`** — generate project-tailored expert + guide skills. |
-| `has_architecture && has_team_skills && !has_tasks` | **`/ck-code:plan <spec-file>`** — break the architecture into epics, stories, and a roadmap. |
-| `has_tasks && !has_indexes` | **`/ck-code:track`** — regenerates the missing generated views, then re-run `/ck-code:guide`. |
-| `n_bug > 0` | **`/ck-code:track next`** → **`/ck-code:build <path>`** — an open bug outranks new work (Bug-Fix Mode). |
-| `n_ready > 0` | **`/ck-code:track next`** → **`/ck-code:build [path]`** — implement the next ready story. |
-| `n_in_progress > 0 && n_ready == 0` | **`/ck-code:ship <story-path>`** — ship the in-progress story, or **`/ck-code:build`** to keep going. |
-| `n_unshipped > 0 && n_ready == 0 && n_in_progress == 0 && n_bug == 0` | **`/ck-code:ship <story-path>`** — `n_unshipped` finished stor(ies) have no PR yet; nothing is on the trunk until they do. |
-| `n_done > 0 && n_ready == 0 && n_in_progress == 0 && n_bug == 0` | **`/ck-code:track progress`** — review the milestone tracker, or plan the next feature with **`/ck-code:plan`** / **`/ck-code:spec`**. Note `n_in_review` stor(ies) still awaiting merge, if any. |
-| `has_tasks && all counts == 0` | **`/ck-code:plan`** appears not to have produced stories — re-check `tasks/<slug>/`. |
-
-Where two ready paths fit and the choice matters (e.g. 3+ independent ready stories),
-use **AskUserQuestion** to offer `build <story-path>` (one story, sequential) vs
-`build <ids>` / `build --epic NN` (PARALLEL MODE, worktrees) — never launch either.
-
-### A.4 Output format
+It prints the rendered `## ck-code: project state` table, then three machine lines:
 
 ```
-## ck-code: project state
+FLAGS: specs=2 architecture=1 team_skills=7 tasks=1 indexes=1 ds_linked=0 ds_pending=1
+COUNTS: ready=4 bug=1 blocked=2 in_progress=1 done=12 unshipped=1 in_review=2 merged=9
+RECOMMEND: /ck-code:track next
+WHY: 1 open bug(s) — a diagnosed bug outranks new work (Bug-Fix Mode)
+```
 
-| Check | Value |
-|---|---|
-| docs/specs/        | <has or — > |
-| docs/architecture/ | <has or — > |
-| .claude/skills/    | <count of expert-*/guide-* or — > |
-| tasks/             | <has or — > |
-| generated indexes  | <has or — > |
-| Claude Design      | <linked · N awaiting link · — > |
-| Stories            | <n_ready ready · n_bug bug · n_blocked blocked · n_in_progress IP · n_done done> |
+**Never re-derive `RECOMMEND`.** Do not read `STORIES_INDEX.md`, `FEATURE_INDEX.md` or any
+story file to second-guess a count or pick a different command — the table is mechanical
+and the script is its only implementation. Consult
+[`references/state-routing.md`](references/state-routing.md) only to *explain* a verdict.
 
+If `ck-view: command not found` appears, the plugin is disabled or predates `bin/ck-view`
+— fall back to `"${CLAUDE_PLUGIN_ROOT}"/scripts/ck-view.sh` and say so in one line.
+
+### A.2 Add the judgement the script cannot
+
+Two things stay with the model:
+
+- **The one-sentence "why this fits"** — ground `WHY` in the state the table shows; never
+  restate the command back as its own reason.
+- **The parallel offer.** When `COUNTS: ready=` is 3 or more and the recommendation is
+  `/ck-code:track next`, use **AskUserQuestion** to offer `build <story-path>` (one story,
+  sequential) vs `build <ids>` / `build --epic NN` (PARALLEL MODE, worktrees) — never
+  launch either.
+
+### A.3 Output format
+
+Relay `ck-view state`'s `## ck-code: project state` table verbatim (drop the `FLAGS:` /
+`COUNTS:` / `RECOMMEND:` / `WHY:` lines — they are for you, not the user), then:
+
+```
 ## Recommended next step
 
 **`<command>`** — <one-sentence why>

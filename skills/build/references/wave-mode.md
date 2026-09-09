@@ -13,7 +13,11 @@ Example: epic 01 has 01-01, 01-02, 01-03 (blocked by 01-01+01-02), 01-04 (blocke
 
 ## Plan the waves (from the index)
 
-Read the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status ≠ done`.
+`ck-view waves --epic NN` implements everything in this section and prints the finished
+table — run it rather than working the ordering out by hand. What follows is the algorithm
+it implements, kept here as the contract:
+
+Take the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status ≠ done`.
 Order them into dependency phases by `Blocked by`:
 
 - **Wave 1** = stories whose every blocker is `done` (or empty).
@@ -23,7 +27,7 @@ An out-of-epic blocker that is not yet `done` makes the epic un-startable — re
 blocker is pending and stop. A story whose blocker never resolves (cycle, or a non-`done`
 out-of-scope dep) is `UNSCHEDULABLE` — exclude it and report at the end.
 
-Print the wave plan table ([conflict-format.md](conflict-format.md)), labelling each wave
+The wave plan table ([conflict-format.md](conflict-format.md)) labels each wave
 `(parallel)` when it holds ≥ 2 stories and `(solo)` when it holds one — that label is the
 dispatch shape P4 will use, so the operator sees up front which waves cut worktrees. A deep
 chain means

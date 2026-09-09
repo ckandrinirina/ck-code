@@ -129,20 +129,20 @@ every story the same way on `$TARGET`.
 
 ## P2 — Plan the waves
 
-Each story's declared file scope is its frontmatter `files:` line. Read only that one line
-per story — bounded, never the body — reusing the SKILL.md 1.2 map when it already ran:
-
 ```bash
-for f in <story paths from the index File column>; do
-  echo "== $f"
-  awk -F'[][]' '/^files:/{n=split($2,a,","); for(i=1;i<=n;i++){gsub(/^ +| +$/,"",a[i]); if(a[i]!="")print a[i]}}' "$f"
-done
+ck-view waves --epic NN
 ```
 
-Order the scope into waves by `Blocked by`, then split each wave so no two stories in it
-share a declared path — the algorithm and the un-startable / `UNSCHEDULABLE` cases are in
-[wave-mode.md](wave-mode.md). Print the wave plan table
-([conflict-format.md](conflict-format.md)) plus every excluded story and the reason.
+One call plans the whole epic: it orders the scope into dependency waves from `Blocked by`,
+splits each wave so no two stories in it share a declared `files:` path, labels every wave
+`(parallel)` or `(solo)`, and prints the wave plan table
+([conflict-format.md](conflict-format.md)) already formatted — plus every `UNSCHEDULABLE`
+story with the blocker that holds it, and the un-startable case. Relay that table; do not
+re-derive it. The algorithm it implements is [wave-mode.md](wave-mode.md).
+
+Dependency ordering and file-conflict grouping are graph and set problems: reasoning them
+out per run costs tokens for an answer that is either exactly right or silently wrong, and
+a story dispatched beside its own blocker is the expensive kind of wrong.
 
 This is a heuristic from *declared* scope; P6 still runs the authoritative dry-run merge on
 *actual* diffs.
@@ -178,11 +178,15 @@ Skip any story already `in-progress` (a resumed wave) or `bug` (Bug-Fix Mode own
 status and restores it at Phase 8.6).
 
 ```bash
-ck-index tasks/<Plan>
+ck-story set status=in-progress <story-path>… --no-board
 git add <the story files just edited> tasks/<Plan>/STORIES_INDEX.md tasks/FEATURE_INDEX.md
 git commit -m "chore: mark wave <N> in progress"
 ck-project sync tasks/<Plan>
 ```
+
+One `ck-story` call takes every story of the wave and regenerates once. `--no-board` holds
+the card sync back until after the commit, so the board never advertises a wave that is not
+yet recorded on `$TARGET`.
 
 On a resumed wave every story may already be `in-progress`, so nothing is staged — the
 commit is skipped rather than failed.

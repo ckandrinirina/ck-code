@@ -1,8 +1,13 @@
-# Track — Output Templates
+# Track — Output Contract (rendered by `ck-view`)
 
-One template per command. Read only the one the invoked command needs.
+These are **not templates for the model to fill** — `scripts/ck-view.sh` renders every one
+of them from `STORIES_INDEX.md` / `FEATURE_INDEX.md`, and `/ck-code:track` relays its
+stdout verbatim. This file is the documented shape of that output: read it when a field
+needs explaining or when the renderer is being changed, never to render a dashboard by
+hand. Bracketed values mark what the script substitutes.
 
-Bracketed values are substituted from the index scan; never print them literally.
+Changing a layout here means changing `scripts/ck-view.sh` in the same commit — the script
+is the implementation, this file is its contract.
 
 ## Status icons
 

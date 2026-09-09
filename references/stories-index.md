@@ -41,12 +41,20 @@ Before any phase that selects stories or checks dependencies:
 
 ## Mutation (there is none — regenerate)
 
-To change a story's status/size/dependency, edit that field in the **story file
-frontmatter**, then regenerate the view in the same phase:
+To change a story's state, use `ck-story`: it writes the field in the **story file
+frontmatter** — the source of truth — then regenerates the view and syncs the board in the
+same call, so the three steps cannot be half-done.
 
 ```bash
-ck-index tasks/<slug>
+ck-story set <story-path> status=done
+ck-story set status=in-progress <story-path> <story-path>…   # a whole wave, one call
+ck-story set <story-path> status=in-progress --no-sync       # frontmatter only (worktree agent)
 ```
+
+Mutable fields are the state set only — `status`, `prior_status`, `delivery`, `pr`,
+`issue`, `size`; each is validated against its enum, and a structural field (`id`, `epic`,
+`title`, `blocked_by`, `files`) is refused, because those belong to `plan`/`migrate`. Edit
+those by hand, then run `ck-index tasks/<slug>` yourself.
 
 There is no cell-edit protocol and no cross-file reconciliation in v5: the view is a
 pure function of the frontmatter, so it cannot drift. Inside a `build` PARALLEL MODE

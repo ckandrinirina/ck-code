@@ -107,7 +107,7 @@ disk does not have. This is why the write variant keeps a central verify step.
 - **`$CLAUDE_PLUGIN_ROOT` is EMPTY.** Every path in a dispatch prompt must be **absolute** or
   repo-relative — a `${CLAUDE_PLUGIN_ROOT}/…` reference resolves to nothing and the agent fails
   silently. This is the single most likely authoring mistake. ck-code's own generators are the
-  exception: `ck-index` and `ck-doctor` are on `PATH` via the plugin's `bin/` and work here
+  exception: `ck-index`, `ck-view`, `ck-story` and `ck-doctor` are on `PATH` via the plugin's `bin/` and work here
   unchanged — which is exactly why skills invoke them as bare commands
   ([`stories-index.md`](stories-index.md#the-ck-index-command)).
 - **Directly callable:** `Read`, `Write`, `Edit`, `Bash`, `Skill`, `ToolSearch`. Repo reads work.

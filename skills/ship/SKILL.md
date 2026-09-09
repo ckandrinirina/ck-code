@@ -3,7 +3,7 @@ name: ship
 description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git push*) Bash(gh auth status*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git push*) Bash(gh auth status*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -321,10 +321,15 @@ still routes to 5.A, whose base is already fixed.
    Paste its stdout verbatim as the body's last block. Empty output is a valid answer (no
    footer); relay any `WARN` — it names an entry that will **not** close on merge. Argument
    forms per PR level and the merge caveats: [pr-templates.md](references/pr-templates.md#the-closes-footer).
-5. **Record the PR in frontmatter — this is what moves the card.** Edit the story file:
-   `pr: <the new PR number>` and `delivery: pr`
-   ([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)).
-   Leave `status` alone; the two axes are independent.
+5. **Record the PR in frontmatter — this is what moves the card.**
+
+   ```bash
+   ck-story set <story-path> pr=<the new PR number> delivery=pr
+   ```
+
+   Leave `status` alone; the two axes are independent
+   ([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)),
+   and `ck-story` regenerates the views and syncs the card in the same call.
 
    Do **not** push the card with `ck-project set … in_review`. In Review is now derived
    from `delivery: pr` like every other column, so the Phase 6.1 sync places it. A story
@@ -339,12 +344,18 @@ still routes to 5.A, whose base is already fixed.
 
 **Skip the status write when the frontmatter already reads `status: done`** —
 `/ck-code:build` Phase 8.6 flips it before invoking this skill; a second flip is duplicate
-work. Otherwise, if this ship completes the story's work: set the story frontmatter
-`status: done` (Edit the `status:` line — do **not** cell-edit any index or flip an EPIC
-checkbox).
+work. Otherwise, if this ship completes the story's work:
+
+```bash
+ck-story set <story-path> status=done
+```
+
+Never cell-edit an index or flip an EPIC checkbox for status.
 
 **Always regenerate and sync, even when the status write was skipped** — Phase 5 wrote
-`pr:`/`delivery:`, so frontmatter changed on every path through this skill:
+`pr:`/`delivery:`, so frontmatter changed on every path through this skill. `ck-story`
+regenerates on every call; when Phase 5's `ck-story` was the only write, that already
+happened and this is a no-op. If neither ran (nothing changed at all):
 
 ```bash
 ck-index tasks/<slug>
@@ -613,7 +624,7 @@ that received an `issue:`. Never re-read the plan to build the summary.
 
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
-- **Never store story status anywhere but frontmatter** — set `status: done` in the story file and run `ck-index`; never cell-edit an index or flip an EPIC checkbox for status.
+- **Never store story status anywhere but frontmatter** — `ck-story set <story-path> status=done`; never cell-edit an index or flip an EPIC checkbox for status.
 - **Never open or update a PR without writing `pr:` + `delivery: pr`** to the story (or to `EPIC.md` at level `epic`/`feature`) — an unrecorded PR strands the story in Ready to Ship, and `ck-project sync` has no anchor to re-check.
 - **Never push a card to the review column with `ck-project set`** — In Review is derived from `delivery: pr`. The sticky rule is gone; a manual push is undone by the next sync.
 - **Never write `delivery: merged` by hand** — only `ck-project sync` promotes it, from GitHub's answer about the PR.
@@ -621,7 +632,7 @@ that received an `issue:`. Never re-read the plan to build the summary.
 - **Never open a promotion PR without re-running `ck-project sync` after recording `pr:` on `EPIC.md`** (§6.5) — the sync is what materializes the anchor onto the epic's stories; without it they carry a `delivery:` with no `pr:`, which `ck-doctor` reports as an ERROR and `STORIES_INDEX.md` renders as a bare `PR`.
 - **Always commit a dirty `tasks/` before finishing** (§6.6) — plan bookkeeping is derived from PR numbers already in the plan, so it belongs on the current branch with no PR and no prompt. Leaving it uncommitted is what forces a hand-made "record merged delivery" PR later.
 - **Never open a PR whose only content is a `delivery:`/`pr:` change** — it is derived state; commit it on the current branch (§3.1, §6.6).
-- **Always run `ck-index` and `ck-project sync` in the same phase** you change any story or epic frontmatter (SHIP MODE's status write; in `--to-issues`, `ck-issues` already runs it) — [`github-projects.md`](../../references/github-projects.md).
+- **Always regenerate in the same phase** you change any story or epic frontmatter: `ck-story set` does it for a story-state field, `ck-index` + `ck-project sync` for an `EPIC.md` edit, and `ck-issues` already does it under `--to-issues` — [`github-projects.md`](../../references/github-projects.md).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
 - **Never ask the user for the PR base branch** — derive it from `trunk_branch` and the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity with no `trunk_branch` set.

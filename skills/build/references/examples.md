@@ -49,20 +49,15 @@ Do NOT glob `tasks/*/epics/*/stories/*.md` and do NOT full-`Read` any story body
 conflict detection read only each ready story's frontmatter `files:` line (SKILL.md 1.2 step
 5), located via the index `File` column.
 
-### Touched-files map (SKILL.md 1.2 step 5) — one batched Bash call
-
-`READY` is each ready story's `File` column from `STORIES_INDEX.md`, prefixed with its plan
-root. The `awk` stops at the closing frontmatter fence, so no body is ever read:
+### Parallel-safe set (SKILL.md 1.2 step 5) — one call
 
 ```bash
-for f in $READY; do
-  echo "== $f"
-  awk 'FNR==1&&$0!="---"{exit} FNR==1{next} $0=="---"{exit} /^files:/{sub(/^files:[ \t]*/,"");print}' "$f"
-done
+ck-view waves --epic NN
 ```
 
-Group the printed paths so no two stories share a file. The largest conflict-free group of
-≥ 2 is the recommended parallel set.
+**Wave 1** of the printed plan is the recommended parallel set: `ck-view` reads only each
+story's frontmatter `files:` line (never a body), groups the ready stories so no two share a
+declared path, and labels the wave `(parallel)` or `(solo)`. Never group them by hand.
 
 If none ready:
 
@@ -109,7 +104,7 @@ The manual-test bug-fix loop has run 3 times and issues remain:
 
 A) FIX MANUALLY — you apply the fix; I run Refactor + QA against it
 B) ACCEPT AS-IS — set `status: done`; #3 documented as known issue
-C) ABORT        — set `status: todo`, regenerate (`ck-index`, `ck-project sync`); do not commit
+C) ABORT        — `ck-story set <story-path> status=todo`; do not commit
 ```
 
 (Delivered via `AskUserQuestion` — A / B / C are the options, not a typed reply.)

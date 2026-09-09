@@ -280,4 +280,4 @@ the missing columns at the end, unless `--reorder` is passed.
 - **Never apply the likely tier of `landed` without a human confirming it** — `--include-likely` exists for a person to answer, not for a skill to pass by default. Marking unshipped work `direct` moves its card to Done and closes its issue.
 - **Never set `delivery: direct` by hand, and never on a story that has a `pr:`** — a story with a PR is `pr` or `merged`, and only `sync` decides which; `ck-doctor` reports the combination.
 - **Never resolve PR state one story at a time** — one batched `gh pr list` per plan, never a `gh pr view` per card.
-- **Always run `ck-project sync` in the same phase** as the `ck-index` that follows a status change, so the view and the board move together.
+- **Always run `ck-project sync` in the same phase** as the `ck-index` that follows a status change, so the view and the board move together. `ck-story set` does both for you and is the preferred path; reach for the pair directly only when the change is not a story-state field.

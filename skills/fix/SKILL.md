@@ -3,7 +3,7 @@ name: fix
 description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Runs only on an explicit bug report or a hand-off from another ck-code skill, never speculatively. Argument is an optional story-file path.
 argument-hint: "[path-to-story.md]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -228,13 +228,14 @@ Present the proposed-fix prompt in `references/qa-dialogue.md` (Phase 5.3) and c
 
 For **every existing story in scope** (verdict A: one; B / D: all matched existing stories — never the `todo` stories created in Phase 2.6):
 
-1. Edit the story-file **frontmatter**: set `status: bug` and `prior_status: <the status before this bug>` (`done` or `in-progress`). This is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent.
-2. Regenerate the views once, in this phase:
+1. Flip the frontmatter and regenerate in one call (every story in scope may be listed at once):
 
    ```bash
-   ck-index tasks/<slug>
-   ck-project sync tasks/<slug>
+   ck-story set status=bug prior_status=<the status before this bug> <story-path> [<story-path>…]
    ```
+
+   `prior_status` is `done` or `in-progress`. The story frontmatter is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent; `ck-story` refuses any field outside the state set, so a stray `delivery=` is caught rather than written.
+2. `ck-story` runs `ck-index` and `ck-project sync` for the plan itself — there is no separate regenerate step to remember.
 
    The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to the **Bugs** column — its own column, because a diagnosed bug is actionable work, not something waiting on a dependency — and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
 
@@ -266,7 +267,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Phase 2.5.2 / 2.5.5 / 4.6 / 5.3** — `AskUserQuestion` confirmation gates; never write without an explicit confirm.
 - **Phase 2.6** — missing stories are created by `/ck-code:plan --quick`, never inline.
 - **Phase 4.2** — a failing reproduction test is mandatory before Phase 5; it is the RED target `build` inherits.
-- **Phase 6.1** — flip is a frontmatter edit (`status: bug` + `prior_status`) followed by `ck-index` in the same phase; never hand-edit a generated view.
+- **Phase 6.1** — the flip is one `ck-story set status=bug prior_status=<prev>` call, which writes the frontmatter and regenerates; never hand-edit a generated view.
 - **Phase 6.2 / 6.3** — the Auto-Build Eligibility Gate is deterministic; a single unchecked box forces MANUAL hand-off.
 
 ### Scope discipline (cross-cutting)
@@ -282,7 +283,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Always use the same `Bug ID`** (`BUG-YYYYMMDD-NN`) across every in-scope story.
 - **Always record `prior_status`** in the story frontmatter so `build` can restore it.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Always regenerate the views** with `ck-index` and sync the board with `ck-project sync`, in the same phase you change any frontmatter ([`github-projects.md`](../../references/github-projects.md)).
+- **Always regenerate the views in the same phase** you change any frontmatter — `ck-story set` does it (`ck-index` + `ck-project sync`) in the one call ([`github-projects.md`](../../references/github-projects.md)).
 - **Always output in English.**
 
 ---

@@ -276,7 +276,8 @@ fast path; `migrate` writes it as its final step.
 - **Never resolve `delivery` by hand** — `ship` writes `pr`/`delivery: pr`; only `ck-project sync` promotes it to `merged`, from GitHub's answer, and only it materializes an inherited epic `pr:` onto a story.
 - **Never open a PR for a `delivery:`/`pr:` change alone** — both are derived from a PR number the plan already holds, so they are committed on the current branch with no review.
 - **Never write a delta/journal doc** — commits are the history.
-- **Always run `ck-index` in the same phase** you change any story's frontmatter.
+- **Always run `ck-index` in the same phase** you change any story's frontmatter — or use
+  `ck-story set`, which writes the field, regenerates and syncs the board in one call.
 - **Frontmatter stays generator-readable** — one `key: value` per line, inline `[...]` lists, no block scalars.
 - **Never restart epic numbering in a new plan** — allocate from the project-wide maximum, or two plans collide and every ID consumer silently picks the wrong one.
 - **Never store the next epic number** — derive it from the epic folders on every run.

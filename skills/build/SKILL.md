@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -111,13 +111,12 @@ Interactive mode only — explicit `$ARGUMENTS` skips this.
 3. Sort by epic, then story number, then size (S < M).
 4. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with
    > 1 non-DONE story is a wave candidate.
-5. **Detect the parallel-safe set:** if ≥ 2 stories are ready, build a **touched-files map**
-   from **only** each ready story's frontmatter `files:` list, in one batched Bash call
-   (`awk` one-liner in [examples.md](references/examples.md) § touched-files map) — never a
-   full body `Read`, never a glob of all stories. The largest conflict-free group of ≥ 2 is
-   the **recommended parallel set** — the preferred default. Keep this map: PARALLEL MODE P2
-   reuses it instead of re-reading, and Phase 2 reuses the selected story's `files:` for
-   skill matching. Only Phase 1.3 issues a full `Read` (for the one selected story).
+5. **Detect the parallel-safe set:** if ≥ 2 stories are ready in one epic, run
+   `ck-view waves --epic NN`. Its **Wave 1** is the largest conflict-free group of ready
+   stories — the **recommended parallel set** and the preferred default — computed from
+   each story's frontmatter `files:` list without reading a single body. Never derive that
+   grouping by hand. PARALLEL MODE P2 re-runs the same command for the full plan; Phase 2
+   reuses the selected story's `files:` for skill matching, read at 1.3.
 6. **Present the menu and route the choice** per [examples.md](references/examples.md):
    recommended parallel set (⚡, when ≥ 2) → epics → single stories. The selection is the
    one confirmation — parallel and epic choices enter [PARALLEL MODE](#parallel-mode) at P1
@@ -187,21 +186,22 @@ is duplicate API calls on the same account.
 **Bug-Fix Mode:** skip this phase — the story stays `bug` through the fix and is restored
 to `prior_status` at Phase 8.6. Do NOT flip `bug → in-progress`.
 
-Edit the story-file frontmatter: `status: todo` → `status: in-progress`. Then regenerate the
-views in the same phase:
+One call flips the frontmatter and regenerates both views:
 
 ```bash
-ck-index tasks/<slug>
-ck-project sync tasks/<slug>
+ck-story set <story-path> status=in-progress
 ```
 
-That is the whole mutation — the generator recomputes every view from frontmatter, so there
-is no index cell, `EPIC.md`, or rollup to touch. The board is one more generated view
+`ck-story` validates the value against the `status` enum, writes the `status:` line, then
+runs `ck-index` and `ck-project sync` for that story's plan — the three steps that must
+never be half-done. That is the whole mutation: the generator recomputes every view from
+frontmatter, so there is no index cell, `EPIC.md`, or rollup to touch. The board is one more generated view
 ([`github-projects.md`](../../references/github-projects.md)): `ck-project` is a no-op when
 the project has no `tasks/SETTINGS.md` or `github_issues` is off, and a board failure never
-blocks the build — report it and continue. **DELEGATED MODE skips both** — a worktree agent
-edits only its own story's frontmatter; the orchestrator regenerates and syncs once on the
-target branch after merge. In that mode the frontmatter edit is normally a **no-op**: P4
+blocks the build — report it and continue. **DELEGATED MODE adds `--no-sync`**
+(`ck-story set <story-path> status=in-progress --no-sync`) — a worktree agent writes only
+its own story's frontmatter; the orchestrator regenerates and syncs once on the target
+branch after merge. In that mode the frontmatter edit is normally a **no-op**: P4
 already flipped this story to `in-progress` on the target before cutting the worktree
 ([parallel-mode.md](references/parallel-mode.md)). Finding `in-progress` where `todo` was
 expected is the normal case, never drift — leave it and carry on.
@@ -479,10 +479,18 @@ AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never contin
 ### 8.6 Set Status → done (frontmatter + regenerate)
 
 **Bug-Fix Mode:** restore `prior_status` (from the Bug Report — normally `done`) instead of
-`done`: frontmatter `status: bug` → `status: <prior_status>`, then clear `prior_status`. Then
-8.7 as usual (`fix/` branch, Bug ID in commit).
+`done`, and clear `prior_status` in the same call. Then 8.7 as usual (`fix/` branch, Bug ID
+in commit):
 
-**Story Mode:** Edit the frontmatter: `status: in-progress` → `status: done`.
+```bash
+ck-story set <story-path> status=<prior_status> prior_status=
+```
+
+**Story Mode:**
+
+```bash
+ck-story set <story-path> status=done
+```
 
 **Touch `status` only — never `pr:` or `delivery:`.** They are the second, orthogonal axis
 ([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)):
@@ -491,19 +499,14 @@ AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never contin
 defect found in already-merged code keeps `delivery: merged` while it is fixed, and the
 restore touches `status`/`prior_status` alone.
 
-Then regenerate the views in the same phase — one call recomputes `STORIES_INDEX.md` and the
+`ck-story` regenerates in the same call — recomputing `STORIES_INDEX.md` and the
 `FEATURE_INDEX.md` rollup (a feature whose stories are all `done` rolls up to `DONE`, or to
-`MERGED` once every one of them is on the trunk):
-
-```bash
-ck-index tasks/<slug>
-ck-project sync tasks/<slug>
-```
+`MERGED` once every one of them is on the trunk) and syncing the board.
 
 No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v6.
 The sync moves this story's card to Done and rolls its epic card up
 ([`github-projects.md`](../../references/github-projects.md)).
-**DELEGATED MODE skips both** (see 1.6).
+**DELEGATED MODE passes `--no-sync`** (see 1.6).
 
 ### 8.7 Ship (Commit + PR + Issue Updates)
 
@@ -564,7 +567,7 @@ is no user to ask.
 |---|---|
 | 1.1–1.2 | Skipped — the story path is given. |
 | 1.4 | Skipped — never offer waves from inside a wave. |
-| 1.6 / 8.6 | Edit **this story's frontmatter only**; never run `ck-index` and never touch a generated index — the orchestrator regenerates once on the target after the wave. |
+| 1.6 / 8.6 | `ck-story set … --no-sync` — **this story's frontmatter only**; never regenerate an index, the orchestrator does that once on the target after the wave. |
 | 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
 | 4–6 | Unchanged. RED still gates GREEN. |
 | 7 | Run the QA commands inline; never delegate to `qa-validator` — the orchestrator runs one per story. |
@@ -603,7 +606,7 @@ dirty for the orchestrator. Commit messages are conventional
 ## RULES
 
 - **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`,
-  `FEATURE_INDEX.md`, or `EPIC.md` — change `status:`, then run `ck-index` and `ck-project sync`
+  `FEATURE_INDEX.md`, or `EPIC.md` — run `ck-story set <story-path> status=<value>`, which writes the field and regenerates
   in the same phase (all three are one atomic mutation; [`github-projects.md`](../../references/github-projects.md)).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
