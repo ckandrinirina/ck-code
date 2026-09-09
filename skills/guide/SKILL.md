@@ -69,10 +69,14 @@ echo "== tasks =="; ls -d tasks/*/ 2>/dev/null | head -5
 echo "== feature index =="; ls tasks/FEATURE_INDEX.md 2>/dev/null
 echo "== stories index =="; ls tasks/*/STORIES_INDEX.md 2>/dev/null | head -5
 echo "== version =="; head -5 tasks/VERSION.md 2>/dev/null
+echo "== design system =="; ls -d docs/architecture/design-system 2>/dev/null
+echo "== design link =="; grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null | head -3
 ```
 
 Derive: `has_specs`, `has_architecture`, `has_team_skills`, `has_tasks`,
-`has_indexes` (a `FEATURE_INDEX.md` **and** at least one `STORIES_INDEX.md`).
+`has_indexes` (a `FEATURE_INDEX.md` **and** at least one `STORIES_INDEX.md`),
+`ds_linked` (the design-system directory exists), and `ds_pending` (count of specs
+awaiting a Claude Design link, meaningful only when `ds_linked` is false).
 
 ### A.2 Story status snapshot (only if `has_indexes`)
 
@@ -129,6 +133,7 @@ use **AskUserQuestion** to offer `build <story-path>` (one story, sequential) vs
 | .claude/skills/    | <count of expert-*/guide-* or — > |
 | tasks/             | <has or — > |
 | generated indexes  | <has or — > |
+| Claude Design      | <linked · N awaiting link · — > |
 | Stories            | <n_ready ready · n_bug bug · n_blocked blocked · n_in_progress IP · n_done done> |
 
 ## Recommended next step
@@ -136,6 +141,11 @@ use **AskUserQuestion** to offer `build <story-path>` (one story, sequential) vs
 **`<command>`** — <one-sentence why>
 
 Why this fits: <1–2 sentences tied to the state above>
+
+<Only when ds_pending > 0 and not ds_linked — one line, after the recommendation and never
+instead of it, because a pending link blocks nothing:
+Also pending: a Claude Design brief is waiting — run `/ck-code:design ds <url>` once the
+design system is ready at claude.ai/design.>
 
 (Full workflow graph + misuse matrix: references/workflow-map.md.)
 ```

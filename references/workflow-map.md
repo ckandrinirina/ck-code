@@ -129,8 +129,8 @@ command reference.
 
 | Skill | Writes to |
 |---|---|
-| `spec` | `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ `.metadata.json`), optional GitHub issue |
-| `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`) |
+| `spec` | `docs/specs/YYYY-MM-DD_<slug>/pre-spec.md` (+ canonical `.metadata.json`), optional GitHub issue, optional `design-brief.md` when the Claude Design offer is accepted |
+| `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`); in `ds` mode, `docs/architecture/design-system/` and the `designSystem` block of every pending spec metadata |
 | `team` | `.claude/skills/expert-*/SKILL.md`, `.claude/skills/guide-*/SKILL.md` (incl. `guide-conventions/`) |
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (PROJECT_OVERVIEW, epics/ with EPIC.md, stories/ with frontmatter, ROADMAP.md); flips feature doc to `design: planned`; regenerates the index views |
 | `build` | Source + tests in repo; the story file only (frontmatter `status`, plan, summary; Bug Report Resolution in Bug-Fix Mode); regenerates the index views; on GitHub, assigns the story's linked `issue:` to the account running the build (plus the epic issue on an `--epic NN` run) — additive, never removing an existing assignee. In PARALLEL MODE: every story implemented by a dispatched agent — per-story branches in native worktrees when a wave holds ≥ 2 stories, one solo agent on the target branch in the main checkout when it holds one — with the same story-file outputs, and the orchestrator regenerates the views once on the target branch after the wave |

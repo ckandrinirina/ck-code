@@ -1,7 +1,7 @@
 ---
 name: design
-description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds` (link and refresh a Claude Design system cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
-argument-hint: "[path-to-spec | optimize | sync | ds]"
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
+argument-hint: "[path-to-spec | optimize | sync | ds [design-url]]"
 effort: high
 allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync Skill
 ---
@@ -27,7 +27,8 @@ content lives in each feature's doc so a story reads only that doc.
 - **Feature** (spec path, docs already exist) — add or extend one feature doc, globals kept consistent.
 - **optimize** (maintenance) — measure per-doc tokens, dedup repeated content into `_shared.md`.
 - **sync** (maintenance) — scaffold feature docs for features in `FEATURE_INDEX` that lack one.
-- **ds** (optional) — link a Claude Design system and refresh its git-tracked cache.
+- **ds** (optional) — link a Claude Design system, from a pasted `claude.ai/design` URL or
+  by picking one, and refresh its git-tracked cache.
 
 ## ROUTING CHECK (do first)
 
@@ -75,7 +76,7 @@ Read `$ARGUMENTS`:
 
 - `optimize` → go to **PHASE O** (skip the design flow).
 - `sync` → go to **PHASE S** (skip the design flow).
-- `ds` → go to **PHASE DS** (skip the design flow).
+- `ds` (alone, or followed by a link) → go to **PHASE DS** (skip the design flow).
 - a spec path, or empty → the **design flow** below (New Project / Feature).
 
 A maintenance mode is a hard scope — never run `optimize`/`sync`/`ds` work in a design run, or
@@ -299,9 +300,11 @@ already exist) it resolves the new doc's `Docs` cell immediately. Never hand-edi
 
 When the spec argument was a `docs/specs/*_<slug>/pre-spec.md` (a `/ck-code:spec` folder —
 a sibling `.metadata.json` exists), record the pass back into that metadata: set `status`
-to `design-in-progress` and `linkedDesign` to the feature-doc folder(s) this run wrote
-(e.g. `docs/architecture/features/<slug>/`). Touch no other field, and skip this step
-entirely for any other spec source.
+to `design-in-progress` and `linkedDesign` to the array of feature-doc folders this run
+wrote (e.g. `["docs/architecture/features/<slug>/"]`). Change no other field, rewrite the
+whole file in the canonical key order from
+[`templates.md`](../spec/references/templates.md#write-procedure) — backfilling any key an
+older ck-code left out — and skip this step entirely for any other spec source.
 
 ---
 
@@ -388,20 +391,37 @@ never runs this is unaffected by it.
 [`design-system.md`](../../references/design-system.md) owns the procedure. Do not restate
 its rules here; run them.
 
+Everything after `ds` in `$ARGUMENTS` is the **link** — a `claude.ai/design` URL, a bare
+project uuid, or a project name. Empty means "pick from a list" or "refresh".
+
 1. **Tool check.** If the `DesignSync` tool is unavailable in this session, print the one
    line from [§ When DesignSync is unavailable](../../references/design-system.md#when-designsync-is-unavailable)
    and STOP cleanly. Never error.
 2. **Branch on `docs/architecture/design-system/`:**
-   - **Absent** → run [§ Linking a project](../../references/design-system.md#linking-a-project)
+   - **Absent, link given** → run
+     [§ From a handed-back URL](../../references/design-system.md#from-a-handed-back-url),
+     then steps 4–7 of § Linking a project. No picker.
+   - **Absent, no link** → run [§ Linking a project](../../references/design-system.md#linking-a-project)
      steps 1–7. `mkdir -p docs/architecture/design-system/cards` before the first write.
    - **Present** → run [§ Freshness protocol](../../references/design-system.md#freshness-protocol)
-     from Tier 0. Announce which tier the run started at in one line.
-3. **Report** with the DS Sync Report block in
+     from Tier 0. Announce which tier the run started at in one line. A link resolving to a
+     **different** `projectId` than the cached one is a design-system switch — confirm via
+     `AskUserQuestion` before replacing the cache, since every cached card is invalidated.
+3. **Close every pending link** (first successful link only). Glob
+   `docs/specs/*/.metadata.json`; for each whose `designSystem.status` is `awaiting-link`,
+   set `status: "linked"`, `projectId`, `projectUrl` (the URL the user supplied, or the
+   project's own when picked), and `linkedAt` = today — re-emitting the whole file in the
+   canonical key order from
+   [`templates.md`](../spec/references/templates.md#write-procedure). Leaving one pending
+   makes the session-start reminder fire forever. Say how many specs were closed.
+4. **Report** with the DS Sync Report block in
    [references/qna-examples.md](references/qna-examples.md). A Tier-0 stop reports
    `up to date — 1 call` and nothing else.
-4. **Next step.** When this run created the cache for the first time, close with: run
-   `/ck-code:team --regenerate` so `guide-design-system` is generated and UI stories pick up
-   the fidelity rules automatically.
+5. **Next step.** When this run created the cache for the first time, offer via
+   `AskUserQuestion` to run `/ck-code:team --regenerate` right now, per
+   [`skill-invocation.md`](../../references/skill-invocation.md) — that is what generates
+   `guide-design-system` and makes UI stories pick up the fidelity rules automatically. On
+   Skip, print the command.
 
 ---
 

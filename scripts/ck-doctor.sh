@@ -438,6 +438,68 @@ for c in json.load(open(sys.argv[1])).get("cards", []):
   fi
 }
 
+# ---- 8b. spec metadata -------------------------------------------------------
+# docs/specs/*/.metadata.json is generated, and its whole value is that every reader
+# (design, session-start, this script) can assume one fixed shape. A run that invents or
+# drops a key breaks the next reader silently, so drift is surfaced here rather than at
+# the point of failure.
+#
+# Never an ERROR: specs are optional and sit entirely upstream of the build loop, and
+# /ck-code:spec <slug> self-heals a drifted file on its next ADJUST.
+check_specs() {
+  [ -d docs/specs ] || return 0
+  local files
+  files=$(ls -d docs/specs/*/.metadata.json 2>/dev/null)
+  [ -n "$files" ] || return 0
+  local n; n=$(printf '%s\n' "$files" | grep -c .)
+  [ "$HAVE_PY" -eq 1 ] || { row "spec metadata" "python3 missing — check skipped" WARN; return 0; }
+
+  local bad pending
+  bad=$(python3 - $files <<'EOF'
+import json, sys
+KEYS = ["slug","title","language","audience","createdAt","updatedAt","status",
+        "stage","tags","github","linkedDesign","designSystem"]
+STATUS = {"draft","ready-for-design","design-in-progress"}
+DS = {"none","awaiting-link","linked"}
+for f in sys.argv[1:]:
+    try:
+        d = json.load(open(f))
+    except Exception:
+        print("%s: not valid JSON" % f); continue
+    if not isinstance(d, dict):
+        print("%s: not a JSON object" % f); continue
+    missing = [k for k in KEYS if k not in d]
+    unknown = [k for k in d if k not in KEYS]
+    if missing: print("%s: missing %s" % (f, ", ".join(missing)))
+    if unknown: print("%s: unknown key %s" % (f, ", ".join(unknown)))
+    if list(d) != KEYS and not missing and not unknown:
+        print("%s: keys are out of canonical order" % f)
+    if d.get("status") not in STATUS:
+        print("%s: status %r is outside the enum" % (f, d.get("status")))
+    if d.get("stage") not in (None, "spec"):
+        print("%s: stage %r is not \"spec\"" % (f, d.get("stage")))
+    ds = d.get("designSystem")
+    if isinstance(ds, dict) and ds.get("status") not in DS:
+        print("%s: designSystem.status %r is outside the enum" % (f, ds.get("status")))
+EOF
+)
+  if [ -n "$bad" ]; then
+    row "spec metadata" "$(printf '%s' "$bad" | grep -c .) issue(s) in $n file(s)" WARN
+    printf '%s\n' "$bad" | sed '/^$/d;s|^|                   ✗ |'
+    note "run /ck-code:spec <slug> — its ADJUST pass rewrites the file canonically"
+  else
+    row "spec metadata" "$n spec(s) canonical" OK
+  fi
+
+  # A brief handed out and never linked. Silent once the cache exists.
+  [ -d docs/architecture/design-system ] && return 0
+  pending=$(grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null | grep -c .)
+  if [ "${pending:-0}" -gt 0 ]; then
+    row "design link" "$pending spec(s) awaiting a Claude Design link" WARN
+    note "paste the design system URL into /ck-code:design ds <url>"
+  fi
+}
+
 # ---- 9. project settings -----------------------------------------------------
 # Local parse always; the board is probed only when gh is available and issue
 # tracking is on. Settings are optional, so an absent file prints no row: most
@@ -612,6 +674,7 @@ check_docs
 check_team
 check_branches
 check_design_system
+check_specs
 check_settings
 check_board
 check_bootstrap

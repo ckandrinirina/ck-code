@@ -6,41 +6,110 @@
 
 ---
 
-## `.metadata.json` schema
+## `.metadata.json` — canonical schema
+
+This file is **generated, not authored**. Its shape is fixed: same keys, same order,
+every run, every project. A run that invents a key, drops one, or reorders them has
+written a different file than the last run — that is the defect this section exists to
+prevent. Emit the template below verbatim and substitute values into it; never assemble
+the object from memory.
 
 ```json
 {
   "slug": "intelligent-bot-system",
   "title": "<full title used in the file and issue>",
   "language": "French",
+  "audience": "Mixed",
   "createdAt": "2026-04-29",
   "updatedAt": "2026-04-29",
   "status": "draft",
-  "github": {
-    "repo": "owner/repo-name",
-    "issueNumber": 809,
-    "issueUrl": "https://github.com/owner/repo-name/issues/809",
-    "projectUrl": "https://github.com/orgs/owner/projects/1"
-  },
-  "tags": ["..."],
   "stage": "spec",
-  "linkedDesign": null
+  "tags": [],
+  "github": null,
+  "linkedDesign": null,
+  "designSystem": {
+    "status": "none",
+    "briefPath": null,
+    "projectId": null,
+    "projectUrl": null,
+    "linkedAt": null
+  }
 }
 ```
 
-`github` is `null` when no issue is linked. `linkedDesign` becomes the
-`docs/architecture/features/<slug>/` folder (or folders) once `/ck-code:design`
-runs (its Phase 3.12).
+### Key contract
+
+Twelve keys, in exactly this order. **The set is closed** — never add a key that is not
+listed here, however useful it seems, and never omit one. An unknown value is written as
+its empty form (`null`, `[]`), never left out.
+
+| Key | Type | Value |
+|---|---|---|
+| `slug` | string | kebab-case ASCII, matches the folder's `_<slug>` suffix |
+| `title` | string | the full document title; also the GitHub issue title |
+| `language` | string | the language name in English (`English`, `French`, `Spanish`, …) — never a locale code |
+| `audience` | string | `Mixed` \| `Product` \| `Technical` — the Phase 1 setup-gate answer |
+| `createdAt` | string | `YYYY-MM-DD`, written once at CREATE and never touched again |
+| `updatedAt` | string | `YYYY-MM-DD`, rewritten on every persist |
+| `status` | string | `draft` \| `ready-for-design` \| `design-in-progress` (table below) |
+| `stage` | string | always the literal `"spec"` |
+| `tags` | array of string | issue labels; `[]` when none, never `null` |
+| `github` | object or null | `null` until published; then **all four** sub-keys present |
+| `linkedDesign` | array of string or null | feature-doc folders, written by `design` Phase 3.12; `null` until then |
+| `designSystem` | object | **always present**, all five sub-keys, even when unused |
+
+`github`, when not `null`, is exactly:
+
+```json
+{ "repo": "owner/repo-name", "issueNumber": 809,
+  "issueUrl": "https://github.com/owner/repo-name/issues/809",
+  "projectUrl": "https://github.com/orgs/owner/projects/1" }
+```
+
+A sub-key with no value is `null` — `projectUrl` is commonly `null`. The object is never
+partially shaped.
 
 ### Status enum
 
-`status` has exactly three states — no other values are ever written by this skill.
+`status` has exactly three states — no other value is ever written.
 
 | Status | Meaning | Written by |
 |---|---|---|
 | `draft` | Just created, may still receive substantive edits | `spec` |
 | `ready-for-design` | User has locked the spec; ready for an architecture pass | `spec` (readiness gate) |
 | `design-in-progress` | `/ck-code:design` has started using it | `design` |
+
+### `designSystem` block
+
+The Claude Design hand-off state. Contract, statuses, and every reader are owned by
+[`design-system.md` § Pending link](../../../references/design-system.md#pending-link) —
+`spec` writes it, `design ds` closes it, `session-start` and `doctor` read it.
+
+| Sub-key | Value |
+|---|---|
+| `status` | `none` (not offered / declined) \| `awaiting-link` (brief written, user is in Claude Design) \| `linked` |
+| `briefPath` | repo-relative path to the generated `design-brief.md`; `null` unless `awaiting-link` or `linked` |
+| `projectId` | the `claude.ai/design` project uuid; `null` until linked |
+| `projectUrl` | the URL the user handed back; `null` until linked |
+| `linkedAt` | `YYYY-MM-DD` the link succeeded; `null` until linked |
+
+### Write procedure
+
+**CREATE** — emit the template above with values substituted, in that key order. Every
+key is present on the first write, including `designSystem` when the offer was declined
+(`status: "none"`, the rest `null`).
+
+**ADJUST** — read the existing file, then:
+
+1. **Backfill** any key the file is missing with its empty form from the template above
+   (a file written by an older ck-code has no `audience` and no `designSystem`). This is
+   the self-heal path — do it silently, it is not a finding to report.
+2. **Drop** any key not in the twelve — it was invented by a stale run.
+3. Mutate only the fields this run actually changed, plus `updatedAt`.
+4. Re-emit the whole object in the canonical key order. Never patch the file in place
+   with a text edit — rewrite it.
+
+`createdAt` is immutable after CREATE. `stage` is immutable, always `"spec"`.
 
 ---
 

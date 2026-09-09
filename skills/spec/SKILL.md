@@ -49,14 +49,18 @@ Per-feature folder, shared with later design output:
 ```
 docs/specs/YYYY-MM-DD_<slug>/
 ├── pre-spec.md       # this skill writes here
-└── .metadata.json    # see references/templates.md for the schema
+├── design-brief.md   # Phase 4.5, only when a Claude Design link was accepted
+└── .metadata.json    # canonical, generated — see references/templates.md
 ```
 
 `.metadata.json#status` evolves through exactly three states:
 `draft` → `ready-for-design` → `design-in-progress`.
 
-Full schema, status meanings, and language localization table are in
-[`references/templates.md`](references/templates.md).
+**`.metadata.json` has one fixed shape** — twelve keys, fixed order, closed set, emitted
+from the template in
+[`references/templates.md`](references/templates.md#metadatajson--canonical-schema) and
+never assembled from memory. That file owns the key contract, the enums, the localization
+table, and the CREATE/ADJUST write procedure.
 
 ---
 
@@ -199,8 +203,14 @@ Editing rules:
 ```
 mkdir -p docs/specs/YYYY-MM-DD_<slug>/
 write docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
-write docs/specs/YYYY-MM-DD_<slug>/.metadata.json   # CREATE: full; ADJUST: bump updatedAt
+write docs/specs/YYYY-MM-DD_<slug>/.metadata.json
 ```
+
+`.metadata.json` is written by the **write procedure** in
+[`references/templates.md`](references/templates.md#write-procedure) — CREATE emits the
+canonical template with values substituted; ADJUST reads, backfills missing keys, drops
+unknown ones, mutates only what changed plus `updatedAt`, and re-emits the whole object in
+canonical key order. Never hand-assemble the JSON and never text-edit the file in place.
 
 ### Publish + readiness gate (one `AskUserQuestion` call)
 
@@ -229,13 +239,86 @@ publishing". Two key rules:
 
 ### Update metadata
 
+Fields this run may change — everything else is carried through unmodified:
+
 - `updatedAt` = today
 - `status` per the readiness gate above
-- If labels/project changed, sync `tags` and `github.projectUrl`
+- `tags` and the `github` object if labels, issue, or project changed (all four `github`
+  sub-keys present, `null` where empty — never a partial object)
 
 ---
 
-## PHASE 5 — Summary
+## PHASE 5 — Claude Design link (optional)
+
+A design system built at [claude.ai/design](https://claude.ai/design) is the highest-value
+thing this project can have before any UI is written: `build` then reproduces its
+components exactly instead of inventing them story by story. The moment to offer it is
+here — the spec that describes the screens has just been written, so the brief can be
+generated from it.
+
+### 5.1 Should the offer happen?
+
+Ask **only** when all three hold. Each is a cheap local check; run them together:
+
+1. `docs/architecture/design-system/` does not exist (the project is not already linked).
+2. No sibling `docs/specs/*/.metadata.json` has `designSystem.status` of `awaiting-link`
+   or `linked` — glob and read them.
+3. The spec just written or edited has user-visible surfaces (it has a
+   *User-facing view* section, or its behaviors describe screens, and the product is not
+   a pure API, CLI, library, or data pipeline).
+
+Any one failing → set `designSystem.status: "none"` on CREATE, leave the block untouched on
+ADJUST, say nothing, and go to Phase 6. **Never re-ask.** A user who declined once has
+answered; the decline is recorded as `none` and is a decision, not a gap.
+
+### 5.2 The offer
+
+One `AskUserQuestion`, one question, three options:
+
+- **Yes — write the brief** — generates `design-brief.md` here and hands it to the user.
+- **Not now** — writes nothing; the project behaves exactly as it does today.
+- **Already have one** — the user already has a design system at `claude.ai/design`; skip
+  the brief and print the link command directly (`/ck-code:design ds <url>`).
+
+Frame it in one sentence: a design system means every screen this spec describes gets
+built against real components and tokens rather than improvised ones.
+
+### 5.3 On "Yes" — write the brief
+
+Generate `docs/specs/YYYY-MM-DD_<slug>/design-brief.md` from
+[`references/design-brief.md`](references/design-brief.md), deriving every section from the
+spec just written. Then stamp the metadata (canonical rewrite, per the Phase 4 procedure):
+
+```json
+"designSystem": {
+  "status": "awaiting-link",
+  "briefPath": "docs/specs/YYYY-MM-DD_<slug>/design-brief.md",
+  "projectId": null, "projectUrl": null, "linkedAt": null
+}
+```
+
+Then print the hand-off — three lines, no more:
+
+1. Open [claude.ai/design](https://claude.ai/design) and start a **design system** project.
+2. Paste the contents of `<briefPath>`.
+3. When it is ready, copy the URL and run `/ck-code:design ds <url>` — in this session or
+   any later one.
+
+Say explicitly that the work stops here and nothing is waiting on them: the reminder
+survives on disk and reappears at the start of any future session in this project. Then go
+to Phase 6 — never poll, never call `DesignSync`, never block on the answer.
+
+### 5.4 On "Already have one"
+
+Skip the brief. Set `designSystem.status: "awaiting-link"` with `briefPath: null`, and
+print the single line `/ck-code:design ds <url>` with the same "any later session" note.
+
+Contract, statuses, and every reader of this block:
+[`design-system.md` § Pending link](../../references/design-system.md#pending-link).
+
+---
+
+## PHASE 6 — Summary
 
 Brief block reporting:
 
@@ -244,6 +327,8 @@ Brief block reporting:
 - Issue URL (if any), project URL (if any)
 - 1-line tally of objectives / decisions / rules covered
 - ADJUST: bulleted list of changes applied
+- Design system: one line only when Phase 5 acted — brief path and the
+  `/ck-code:design ds <url>` command; nothing at all when the offer was skipped
 - Hint about re-invocation: `/ck-code:spec <slug>` to adjust again
 
 ## NEXT
@@ -276,4 +361,7 @@ wrote, and bumps status to `design-in-progress` (design Phase 3.12).
 - **Never rename a slug or break issue sync** without confirmation — both silently break external links.
 - **Never guess a conflict resolution** — every contradiction goes through the `AskUserQuestion` gate.
 - **Always let user-saved memory override repo inference** for issue location, labels, and default branch.
+- **Never hand-assemble `.metadata.json`** — emit it from the canonical template in `references/templates.md`, twelve keys in fixed order, closed set. A key this skill invents is a bug in the next reader.
+- **Never offer the Claude Design link more than once per project** (Phase 5.1) — a declined offer is recorded as `none` and never re-asked.
+- **Never call `DesignSync` from this skill** — it writes a brief and stops; linking belongs to `/ck-code:design ds`.
 - **Always write descriptively, not prescriptively** — `MUST`/`SHALL` only for non-negotiable product invariants.

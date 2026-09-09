@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: Use when checking a ck-code project for problems — a stale layout stamp, story frontmatter that will not parse, generated indexes that disagree with the story files, unresolvable blocked_by dependencies, feature-doc slug drift, unregistered team skills, orphan epic branches, or a missing ck-code-required guard. Read-only; reports each finding with the command that fixes it.
+description: Use when checking a ck-code project for problems — a stale layout stamp, story frontmatter that will not parse, generated indexes that disagree with the story files, unresolvable blocked_by dependencies, feature-doc slug drift, unregistered team skills, orphan epic branches, spec metadata that has drifted from its canonical shape, or a missing ck-code-required guard. Read-only; reports each finding with the command that fixes it.
 argument-hint: "[tasks/<slug>] [--quiet]"
 effort: low
 model: haiku
@@ -63,6 +63,8 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `team skills` (WARN) | none generated, or one is invalid — `build` and `fix` then run with no project expertise | `/ck-code:team` |
 | `branches` (WARN) | an `epic/NN-*` branch has no matching epic folder, usually left by a rename | delete it once merged |
 | `design system` (WARN) | a cached design-system card is missing or its content no longer matches the manifest digest, so `build` would copy markup that drifted from its source | `/ck-code:design ds` |
+| `spec metadata` (WARN) | a `docs/specs/*/.metadata.json` is not valid JSON, is missing a canonical key, carries a key no ck-code version writes, or has a `status` outside its enum — every reader of that file assumes one fixed shape | `/ck-code:spec <slug>` (its ADJUST pass rewrites the file canonically) |
+| `design link` (WARN) | a Claude Design brief was handed out and never linked back, so UI stories are still building from improvised components | `/ck-code:design ds <url>` |
 | `board` (WARN) | a Projects card sits in a column the story's `status:` + `delivery:` do not call for — a skill changed frontmatter without syncing, someone dragged a card by hand, or a PR merged since the last sync | `/ck-code:sync` |
 | `bootstrap` (WARN) | `.claude/ck-code-required.sh` is missing, stale, or not wired into `.claude/settings.json` — so a clone of this repo on a machine without ck-code starts work with none of the `/ck-code:*` commands and no warning that they are gone | `ck-bootstrap install` |
 | `bootstrap git` (WARN) | the guard is gitignored or uncommitted, so it protects only this machine — the one that already has the plugin | commit it; for a bare `.claude/` ignore rule the row prints the per-child replacement |

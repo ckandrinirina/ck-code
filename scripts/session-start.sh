@@ -72,6 +72,30 @@ guard_notice() {
 }
 guard_notice
 
+# ---- pending Claude Design link ---------------------------------------------
+# /ck-code:spec can hand the user a design brief to build at claude.ai/design and then
+# stop -- the user may come back days later, in a session that never saw that
+# conversation. The only thing bridging the gap is docs/specs/*/.metadata.json, so the
+# reminder is re-derived here from disk.
+#
+# Deliberately BEFORE the `tasks/` early-exit below: a project that has only ever run
+# `spec` has no tasks/ directory at all, and that is exactly the project waiting.
+# Suppressed once the cache exists -- a linked project has nothing to be reminded of.
+ds_pending_notice() {
+  [ -d docs/specs ] || return 0
+  [ -d docs/architecture/design-system ] && return 0
+  local hits n first
+  hits=$(grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null)
+  [ -n "$hits" ] || return 0
+  n=$(printf '%s\n' "$hits" | grep -c .)
+  first=$(printf '%s\n' "$hits" | head -1)
+  first=$(dirname "$first")
+  local what="a Claude Design system is pending for $first"
+  [ "$n" -gt 1 ] && what="a Claude Design system is pending for $n specs (including $first)"
+  CK_NOTE="${CK_NOTE:+$CK_NOTE }ck-code: $what. Once the design system is ready at claude.ai/design, paste its URL into /ck-code:design ds <url> to link and cache it."
+}
+ds_pending_notice
+
 # No tasks/ at all → nothing to summarise (the guard notice may still be worth saying).
 [ -d tasks ] || { if [ -n "$CK_NOTE" ]; then emit "$CK_NOTE"; else emit_plain; fi; exit 0; }
 
