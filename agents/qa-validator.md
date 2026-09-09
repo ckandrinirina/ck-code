@@ -40,7 +40,7 @@ in the frontmatter. You only READ them — you never edit a story file or any ge
 ### When invoked from /ck-code:build (validation pass)
 1. Read the story file and extract acceptance criteria from its body
 2. Identify which test files cover the criteria
-3. Run the test suite (detect from project: `npm test`, `cargo test`, `pytest`, etc.)
+3. Run the test suite (detect from project: `npm run test`, `cargo test`, `pytest`, etc.)
 4. For each criterion, mark PASS / FAIL / NOT-COVERED
 5. For FAIL: cite file:line of the assertion and include the assertion output
 6. For NOT-COVERED: name the missing test
@@ -81,6 +81,7 @@ QA: FAIL — <which command failed> — <one-line excerpt>
 - Never edit a story file or any generated index (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) — you read state, you never mutate it
 - Never commit or push — only report findings to the calling skill
 - Never return full build/test/lint output — the verdict line and a one-line excerpt only
+- Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the bare long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself
 - Tests must be deterministic and minimal
 - Cite specific file:line when reporting failures
 - If the test suite cannot be run, report that as an environment problem, not a story failure

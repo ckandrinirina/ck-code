@@ -659,6 +659,44 @@ check_bootstrap() {
   return 0
 }
 
+# ---- 12. RTK output filtering (optional) -------------------------------------
+# RTK is a third-party CLI proxy that filters command output before it reaches context.
+# It is entirely optional: ck-code emits command forms its hook recognizes, but never
+# requires, installs or depends on it.
+#
+# Never an ERROR, and absence is not even a WARN -- a project without RTK is healthy,
+# just chattier. The one genuinely actionable state is RTK installed with no hook wired:
+# the user paid for the tool and gets nothing from it.
+check_rtk() {
+  local settings="$HOME/.claude/settings.json" local_settings="$HOME/.claude/settings.local.json"
+  local hooked=0 ver
+
+  grep -qs 'rtk hook' "$settings" "$local_settings" && hooked=1
+
+  if ! command -v rtk >/dev/null 2>&1; then
+    row rtk "not installed (optional)" OK
+    [ "$QUIET" -eq 1 ] || note "rtk filters test/git/gh output before it reaches context — install, then: rtk init"
+    return 0
+  fi
+
+  # `gain` exists only in this rtk. reachingforthejack/rtk (Rust Type Kit) shadows the
+  # name on PATH and would otherwise read as installed.
+  if ! rtk gain >/dev/null 2>&1; then
+    row rtk "a different tool named rtk is on PATH" WARN
+    note "$(command -v rtk) has no 'gain' subcommand — this is not the token-filtering rtk"
+    return 0
+  fi
+
+  ver=$(rtk --version 2>/dev/null | awk '{print $2}')
+  if [ "$hooked" -eq 0 ]; then
+    row rtk "v${ver:-?} installed, PreToolUse hook not wired" WARN
+    note "run: rtk init — without the hook every command runs unfiltered"
+  else
+    row rtk "v${ver:-?}, hook wired" OK
+  fi
+  return 0
+}
+
 # ---- run ---------------------------------------------------------------------
 echo
 if [ -n "$ONLY_PLAN" ] && [ ! -d "$ONLY_PLAN" ]; then
@@ -678,6 +716,7 @@ check_specs
 check_settings
 check_board
 check_bootstrap
+check_rtk
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."

@@ -69,6 +69,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `bootstrap` (WARN) | `.claude/ck-code-required.sh` is missing, stale, or not wired into `.claude/settings.json` — so a clone of this repo on a machine without ck-code starts work with none of the `/ck-code:*` commands and no warning that they are gone | `ck-bootstrap install` |
 | `bootstrap git` (WARN) | the guard is gitignored or uncommitted, so it protects only this machine — the one that already has the plugin | commit it; for a bare `.claude/` ignore rule the row prints the per-child replacement |
 | `vendored copy` (WARN) | `.claude/skills/ck-code/` was left by the removed `vendor` skill. It loads as `ck-code@skills-dir`, a different plugin id from `ck-code@ck-marketplace`, so both run: every `/ck-code:*` command is listed twice and the vendored one never updates | delete the folder and its `ck-code@skills-dir` key, then `/plugin install ck-code@ck-marketplace` |
+| `rtk` | never an ERROR. `OK` covers both "wired" and "not installed" — [RTK](../../references/rtk.md) is optional and a project without it is healthy, just chattier. `WARN` means either RTK is installed with no `PreToolUse` hook (paid for, doing nothing) or a different tool named `rtk` is shadowing it on `PATH` | `rtk init` |
 
 ### 2.2 Report
 

@@ -93,6 +93,17 @@ and Claude paces itself. Useful for watching a long `build --epic` wave or re-ru
 - **`/plugin`** — where ck-code's own settings live (model-tier overrides; see `userConfig` in
   `plugin.json`). Set them there rather than exporting `CK_MODEL_*` by hand.
 
+## RTK — a third-party hook that shrinks command output
+
+Not a Claude Code built-in, but it plugs into one. [RTK](https://github.com/ckandrinirina/rtk)
+registers a `PreToolUse` hook on `Bash` that filters command output before it reaches
+context — a full test suite comes back as its failures alone. Install with `rtk init`;
+check savings with `rtk gain`.
+
+ck-code emits command forms the hook recognizes (`npm run test`, not `npm test`), so the
+savings need no configuration on the skill side. Full contract, the rewrite table, and the
+reason a skill must **never** hardcode an `rtk` prefix: [`rtk.md`](rtk.md).
+
 ## What ck-code already does for you (do not re-do it manually)
 
 | You might reach for | ck-code already does it |
