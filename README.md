@@ -87,7 +87,7 @@ issues stay valid.
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
 - **SOLID + redundancy checks** — every implementation is reviewed against the five principles, then its diff is scanned for code the repo already has: reimplementations, copy-paste, dead code, single-caller wrappers, and options no acceptance criterion asked for
 - **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
-- **Claude Design system fidelity (optional)** — link a [claude.ai/design](https://claude.ai/design) design system with `/ck-code:design ds`; ck-code caches its tokens and component sources into the repo, generates a `guide-design-system` skill that auto-loads on UI stories, and builds components exactly against it. Fully offline after one sync, and entirely absent from projects that never opt in
+- **Claude Design system fidelity (optional)** — `/ck-code:spec` offers to write a **design brief** you paste into [claude.ai/design](https://claude.ai/design); when the system is ready, hand its URL back with `/ck-code:design ds <url>` — from any session, days later, since the pending link lives on disk and is surfaced at session start. ck-code then caches its tokens and component sources into the repo, generates a `guide-design-system` skill that auto-loads on UI stories, and builds components exactly against it. Fully offline after one sync, and entirely absent from projects that never opt in
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge. A wave that narrows to a single story drops the worktree and runs one agent straight on the target branch — same delegation, none of the isolation overhead
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
 - **ck-code is required, and the repo says so** — a ck-code project keeps its plan, stories and architecture in a layout only the `/ck-code:*` commands maintain, so a clone on a machine that never installed the plugin has nothing that can read or write that state — and nothing able to *say* so, because the plugin is what is missing. `ck-bootstrap install` commits a ~1 KB guard (`.claude/ck-code-required.sh`, wired as the project's own `SessionStart` hook) that is silent wherever ck-code is present and stops the session with the install command wherever it is not. It is written automatically the first time a session starts in a stamped project
@@ -381,8 +381,8 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 
 | Skill | Purpose | Input | Output |
 | --- | --- | --- | --- |
-| `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes | feature description or notes file | `docs/specs/` and/or GitHub issue |
-| `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes | spec file | `docs/architecture/` |
+| `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes; offers a Claude Design brief on a UI project | feature description or notes file | `docs/specs/` and/or GitHub issue |
+| `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes and `ds [url]` to link a Claude Design system | spec file | `docs/architecture/` |
 | `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline at the plan prompt (`--conventions` re-runs it alone); `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/expert-*/`, `.claude/skills/guide-*/` |
 | `/ck-code:plan` | Create epics, single-dispatch S/M stories, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
 | `/ck-code:build` | Implement stories (TDD + QA): one inline, several at once in parallel worktrees (story IDs), or a whole epic in dependency-ordered waves (`--epic NN`); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`). Resolves the **base branch** from the epic's integration level and shows it with its reason before cutting, rather than inheriting whatever branch the run was launched on | story file / story IDs / `--epic NN` | source code + tests; regenerated index views; in PARALLEL MODE a branch per story plus a conflict report for waves of ≥ 2, or commits straight on the target branch for a single-story wave |
@@ -497,12 +497,16 @@ Each skill folder is self-contained: the main `SKILL.md` is the entry point, and
 ```
 docs/specs/YYYY-MM-DD_<slug>/
 ├── pre-spec.md            # Stakeholder-friendly version (from /ck-code:spec)
-└── .metadata.json         # Slug, GitHub issue link, status, language
-                           # (linkedDesign points at docs/architecture/features/<slug>/ after a design pass)
+├── design-brief.md        # Optional — paste into claude.ai/design to build the design system
+└── .metadata.json         # Canonical: twelve keys, fixed order, closed set
+                           # (linkedDesign points at docs/architecture/features/<slug>/ after a design pass;
+                           #  designSystem tracks the Claude Design link across sessions)
 ```
 
 `/ck-code:spec` creates these on first run and re-uses them on subsequent invocations to
 apply adjustments — keeping the local file and the linked GitHub issue in sync.
+`.metadata.json` is generated to one fixed shape every run; `/ck-code:doctor` reports any
+file that has drifted from it.
 
 ## Compatibility
 
