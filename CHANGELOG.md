@@ -5,6 +5,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.13.0] — 2026-09-09
+
+### Added
+- **`ck-view`** (`scripts/ck-view.sh`, `bin/ck-view`): renders every read-only projection of a
+  plan — `status`, `next`, `progress`, `state` and `waves` — directly from
+  `STORIES_INDEX.md` / `FEATURE_INDEX.md`. The Ready rule, the `next` selection algorithm,
+  the epic rollups, the percentages and progress bars, the guide routing table, and the
+  dependency-wave + file-conflict planner now have exactly one implementation, in a script,
+  instead of being re-derived by the model on every run. `blocked_by` resolves across all
+  plans; `state` never writes, so `/ck-code:guide` stays read-only.
+- **`ck-story`** (`scripts/ck-story.sh`, `bin/ck-story`): the one way to mutate story state.
+  `ck-story set <story.md>… key=value…` validates each field against its enum, writes the
+  frontmatter, then runs `ck-index` and `ck-project sync` for that plan — the three steps
+  that had to be remembered separately at six call sites. Mutable fields are the state set
+  only (`status`, `prior_status`, `delivery`, `pr`, `issue`, `size`); a structural field is
+  refused. `--no-sync` (worktree agents) and `--no-board` (before a commit) cover the two
+  cases that must not regenerate immediately.
+
+### Changed
+- **track**: renders nothing itself — one `ck-view` call, relayed verbatim.
+  `references/dashboard-templates.md` is now documented as `ck-view`'s output contract
+  rather than a template the model fills. `allowed-tools` gained the `git rev-list` the
+  branch-topology phase always used.
+- **guide**: MODE A is one `ck-view state` call. The probe, the counts and the
+  first-match-wins routing table moved to `references/state-routing.md` as the script's
+  spec; the model keeps the "why this fits" prose and the parallel offer.
+- **build**: 1.6 / 8.6 flip status through `ck-story set`; 1.2's parallel-safe set and
+  PARALLEL MODE P2's wave plan come from `ck-view waves --epic NN`; P4 flips a whole wave in
+  one `ck-story` call. DELEGATED MODE passes `--no-sync`.
+- **fix** 6.1 and **ship** 5.B.5 / 6.1 write frontmatter through `ck-story set`.
+
 ## [6.12.0] — 2026-09-09
 
 ### Added
