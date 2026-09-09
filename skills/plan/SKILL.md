@@ -168,6 +168,10 @@ Use extended thinking (ultrathink) for **genuine** ambiguities only — where th
 - **TECH STACK** — languages/frameworks per component, build tools, package managers, datastores, protocols, deploy targets.
 - **FEATURES & REQUIREMENTS** — functional (explicit + implied), non-functional (perf, security, latency), API surface.
 - **PHASES / ROADMAP** (if specified) — phased rollout, MVP vs. future scope, priorities.
+- **USER-VISIBLE SURFACE** — the entry point a human can exercise once the app runs (web
+  route or screen, mobile screen, CLI command, HTTP endpoint) plus the stack command that
+  starts it. Answer `none` for a library, daemon, or pure-API project with no human-facing
+  surface — that answer is what switches 3.1 to foundation-first ordering.
 
 ### 2.5 Parallel domain analysis (fan-out decision — make it before analysing)
 
@@ -234,9 +238,32 @@ then resolve to whichever plan they reach first. See
   A globally unique ID means `blocked_by` may name a story in **another plan** — use it
   when the dependency is real rather than duplicating the work.
 
-**Ordering:** infrastructure/foundation first; no-dependency epics before dependents;
-respect spec phases; within a phase — shared/core code, then feature code, then
-integration. The plan's **last** epic is always the mandatory Integration & E2E epic (3.6).
+**Ordering — demo-first (default).** Sequence epics so the product becomes runnable and
+exercisable at the earliest possible epic, then deepens. Never plan a layer that nothing
+can reach. Using the user-visible surface from 2.4:
+
+1. **Walking skeleton** — the first epic makes the app *run* and its primary surface render
+   real-looking output from fixtures: the stack's `dev`/`start` command shows something a
+   human can click or invoke. Only the scaffold that milestone needs — no speculative
+   infrastructure.
+2. **Surface epics** — each feature's UI/CLI/endpoint next, reading through **one typed seam
+   per feature** (a single adapter or service module returning fixtures), never mocks
+   scattered through components. The surface story owns the seam's contract file and lists
+   it in `files`.
+3. **Backend epics** — implement the seams the surface already consumes, one slice at a
+   time. The surface code does not change; only the seam's implementation swaps from fixture
+   to real.
+4. The mandatory Integration & E2E epic (3.6) closes the plan.
+
+Within a step: no-dependency epics before dependents, and respect explicit spec phases.
+
+**Headless projects** (surface `none` in 2.4 — library, daemon, pure API): say so in one
+line and order foundation-first instead — shared/core code, then feature code, then
+integration. There is no demo to bring forward.
+
+**Override** demo-first only for a hard constraint the spec states (an external contract to
+conform to, a migration that must land first) — name the constraint in `ROADMAP.md`. Never
+override because backend-first feels tidier.
 
 ### 3.2 Define stories
 
@@ -247,6 +274,11 @@ budget. An oversized story stalls mid-build and forces a costly recovery pass.
 Each story: exactly one cohesive concern (a feature, component, or vertical slice);
 sized **S or M only**; numbered sequentially within its epic (`01`, `02`, …) with a
 short slug; clear testable acceptance criteria and a `files` list.
+
+**Observable from the surface.** Under demo-first ordering, every story in the
+walking-skeleton and surface epics carries at least one acceptance criterion a human can
+check by running the app — a route renders, a command prints, a click path completes — not
+only a passing unit test.
 
 **Sizing rubric (S or M only, single-dispatch):**
 
@@ -287,6 +319,13 @@ one verifiable action toward its acceptance criteria (e.g. "define the `X` inter
 
 For each story, identify blockers (must-complete-first story IDs → `blocked_by`),
 parallel-safe siblings, and cross-epic dependencies.
+
+**Every stub is owned.** A surface story that introduces a fixture-backed seam (3.1) is only
+plannable alongside the story that replaces it. That later story `blocked_by`s the surface
+story, and its acceptance criteria state that the surface works **unchanged** against the
+real implementation and the fixture path is gone. Record the pair in the roadmap's Stub
+Ledger (5.6). A seam with no replacing story in this plan is a mock shipped to production —
+plan the replacement or drop the stub.
 
 ### 3.6 Mandatory final Integration & E2E epic
 
@@ -384,7 +423,9 @@ exists. This is what makes "what still needs planning?" a cheap frontmatter look
 ### 5.6 ROADMAP.md
 
 Write from [roadmap-format.md#roadmapmd-template](references/roadmap-format.md#roadmapmd-template).
-Continue mode: update the existing roadmap to include the new epics.
+Fill the **Stub Ledger** with one row per seam recorded in 3.5, and state which epic first
+yields a runnable demo. Continue mode: update the existing roadmap to include the new epics,
+appending Stub Ledger rows rather than replacing existing ones.
 
 ### 5.7 Regenerate the indexes (never hand-write)
 
@@ -501,6 +542,8 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never ask which plan an `--epic NN` belongs to** (Q.1) — the number is unique project-wide; more than one match is a collision to migrate, not a question to ask.
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
 - **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
+- **Never plan a backend slice before something can exercise it** (3.1) — demo-first is the default ordering; a headless project (surface `none` in 2.4) says so in one line and falls back to foundation-first.
+- **Never introduce a stubbed seam without the story that replaces it** (3.5) — same plan, `blocked_by` the surface story, one Stub Ledger row, and the fixture path gone by its acceptance criteria.
 - **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index` (5.7, Q.5).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write an `EPIC.md` `## Stories` table** — the story list is generated.

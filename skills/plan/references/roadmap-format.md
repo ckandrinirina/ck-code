@@ -26,14 +26,26 @@ Shown to the user before any files are written. Present this text, then gate wit
 
 [... all epics, including the final NN_integration-e2e epic ...]
 
+### Ordering Strategy
+Demo-first — [Epic NN] makes the app runnable; surface epics follow; backend epics replace
+their seams. (Headless project: "Foundation-first — no user-facing surface.")
+
+### First Runnable Demo
+After **Epic [NN]**: [what a human can click, run, or call, and with which command]
+
 ### Suggested Implementation Order
 1. [Epic/story] - [reason]
 2. [Epic/story] - [reason]
 ...
 
+### Stubbed Seams
+- `[seam path]` — stubbed by [EE-SS], replaced by [EE-SS]
+
 ### Output Location
 tasks/YYYY-MM-DD_[project-slug]/
 ```
+
+The ordering strategy is shown so **Adjust** can change it; do not add a separate prompt for it.
 
 `AskUserQuestion` — "Proceed with generating this plan?" → **Proceed** (Phase 5) /
 **Adjust** (ask what to change, loop to Phase 3) / **Cancel** (stop, write nothing).
@@ -64,6 +76,15 @@ tasks/YYYY-MM-DD_[project-slug]/
 
 ...
 
+## Stub Ledger
+
+Every fixture-backed seam the demo-first ordering introduces, and the story that removes it.
+An empty table means the plan ships no stubs; a row with no **Replaced by** is a planning bug.
+
+| Seam (file)  | Contract         | Stubbed by | Replaced by | Demo it unblocks |
+| ------------ | ---------------- | ---------- | ----------- | ---------------- |
+| [path]       | [type/function]  | [EE-SS]    | [EE-SS]     | [what renders]   |
+
 ## Parallelization Opportunities
 
 - [Story A] and [Story B] can be developed simultaneously because [reason]
@@ -86,6 +107,9 @@ The longest sequential chain is:
 | --------- | -------------- | --------------- |
 | [Name]    | Epic 01, 02    | [What's usable] |
 | [Name]    | Epic 03        | [What's added]  |
+
+The first milestone is the runnable demo — name the command that starts it and what a human
+sees. A milestone whose deliverable no one can exercise is mis-ordered (see `plan` 3.1).
 ```
 
 ---
