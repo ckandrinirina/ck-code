@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.14.0] — 2026-09-09
+
+### Added
+- **references/rtk.md** (new): the RTK integration contract — RTK is an optional third-party `PreToolUse` hook that filters command output before it reaches context. Documents the measured rewrite table, the rule that a skill must **never** hardcode an `rtk` prefix (it would break every user without the tool), and the `npm test` trap.
+- **doctor**: new `rtk` check. Reports whether RTK is on `PATH` and whether its hook is wired. Never an ERROR and absence is not a WARN — it warns only when RTK is installed with no hook (paid for, doing nothing) or when a different tool named `rtk` shadows it on `PATH`.
+
+### Changed
+- **ck-code:qa-validator**: runs `npm run test` rather than the `npm test` shorthand, and never pipes a suite into `tail`/`grep`. Identical behaviour, but only the bare long form is filtered by RTK — and the QA suite run is the largest single output in the workflow.
+- **references/native-commands.md**: new RTK section linking the full contract.
+
 ## [6.13.1] — 2026-09-09
 
 ### Changed
