@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.12.0] — 2026-09-09
+
+### Added
+- **spec**: Phase 5 offers a Claude Design link on any project with a UI and no design
+  system yet, at most once per project. On accept it writes `design-brief.md` into the
+  spec folder — a brief authored so the resulting design system extracts cleanly (CSS
+  custom properties, the foundation group labels ck-code already looks for) — and records
+  `designSystem.status: "awaiting-link"` in the spec metadata.
+- **design**: `ds` now accepts the link the user hands back —
+  `/ck-code:design ds <claude.ai/design url>` parses the project uuid, verifies it with
+  `get_project`, and links without a picker. A successful first link closes every spec
+  still reading `awaiting-link` and offers `/ck-code:team --regenerate` inline.
+- **session-start hook**: surfaces a pending Claude Design link on every session start,
+  before its `tasks/` early-exit — so a project that has only run `spec` still gets the
+  reminder, in a session that never saw the conversation that created the brief.
+- **doctor**: `spec metadata` row (a `.metadata.json` that is invalid, missing a canonical
+  key, carrying an unknown one, or outside a status enum) and `design link` row (a brief
+  handed out and never linked). Both WARN, never ERROR.
+- **guide**: state routing reports the Claude Design link and, when one is pending, prints
+  a one-line reminder after the recommendation — never instead of it.
+
+### Changed
+- **spec**: `.metadata.json` is now canonical — twelve keys, fixed order, closed set,
+  emitted from a template rather than assembled per run. ADJUST backfills missing keys,
+  drops invented ones, and rewrites the whole object. Adds `audience` (previously captured
+  and discarded) and `designSystem`; `linkedDesign` is an array.
+
 ## [6.11.0] — 2026-09-07
 
 ### Removed
