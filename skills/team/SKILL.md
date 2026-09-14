@@ -67,6 +67,11 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 what is current, version-specific, or project-specific — never well-known fundamentals.
 See [`reuse-first.md`](../../references/reuse-first.md).
 
+**Code-craft:** every guide's Code Style section refines the shared clean-code and comment
+standard in [`code-craft.md`](../../references/code-craft.md) — read it before writing that
+section, state only what this project adds or specialises (case style, doc-comment format,
+idioms), and never restate or lower it.
+
 ## INPUT
 
 `$ARGUMENTS` may include a path to the architecture docs folder (default

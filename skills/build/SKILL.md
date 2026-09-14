@@ -25,7 +25,7 @@ in **Bug-Fix Mode** (Phase 1.3.5). Argument shapes: [INPUT](#input).
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
 views are **generated read-only** — this skill changes frontmatter, then regenerates. See [`data-model.md`](../../references/data-model.md).
 
-References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [`code-craft.md`](../../references/code-craft.md) (clean-code + comment standard, 6.1 scan) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
 
 Parallel-mode references, read **only** when two or more stories are in scope: [parallel-mode.md](references/parallel-mode.md) (orchestration detail for P1–P9) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [wave-mode.md](references/wave-mode.md) (wave planning) · [conflict-format.md](references/conflict-format.md) (table/integrity/conflict/QA/summary formats).
 
@@ -368,8 +368,10 @@ Phase 2 now — implementation must apply the loaded experts/guides.
 **5.2 Implement.** Order: (1) create new files from the story's `files:`; (2) modify existing
 files; (3) run tests after each significant change; (4) stop as soon as all tests pass — don't
 over-engineer. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
-existing code (check `docs/architecture/`, scan files); simplest code that passes; comment
-only non-obvious logic. **Log unplanned changes incrementally** — any file touched outside the
+existing code (check `docs/architecture/`, scan files); simplest code that passes; write to
+the clean-code and comment standard in [`code-craft.md`](../../references/code-craft.md) —
+names that explain themselves, comments only where they say *why*. **Log unplanned changes
+incrementally** — any file touched outside the
 story's `files:` set gets one line in a `## Unplanned Changes` body section in the same Edit
 pass: `- <path> — <what> — <why>`. Record at the moment of change; empty section = omit the
 heading.
@@ -392,11 +394,15 @@ review that uncovers a structural problem escalates to the FULL template before 
 **Then run the redundancy scan on the diff** — the five checks in
 [`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)
 (reimplementation, copy-paste, dead code, needless indirection, unasked-for surface), at both
-routes, no template. Each hit is an ISSUE for 6.2 like any SOLID violation.
+routes, no template. **Then the comment & readability scan** — the four checks in
+[`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)
+(restating comments, missing *why*, doc comments, readability), same diff, same routes. Each
+hit from either scan is an ISSUE for 6.2 like any SOLID violation.
 
 **6.2 Apply refactorings.** For each issue: apply the refactoring, run tests (must stay green),
 revert and reconsider if they break. Common refactorings: collapse a reimplementation into
-the existing code, delete dead code, inline a single-caller wrapper, extract function, rename,
+the existing code, delete dead code, inline a single-caller wrapper, delete a restating
+comment, add the missing *why* line, extract function, rename,
 introduce interface/trait for dependency inversion, split large functions, move code to the
 correct module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
 also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
@@ -615,6 +621,7 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
 - **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy scan runs in full at both routes.
 - **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)).
+- **Never ship a comment that restates the code, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)).
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
   claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
   failure is one reported line, not a stop.

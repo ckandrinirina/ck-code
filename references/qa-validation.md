@@ -42,16 +42,18 @@ per project; full command list (TypeScript / Rust / Python / C++ / JUCE)
 lives in the `build` skill's `references/tdd-walkthrough.md`. Zero
 compiler warnings in project-owned files is the bar.
 
-## Step 3.5 — Redundancy check
+## Step 3.5 — Redundancy and code-craft check
 
-Verify Phase 6.1's redundancy scan actually ran, then spot-check the diff against the
-same five checks — [`reuse-first.md`](reuse-first.md#redundancy-scan-implementation)
-owns them; never restate the list here. QA re-runs the scan only when Phase 6 shows no
-evidence of it (no scan line, no collapse/delete in 6.2) or when the diff grew after it.
+Verify Phase 6.1's two scans actually ran, then spot-check the diff against the same
+checks — [`reuse-first.md`](reuse-first.md#redundancy-scan-implementation) owns the five
+redundancy checks, [`code-craft.md`](code-craft.md#comment--readability-scan-implementation)
+the four comment & readability checks; never restate either list here. QA re-runs a scan
+only when Phase 6 shows no evidence of it (no scan line, no collapse/delete/comment fix in
+6.2) or when the diff grew after it.
 
 Anything found is an ordinary QA finding in the Issues Found table under the existing
-iteration cap — never a new gate. Cite `file:line` and the existing code the diff should
-have used.
+iteration cap — never a new gate. Cite `file:line` and, for a redundancy hit, the existing
+code the diff should have used; for a comment hit, the line to delete or the *why* it lacks.
 
 ## Step 4 — Architecture compliance
 

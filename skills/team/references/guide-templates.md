@@ -48,8 +48,8 @@ paths:
 
 ### Code Style
 - [Formatting rules — line length, indentation, braces]
-- [Comment style and when to comment]
-- [Documentation conventions (doc comments, JSDoc, rustdoc, etc.)]
+- [Comment style and the stack's doc-comment format — only what refines the shared
+  code-craft standard for this project]
 
 ## Patterns to Follow
 
@@ -197,7 +197,8 @@ paths:
 ## Code Style
 
 - [Formatting rules not covered by the formatter, or formatter config to honor]
-- [Comment and documentation conventions; preferred constructs and idioms]
+- [Comment and doc-comment conventions, preferred constructs and idioms — only the
+  house refinements of the shared code-craft standard]
 
 ```[primary-language]
 // Correct — follows the house style
