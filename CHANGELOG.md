@@ -5,6 +5,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.15.0] — 2026-09-14
+
+Stabilization release from a full audit of every skill, reference and script. No layout
+change — v6 projects need no migration.
+
+### Added
+- **tests/smoke.sh + CI**: a bash smoke suite builds a throwaway v6 project (quoted `blocked_by`, a title with `|` and `"`, skip/bug stories, an out-of-epic blocker, shared files, a second broken plan) and asserts `ck-index`, `ck-view`, `ck-doctor`, `ck-story`, `ck-bootstrap` and the three hook scripts against their references, then runs shellcheck. `.github/workflows/ci.yml` runs it on ubuntu and macOS (bash 3.2).
+- **README**: Model tiers (`model_fast`/`model_balanced`/`model_advanced`), the SessionStart and format hooks' exact behaviour, subagent tool scope, the no-telemetry statement, the one-`tasks/`-per-repo constraint, and a Troubleshooting section.
+- **doctor**: `check_specs` validates `audience` against `Mixed|Product|Technical`.
+
+### Fixed
+- **scripts**: a YAML-quoted `blocked_by` id (`["02-01"]`) deadlocked the Ready rule, wave scheduling and the board sync while `ck-doctor` reported the graph clean — `ck-index` and `ck-project` now unquote every element. `ck-view waves` never printed its `UNSCHEDULABLE` list (awk auto-vivification). `ck-doctor tasks/<slug>` ignored its argument. `ck-story set` discarded `ck-index: WARN` lines and used a predictable temp file. `ck-issues` passed an unvalidated `size:` into `gh` arguments; `ck-project` used a raw column name as a file name. Every `cd "$ROOT"` now exits on failure; shellcheck `-S warning` is clean.
+- **format.sh**: ruff/black run only when `pyproject.toml`/`ruff.toml`/`setup.cfg` declares them, shfmt only behind `.editorconfig`/`.shfmt` — a repo that never asked for a formatter is no longer rewritten. gofmt and rustfmt stay unconditional.
+- **no-ai-guard.sh**: warns once on stderr when `python3` is missing instead of disabling itself silently.
+- **build PARALLEL MODE**: P1 checks out and verifies `$TARGET` before any dispatch (the wave marker was committed and worktrees cut from whatever branch was checked out); at `integration: story` the P3 question escalates the epic to `integration: epic` or cancels — the mode never commits or merges on the trunk (new HARD GATE). P8 merges follow `branch-topology.md#story-merge`; `conflict-analyzer` refuses to probe unless HEAD is the target on a clean tree; a deletion in a story diff is a review flag, not a block; the interactive menu resumes `IN PROGRESS` stories and excludes `SKIP`.
+- **QA**: one per-stack QA table (parallel-mode.md); the JUCE build is no longer piped into `grep`; `qa-validator` loads the project's QA expert skills first; an inline QA dispatch template pins `model: haiku`; a delegated `QA: FAIL` is a `NEEDS FIXES` verdict; ACCEPT AS-IS records under the Implementation Summary Notes and ABORT keeps a bug story's status.
+- **Bug-fix flow**: four references still told the model to hand-edit `status:`/`prior_status:` and run `ck-index` + `ck-project sync`; all use the single `ck-story set` call. `bug-section-template` headings name phases that exist (6.1, 8.5). `fix` keeps `prior_status` when re-triaging a story already at `bug`; the verdict-E threshold is 0.7 in skill and report alike; multi-story hand-offs never span epics; example paths use the `NN_`/`SS_` layout.
+- **ship**: the "Commit here" option on a protected branch is gone (Create branch / Rename / Abort), so the RULE is absolute; 5.A records `pr:`/`delivery:` through `ck-story set`; story completion is defined mechanically; worked examples no longer hand-edit frontmatter or hardcode `--base main`.
+- **migrate**: `--dry-run` is read-only on every path (it converted v3/v4/lite projects and only skipped the renumbering); Phase 0 records the rollback SHA instead of announcing a snapshot commit that was never made; Phase 6 asserts the migration commit landed; `EPIC.md` gets the same eight keys `plan` writes; the lite mapping documents the epic frontmatter and the `ck-bootstrap install` settings write.
+- **design**: the feature-doc template's outer fence closed on its nested flow block, truncating what fan-out agents copy verbatim (four-backtick fence now); fidelity rules are byte-identical to `design-system.md`; FULL REFRESH requires a clean tree and a unique backup; `optimize` confirms hoists and prunes in one question; the design-system offer honours a decline recorded by `spec`.
+- **spec / plan**: the design-brief phase is PHASE 5 everywhere; audience labels match the metadata enum; `--quick` derives `SS` from frontmatter ids; no bracketed placeholder may ship.
+- **team**: `dynamic-workflows.md` and `team` told the model to pass a prose file as an inline `Workflow` script — both now invoke `team-research`/`team-generate` by name; the guide template fence is fixed; the Workflow path handles net-new skills only so MANUAL fences are re-inserted inline; an all-empty brief is retried; both context7 MCP name variants are probed; `guide-design-system` removal is MERGE RULE step 4; the size budget is enforced in Phase 4.1.
+- **Routing**: `sync` was missing from the DIRECT tier, the invocation matrix and the version-gate scope, and `guide`/`track` blacklisted it as retired — `guide` could never recommend it. `data-model.md` no longer denies a reconciler exists; its `MERGED` rollup includes `delivery: direct` as `ck-index` computes it. `dashboard-templates.md` and `wave-mode.md` are rewritten to what `ck-view` emits. `commands.md` matches every skill's `argument-hint`.
+- **allowed-tools**: nine skills omitted commands their own text runs (`ck-issues` in ship, `git commit` in migrate, `ck-bootstrap`/`find`/`grep` for the version gate everywhere, `gh` in build, the GitHub publish path in spec, `cp` for design's backup). Each list is complete; `migrate` carries the no-ai-guard hook like every other committing skill; `version-gate.md` states the grants a gated skill needs.
+
+### Changed
+- Stale "v5" qualifiers describing current behaviour read as v6; duplicated rationale in `version-gate.md`, `migrate`, `spec` templates, `design` and `reuse-first.md` trimmed to one statement each.
+
+
 ## [6.14.1] — 2026-09-14
 
 ### Added
