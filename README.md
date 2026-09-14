@@ -220,14 +220,20 @@ Without this entry the plugin stays dormant in that project. `ck-bootstrap insta
 
 ## Settings
 
-Run `/plugin` → ck-code to set these; they are stored in your user `settings.json`, never
-in the repo, and never need to be exported as environment variables.
+Run `/plugin` → ck-code → **settings** to set these; they are stored in your user
+`settings.json`, never in the repo, and never need to be exported as environment
+variables.
 
-| Setting | Default | What it changes |
-|---|---|---|
-| **Fast tier model** | `haiku` | model dispatched for trivial mechanical stories and QA command runs |
-| **Balanced tier model** | `sonnet` | default model for a story implementer in `build` PARALLEL MODE |
-| **Advanced tier model** | `opus` | model for stories with a high-reasoning signal (novel algorithm, concurrency, security- or perf-critical path) |
+### Model tiers
+
+The three keys below live in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json)'s
+`userConfig`, so they show up as plugin settings rather than needing an env var.
+
+| Setting | Key | Default | What it changes |
+|---|---|---|---|
+| **Fast tier model** | `model_fast` | `haiku` | model dispatched for trivial mechanical stories and QA command runs |
+| **Balanced tier model** | `model_balanced` | `sonnet` | default model for a story implementer in `build` PARALLEL MODE |
+| **Advanced tier model** | `model_advanced` | `opus` | model for stories with a high-reasoning signal (novel algorithm, concurrency, security- or perf-critical path) |
 
 Each accepts one of `haiku`, `fable`, `sonnet`, `opus`. Raise the balanced tier for a codebase
 where Sonnet consistently underperforms; lower the advanced tier to cap spend on a large epic.
@@ -238,11 +244,61 @@ Every skill declares `allowed-tools`, so the `git`, `gh`, and `ck-index` calls i
 a run are pre-approved for that turn instead of prompting one command at a time. The grant is
 narrow (a `build` run cannot `git push`; only `ship` can) and it expires with your next message.
 
-`ship`, `build`, `fix`, and `spec` additionally register a skill-scoped `PreToolUse` hook that
-blocks any commit, PR, or issue command carrying an AI-authorship trailer or footer. It matches
-the trailer *forms* only, so a commit that legitimately discusses Claude Code is untouched. The
-rule is [documented here](references/no-ai-references.md) and enforced by
-`scripts/no-ai-guard.sh` — the hook is active only while one of those skills is running.
+`ship`, `build`, `fix`, `migrate`, `spec`, and `sync` additionally register a skill-scoped
+`PreToolUse` hook that blocks any commit, PR, or issue command carrying an AI-authorship
+trailer or footer. It matches the trailer *forms* only, so a commit that legitimately
+discusses Claude Code is untouched. The rule is
+[documented here](references/no-ai-references.md) and enforced by `scripts/no-ai-guard.sh`
+— the hook is active only while one of those skills is running.
+
+**SessionStart hook** (`scripts/session-start.sh`) reloads generated skills, injects the
+one-line workflow summary, and — only in a project already stamped `tasks/VERSION.md` —
+may run `ck-bootstrap install` when the committed guard is missing or stale. That writes
+`.claude/ck-code-required.sh` and adds its `SessionStart` entry to `.claude/settings.json`;
+it never touches an unstamped project, so cloning ck-code itself does not trigger it. See
+[ck-code is required in a ck-code project](#ck-code-is-required-in-a-ck-code-project).
+
+**`format.sh`** (`PostToolUse` on every `Write`/`Edit`) best-effort formats the file just
+touched: `gofmt` and `rustfmt` run whenever installed, no configuration needed — they are
+the language standard. `prettier`, `ruff`/`black`, and `shfmt` run only when the project
+has opted in (a prettier config file or `package.json` key; a `pyproject.toml`/`ruff.toml`/
+`.ruff.toml`/`setup.cfg` carrying `[tool.ruff]`/`[tool.black]`; an `.editorconfig` or
+`.shfmt`), so a repo that never asked for one of those formatters never has its style
+silently rewritten. Always exits 0 — a missing formatter or an unformattable file never
+fails the turn.
+
+**Dispatched subagents** — `story-implementer`, `qa-validator`, `conflict-analyzer` — run
+with the full tool set, not a narrowed `allowed-tools` list. Their "never commit, never
+push" boundary is a stated constraint in the dispatch prompt, verified by the orchestrator
+afterward, not a permission the tool layer enforces for them.
+
+**Nothing leaves the machine** except the `git` and `gh` calls each skill's `allowed-tools`
+already names — no telemetry, no other network call, from any skill or hook.
+
+**One plan tree per repo.** `tasks/` must sit at the git root; ck-code does not support more
+than one `tasks/` directory in the same repository (a multi-repo project with code and
+`tasks/` in different repos is fine — see [Status bar](#status-bar-opt-in-zero-tokens)).
+
+## Troubleshooting
+
+- **Keep getting a permission prompt for a command a skill runs.** The skill's own
+  `allowed-tools` should have pre-approved it — update the plugin (`/plugin update
+  ck-code@ck-marketplace`); an older version may be missing that command form.
+- **`ck-view` output is empty, or the status line shows nothing.** Run `ck-index` to
+  (re)generate the views, then `/ck-code:doctor` to see what is still wrong.
+- **A story sits at `blocked` and never becomes ready.** Its `blocked_by` ids must
+  resolve to `status: done` stories — `/ck-code:doctor` reports one that does not.
+- **`gh` is unauthenticated.** GitHub Issues/Projects calls are skipped; the local,
+  commit-only half of `build`, `ship`, and `sync` still completes.
+- **The project is on a pre-v6 layout.** Run `/ck-code:migrate` — every
+  change-producing skill blocks until it stamps `tasks/VERSION.md`.
+- **Every `/ck-code:*` command is listed twice.** Two enabled copies of the plugin —
+  usually `ck-code-lite` left enabled alongside `ck-code`, or a leftover vendored copy
+  (see [ck-code is required in a ck-code project](#ck-code-is-required-in-a-ck-code-project))
+  — are both registered. Disable the one you are not using.
+- **No warning ever appears for an AI-authorship trailer.** `python3` is required for
+  the no-AI guard; when it is missing, the session prints one warning and the guard is
+  disabled for that session rather than blocking silently.
 
 ## Status bar (opt-in, zero tokens)
 
@@ -396,7 +452,7 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 | `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps; `--epic NN` instead explains that epic's goal and the goal of every story in it | `[file-or-concept]` / `--epic NN` | walkthrough + verification steps, or epic + story goals |
 | `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping, a missing or uncommitted ck-code-required guard. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
-| `/ck-code:sync` | Reconcile everything with GitHub in one pass — recover missing `pr:` anchors, refresh `delivery:` from merged PRs, record stories merged straight to the trunk with no PR, place board cards, close issues a merged PR failed to close, tick epic checklists, and add a missing `Closes` footer to an open PR; commits the `tasks/` diff. Previews and asks once | `[tasks/<slug>] [--apply\|--dry-run\|--local]` | `tasks/` + views, board, Issues/PRs, one commit |
+| `/ck-code:sync` | Reconcile everything with GitHub in one pass — recover missing `pr:` anchors, refresh `delivery:` from merged PRs, record stories merged straight to the trunk with no PR, place board cards, close issues a merged PR failed to close, tick epic checklists, and add a missing `Closes` footer to an open PR; commits the `tasks/` diff. Previews and asks once | `[tasks/<slug>] [--apply] [--dry-run] [--local]` | `tasks/` + views, board, Issues/PRs, one commit |
 | `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, set the trunk branch every PR targets, pick or create the GitHub Project whose board mirrors story status, re-map or reorder board columns, or show what is configured | `show` / `board` / `trunk <branch>` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
 
 ## Hand-offs — one click, never a retype
