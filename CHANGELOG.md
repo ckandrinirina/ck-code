@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.14.1] — 2026-09-14
+
+### Added
+- **references/code-craft.md** (new): the shared clean-code and comment standard — self-explaining names, one-job functions, guard clauses, no magic values, idiomatic error handling, code that matches its file; comments only when they state *why*, an invariant, a workaround, a pointer, or a public-API doc comment — never restating the code, narrating history, or keeping dead code. Ends with a four-check comment & readability scan mirroring `reuse-first.md`'s redundancy scan.
+
+### Changed
+- **build**: Phase 5.2 writes to the code-craft standard instead of the lone "comment only non-obvious logic" clause; Phase 6.1 runs the comment & readability scan after the redundancy scan and 6.2 fixes each hit; new RULE forbids shipping a restating comment or code that needs one to be read.
+- **references/qa-validation.md**: Step 3.5 verifies both Phase 6.1 scans ran and spot-checks the diff against each.
+- **team**: the conventions guide's Code Style section refines the shared standard (case style, doc-comment format, idioms) and never restates or lowers it.
+
 ## [6.14.0] — 2026-09-09
 
 ### Added
