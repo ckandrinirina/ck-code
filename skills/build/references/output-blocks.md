@@ -138,9 +138,15 @@ QA has run 3 times and issues remain:
 [list]
 
 A) FIX MANUALLY  — apply specific fixes you suggest
-B) ACCEPT AS-IS  — proceed with known issues (documented)
+B) ACCEPT AS-IS  — proceed; each remaining issue is recorded under the Implementation
+                   Summary `### Notes`
 C) ABORT         — stop; `ck-story set <story-path> status=todo` (writes + regenerates)
 ```
+
+**Bug-Fix Mode differs on B and C.** B records the remaining issues under the Bug Report
+`### Resolution` (there is no Implementation Summary). C leaves the story at `status: bug` —
+never flip a diagnosed bug to `todo`; that discards the diagnosis, the Fix Plan, and
+`prior_status`.
 
 ---
 

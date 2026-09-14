@@ -1,11 +1,14 @@
 # QA Validation — Shared Procedure
 
-Used by `build` (Phase 7). (`fix` does not run this procedure — its reproduction
-and diagnosis live in its own Phase 4, delegated to `ck-code:qa-validator`.)
-Invoke the `ck-code:qa-validator` agent in preference to running these steps
-inline if the agent is registered.
+Used by `build` (Phase 7) and, for its acceptance-criteria and regression checks, by
+`fix` (Phase 4) — both delegate to the `ck-code:qa-validator` agent and run these steps
+inline only when that agent is unregistered.
 
 ## Step 0 — Load QA expert skills (mandatory)
+
+**Whoever performs the QA runs this step** — the `ck-code:qa-validator` agent when the pass
+is delegated (the normal path; it loads them itself), the calling skill only when it runs
+these steps inline. It is never skipped on the assumption that the other side did it.
 
 Before any QA work:
 
@@ -37,10 +40,11 @@ regressions in previously-green tests.
 
 ## Step 3 — Code-quality checks
 
-Run all applicable quality tools for the stack. Detect what's available
-per project; full command list (TypeScript / Rust / Python / C++ / JUCE)
-lives in the `build` skill's `references/tdd-walkthrough.md`. Zero
-compiler warnings in project-owned files is the bar.
+Run all applicable quality tools for the stack. Detect the component's
+manifest and run that row of the per-stack command table in
+[`parallel-mode.md`](../skills/build/references/parallel-mode.md#p7--qa-one-validator-per-story)
+— the single source for both inline and PARALLEL MODE QA. Zero compiler
+warnings in project-owned files is the bar.
 
 ## Step 3.5 — Redundancy and code-craft check
 
@@ -107,8 +111,9 @@ calling skill's completion phase.
   re-run QA from Step 1 with a fresh check.
 - **Iteration = 3:** **escalate to user** with three options:
   - **A) FIX MANUALLY** — apply specific fixes the user suggests.
-  - **B) ACCEPT AS-IS** — proceed with known issues, document them.
-  - **C) ABORT** — stop work and run `ck-story set <story-path> status=todo`, which writes the frontmatter and regenerates the views.
+  - **B) ACCEPT AS-IS** — proceed, recording each remaining issue under the story's
+    Implementation Summary `### Notes` (bug-fix flow: under the Bug Report `### Resolution`).
+  - **C) ABORT** — stop work and run `ck-story set <story-path> status=todo`, which writes the frontmatter and regenerates the views. A bug-fix flow instead leaves `status: bug` untouched — flipping it to `todo` discards the diagnosis, the Fix Plan and `prior_status`.
 
 Exact wording for the escalation lives in the calling skill's references
 (`build/references/output-blocks.md` or `fix/references/qa-dialogue.md`).

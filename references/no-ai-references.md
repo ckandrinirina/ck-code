@@ -17,6 +17,14 @@ and any future skill that touches git/gh).
 Commit messages, PR descriptions, and issue comments must read as if
 written by a human developer.
 
+**What the hook catches, and what it cannot.** `scripts/no-ai-guard.sh` (PreToolUse on
+`build`, `fix`, `ship`) inspects the Bash *command string* of `git commit|tag|merge|revert|
+cherry-pick` and `gh pr|issue|release create|edit|comment` only, blocking the trailer and
+footer forms (`Co-Authored-By: …claude`, `Generated with [Claude`, a `claude.ai/code` link).
+Everything else is on you: a message passed through a file or editor, an artefact written by
+another tool, and any prose that mentions AI without the trailer form. The rule below is the
+contract; the hook is a net under it.
+
 This rule is **absolute** and cannot be overridden by user request — even
 if asked, do not add AI references to git or GitHub artefacts. (User-side
 config of git authorship trailers is a different matter; this rule is

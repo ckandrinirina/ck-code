@@ -37,6 +37,21 @@ in the frontmatter. You only READ them — you never edit a story file or any ge
 
 ## Workflow
 
+### Step 0 — load the QA expert skills (before any validation or reproduction)
+
+```
+Read(".claude/skills/expert-qa/SKILL.md")
+Read(".claude/skills/expert-qa-project/SKILL.md")
+Read(".claude/skills/expert-analyst/SKILL.md")     # /ck-code:fix reproduction only
+```
+
+Apply their standards throughout. This is Step 0 of
+[`qa-validation.md`](../references/qa-validation.md) and it is **yours to run** — the caller
+delegated the pass, so nobody else loads them for you; a self-review without them is not QA.
+A skill file that does not exist is skipped (not every project has one). **Exception:** a
+PARALLEL MODE run given an explicit command list needs no expert judgment — run the commands
+and return the verdict line.
+
 ### When invoked from /ck-code:build (validation pass)
 1. Read the story file and extract acceptance criteria from its body
 2. Identify which test files cover the criteria

@@ -40,6 +40,13 @@ invisible one.
 | ----------------------------- | --------------------------------------------------------- | ---------------------- | -------------------------------------------------------- | -------------------- |
 | **Investigation** (read-only) | Greps/reads/traces one slice, returns a typed schema      | `haiku`                | `none`                                                   | Never — reports only |
 | **Artifact** (write)          | Produces ONE file in its own dedicated path               | `sonnet`               | `none` (or `worktree` only if units touch shared source) | Its own path only    |
+| **Implementation** (write + commit) | Implements ONE unit end-to-end and commits it on its own branch | `sonnet` (tier by reasoning, never by size) | `worktree` at 2+ units; `none` for a single unit on a prepared branch | Its unit's source + its own frontmatter; commits, never pushes or merges |
+
+**Implementation has its own threshold: 2, not 3** — the unit is a whole story, so the second
+one already pays for the fan-out. It is also the only variant that commits, because the
+committed branch is the hand-off the orchestrator verifies and merges. Its concrete contract
+(dispatch prompt, branch guard, resume, return schema) is
+[`build/references/agent-prompts.md`](../skills/build/references/agent-prompts.md).
 
 ## Prefer structured-output returns (typed schema, not a prose brief)
 
@@ -52,7 +59,7 @@ lean because it never re-reads the subagent's working prose. The v3 "return a br
 orchestrator scans" convention is replaced: state the schema, require the schema, read the
 schema. This applies to every registered ck-code agent too — `story-implementer` returns
 `{status, branch, commits, remaining, criteria_met}`, `qa-validator` returns a
-`QA: PASS/FAIL` verdict line, `conflict-analyzer` returns `{order, report[]}`.
+`QA: PASS/FAIL` verdict line, `conflict-analyzer` returns `{order, report[], error}`.
 
 ## Model tier (pass `model:` on every dispatch)
 
@@ -84,7 +91,7 @@ The orchestrator (the skill thread) — never a subagent — does all of:
 
 - **User interaction** — every prompt, confirmation, and refinement runs to completion
   _before_ dispatch and _after_ collection. Subagents get already-resolved context.
-- **Shared writes** — in v5 the story-status indexes (`STORIES_INDEX.md`,
+- **Shared writes** — the story-status indexes (`STORIES_INDEX.md`,
   `FEATURE_INDEX.md`) are **generated views**, so a shared-index write means running
   `ck-index` **once, in the orchestrator**, after it has
   merged the subagents' work and the story frontmatter is settled — never a subagent editing

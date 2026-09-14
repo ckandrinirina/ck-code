@@ -2,7 +2,9 @@
 
 Prompt templates and the structured return contract for every sub-agent PARALLEL MODE
 dispatches: the per-story implementer (P4), its resume (P5), and QA (P7). Read only when two
-or more stories are in scope.
+or more stories are in scope — **except** the last section, [Inline QA
+dispatch](#inline-qa-dispatch), which single-story `build` Phase 7 and `fix` Phase 4 read on
+their own.
 
 ## The structured return schema (all implementer agents)
 
@@ -156,3 +158,42 @@ stories' commands, and returns the same verdict line. After a fan-out merge a `Q
 is a cross-branch integration failure by construction — each branch already passed in
 isolation. After a solo wave it means the index-regenerate commit, or the target's own moving
 state, broke what P7 had green.
+
+## Inline QA dispatch
+
+The single-story dispatch, used by `build` Phase 7 and `fix` Phase 4. No `isolation` (the
+work is in the main checkout on its own branch) and no worktree; everything the agent needs
+is in the prompt, because it cannot ask.
+
+```
+subagent_type: ck-code:qa-validator     # unregistered → run the steps inline instead
+model: haiku
+description: "QA story EE-SS: <title>"
+prompt: |
+  Run QA for story EE-SS in <cwd — the component directory whose manifest owns the commands
+  below; the repo root unless the story lives in a sub-package>. Read-only: never edit a
+  file, never apply a fix.
+
+  Story file: <repo-relative story path>   # acceptance criteria are in its body
+
+  Run these commands exactly, in order, stopping at the first failure and capturing a short
+  excerpt (failing test names, lint or type errors) — not the whole log:
+    <this story's stack commands from parallel-mode.md § P7>
+
+  Follow qa-validation.md Steps 0–7: load the QA expert skills yourself, verify every
+  acceptance criterion with file:line evidence, then the suite, the quality checks, the
+  redundancy/code-craft spot-check and architecture compliance.
+
+  Return, in this order:
+    - one line per acceptance criterion: PASS | FAIL | NOT-COVERED, with file:line
+    - the Issues Found rows (severity, description, file:line), or "none"
+    - exactly one final line:  QA: PASS   or   QA: FAIL — <command> — <excerpt>
+```
+
+`QA: FAIL` is a **NEEDS FIXES** verdict — the caller's normal QA loop, iteration cap and
+escalation apply unchanged.
+
+**`fix` Phase 4 variant (reproduction, not validation).** Same `subagent_type` and `model`,
+but the agent is given the bug description instead of a command list, **may write one minimal
+failing test**, and returns `{test path, failure output, root-cause hypothesis}` with no
+verdict line. It still never proposes a fix — the Fix Plan is `fix`'s own Phase 5.

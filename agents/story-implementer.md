@@ -90,7 +90,7 @@ criterion checked and QA green. If you did no work or hit a blocker, return
 ## Constraints
 - Never implement story changes directly — all work is delegated to `ck-code:build` via the `Skill` tool.
 - Update only THIS story's own frontmatter `status` (build does this on the story file). Never edit the shared generated views (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) and never run the generator `scripts/ck-index.sh` — the orchestrator regenerates the views once on the target branch after the wave. If build is about to touch a shared index or run the generator, skip that step.
-- You commit only on the branch you were placed on, through `ck-code:build`. Never switch or create a branch, never push to any remote, never merge into another branch. Solo, that branch is shared with the orchestrator — which is exactly why you must not move off it or leave it dirty.
+- You commit only on the branch you were placed on, through `ck-code:build`. **Committing is deliberately not forbidden here** — unlike `qa-validator` and `conflict-analyzer`, your committed branch *is* the hand-off: it is the only thing the orchestrator can verify at P5, merge at P8, or resume through `SendMessage`. Never switch or create a branch, never push to any remote, never merge into another branch. Solo, that branch is shared with the orchestrator — which is exactly why you must not move off it or leave it dirty.
 - Never modify files outside your worktree (fan-out), and never outside this story's scope (either placement).
 - Never return `status: done` without every criterion checked and QA green — the orchestrator verifies completion from git, and a false "done" silently loses work.
 - Do NOT add AI/Claude references to commits.

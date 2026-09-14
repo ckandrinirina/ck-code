@@ -17,23 +17,36 @@ Example: epic 01 has 01-01, 01-02, 01-03 (blocked by 01-01+01-02), 01-04 (blocke
 table — run it rather than working the ordering out by hand. What follows is the algorithm
 it implements, kept here as the contract:
 
-Take the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status ≠ done`.
-Order them into dependency phases by `Blocked by`:
+Take the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status ∉ {done,
+skip}` (what `ck-view waves` does — a done or skipped story needs no wave and blocks
+nothing). Order them into dependency phases by `Blocked by`:
 
-- **Wave 1** = stories whose every blocker is `done` (or empty).
-- **Wave k+1** = stories whose every blocker is `done` or scheduled in waves ≤ k.
+- **Wave 1** = stories whose every blocker is `done` (or empty). A `BUG` story always
+  qualifies for wave 1 regardless of its `blocked_by` — Bug-Fix Mode outranks dependency
+  ordering, same as the Ready rule elsewhere.
+- **Wave k+1** = stories whose every blocker is `done` or scheduled in a wave < k (one
+  scheduled in the wave being filled right now does not count — it has not landed yet).
 
-An out-of-epic blocker that is not yet `done` makes the epic un-startable — report which
-blocker is pending and stop. A story whose blocker never resolves (cycle, or a non-`done`
-out-of-scope dep) is `UNSCHEDULABLE` — exclude it and report at the end.
+Within one dependency level, stories are further split into **sub-waves** so no two
+stories sharing a `files:` path ever land in the same wave — a level with `01-05` and
+`01-06` both touching `server/src/lib.rs` becomes two sub-waves even though neither
+blocks the other. This is why the printed wave numbers can outnumber the dependency
+depth implied by `blocked_by` alone.
 
-The wave plan table ([conflict-format.md](conflict-format.md)) labels each wave
-`(parallel)` when it holds ≥ 2 stories and `(solo)` when it holds one — that label is the
-dispatch shape P4 will use, so the operator sees up front which waves cut worktrees. A deep
-chain means
-many sequential merge+dispatch cycles and heavy token use — if the plan runs more than
-~3 waves, note that and let the operator re-scope. Create one Claude Task per scheduled
-story prefixed by wave (`W1 · Implement 01-01: …`) when the Task tools are available.
+A story whose blocker never resolves — a dependency cycle, or a blocker (in this epic or
+any other) that is not `done` and never becomes scheduled — is `UNSCHEDULABLE`: excluded
+from every wave and reported at the end, never silently dropped and never mistaken for a
+reason to stop planning the rest of the epic. Only when **no** story in scope can start at
+all does the epic report un-startable instead of a wave plan; when every story in scope is
+already `done`/`skip`, it reports nothing left to build.
+
+The wave plan table ([dashboard-templates.md](../../track/references/dashboard-templates.md#waves))
+labels each wave `(parallel)` when it holds ≥ 2 stories and `(solo)` when it holds one —
+that label is the dispatch shape P4 will use, so the operator sees up front which waves cut
+worktrees. A deep chain means many sequential merge+dispatch cycles and heavy token use —
+if the plan runs more than ~3 waves, `ck-view` notes that and the operator should consider
+re-scoping. Create one Claude Task per scheduled story prefixed by wave (`W1 · Implement
+01-01: …`) when the Task tools are available.
 
 ## The wave loop
 

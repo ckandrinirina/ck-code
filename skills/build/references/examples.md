@@ -103,8 +103,12 @@ The manual-test bug-fix loop has run 3 times and issues remain:
   #3  Form race condition on rapid double-click → still ISSUES
 
 A) FIX MANUALLY — you apply the fix; I run Refactor + QA against it
-B) ACCEPT AS-IS — set `status: done`; #3 documented as known issue
+B) ACCEPT AS-IS — `ck-story set <story-path> status=done`; #3 recorded under the
+                  Implementation Summary `### Notes`
 C) ABORT        — `ck-story set <story-path> status=todo`; do not commit
 ```
 
 (Delivered via `AskUserQuestion` — A / B / C are the options, not a typed reply.)
+
+In Bug-Fix Mode, B records the residual issue under the Bug Report `### Resolution` instead,
+and C leaves `status: bug` as it is — a diagnosed bug is never flipped to `todo`.

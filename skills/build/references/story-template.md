@@ -1,8 +1,8 @@
 # Story File Templates
 
 Blocks written to the story file at specific phases of the build skill. **Status lives in
-the frontmatter** (`status:`) — the only status mutation is editing that field and running
-`ck-index` (SKILL.md 1.6 / 8.6). The blocks below are the free-form **body** additions
+the frontmatter** (`status:`) — the only status mutation is one `ck-story set` call, which
+writes the field and regenerates (SKILL.md 1.6 / 8.6). The blocks below are the free-form **body** additions
 (Unplanned Changes, Implementation Summary, checklist, Manual-Test Bugs); the body never
 records the plan or a status header.
 
@@ -96,9 +96,9 @@ Mark all acceptance criteria as checked in the story file:
 
 ## Phase 1.6 / 8.6 — Status Transitions (frontmatter only)
 
-Status is a **frontmatter field** — edit the `status:` line inside the leading `---`
-fences, then regenerate the views (`ck-index tasks/<slug>`)
-in the same phase. Values are lowercase `todo | in-progress | done | skip | bug`. There is no
+Status is a **frontmatter field**, and `ck-story set <story-path> status=<value>` is the only
+way it changes — one call writes the `status:` line inside the leading `---` fences and
+regenerates both views. Values are lowercase `todo | in-progress | done | skip | bug`. There is no
 `EPIC.md` stories-table row and no index cell to touch — the generator recomputes both views
 from this field.
 

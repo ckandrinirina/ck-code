@@ -43,7 +43,7 @@ reproduction test GREEN. Log any touch outside the Fix Plan's `Files to modify` 
 `## Unplanned Changes` (bug-section-template Phase 6.2), same as normal build.
 
 **Phase 6 — SOLID.** Run the SOLID check **bounded to the fix diff** (not the whole story).
-Record it under the Bug Report as `### SOLID Verification` (bug-section-template Phase 6.4),
+Record it under the Bug Report as `### SOLID Verification` (bug-section-template Phase 6.1),
 not as a story-level SOLID summary.
 
 **Phase 7 — QA.** Full QA procedure **plus the minimalism check** — the diff must be the
@@ -53,25 +53,25 @@ smallest change that resolves the root cause; flag any unrelated edit.
 
 1. Fill the Bug Report `### Resolution` + `### Files Touched` (bug-section-template Phase 8.1);
    set Bug Report `Status: DIAGNOSED → FIXED`.
-2. **Restore the story status** in the frontmatter: `status: bug` → `status: <prior_status>`
-   (from the frontmatter `prior_status:` — normally `done`), then clear `prior_status:`. Run
-   the generator in the same phase:
+2. **Restore the story status** — one call writes both fields and regenerates every view:
 
    ```bash
-   ck-index tasks/<slug>
-   ck-project sync tasks/<slug>
+   ck-story set <story-path> status=<prior_status> prior_status=
    ```
 
-   The rollup recomputes automatically — a feature with no remaining `bug`/`in-progress`/`todo`
-   story rolls back to `DONE`, and the sync moves the card out of Blocked into the column the restored status calls for. There is no index cell to edit and no `EPIC.md` to touch. In
-   DELEGATED MODE the agent restores only its own frontmatter and skips `ck-index` — the
-   orchestrator regenerates once on the target branch after merge.
+   `<prior_status>` is the frontmatter `prior_status:` value (normally `done`); the empty
+   `prior_status=` clears it in the same call. The rollup recomputes automatically — a feature
+   with no remaining `bug`/`in-progress`/`todo` story rolls back to `DONE`, and the sync moves
+   the card out of Bugs into the column the restored status calls for. There is no index cell
+   to edit and no `EPIC.md` to touch. In DELEGATED MODE add `--no-sync` — the agent writes
+   only its own frontmatter and the orchestrator regenerates once on the target branch after
+   merge.
 3. Do NOT append an Implementation Summary — the Bug Report Resolution is the record for a bug
    fix.
 4. Ship as usual (Phase 8.7) — the commit body lists the `Bug ID` and the story ID; `fix/`
    branch prefix.
 
-**Phase 8.5 — Manual-test loop.** Unchanged (bug-section-template Phase 8.6 Manual-Test
+**Phase 8.5 — Manual-test loop.** Unchanged (bug-section-template Phase 8.5 Manual-Test
 Reports records residual-symptom cycles). Cap = 3.
 
 ## Multi-story bugs

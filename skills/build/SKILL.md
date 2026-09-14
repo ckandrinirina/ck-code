@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -103,14 +103,19 @@ Interactive mode only — explicit `$ARGUMENTS` skips this.
 
 1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN`.
    Regenerate first if it is missing or lacks the `GENERATED` header
-   ([`stories-index.md`](../../references/stories-index.md)), then re-read.
-2. Filter to actionable rows: `Status: TODO` whose every `Blocked by` ID resolves to
-   `Status: DONE`, **plus every `Status: BUG` row** (a triaged bug from `/ck-code:fix`,
-   always actionable → Bug-Fix Mode). Surface `BUG` rows first with a 🐛 marker — an open
-   bug in shipped code outranks new work.
+   ([`stories-index.md`](../../references/stories-index.md)), then re-read. **In the
+   two-unfinished-features case** the gate chose nothing, so read *each* unfinished feature's
+   `tasks/<Plan>/STORIES_INDEX.md` (they may be the same file) and filter each to its own
+   epic `NN`; every step below stays per-epic, and the menu shows both epics' rows.
+2. Filter to actionable rows: `Status: TODO` or `Status: IN PROGRESS` whose every `Blocked by`
+   ID resolves to `Status: DONE`, **plus every `Status: BUG` row** (a triaged bug from
+   `/ck-code:fix`, always actionable → Bug-Fix Mode). Surface `BUG` rows first with a 🐛
+   marker — an open bug in shipped code outranks new work — and mark an `IN PROGRESS` row
+   with ↻ (resume: an interrupted run left it there, and it is picked up, never re-started).
 3. Sort by epic, then story number, then size (S < M).
-4. **Detect whole-epic options:** group ALL not-`DONE` rows by epic (`NN`); any epic with
-   > 1 non-DONE story is a wave candidate.
+4. **Detect whole-epic options:** group every row that is neither `DONE` nor `SKIP` by epic
+   (`NN`); any epic with > 1 such story is a wave candidate. A `SKIP` story is deliberately
+   out of scope and never counts toward a wave.
 5. **Detect the parallel-safe set:** if ≥ 2 stories are ready in one epic, run
    `ck-view waves --epic NN`. Its **Wave 1** is the largest conflict-free group of ready
    stories — the **recommended parallel set** and the preferred default — computed from
@@ -152,7 +157,8 @@ Runs ONLY for an explicit `$ARGUMENTS` story path — **skip** when the 1.2 menu
 Bug-Fix Mode, in DELEGATED MODE, or non-interactively. Never auto-pull parallel-safe peers:
 an explicit single-story request is respected, and batch routing belongs to the 1.2 menu.
 
-Count the selected story's epic (`NN`) rows in `STORIES_INDEX.md` whose `Status` ≠ `DONE`.
+Count the selected story's epic (`NN`) rows in `STORIES_INDEX.md` whose `Status` is neither
+`DONE` nor `SKIP`.
 If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuestion`):
 
 - **Build the whole epic in dependency-ordered waves** — leave this story `status: todo`
@@ -417,15 +423,22 @@ also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format 
 QA reviews the work — this is **not** a self-review.
 
 **Always delegate to the `ck-code:qa-validator` agent** (Haiku) — it absorbs the verbose
-suite/build/lint output in its own context and returns a compact verdict. Run the heavy
-commands inline **only** when that subagent_type is unregistered, or in DELEGATED MODE
-(where the orchestrator runs `qa-validator` per story instead).
+suite/build/lint output in its own context and returns a compact verdict. The dispatch call —
+model, cwd, story path, stack commands, return shape — is
+[agent-prompts.md § Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch); do
+not improvise it. Run the heavy commands inline **only** when that subagent_type is
+unregistered, or in DELEGATED MODE (where the orchestrator runs `qa-validator` per story
+instead).
 
 Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../references/qa-validation.md)
 — it loads the QA experts, validates every acceptance criterion, runs the suite +
 code-quality checks (commands per stack in [tdd-walkthrough.md](references/tdd-walkthrough.md)),
 and checks architecture compliance against the feature doc. Present the QA Report
 (output-blocks).
+
+**A delegated `QA: FAIL` is a `NEEDS FIXES` verdict** — the agent's verdict line replaces the
+inline report's verdict and enters the same loop; never treat it as a separate outcome, and
+never re-run the suite here to confirm it.
 
 **Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`
 via `AskUserQuestion` (wording in output-blocks); never silently continue past 3. On NEEDS
@@ -555,9 +568,11 @@ dispatch, explicit `model:` on every call, typed-schema returns — and P4 **ann
 decision** before the first dispatch (`Fan-out: N stories → dispatching N agents.`, or
 `Solo: 1 story → dispatching 1 agent on <branch> (no worktree).`).
 
-The three gates that bind even before that read: **P3** never dispatches into a project with
-zero skills without asking (agents cannot prompt) · **P5** derives "done" from git, never from
-an agent's self-report · **P7/P8** never accept work that has not returned `QA: PASS`.
+The four gates that bind even before that read: **P1** checks out and verifies `$TARGET`
+before any dispatch, and never lets it be the trunk (a `story`-level epic escalates at P3, or
+the run cancels) · **P3** never dispatches into a project with zero skills without asking
+(agents cannot prompt) · **P5** derives "done" from git, never from an agent's self-report ·
+**P7/P8** never accept work that has not returned `QA: PASS`.
 
 ---
 
@@ -605,15 +620,23 @@ dirty for the orchestrator. Commit messages are conventional
 - **1.3.5 (Bug-Fix Mode)** — implement only the recorded Fix Plan; the failing repro test is
   the RED target; restore `prior_status`, never an Implementation Summary. `status: bug`
   without a `DIAGNOSED` Bug Report → STOP (run `/ck-code:fix`).
+- **P1 / P3 (PARALLEL MODE)** — `$TARGET` is resolved, created, checked out and verified
+  before any dispatch, and it is **never the trunk**: a `story`-level epic escalates to
+  `integration: epic` through the P3 question, or the run cancels. This mode never commits or
+  merges on `main`/`develop`/`<trunk>`.
 - **P3 / P4 / P5 / P7 (PARALLEL MODE)** — team gate asked once per batch; every story
   implemented by an agent, worktrees only for waves of ≥ 2; "done" derived from git; nothing
   merged or accepted without `QA: PASS`.
 
 ## RULES
 
-- **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`,
-  `FEATURE_INDEX.md`, or `EPIC.md` — run `ck-story set <story-path> status=<value>`, which writes the field and regenerates
-  in the same phase (all three are one atomic mutation; [`github-projects.md`](../../references/github-projects.md)).
+- **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`
+  or `FEATURE_INDEX.md` — run `ck-story set <story-path> status=<value>`, which writes the field and regenerates
+  in the same phase (one atomic mutation; [`github-projects.md`](../../references/github-projects.md)).
+- **`EPIC.md` is the one file this skill edits directly, and only its `integration:` field** —
+  written at 3.5 (or by the PARALLEL MODE P3 escalation). `ck-story` refuses it, so that edit
+  is followed by `ck-index tasks/<Plan>` + `ck-project sync tasks/<Plan>` in the **same phase**;
+  its `pr:`/`delivery:` fields belong to `ship`, and it has no story table or checklist to touch.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.

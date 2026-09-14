@@ -31,7 +31,8 @@ cannot enable it for you.** Use it intelligently:
 | Big / complex: `design`, `plan`, `spec`, size `M` SOLID-heavy `build`, architecture | 🧠 **Off** — keep full reasoning |
 
 The skill-side lever that *is* automatic is `effort:` frontmatter — every ck-code skill sets
-it (`low` for `track`/`guide`/`explain`/`doctor`, `high` for `design`/`plan`/`spec`/`build`).
+it: `low` for `track`/`guide`/`explain`/`doctor`/`config`/`sync`, `medium` for
+`ship`/`migrate`, `high` for `design`/`plan`/`spec`/`build`/`fix`/`team`.
 The read-only skills additionally pin `model: haiku`, so they cost a cheap model regardless
 of your session model. Neither lever can reach `/fast`, which is a serving path, not a model.
 

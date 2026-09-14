@@ -144,32 +144,25 @@ Issue handling and common refactorings: rules in SKILL.md Phase 6.2.
 
 ## Phase 7 — Code Quality Checks by Stack
 
-Detect which tools are available in the project and run them:
-
-```bash
-# TypeScript projects
-npx tsc --noEmit        # Type checking
-npx eslint .            # Linting
-npx prettier --check .  # Formatting
-
-# Rust projects
-cargo clippy            # Linting
-cargo fmt -- --check    # Formatting
-
-# Python projects
-mypy .                  # Type checking
-ruff check .            # Linting
-black --check .         # Formatting
-
-# C++ / JUCE projects
-cmake --build build -- -v 2>&1 | grep -iE "warning:|error:" | grep -v "_deps"
-# clang-format --dry-run --Werror Source/*.cpp Source/*.h   (if .clang-format exists)
-# Zero compiler warnings in project-owned files is the quality bar
-```
+The per-stack build/test/lint commands are the manifest table in
+[parallel-mode.md](parallel-mode.md#p7--qa-one-validator-per-story) — the single source for
+both inline Phase 7 and PARALLEL MODE P7. Detect the manifest, run that row's commands, and
+let a project's `guide-conventions` skill override them when it names canonical ones.
 
 ---
 
 ## JUCE Test Runner Rules
+
+**Build check.** Run the build unpiped and read the tail of its output for `warning:` and
+`error:` lines (ignore anything under `_deps`) — piping a build into `grep` hides the exit
+code and drops the context around the first error:
+
+```bash
+cmake --build build -- -v
+clang-format --dry-run --Werror Source/*.cpp Source/*.h   # only if .clang-format exists
+```
+
+Zero compiler warnings in project-owned files is the quality bar.
 
 When writing JUCE unit tests:
 - `juce::ScopedJuceInitialiser_GUI juceInit;` as the first line of `main()` — prevents CoreMidi/Singleton assertions

@@ -22,12 +22,12 @@ Solo keeps the orchestrator/implementer split (this context still never builds o
 source) while dropping the worktree, its cold dependency install, and the whole
 conflict-and-merge stage that only exists because peers run concurrently.
 
-**Where solo commits.** The agent works in the main checkout on `$TARGET` — *unless*
-`$TARGET` is the default branch (`main`/`develop`, i.e. `integration: story`). Implementation
-on a protected branch is forbidden project-wide (SKILL.md 3.5), so in that case the solo agent
-cuts `story/<EE>-<SS>-<slug>` (or `fix/…`) **in the main checkout**, commits there, and P8
-merges that one branch into `$TARGET`. Still no worktree. Call the branch it will use
-`$WORKBRANCH` below; at `epic`/`feature` integration `$WORKBRANCH == $TARGET`.
+**Where solo commits.** The agent works in the main checkout on `$TARGET`, which P1 has
+already checked out. `$TARGET` is never a protected branch here — at `integration: story` P1
+raises the escalation gate instead of targeting the trunk (§ P1, § P3), so implementation
+never lands on `main`/`develop` (forbidden project-wide, SKILL.md 3.5). The branch the solo
+agent is placed on is called `$WORKBRANCH` below, and it is always `$TARGET`; the separate
+name is what P5's drift guard and the dispatch prompt check against.
 
 ## The P-step map
 
@@ -36,14 +36,14 @@ detailed in its section below.
 
 | Step | What this context does | Non-negotiable |
 |---|---|---|
-| **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run), **announce it with its reason and staleness**, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never merge into a hardcoded `main`, and never into whatever branch happened to be checked out |
+| **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run), **check it out — creating it if absent — and verify HEAD**, announce it with its reason and staleness, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never dispatch before HEAD is on `$TARGET`; never merge into a hardcoded `main`, into whatever branch happened to be checked out, or into the trunk (level `story` escalates at P3) |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
-| **P3** | Team gate (`ls .claude/skills/{expert,guide}-*/SKILL.md`) + wave-plan confirmation + criteria ambiguity, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
+| **P3** | Team gate (see § P3) + wave-plan confirmation + criteria ambiguity + the level-`story` escalation when P1 raised it, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
 | **P4** | Dispatch the wave: **fan-out** (≥ 2) = one worktree `Agent` per story in a single message; **solo** (= 1) = one `Agent` on `$WORKBRANCH`, no worktree. Both `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` | Every story goes to an agent; a worktree only when a peer runs beside it. Tier the model by reasoning complexity, never `size` |
-| **P5** | Integrity **the moment an agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
+| **P5** | Integrity **the moment an agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / ⚠ deletion review (ask accept-or-exclude) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
 | **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Cross-branch by construction — the fan-out wave's one barrier. **Skipped entirely on a solo wave.** Every dry-run is aborted; nothing lands here |
 | **P7** | One `ck-code:qa-validator` per ✓ story, launched as it clears P5 | Acceptable = ✓ complete + `QA: PASS` (+ conflict-free, fan-out only) |
-| **P8** | Fan-out: merge in P6's order. Solo: nothing to merge (or one local branch when `$WORKBRANCH ≠ $TARGET`). Then regenerate the indexes **once**, run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never accept work that has not passed P7 |
+| **P8** | Fan-out: merge in P6's order. Solo: nothing to merge. Then regenerate the indexes **once**, run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never accept work that has not passed P7 |
 | **P9** | Re-resolve the next wave from the regenerated index and loop from P3 | A held story keeps its branch (and worktree, if any) and holds its dependents |
 
 **P5 and P7 are pipelined, P6 and P8 are barriers.** P5 and P7 judge one story against
@@ -62,11 +62,35 @@ git status --porcelain && git branch --show-current
 A dirty tree or a detached HEAD stops the run — say which and stop.
 
 `$TARGET` is `resolve_parent(epic NN)`
-([`branch-topology.md`](../../../references/branch-topology.md#resolution)), created if
-absent — **not** whatever branch is currently checked out. At level `story` that resolves to
-the default branch; at `epic`/`feature` to `epic/<NN>-*`. This mode is already scoped to a
-single epic, so exactly one `$TARGET` resolves. Every later phase merges into it, never a
-hardcoded `main`.
+([`branch-topology.md`](../../../references/branch-topology.md#resolution)) — **not** whatever
+branch is currently checked out. At `epic`/`feature` it is `epic/<NN>-*`; at level `story` it
+resolves to the default branch, which this mode never uses as `$TARGET` (escalation gate
+below). This mode is already scoped to a single epic, so exactly one `$TARGET` resolves.
+Every later phase merges into it, never a hardcoded `main`.
+
+**Level `story` — escalate before anything is dispatched.** This mode records the wave on
+`$TARGET` (P4 commits there) and merges into it (P8), and **neither may ever happen on the
+trunk**. So when `resolve_parent` returns the default branch, do not check it out and do not
+plan a dispatch: carry the escalation into P3's single question — **Escalate epic `NN` to
+`integration: epic`** (write `integration: epic` to `EPIC.md`, create `epic/<NN>-<slug>` from
+`<trunk>`, and that branch becomes `$TARGET`) or **Cancel** (the stories stay untouched;
+build them one at a time inline). P2 may be planned meanwhile; nothing is dispatched until
+the answer lands.
+
+**Check out `$TARGET` and verify HEAD, before the announce.** Creating it when absent is part
+of this step ([Creation](../../../references/branch-topology.md#creation) builds the chain
+top-down, so `feat/<plan-slug>` comes first at level `feature`):
+
+```bash
+git fetch origin --quiet
+git branch "$TARGET" "<parent per branch-topology Creation>"   # only if absent
+git checkout "$TARGET"
+git rev-parse --abbrev-ref HEAD                                 # must print $TARGET
+```
+
+HEAD anywhere else stops the run — every later step assumes it: P4 commits the wave marker
+there, fan-out worktrees are cut from its HEAD, P8 merges into it, and the post-wave QA and
+manual gate run on it.
 
 **Announce it, with its reason** — one line, before any wave is planned, so a run launched on
 an unrelated branch is visible rather than surprising at merge time:
@@ -76,7 +100,7 @@ Target: epic/02-payments — level epic, all 4 stories land in epic 02's single 
         (current branch story/01-03-login is not the target)
 ```
 
-Then `git fetch origin --quiet` and check staleness once for the whole run
+Then check staleness once for the whole run — the fetch above already ran
 (`git rev-list --count $TARGET..origin/$TARGET`). When it is behind, say so on a second line
 and carry the **Sync `$TARGET` from origin first** option into P3's single question — never a
 prompt of its own, never a silent merge. If `$TARGET` already has an open PR (`EPIC.md` `pr:`),
@@ -87,7 +111,7 @@ Resolving the scope set, by argument shape:
 | `$ARGUMENTS` | Scope |
 |---|---|
 | Story IDs (`02-05 03-01`) | exactly those stories; skip the feature gate — explicit scope is always respected |
-| `--epic NN` | every non-`DONE` story of epic `NN`; skip the feature gate |
+| `--epic NN` | every story of epic `NN` that is neither `DONE` nor `SKIP`; skip the feature gate |
 | Empty (menu route) | the set the SKILL.md 1.2 menu already resolved — do not re-derive it |
 
 **Resolve the plan from the number, never by asking.** Epic numbers are unique across
@@ -160,13 +184,35 @@ generic code with no project experts, guides, or QA rules. Warn per
 in place; **CONTINUE WITHOUT SKILLS** → dispatch as-is. Never dispatch without asking.
 
 Fold that question, the wave-plan confirmation (`PROCEED` / `DROP A STORY` / `ABORT`), the P1
-**Sync `$TARGET` from origin first** option when the target is behind, and any genuine
-acceptance-criteria ambiguity into **one `AskUserQuestion`, at most 4 questions** — the
-dispatched agents have no user, so ambiguity is resolved here or not at all. Skip the
-wave-plan question when the SKILL.md 1.2 menu already resolved this exact scope; that
-selection was the confirmation, and re-asking it is a wasted round-trip. When all four slots
-are contended, the team gate and the sync offer win — both change what every dispatched agent
-starts from.
+**Sync `$TARGET` from origin first** option when the target is behind, the P1 **escalation**
+question when the epic's level is `story`, and any genuine acceptance-criteria ambiguity into
+**one `AskUserQuestion`, at most 4 questions** — the dispatched agents have no user, so
+ambiguity is resolved here or not at all. Skip the wave-plan question when the SKILL.md 1.2
+menu already resolved this exact scope; that selection was the confirmation, and re-asking it
+is a wasted round-trip. When the slots are contended the escalation question wins, then the
+team gate and the sync offer — without a target there is nothing to dispatch, and the other
+two change what every dispatched agent starts from.
+
+**The escalation question (level `story` only).** "Epic `<NN>` is `integration: story`, so its
+target would be `<trunk>` — this mode never commits or merges there. How should it land?"
+
+- **Escalate epic `<NN>` to `integration: epic`** (recommended) — write `integration: epic`
+  to that `EPIC.md`, then run P1's checkout for the new target:
+
+  ```bash
+  git branch "epic/<NN>-<slug>" "<trunk>"     # only if absent
+  git checkout "epic/<NN>-<slug>"
+  ck-index tasks/<Plan> && ck-project sync tasks/<Plan>
+  ```
+
+  `epic/<NN>-<slug>` becomes `$TARGET` for the whole run, and every story of the epic lands in
+  that one PR. The level change applies from here onward, never retroactively — say so when
+  stories of the epic are already merged.
+- **Cancel** — dispatch nothing and leave every story's status exactly as it is; a
+  `story`-level epic is built one story at a time inline (SKILL.md Phases 1–8), each on its
+  own `story/…` branch with its own PR.
+
+Never synthesize an epic branch without this answer, and never fall back to the trunk.
 
 ## P4 — Dispatch
 
@@ -179,6 +225,7 @@ status and restores it at Phase 8.6).
 
 ```bash
 ck-story set status=in-progress <story-path>… --no-board
+git status --porcelain tasks/          # empty → nothing to record; skip the two commands below
 git add <the story files just edited> tasks/<Plan>/STORIES_INDEX.md tasks/FEATURE_INDEX.md
 git commit -m "chore: mark wave <N> in progress"
 ck-project sync tasks/<Plan>
@@ -188,8 +235,12 @@ One `ck-story` call takes every story of the wave and regenerates once. `--no-bo
 the card sync back until after the commit, so the board never advertises a wave that is not
 yet recorded on `$TARGET`.
 
-On a resumed wave every story may already be `in-progress`, so nothing is staged — the
-commit is skipped rather than failed.
+**A resumed wave usually changes nothing.** `ck-story` reports one line per story, and
+`<id>: already current — no change` means that story was already `in-progress`. When every
+story reports it, there is nothing to stage: skip the `git add`/`git commit` and go straight
+to the sync. Otherwise the porcelain check above is the gate — an empty `tasks/` porcelain
+with a non-empty change summary means the generated views were already current too. Never run
+`git commit` on an empty index; it exits non-zero and reads as a failed wave.
 
 One commit and one sync per wave, whatever the wave's width. This is the only place
 In Progress can be expressed: a dispatched agent writes `in-progress` inside its own
@@ -243,11 +294,10 @@ they run concurrently. Per story (full prompt: [agent-prompts.md](agent-prompts.
 One story has no peer to collide with, so it gets no worktree — the agent works in the main
 checkout and its commits are already where they need to be.
 
-1. **Resolve `$WORKBRANCH`.** `$TARGET` when the epic's `integration:` is `epic` or
-   `feature`. When `$TARGET` is the default branch (`integration: story`), instead create and
-   check out `story/<EE>-<SS>-<slug>` (`fix/…` for a `BUG` story) from `$TARGET` **here in the
-   orchestrator, before dispatch** — never let the agent choose a branch — and record that
-   P8 must merge it back.
+1. **Resolve `$WORKBRANCH` — it is `$TARGET`.** P1 already created and checked it out, and
+   its escalation gate guarantees it is an `epic/…` or `feat/…` branch, never the trunk.
+   Re-verify with `git rev-parse --abbrev-ref HEAD` **here in the orchestrator, before
+   dispatch** — never let the agent choose or change a branch.
 2. **Record the base SHA** — `git rev-parse HEAD` on `$WORKBRANCH`. P5 has no second branch to
    diff against, so this SHA *is* the baseline. Capture it before the agent starts.
 3. **Announce**: `Solo: 1 story → dispatching 1 agent on <$WORKBRANCH> (no worktree).`
@@ -341,8 +391,13 @@ Classify (report format: [conflict-format.md](conflict-format.md)):
   rounds**. Still
   incomplete after the cap, or a resume that makes zero new commits → flag `too large /
   stuck`, keep the branch, recommend splitting.
-- **🚫 blocked** — empty diff (nothing to resume — re-dispatch fresh via a new `Agent` call)
-  or an unexpected deletion. Excluded from merge; branch kept; reported for review.
+- **🚫 blocked** — empty diff: there is nothing to resume, so re-dispatch fresh via a new
+  `Agent` call. Excluded from merge; branch kept; reported for review.
+- **⚠ deletion review** — a real diff with its criteria checked that also deletes files.
+  **Not blocked**: a story may legitimately delete code, and excluding it strands finished
+  work. Print every deleted path and ask (`AskUserQuestion`): **Accept the deletions** → the
+  story is ✓ complete and walks on to P7; **Exclude this story** → treat it as 🚫 blocked,
+  keep the branch, report it. Never decide either way on the agent's behalf.
 
 Never trust the agent's word; a story is done only when this gate and P7 QA agree.
 
@@ -353,6 +408,18 @@ none. Say so in one line (`Conflicts: skipped (solo wave).`) and go to P7.
 
 **The fan-out wave's one barrier** — starts only once every branch has cleared P5, and runs
 while the P7 QA already dispatched is still in flight. It never waits for QA.
+
+**Guard the checkout first** — the dry-runs happen in the main checkout, so a wrong HEAD or a
+dirty tree would either measure the wrong target or leave a half-merge behind:
+
+```bash
+git rev-parse --abbrev-ref HEAD    # must be $TARGET
+git status --porcelain             # must be empty
+```
+
+Either check failing stops P6: fix the checkout (P1's `git checkout "$TARGET"`) or report the
+dirty paths and stop — never dry-run from somewhere else. The agent repeats the same guard and
+returns `order: []` with an error rather than probing, so an unguarded dispatch fails loudly.
 
 Delegate the ✓-complete branches to `ck-code:conflict-analyzer` (falls back inline): it
 dry-run `git merge --no-commit`s each branch onto `$TARGET`, classifies risk, and returns a
@@ -375,15 +442,16 @@ the main checkout — there is no worktree to check out and re-install. It stays
 it cannot disturb the checkout.
 
 Resolve each story's commands from the component its `files:` touch — detect the stack from
-that directory's manifest:
+that directory's manifest. **This table is the one per-stack QA command list in ck-code** —
+inline Phase 7 uses it too, via [tdd-walkthrough.md](tdd-walkthrough.md) § Phase 7:
 
 | Manifest | QA commands |
 | --- | --- |
 | `Cargo.toml` | `cargo test && cargo clippy -- -D warnings && cargo fmt --check` |
-| `package.json` | the declared `test`, `lint`, and typecheck scripts |
-| `pyproject.toml` | `pytest` + the declared lint/format checks |
+| `package.json` | the declared `test`, `lint`, and typecheck scripts — typically `npm run test`, `npx eslint .`, `npx tsc --noEmit`, `npx prettier --check .` |
+| `pyproject.toml` | `pytest`, plus the declared lint/format/type checks — typically `ruff check .`, `black --check .`, `mypy .` |
 | `go.mod` | `go test ./... && go vet ./...` |
-| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact |
+| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)) |
 
 A project's `guide-conventions` skill overrides this table when it names canonical commands.
 No manifest match → ask once and reuse. Mark any QA-failing story **BLOCKED** — from merge in
@@ -400,24 +468,21 @@ Never advance P9 past a red solo story — its dependents would build on broken 
 Print the final summary with options ([conflict-format.md](conflict-format.md)) and use
 **AskUserQuestion**:
 
-1. **Merge ready branches now** (conflict-free order) — *fan-out, or a solo run whose
-   `$WORKBRANCH ≠ $TARGET`*
+1. **Merge ready branches now** (conflict-free order) — *fan-out only*
 2. **Review branches first, merge manually** — print branch names and stop
 3. **Re-dispatch blocked/failed stories** — fresh `Agent` call for empty or errored stories
    only (◐ incomplete is resumed at P5, not here). A new worktree in fan-out; a fresh solo
    dispatch on `$WORKBRANCH` in a solo wave.
 
-**Solo wave, `$WORKBRANCH == $TARGET`** — the work is already on the target; there is no merge
-question. Skip straight to the regenerate below, saying so in one line
-(`Merge: none needed (solo on <$TARGET>).`).
+**A solo wave** has its work already on the target; there is no merge question. Skip straight
+to the regenerate below, saying so in one line (`Merge: none needed (solo on <$TARGET>).`).
 
-**Option 1** — merge each eligible branch into `$TARGET` in P6's order (a solo wave has one
-branch and no order to derive):
-
-```bash
-git checkout "$TARGET"
-git merge --no-ff "<branch>" -m "feat: implement story <id>"
-```
+**Option 1** — merge each eligible branch into `$TARGET` in P6's order, following
+[`branch-topology.md`](../../../references/branch-topology.md#story-merge) exactly: the
+clean-tree guard before the checkout, `--no-ff` so each story stays a readable unit, the
+abort-and-report path on conflict, and `git branch -d` (never `-D`) once it lands. Do not
+improvise a merge here, and do not write a story-id merge message — the shape there is the
+one every consumer uses.
 
 Then **regenerate the indexes once** on the target branch — every dispatched agent, worktree
 or solo, carries only its own story frontmatter at `done` (sub-agents never touch the shared
@@ -451,15 +516,13 @@ re-ask. The story stays merged — this is a fix, not a re-open.
 
 **Cleanup.** After the merge and its check settle, `git worktree prune` and confirm only the
 main worktree remains (changed native worktrees linger until pruned; unchanged ones already
-auto-cleaned). Then delete each **merged** story branch — `git branch -d "<branch>"` per
-branch that landed in `$TARGET` this wave (`-d`, never `-D`: an unmerged branch must refuse
-to die). Merged branches left standing accumulate forever and bury the real ones. A worktree
-or branch still standing must map to a story the report names as held, blocked, or
-conflicted — that is the only state a resume can read from.
+auto-cleaned). Then confirm no merged story branch is still standing — the merge step deleted
+each with `-d` as it landed, so `git branch --list 'story/*' 'fix/*'` must name only stories
+this report calls held, blocked, or conflicted. That is the only state a resume can read
+from; merged branches left standing accumulate forever and bury the real ones.
 
-A solo wave has nothing to prune when `$WORKBRANCH == $TARGET`; say `Cleanup: none (solo on
-<$TARGET>).` rather than skipping the step silently. When it cut its own `story/…` branch,
-delete it with the same `-d` after it merges.
+A solo wave has nothing to prune and no branch to delete — its work is on `$TARGET` itself;
+say `Cleanup: none (solo on <$TARGET>).` rather than skipping the step silently.
 
 ## P9 — Next wave
 

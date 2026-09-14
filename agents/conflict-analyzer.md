@@ -29,10 +29,20 @@ report:
     risk:   NONE | TRIVIAL | NEEDS-REVIEW | HIGH-RISK
     files:  [<path>:<line-range>, …]   # [] when risk: NONE
     against: [<other source branch it also collides with>, …]
+error:  <one line>               # only when the step-0 guard refused to probe
 ```
 
 ## Workflow
 
+0. **Guard first — never probe from the wrong place.** The dry-runs happen in the caller's
+   checkout, so confirm you are on the target branch with a clean tree:
+   ```bash
+   git rev-parse --abbrev-ref HEAD    # must equal the target branch you were given
+   git status --porcelain             # must be empty
+   ```
+   Either check failing → return `order: []`, an empty `report`, and `error:` naming what you
+   found, and change nothing. A probe from another branch measures the wrong merge, and one
+   over uncommitted work can bury the caller's changes.
 1. For each source branch, dry-run a merge against the target and grep the conflict lines:
    ```bash
    git merge --no-commit --no-ff "$branch" 2>&1 | grep '^CONFLICT' || true

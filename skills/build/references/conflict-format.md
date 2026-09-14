@@ -31,6 +31,7 @@ Integrity (derived from git — not the agents' self-report):
   02-05  →  ✓ complete   (+347 / -12, all criteria checked, clean tree)
   03-01  →  ◐ incomplete (+120 / -4, "rate limiting" unchecked)  → resume via SendMessage
   02-06  →  🚫 blocked   (empty diff — no implementation)         → re-dispatch fresh
+  02-07  →  ⚠ deletion   (+40 / -180, deletes src/legacy/*.ts)    → ask: accept / exclude
 ─────────────────────────────────────────────────────
 ```
 
