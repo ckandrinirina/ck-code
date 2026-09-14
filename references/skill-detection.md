@@ -8,7 +8,7 @@ the files a story or bug touches.
 
 Architecture docs are **feature-scoped**: each feature owns a self-contained
 `docs/architecture/features/<slug>/index.md` with its components, APIs, data, and
-flows. A story reads its **own feature's doc**, not the whole architecture. v5 writes no
+flows. A story reads its **own feature's doc**, not the whole architecture. `design` writes no
 dated delta/journal docs (git is the history); if a pre-v4 project left some beside
 `index.md`, they are inert — `index.md` always carries current truth.
 

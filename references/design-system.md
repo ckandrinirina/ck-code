@@ -5,8 +5,8 @@ how the local cache stays fresh, how `build` reproduces a component exactly, and
 touchpoint behaves when the integration is absent.
 
 Read by `spec` (the brief offer, § Pending link), `design` (`ds` mode), `team` (guide
-generation), `build`/`fix` (via [`skill-detection.md`](skill-detection.md)),
-[`qa-validation.md`](qa-validation.md), and `doctor`. Those files state *when* they consult
+generation), `build`/`fix` (via [`skill-detection.md`](skill-detection.md)), and
+[`qa-validation.md`](qa-validation.md). Those files state *when* they consult
 a design system; this file states *how*.
 
 ## The off switch
@@ -166,8 +166,8 @@ property of the spec that asked for it.
 
 | `designSystem.status` | Meaning | Written by |
 |---|---|---|
-| `none` | never offered, or the user declined | `spec` (Phase 4.5) |
-| `awaiting-link` | a brief was written; the user is in Claude Design | `spec` (Phase 4.5) |
+| `none` | never offered, or the user declined | `spec` (PHASE 5) |
+| `awaiting-link` | a brief was written; the user is in Claude Design | `spec` (PHASE 5) |
 | `linked` | the design system is cached in this repo | `design ds` |
 
 **Who reads it, and what each does — no other touchpoint may act on it:**

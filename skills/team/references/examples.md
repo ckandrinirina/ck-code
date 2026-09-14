@@ -117,6 +117,14 @@ B) Regenerate all — refresh team-owned skills with fresh research (merge-safe:
 C) Abort
 ```
 
+Add one line to option B only when `guide-design-system` is on disk and
+`docs/architecture/design-system/` is not — the one case where B removes a skill:
+
+```
+   note: guide-design-system will be REMOVED — its cache
+   (docs/architecture/design-system/) no longer exists
+```
+
 ---
 
 ## Post-Generation Summary (Phase 4.2)
@@ -144,6 +152,21 @@ C) Abort
 | [Language] | /guide-[slug] | [ver] | context7 |
 | [Framework] | /guide-[slug] | [ver] | context7 + WebSearch |
 | ... | ... | ... | ... |
+
+### Design System
+
+<!-- this section only when guide-design-system was written, refreshed, or removed;
+     omit it entirely otherwise — most projects have no design system -->
+
+**guide-design-system:** generated from `docs/architecture/design-system/index.md`
+([N] tokens, [N] components). Auto-loads on UI paths; exempt from the guide line budget
+because its tables are verbatim data.
+
+<!-- other outcomes, one line, pick the one that happened:
+     refreshed — tables re-copied from the current cache
+     REMOVED — docs/architecture/design-system/ was deleted, so the guide went with it
+     preserved unchanged — marker removed by you, so --regenerate left it alone
+       (its cache is gone; delete the skill when you are done with it)  -->
 
 ### House Conventions
 
@@ -210,8 +233,12 @@ Based on tech-stack.md, expected skills vs. current state:
 | guide-react-native | .claude/skills/guide-react-native/SKILL.md  | ✗ missing                 |
 | guide-grpc         | .claude/skills/guide-grpc/SKILL.md          | ? extra (tech not detected) |
 | guide-conventions  | .claude/skills/guide-conventions/SKILL.md   | ● protected (house rules)   |
+| guide-design-system | .claude/skills/guide-design-system/SKILL.md | ⊘ stale (cache deleted → will be REMOVED) |
 
-**Summary:** 2 missing, 1 extra, 6 owned, 1 protected.
+**Summary:** 2 missing, 1 extra, 6 owned, 1 protected, 1 stale.
+
+The `guide-design-system` row appears only when that skill or its cache exists; omit it
+entirely on a project with no design system.
 
 Then ask via **AskUserQuestion** (see Existing-Skills Gate above):
 A) Generate missing only  B) Regenerate all (merge-safe)  C) Abort
@@ -220,4 +247,7 @@ A) Generate missing only  B) Regenerate all (merge-safe)  C) Abort
 Legend: **owned** = carries the team GENERATED marker (refreshable on `--regenerate`).
 **protected** = no marker (`--conventions`, `--new`, or user-unmarked) — never overwritten,
 never counted as EXTRA. **? extra** = an owned skill for a technology no longer in
-tech-stack.md; never deleted automatically — the user decides.
+tech-stack.md; never deleted automatically — the user decides. **⊘ stale** = the one
+auto-removal in the whole skill: an *owned* `guide-design-system` whose
+`docs/architecture/design-system/` cache has been deleted (THE MERGE RULE step 4). No other
+slug is ever deleted, and a *protected* `guide-design-system` is `● protected`, not stale.

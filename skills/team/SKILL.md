@@ -3,7 +3,7 @@ name: team
 description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill. Requires docs/architecture/ to exist already — run design first if it does not. Runs only on an explicit request or a hand-off from another ck-code skill.
 argument-hint: "[--basic|--standard|--max] [--check|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
 effort: high
-allowed-tools: Bash(ls*) Bash(mkdir*) Bash(git status*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ls*) Bash(mkdir*) Bash(rm*) Bash(git status*) Bash(find*) Bash(grep*) Bash(npx*) Skill
 ---
 
 # Team — Project-Tailored Expert & Guide Skill Factory
@@ -132,16 +132,23 @@ Per target path, in **every** generation and `--regenerate` run:
    On `--regenerate` → refresh the body, re-emit the marker, and **re-insert verbatim**
    any block fenced by `<!-- ck-code:team MANUAL START -->` … `<!-- ck-code:team MANUAL END -->`.
 
+4. **`guide-design-system`, present, marker found, and `docs/architecture/design-system/`
+   gone** → **DELETE** `.claude/skills/guide-design-system/` and report the removal. This is
+   the single path on which a `--regenerate` removes a skill instead of refreshing it: the
+   directory's absence is the integration's off switch
+   ([`design-system.md`](../../references/design-system.md)), and a stale guide would keep
+   enforcing tokens that no longer have a source. It applies to that one slug and no other —
+   a `guide-<tech>` whose technology left `tech-stack.md` is reported as `? extra` and never
+   deleted. A `guide-design-system` whose marker the user removed falls under rule 2:
+   PROTECTED, reported as preserved, the user deletes it.
+
+   ```bash
+   rm -rf .claude/skills/guide-design-system
+   ```
+
 So a user protects a whole file by removing its marker line, or protects an addition
 inside a team-owned file by wrapping it in a MANUAL fence. `--conventions` and `--new`
 never write the GENERATED marker, so their output is protected forever.
-
-`guide-design-system` is the one exception to "regeneration only adds": when
-`docs/architecture/design-system/` has been deleted, `--regenerate` **removes** it (rule 3
-targets, marker present), because the directory's absence is the integration's off switch
-and a stale guide would keep enforcing tokens that no longer have a source. A
-`guide-design-system` whose marker the user removed is PROTECTED like any other file —
-report it as preserved and let the user delete it.
 
 ---
 
@@ -242,10 +249,12 @@ The orchestrator merges the briefs into the single "Best Practices Knowledge" bl
 inline before Phase 2.
 
 **Workflow path (≥8 technologies + `--workflow`).** When the gate in
-[`dynamic-workflows.md`](../../references/dynamic-workflows.md) passes, run this fan-out with the
-`Workflow` tool instead, passing [`references/research.workflow.md`](references/research.workflow.md)
-verbatim as `script` with `args = {technologies}`. It retries empty units itself (3 rounds); merge
-`briefs`, research the returned `unresolved` ids inline. At 8+ without the flag, print the hint once.
+[`dynamic-workflows.md`](../../references/dynamic-workflows.md) passes, run this fan-out with
+`Workflow({ name: "team-research", args: { technologies } })` — the registered plugin workflow,
+never an inline `script`. Build `args` from
+[`references/research.workflow.md`](references/research.workflow.md), which is the contract for
+this call. It retries empty units itself (3 rounds); merge `briefs`, research the returned
+`unresolved` ids inline. At 8+ without the flag, print the hint once.
 
 ---
 
@@ -388,14 +397,21 @@ Count the write set from 3.0 and announce the branch in one line
   guide), and the GENERATED-marker instruction; it writes exactly one file and nothing else.
 - **<3 skills** → write them inline, following the same 3.2/3.3 contracts.
 
+**A file that already exists is always regenerated inline, never by a workflow** — the MANUAL
+re-insert rule needs the file's current text, and a workflow subagent is handed a template, not
+a file. So split the write set: net-new paths may go to a dispatched agent or the `Workflow`
+path below; every existing GENERATED file stays with the orchestrator.
+
 All prompts (0.5, 2.4), the 2.5 capture, and the 3.0 merge-rule resolution stay with the
 orchestrator and are complete before dispatch; Phase 4.1 verifies centrally.
 
-**Workflow path (≥8 skills + `--workflow`).** Same gate as 1.6a, using
-[`references/generate.workflow.md`](references/generate.workflow.md) with `args = {projectContext,
-skills}` — `skills` carries only paths the merge rule already cleared. Necessarily a **second,
-separate** `Workflow` call: the 2.4/2.5 block sits between the two and a script can never prompt.
-Regenerate every slug in the returned `missing` inline.
+**Workflow path (≥8 skills + `--workflow`).** Same gate as 1.6a, run as
+`Workflow({ name: "team-generate", args: { projectContext, skills } })` — never an inline
+`script`; [`references/generate.workflow.md`](references/generate.workflow.md) is the contract
+for `args` and the return shape. `skills` carries **only net-new paths** the merge rule already
+cleared — an existing GENERATED file never enters `skills` (3.1). Necessarily a **second,
+separate** `Workflow` call: the 2.4/2.5 block sits between the two and a script can never
+prompt. Regenerate every slug in the returned `missing` inline.
 
 ### 3.2 Expert content contract
 
@@ -430,11 +446,20 @@ session that touches their paths: every line is a recurring cost.
 
 ### 3.4 Design-system guide contract (conditional)
 
-**Skip entirely** when `docs/architecture/design-system/index.md` does not exist. That
-absence is the integration's off switch — do not create the guide, do not mention it, do
-not ask. Most projects have no design system and must see nothing.
+Branch on whether `docs/architecture/design-system/index.md` exists — that file's absence
+is the integration's off switch:
 
-When it exists, read it plus [`design-system.md`](../../references/design-system.md) and
+- **Absent, and no `guide-design-system/` on disk** → skip entirely. Do not create the
+  guide, do not mention it, do not ask. Most projects have no design system and must see
+  nothing.
+- **Absent, but `guide-design-system/` exists and carries the GENERATED marker** → this is
+  [THE MERGE RULE](#the-merge-rule) step 4: **remove** the skill directory and report the
+  removal. Never leave a design-system guide standing over a deleted cache.
+- **Absent, and `guide-design-system/` exists without the marker** → PROTECTED. Leave it,
+  report it as preserved, and say the cache it describes is gone.
+- **Present** → generate or refresh it, as below.
+
+When `index.md` exists, read it plus [`design-system.md`](../../references/design-system.md) and
 write `.claude/skills/guide-design-system/SKILL.md` (GENERATED marker as the first body
 line, `user-invocable: false`, same merge rule as every other guide):
 
@@ -485,6 +510,19 @@ ls -la .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md
 This `ls` is the proof, never a subagent's or workflow manifest's self-report — a resumed workflow
 replays cached results without re-writing, so a manifest entry can outlive its file. Write inline any
 planned path it does not show.
+
+**Then enforce the size budget on what the workflow wrote.** The `team-generate` manifest
+returns a `lines` count per file; the inline and `Agent` paths get it from `wc -l`:
+
+```bash
+wc -l .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md
+```
+
+Any expert over **120** lines or guide over **150** (3.3) is **regenerated inline**, tighter,
+against the same research slice — a dispatched agent already returned, so there is nobody to
+send it back to. `guide-design-system` is exempt (3.4: verbatim data). Report each file that
+had to be re-tightened; never ship an over-budget skill silently, because every line is
+re-read by every `build`/`fix` session that matches its `paths`.
 
 ### 4.2 Summary
 
@@ -537,14 +575,17 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 1. Confirm slug, prefix (`expert-` or `guide-`), and a one-sentence purpose.
 2. **Expert** → write `expert-<slug>/SKILL.md` from the
    [base template](references/expert-templates.md#the-base-expert-template): frontmatter
-   (`name: expert-<slug>`, `description`, **plus `paths:`/`keywords:`** for auto-load), the
-   resolved project context block, and the standard sections; the standards section must
-   reference `/guide-conventions`.
-3. **Guide** → write `guide-<slug>/SKILL.md` with `user-invocable: false`, a `paths` glob,
-   and the conventions/patterns/anti-patterns the user dictates.
-4. Set `paths`/`keywords` so `build`/`fix` auto-load it (see `skill-detection.md`); omit them
-   only if the user wants it invoke-only (`/expert-<slug>`). Do **not** write the GENERATED
-   marker — this file is hand-authored and permanent.
+   (`name: expert-<slug>`, `description`), the resolved project context block, and the
+   standard sections; the standards section must reference `/guide-conventions`.
+3. **Guide** → write `guide-<slug>/SKILL.md` with `user-invocable: false` and the
+   conventions/patterns/anti-patterns the user dictates.
+4. **`paths`/`keywords` — decided once, here, for both kinds.** Ask the user whether the
+   skill should auto-load. Auto-load → set `paths` (a real glob into the code it governs)
+   and `keywords`, which is what makes `build`/`fix` pick it up
+   ([`skill-detection.md`](../../references/skill-detection.md) Step 2). Invoke-only
+   (`/expert-<slug>`) → omit both keys. A guide with neither key never loads at all, so
+   confirm the choice rather than defaulting silently.
+5. Do **not** write the GENERATED marker — this file is hand-authored and permanent.
 
 ## PHASE A: ADJUST
 
@@ -563,11 +604,24 @@ already scan. Its output is PROTECTED (no GENERATED marker).
 
 ## NEXT
 
-Hand off to `/ck-code:plan <the spec file these docs were built from>` per
-[`skill-invocation.md`](../../references/skill-invocation.md) — one question, the path
-already resolved — to break the architecture into epics, stories, and a roadmap. Ask **only**
-when no `tasks/*/` plan folder exists yet; on a refresh run, name the command in prose and
-ask nothing.
+Hand off to `/ck-code:plan` per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question — to break the
+architecture into epics, stories, and a roadmap. Ask **only** when no `tasks/*/` plan folder
+exists yet; on a refresh run, name the command in prose and ask nothing.
+
+**Resolve the argument, never describe it.** `skill-invocation.md` § Argument discipline
+forbids a referential phrase, and this skill read architecture docs, not a spec, so it
+usually has no spec path to pass:
+
+```bash
+find docs/specs -maxdepth 2 -name pre-spec.md 2>/dev/null | sort | tail -1
+```
+
+- One path comes back and the user confirms it is the spec behind these docs → hand off
+  `/ck-code:plan <that exact path>`.
+- Nothing comes back, several do, or the user is unsure → hand off **`/ck-code:plan` with no
+  argument**. `plan`'s own INPUT step then locates or asks for the spec. Never pass a
+  placeholder or a phrase like "the spec these docs were built from".
 
 - `/ck-code:team --conventions` — **only if 2.4 skipped it** — capture your project's own code
   structure, naming, style, and architectural rules into `guide-conventions`. Recommend in
@@ -585,8 +639,11 @@ ask nothing.
 - **Never invent conventions** — CAPTURE records only rules the user states or the code demonstrably follows; an empty area stays empty.
 - **Never enter PHASE C twice in one run** — inline (2.5) and standalone (`--conventions`) are mutually exclusive entry points; inline never re-scans what Phase 1.3 already read, and no skill file is written until the 2.4 gate and 2.5 have both resolved.
 - **Never ship a skill whose detection signal is absent**, whatever the tier: tier gates breadth, detection gates relevance.
-- **Never exceed the size budget** — guides ≤ 150 lines, experts ≤ 120 (3.3); `guide-design-system` is exempt because its tables are verbatim data (3.4). Never generate overlapping guides for one surface (2.2), and never declare a generated skill always-on beyond `expert-qa`/`expert-qa-project`/`expert-analyst`/`guide-conventions` (2.3).
+- **Never exceed the size budget** — guides ≤ 150 lines, experts ≤ 120 (3.3); `guide-design-system` is exempt because its tables are verbatim data (3.4). Phase 4.1 checks the real counts and re-tightens any file over budget **inline**, whichever path wrote it. Never generate overlapping guides for one surface (2.2), and never declare a generated skill always-on beyond `expert-qa`/`expert-qa-project`/`expert-analyst`/`guide-conventions` (2.3).
+- **Never delete a generated skill except `guide-design-system` with its cache gone** (THE MERGE RULE step 4) — an owned `guide-<tech>` for a retired technology is reported as `? extra`, never removed.
 - **Never leave a `[bracketed placeholder]`** or an unresolved `[PROJECT CONTEXT BLOCK]` in a generated skill.
 - **Never run a `Workflow` without the full opt-in gate** — tool present, explicit `--workflow` signal, and the phase's threshold met. Missing any one → the `Agent` path. The workflow path is never the only way a phase can execute.
+- **Never pass a ck-code workflow as an inline `script`** — always `Workflow({ name: "team-research" | "team-generate", args })`. Only a named workflow has the stable identity `resumeFromRunId` needs; the `.workflow.md` next to this skill is the `args`/return contract, never a script to paste.
+- **Never send an already-existing SKILL.md to the `Workflow` path** — a file being refreshed is regenerated inline so its MANUAL fences survive. `args.skills` holds net-new paths only.
 - **Always keep this generator project-agnostic** — it reads project context dynamically and injects it.
 - **Always output in English.**

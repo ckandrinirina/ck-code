@@ -24,6 +24,8 @@ sanctions the `Workflow` backend at all. An inline script re-pasted from a refer
 new script each time and resumes nothing.
 
 Each technology is researched by one `haiku` agent returning a validated `BRIEF` schema, retried
-for up to 3 rounds while any agent returns empty. Read
+for up to 3 rounds while any unit fails. A unit fails when the agent returns nothing **or** when
+it returns a brief whose every content field is empty — a schema-valid but contentless brief is
+no research, so it is retried rather than merged. Read
 [`workflows/team-research.js`](../../../workflows/team-research.js) for the schema fields and
 the retry loop; it is the single source of truth and is never restated here.

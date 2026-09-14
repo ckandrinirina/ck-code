@@ -11,7 +11,7 @@ Rules below and `references/context7-research.md`).
 
 **File:** `.claude/skills/guide-<slug>/SKILL.md`
 
-```markdown
+````markdown
 ---
 name: guide-<slug>
 description: >
@@ -121,7 +121,7 @@ paths:
 - [Official documentation URL]
 - [Key community resources]
 - [Project-specific references (architecture docs)]
-```
+````
 
 ---
 

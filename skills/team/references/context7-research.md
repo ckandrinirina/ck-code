@@ -50,9 +50,8 @@ this order:
 
    First-run setup (one-time per machine): `npx -y @upstash/context7 setup`
    handles OAuth/API-key auth. Subsequent calls are non-interactive.
-   Note: confirm the package name with `npm search context7` if `@upstash/context7`
-   does not resolve — Upstash has shipped the CLI under a few names while it
-   stabilises.
+   If `npx -y @upstash/context7` does not resolve, treat the CLI as unavailable
+   and go straight to step 3.
 
 3. **WebSearch** (last-resort fallback if neither MCP nor CLI is reachable):
    see section 3 below.

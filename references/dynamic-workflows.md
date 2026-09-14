@@ -127,7 +127,14 @@ disk does not have. This is why the write variant keeps a central verify step.
 
 ## File layout
 
-Each script lives at `ck-code/skills/<skill>/references/<phase>.workflow.md` as exactly **one**
-fenced ` ```js ` block. The orchestrator reads it and passes the block verbatim as the inline
-`script` parameter, with per-run values in `args`. Keeping scripts as markdown references means
-`update-skill` reviews them like any other reference file.
+Each workflow is **two files**:
+
+| File | Role |
+|---|---|
+| `ck-code/workflows/<name>.js` | The script itself — the only source of the logic. Claude Code registers it with the plugin, which is what makes `Workflow({ name: "<name>" })` resolve. |
+| `ck-code/skills/<skill>/references/<name>.workflow.md` | The caller-facing contract: what `args` the script takes, what it returns, and which inline path recovers a failed unit. No script body. |
+
+The orchestrator reads the `.workflow.md` to build `args`, then calls the workflow **by name**.
+It never reads, pastes, or reconstructs the `.js`. The two files are edited together: an arg or
+return-shape change in the `.js` that is not mirrored in its `.workflow.md` is a bug, because the
+`.workflow.md` is all the caller has.

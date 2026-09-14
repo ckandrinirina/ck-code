@@ -47,12 +47,10 @@ saves.
 
 ## Why
 
-Overthinking is the most common failure mode of the upstream authoring skills:
-re-scoring settled dimensions, re-researching well-known tech, asking questions the
-docs already answer, designing more than the requirement needs. Each costs tokens and
-user time and bloats output. `build` and `fix` already encode this discipline ("write
-the simplest code that passes", "the smallest possible change"); this rule extends it
-upstream so the whole workflow stays lean.
+Overthinking is the most common failure mode of the upstream authoring skills —
+re-scoring settled dimensions, re-researching well-known tech, asking questions the docs
+already answer, designing more than the requirement needs — so this rule extends `build`
+and `fix`'s "simplest code that passes" discipline upstream.
 
 Reuse-first **tightens, never loosens** a skill's own guarantees: where a skill mandates a
 step for safety or correctness (`fix`'s scope analysis, the version gate, a confirmation

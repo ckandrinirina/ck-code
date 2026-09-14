@@ -19,6 +19,14 @@ Gate, contract, and script rules: [`../../../references/dynamic-workflows.md`](.
 Every merge-rule decision is already made by the orchestrator — `skills` contains only paths
 cleared to write. Returns `{ written: [manifest], missing: [slug] }`.
 
+**`skills` carries net-new paths only.** The script hands each agent a template, not the file
+it is replacing, so it cannot honour the MANUAL re-insert rule. A target that already exists on
+disk — a team-owned GENERATED file being refreshed under `--regenerate` — is therefore excluded
+from `args.skills` and regenerated **inline** by the orchestrator, which reads the current file
+and re-inserts every `<!-- ck-code:team MANUAL START/END -->` fence verbatim. A `--regenerate`
+run over an existing team can legitimately pass an empty or short `skills` array; that is not a
+gate failure.
+
 **The manifest is a claim, not proof.** Phase 4.1 must `ls` the real paths: a resumed run
 replays cached results without re-writing, so a manifest entry can outlive its file.
 
