@@ -70,7 +70,7 @@ esac
 if [ ! -d "$PLAN" ]; then
   ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   if [ -n "$ROOT" ] && [ -d "$ROOT/$PLAN" ]; then
-    cd "$ROOT"
+    cd "$ROOT" || exit 1
   else
     echo "ck-issues: plan directory not found: $PLAN (cwd: $PWD)" >&2
     exit 1
@@ -103,6 +103,12 @@ LINKED=0
 
 warn() { echo "ck-issues: WARN — $*" >&2; }
 fail() { echo "ck-issues: ERROR — $*" >&2; FAILURES=$((FAILURES + 1)); }
+
+# is_valid_size SIZE — same enum ck-story.sh validates (S|M). A story's `size:`
+# frontmatter flows into create_issue's label list, which is later word-split
+# UNQUOTED into gh's argv (see create_issue below) — an unvalidated value there
+# is a CLI argument-injection vector, not just a display quirk.
+is_valid_size() { case "$1" in S|M) return 0 ;; *) return 1 ;; esac; }
 
 summary() {
   local verb="created"
@@ -245,7 +251,7 @@ EPIC_DIRS=$(find "$PLAN/epics" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sor
 
 SIZES=$(find "$PLAN/epics" -type f -path '*/stories/*.md' 2>/dev/null | sort | while read -r s; do
   fm "$s" size
-done | awk 'NF' | sort -u)
+done | awk 'NF' | sort -u | while read -r sz; do is_valid_size "$sz" && printf '%s\n' "$sz"; done)
 
 N_EPICS=$(printf '%s\n' "$EPIC_DIRS" | awk 'NF' | wc -l | tr -d ' ')
 N_STORIES=$(find "$PLAN/epics" -type f -path '*/stories/*.md' 2>/dev/null | wc -l | tr -d ' ')
@@ -428,6 +434,10 @@ for dir in $EPIC_DIRS; do
     id=$(fm "$sf" id)
     [ -n "$id" ] || { warn "no 'id:' in $sf — story skipped"; continue; }
     stitle=$(fm "$sf" title); size=$(fm "$sf" size)
+    if [ -n "$size" ] && ! is_valid_size "$size"; then
+      warn "$sf: size '$size' is not S or M — story issue created without a size label"
+      size=""
+    fi
     existing=$(fm "$sf" issue)
 
     if [ -n "$existing" ]; then

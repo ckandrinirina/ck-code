@@ -32,7 +32,7 @@ set -uo pipefail
 
 if [ ! -d tasks ]; then
   ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ] && cd "$ROOT"
+  [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ] && { cd "$ROOT" || exit 1; }
 fi
 
 usage() { sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'; }
@@ -40,6 +40,13 @@ usage() { sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'; }
 MUTABLE="status prior_status delivery pr issue size"
 
 die() { echo "ck-story: ERROR — $*" >&2; exit 1; }
+
+# CKSTORY_TMP tracks the one rewrite temp file live at a time (the set loop below
+# processes files sequentially) so a mid-loop failure or signal never leaves a
+# `*.ckstory.XXXXXX` scratch file sitting next to a story.
+CKSTORY_TMP=""
+trap '[ -n "$CKSTORY_TMP" ] && rm -f "$CKSTORY_TMP"' EXIT
+trap 'exit 130' INT TERM
 
 here="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 run_tool() { # run_tool ck-index ARGS…
@@ -162,7 +169,8 @@ while IFS= read -r f; do
     v="$(printf '%s' "$VALS" | sed -n "${i}p")"
     old="$(fm_get "$f" "$k")"
     [ "$old" = "$v" ] && continue
-    tmp="$f.ckstory.$$"
+    tmp="$(mktemp "$f.ckstory.XXXXXX")" || die "could not create a temp file next to $f"
+    CKSTORY_TMP="$tmp"
     # Rewrite in place, inside the FIRST frontmatter fence only. A key that is absent is
     # appended just before the closing fence, so a plan scaffolded without `prior_status`
     # still accepts one without hand-editing.
@@ -178,6 +186,7 @@ while IFS= read -r f; do
       { print }
     ' "$f" > "$tmp" && cat "$tmp" > "$f"
     rm -f "$tmp"
+    CKSTORY_TMP=""
     changes="$changes${changes:+, }$k ${old:-∅} → ${v:-∅}"
   done <<<"$KEYS"
   if [ -n "$changes" ]; then
@@ -199,11 +208,16 @@ fi
 while IFS= read -r p; do
   [ -n "$p" ] || continue
   [ -d "$p" ] || continue
-  if run_tool ck-index "$p" >/dev/null 2>&1; then
+  # Capture stderr only (stdout discarded) so a `ck-index: WARN —` line (e.g. a
+  # story missing `id`) still reaches the caller instead of being swallowed here.
+  idx_err="$(run_tool ck-index "$p" 2>&1 >/dev/null)"
+  idx_rc=$?
+  if [ "$idx_rc" -eq 0 ]; then
     echo "ck-story: regenerated $p/STORIES_INDEX.md + tasks/FEATURE_INDEX.md"
   else
     echo "ck-story: WARN — could not run ck-index for $p; the generated views are now stale." >&2
   fi
+  [ -n "$idx_err" ] && printf '%s\n' "$idx_err" >&2
   [ "$NO_BOARD" -eq 1 ] && continue
   # The board is one more generated view: a no-op without tasks/SETTINGS.md or with
   # github_issues off, and NEVER fatal — a board that is down must not block a build.

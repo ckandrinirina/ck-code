@@ -49,6 +49,46 @@ prettier_opted_in() {
   return 1
 }
 
+# ruff/black run ONLY when the project opts into one of them, same rationale as
+# prettier above (never impose formatting a repo did not ask for). Unlike prettier,
+# ruff.toml/.ruff.toml are single-purpose files — their mere presence is the opt-in —
+# while pyproject.toml/setup.cfg/tox.ini are shared files, so those require the actual
+# [tool.ruff]/[tool.black] (or bare [ruff]/[black]) table to be present.
+python_opted_in() {
+  local dir d
+  case "$file" in
+    /*) dir=$(dirname "$file") ;;
+    *)  dir=$PWD/$(dirname "$file") ;;
+  esac
+  while :; do
+    { [ -f "$dir/ruff.toml" ] || [ -f "$dir/.ruff.toml" ]; } && return 0
+    [ -f "$dir/pyproject.toml" ] && grep -Eq '^\[(tool\.ruff|tool\.black)\]' "$dir/pyproject.toml" 2>/dev/null && return 0
+    [ -f "$dir/setup.cfg" ] && grep -Eq '^\[(ruff|black)\]' "$dir/setup.cfg" 2>/dev/null && return 0
+    [ -f "$dir/tox.ini" ] && grep -Eq '^\[(ruff|black)\]' "$dir/tox.ini" 2>/dev/null && return 0
+    [ "$dir" = "$PWD" ] || [ "$dir" = "/" ] && break
+    dir=$(dirname "$dir")
+  done
+  return 1
+}
+
+# shfmt runs ONLY when the project opts in via an .editorconfig section for shell
+# files, or a bare .shfmt marker file — many shell scripts are deliberately
+# hand-formatted and shfmt's defaults would reflow them uninvited.
+shfmt_opted_in() {
+  local dir d
+  case "$file" in
+    /*) dir=$(dirname "$file") ;;
+    *)  dir=$PWD/$(dirname "$file") ;;
+  esac
+  while :; do
+    [ -f "$dir/.shfmt" ] && return 0
+    [ -f "$dir/.editorconfig" ] && grep -Eq '\[\*\.sh\]|shell' "$dir/.editorconfig" 2>/dev/null && return 0
+    [ "$dir" = "$PWD" ] || [ "$dir" = "/" ] && break
+    dir=$(dirname "$dir")
+  done
+  return 1
+}
+
 case "$file" in
   *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.css|*.scss|*.less|*.html|*.vue|*.md|*.yaml|*.yml)
     if prettier_opted_in; then
@@ -57,18 +97,22 @@ case "$file" in
     fi ;;
   *.rs)
     # Bare rustfmt assumes edition 2015 and chokes on modern syntax; try newest first.
+    # Language-standard formatter — always runs, no opt-in config to gate on.
     if have rustfmt; then
       rustfmt --edition 2024 "$file" >/dev/null 2>&1 \
         || rustfmt --edition 2021 "$file" >/dev/null 2>&1 \
         || rustfmt "$file" >/dev/null 2>&1
     fi ;;
   *.py)
-    if have ruff; then ruff format "$file" >/dev/null 2>&1
-    elif have black; then black -q "$file" >/dev/null 2>&1; fi ;;
+    if python_opted_in; then
+      if have ruff; then ruff format "$file" >/dev/null 2>&1
+      elif have black; then black -q "$file" >/dev/null 2>&1; fi
+    fi ;;
   *.go)
+    # Language-standard formatter — always runs, no opt-in config to gate on.
     have gofmt && gofmt -w "$file" >/dev/null 2>&1 ;;
   *.sh)
-    have shfmt && shfmt -w "$file" >/dev/null 2>&1 ;;
+    shfmt_opted_in && have shfmt && shfmt -w "$file" >/dev/null 2>&1 ;;
 esac
 
 exit 0

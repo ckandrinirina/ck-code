@@ -1,0 +1,4 @@
+# SC1007 fires on the `here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)` self-locate
+# idiom in bin/* and scripts/*: the empty CDPATH assignment is deliberate (it stops `cd`
+# from printing the resolved path when CDPATH is set in the user's shell).
+disable=SC1007

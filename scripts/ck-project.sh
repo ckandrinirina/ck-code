@@ -105,7 +105,7 @@ done
 # matter which subdirectory the caller sat in.
 if [ ! -d tasks ]; then
   ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ] && cd "$ROOT"
+  [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ] && { cd "$ROOT" || exit 1; }
 fi
 SETTINGS="$SETTINGS_REL"
 
@@ -137,7 +137,19 @@ jqesc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 # rget NAME — read a dynamically named variable (bash 3.2 has no name refs and
 # no associative arrays, so the ROLE_*/ROLEID_* families are addressed this way).
 rget() { eval "printf '%s' \"\${$1:-}\""; }
-lc()   { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
+lc()   { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+# optkey NAME — the on-disk key for a board-column option cache file under
+# $WORK/opt/: lowercased, with `/` neutralised (a GitHub column name is
+# untrusted remote data and could legitimately contain one) and a bare "."
+# or ".." rejected, so a column name can never be read as a path component
+# escaping $WORK/opt.
+optkey() {
+  local k; k=$(lc "$1")
+  k=${k//\//_}
+  case "$k" in ""|.|..) k="_" ;; esac
+  printf '%s' "$k"
+}
 
 # ---------------------------------------------------------------------------
 # Frontmatter helpers — same contract as ck-issues.sh (one key per line, no
@@ -315,7 +327,7 @@ load_field() {
   FIELD_ID=""
   printf '%s\n' "$out" | while IFS="$(printf '\t')" read -r fid oid oname; do
     [ -n "$oname" ] || continue
-    printf '%s\t%s' "$oid" "$oname" > "$WORK/opt/$(lc "$oname")"
+    printf '%s\t%s' "$oid" "$oname" > "$WORK/opt/$(optkey "$oname")"
     printf '%s' "$fid" > "$WORK/fieldid"
   done
   [ -f "$WORK/fieldid" ] && FIELD_ID=$(cat "$WORK/fieldid")
@@ -323,8 +335,8 @@ load_field() {
   return 0
 }
 
-opt_id()   { [ -f "$WORK/opt/$(lc "$1")" ] && cut -f1 "$WORK/opt/$(lc "$1")"; }
-opt_name() { [ -f "$WORK/opt/$(lc "$1")" ] && cut -f2 "$WORK/opt/$(lc "$1")"; }
+opt_id()   { [ -f "$WORK/opt/$(optkey "$1")" ] && cut -f1 "$WORK/opt/$(optkey "$1")"; }
+opt_name() { [ -f "$WORK/opt/$(optkey "$1")" ] && cut -f2 "$WORK/opt/$(optkey "$1")"; }
 
 # role_matches ROLE LOWERCASED-COLUMN-NAME — does this column play this role?
 # Ambiguous words are REJECTED by the wrong role before the right one is offered
@@ -391,7 +403,8 @@ story_files() { # story_files [PLAN]
 # always scans all of tasks/ even when sync is scoped to one plan.
 build_status_map() {
   local f id
-  for f in $(find tasks -type f -path '*/epics/*/stories/*.md' 2>/dev/null); do
+  find tasks -type f -path '*/epics/*/stories/*.md' -print0 2>/dev/null |
+  while IFS= read -r -d '' f; do
     id=$(fm "$f" id)
     [ -n "$id" ] && printf '%s' "$(fm "$f" status)" > "$WORK/status/$id"
   done
@@ -401,7 +414,10 @@ deps_met() { # deps_met FILE → 0 when every blocked_by story is done
   local raw d st
   raw=$(fm "$1" blocked_by)
   [ -n "$raw" ] || return 0
-  for d in $(printf '%s' "$raw" | tr -d '[]' | tr ',' ' '); do
+  # blocked_by is a raw YAML flow list, e.g. ["02-01", "02-03"]: strip brackets
+  # AND per-element quotes before splitting, or a quoted id like "02-01" never
+  # matches the unquoted $WORK/status/<id> filename and looks permanently unmet.
+  for d in $(printf '%s' "$raw" | tr -d "[]'\"" | tr ',' ' '); do
     [ -n "$d" ] || continue
     st=""
     [ -f "$WORK/status/$d" ] && st=$(cat "$WORK/status/$d")
@@ -425,7 +441,7 @@ role_for_story() {
       case "$dv" in
         # `direct` is on the trunk with no PR behind it — the same arrival as `merged`,
         # reached without review, so it lands in the same column and never sees In Review.
-        merged|direct) echo done ;;
+        merged|direct) echo 'done' ;;
         pr)            echo in_review ;;
         *)             echo ready_to_ship ;;
       esac
@@ -456,7 +472,7 @@ role_for_epic() { # role_for_epic EPICDIR → rollup role
   [ "$any" -eq 1 ] || { echo todo; return; }
   [ "$any_bug" -eq 1 ] && { echo bug; return; }
   if [ "$all_done" -eq 1 ]; then
-    if [ "$all_merged" -eq 1 ]; then echo done
+    if [ "$all_merged" -eq 1 ]; then echo 'done'
     elif [ "$any_pr" -eq 1 ]; then echo in_review
     else echo ready_to_ship
     fi
@@ -537,10 +553,10 @@ resolve_one() {
       if [ "$base" = "$TRUNK" ]; then
         want=merged
       else
-        want=pr
+        want='pr'
         warn "PR #$n merged into '$base', not the trunk '$TRUNK' — $label is not delivered yet"
       fi ;;
-    OPEN)   want=pr ;;
+    OPEN)   want='pr' ;;
     CLOSED)
       want=""
       warn "PR #$n was closed without merging — clearing delivery for $label" ;;
@@ -911,7 +927,7 @@ EOF
   for r in $ROLES; do
     name=$(preset_name "$r")
     color=$(preset_color "$r")
-    printf '%s\n' "$existing" | cut -f1 | tr 'A-Z' 'a-z' | grep -qxF "$(lc "$name")" && continue
+    printf '%s\n' "$existing" | cut -f1 | tr '[:upper:]' '[:lower:]' | grep -qxF "$(lc "$name")" && continue
     opts="$opts{name: \"$(jqesc "$name")\", color: $color, description: \"\"}, "
     missing=$((missing+1))
     echo "  column   + $name"

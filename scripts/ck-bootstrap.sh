@@ -234,6 +234,10 @@ check_delivery() {
 }
 
 # ---- subcommands -------------------------------------------------------------
+# cmd_install intentionally has no tasks/VERSION.md gate (unlike cmd_check below):
+# the version gate in references/version-gate.md calls `ck-bootstrap install` right
+# after stamping tasks/VERSION.md for a brand-new project, so requiring the stamp
+# to already exist here would make that ordering impossible.
 cmd_install() {
   local had
   had=$(guard_installed_version) || had=""

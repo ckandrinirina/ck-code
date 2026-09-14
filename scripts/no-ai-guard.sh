@@ -14,7 +14,10 @@
 payload=$(cat 2>/dev/null) || exit 0
 [ -n "$payload" ] || exit 0
 
-command -v python3 >/dev/null 2>&1 || exit 0
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "no-ai-guard: WARN — python3 missing, guard skipped (fail-open)." >&2
+  exit 0
+fi
 
 cmd=$(printf '%s' "$payload" | python3 -c '
 import json, sys

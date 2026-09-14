@@ -21,7 +21,7 @@ set -uo pipefail
 if [ ! -d tasks ]; then
   ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   if [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ]; then
-    cd "$ROOT"
+    cd "$ROOT" || exit 1
   else
     echo "ck-index: no tasks/ directory (cwd: $PWD) — nothing to do." >&2
     exit 0
@@ -75,7 +75,7 @@ emit_plan() {
       return s
     }
     # Emit + accumulate when the closing frontmatter fence is reached (FILENAME is still correct here).
-    function emit(   epicdir, eslug, edisp, n, parts, i, w, su, bl, relfile, dv) {
+    function emit(   epicdir, eslug, edisp, n, parts, i, w, su, bl, relfile, dv, n2, bparts, bi, bp) {
       if (id=="") { warn(FILENAME ": missing id in frontmatter — story skipped"); return }
       n=split(FILENAME, parts, "/")
       for (i=1;i<=n;i++) if (parts[i]=="epics" && i+1<=n) { epicdir=parts[i+1]; break }
@@ -87,7 +87,21 @@ emit_plan() {
       if (edisp=="") edisp=epicdir
       su=toupper(status); sub(/IN-PROGRESS/,"IN PROGRESS",su)
       relfile=substr(FILENAME, length(plandir)+2)
-      bl=blocked; sub(/^\[/,"",bl); sub(/\]$/,"",bl); gsub(/^[ \t]+|[ \t]+$/,"",bl); if(bl=="")bl="-"
+      # blocked_by is raw YAML-flow-list text, e.g. ["02-01", "02-03"]: strip the
+      # brackets, split on comma, then unquote each element so the cell renders
+      # `02-01, 02-03` instead of `"02-01", "02-03"` (ck-view/ck-project match on
+      # the unquoted id).
+      bl=blocked; sub(/^\[/,"",bl); sub(/\]$/,"",bl); gsub(/^[ \t]+|[ \t]+$/,"",bl)
+      if (bl=="") { bl="-" }
+      else {
+        n2=split(bl, bparts, ",")
+        bl=""
+        for (bi=1; bi<=n2; bi++) {
+          bp=bparts[bi]; gsub(/^[ \t]+|[ \t]+$/,"",bp); bp=unquote(bp)
+          if (bp!="") bl=bl (bl=="" ? "" : ", ") bp
+        }
+        if (bl=="") bl="-"
+      }
       gsub(/\|/,"\\|",title)   # a raw | would break the generated markdown table
       # Delivery cell — the integration axis. Rendered from delivery:/pr: alone; the
       # walk-up to an epic PR is materialized onto the story by `ck-project sync`

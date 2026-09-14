@@ -27,7 +27,7 @@ done
 # Run from the repo root so every relative path below resolves the same way.
 if [ ! -d tasks ]; then
   ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ]; then cd "$ROOT"; fi
+  if [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ]; then cd "$ROOT" || exit 1; fi
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -62,18 +62,39 @@ row() {
 note() { printf '                   → %s\n' "$1"; }
 
 plans() {
+  # ONLY_PLAN (a validated tasks/<slug> directory — see the "run" section at the
+  # bottom) restricts every plan-scoped check to that one plan instead of every
+  # plan under tasks/.
+  if [ -n "$ONLY_PLAN" ]; then
+    printf '%s\n' "$ONLY_PLAN"
+    return 0
+  fi
   find tasks -maxdepth 2 \( -name PROJECT_OVERVIEW.md -o -name FEATURE_OVERVIEW.md \) 2>/dev/null \
     | sed 's|/[^/]*$||' | sort -u
 }
 
+# story_glob / epic_glob — the find/glob pattern story- and epic-level checks scan.
+# Scoped to ONLY_PLAN when set so `ck-doctor tasks/<slug>` never reports another
+# plan's problems. Cross-plan invariants (duplicate epic/story ids, blocked_by ids
+# that may legitimately live in another plan per data-model.md) intentionally keep
+# scanning every plan regardless — see check_ids/check_deps.
+story_glob() { [ -n "$ONLY_PLAN" ] && printf '%s' "$ONLY_PLAN/epics/*/stories/*.md" || printf '%s' "tasks/*/epics/*/stories/*.md"; }
+
 # fmv FILE KEY — read one frontmatter scalar. Shared by check_settings and
 # check_board; must stay at file scope because check_settings returns early
 # when tasks/SETTINGS.md is absent, before any nested definition would run.
+# Unquotes like the fm() helper in ck-index/ck-project/ck-story/ck-view — without
+# it a quoted `board: "123"` value in SETTINGS.md compares false against an
+# unquoted expectation and false-WARNs.
 fmv() { awk -v k="$2" '
+  function unquote(s) {
+    if (s ~ /^".*"$/ || s ~ /^'"'"'.*'"'"'$/) s = substr(s, 2, length(s)-2)
+    return s
+  }
   { sub(/\r$/,"") } FNR==1 && $0!="---" { exit } FNR==1 { next } $0=="---" { exit }
   { i=index($0,":"); if(i>0){ n=substr($0,1,i-1); v=substr($0,i+1);
       gsub(/^[ \t]+|[ \t]+$/,"",n); gsub(/^[ \t]+|[ \t]+$/,"",v);
-      if(n==k){print v; exit} } }' "$1"; }
+      if(n==k){print unquote(v); exit} } }' "$1"; }
 
 # ---- 1. layout stamp ---------------------------------------------------------
 check_layout() {
@@ -113,7 +134,8 @@ SIZE = {'S','M'}
 # value with no `pr:` behind it: work merged to the trunk without ever opening a PR.
 DELIVERY = {'', 'pr', 'merged', 'direct'}
 bad, total = [], 0
-for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
+STORY_GLOB = sys.argv[1] if len(sys.argv) > 1 else 'tasks/*/epics/*/stories/*.md'
+for f in sorted(glob.glob(STORY_GLOB)):
     total += 1
     t = open(f, encoding='utf-8', errors='replace').read()
     m = re.match(r'---\n(.*?)\n---\n', t, re.S)
@@ -150,7 +172,7 @@ for f in sorted(glob.glob('tasks/*/epics/*/stories/*.md')):
 print(total)
 print('\n'.join(bad))
 PY
-  out=$(python3 "$TMP/stories.py")
+  out=$(python3 "$TMP/stories.py" "$(story_glob)")
   total=$(printf '%s' "$out" | head -1)
   local rest; rest=$(printf '%s' "$out" | tail -n +2 | sed '/^$/d')
   if [ "${total:-0}" -eq 0 ]; then row stories "no story files found" WARN; return; fi
@@ -338,7 +360,7 @@ check_docs() {
     [ -n "$slug" ] || slug=$(basename "$(dirname "$epicmd")" | sed 's/^[0-9]*_//')
     [ -f "docs/architecture/features/$slug/index.md" ] \
       || missing="$missing$slug (epic $(dirname "$epicmd"))"$'\n'
-  done < <(find tasks -path '*/epics/*/EPIC.md' 2>/dev/null | sort)
+  done < <(find "${ONLY_PLAN:-tasks}" -path '*/epics/*/EPIC.md' 2>/dev/null | sort)
   if [ -n "$missing" ]; then
     row "feature docs" "$(printf '%s' "$missing" | grep -c .) of $n epics unrouted" WARN
     printf '%s' "$missing" | sed '/^$/d;s/^/                   ✗ no feature doc for slug /'
@@ -448,18 +470,22 @@ for c in json.load(open(sys.argv[1])).get("cards", []):
 # /ck-code:spec <slug> self-heals a drifted file on its next ADJUST.
 check_specs() {
   [ -d docs/specs ] || return 0
-  local files
-  files=$(ls -d docs/specs/*/.metadata.json 2>/dev/null)
-  [ -n "$files" ] || return 0
-  local n; n=$(printf '%s\n' "$files" | grep -c .)
+  # Collect into an array (not a newline-joined string) so a spec slug containing a
+  # space survives both the count and the argv handed to python3 below unmangled.
+  local -a files=()
+  while IFS= read -r f; do [ -n "$f" ] && files+=("$f"); done \
+    < <(find docs/specs -mindepth 2 -maxdepth 2 -name .metadata.json 2>/dev/null | sort)
+  [ "${#files[@]}" -gt 0 ] || return 0
+  local n="${#files[@]}"
   [ "$HAVE_PY" -eq 1 ] || { row "spec metadata" "python3 missing — check skipped" WARN; return 0; }
 
   local bad pending
-  bad=$(python3 - $files <<'EOF'
+  bad=$(python3 - "${files[@]}" <<'EOF'
 import json, sys
 KEYS = ["slug","title","language","audience","createdAt","updatedAt","status",
         "stage","tags","github","linkedDesign","designSystem"]
 STATUS = {"draft","ready-for-design","design-in-progress"}
+AUDIENCE = {"Mixed","Product","Technical"}
 DS = {"none","awaiting-link","linked"}
 for f in sys.argv[1:]:
     try:
@@ -478,6 +504,8 @@ for f in sys.argv[1:]:
         print("%s: status %r is outside the enum" % (f, d.get("status")))
     if d.get("stage") not in (None, "spec"):
         print("%s: stage %r is not \"spec\"" % (f, d.get("stage")))
+    if d.get("audience") not in AUDIENCE:
+        print("%s: audience %r is not one of Mixed|Product|Technical" % (f, d.get("audience")))
     ds = d.get("designSystem")
     if isinstance(ds, dict) and ds.get("status") not in DS:
         print("%s: designSystem.status %r is outside the enum" % (f, ds.get("status")))
@@ -533,7 +561,7 @@ check_settings() {
     return 0
   fi
 
-  for r in blocked todo in_progress ready_to_ship in_review bug done; do
+  for r in blocked todo in_progress ready_to_ship in_review bug 'done'; do
     [ -n "$(fmv "$f" "board_$r")" ] || missing="$missing$r "
   done
 
@@ -552,7 +580,7 @@ check_settings() {
   fi
 
   local gone=""
-  for r in blocked todo in_progress ready_to_ship in_review bug done; do
+  for r in blocked todo in_progress ready_to_ship in_review bug 'done'; do
     name=$(fmv "$f" "board_$r")
     [ -n "$name" ] || continue
     printf '%s\n' "$opts" | grep -qxF "$name" || gone="$gone$r → '$name' "
