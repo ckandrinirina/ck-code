@@ -1,7 +1,9 @@
 # Worked Examples
 
 Both commit body and PR body are written in plain language. Subject lines
-stay in conventional-commit format for changelog and CI tooling.
+stay in conventional-commit format for changelog and CI tooling. Every `Closes #n`
+line below is the pasted output of `ck-project closes <story-path>` — never typed by
+hand (SKILL.md RULES).
 
 ## Example: Full Feature Ship (Commit + PR + Issue Updates)
 
@@ -27,7 +29,7 @@ Closes #42
 git commit -m "$(cat <<'EOF'
 feat(realtime): live updates without refresh
 
-<body and footer exactly as in 2.2 above>
+<body and footer exactly as in 3.2 above>
 EOF
 )"
 ```
@@ -51,7 +53,7 @@ git push -u origin story/02-01-server-setup
 
 gh pr create \
   --title "feat(realtime): live updates without refresh" \
-  --base main \
+  --base <resolved base — SKILL.md 5.B step 1, never asked for> \
   --body "$(cat <<'EOF'
 ## What's new
 The app now receives live updates from the server without users needing
@@ -72,12 +74,22 @@ EOF
 )"
 ```
 
+### Phase 5 step 5 — Record the PR
+
+```bash
+ck-story set tasks/2026-01-04_realtime-app/epics/02_server/stories/01_server-setup.md \
+  pr=57 delivery=pr
+```
+
+Without this the story is stranded in *Ready to Ship* whatever the PR does.
+
 ### Phase 6 — Mark Done & Update Issues
 
-Set the story frontmatter `status: done`, then regenerate the views:
+Here `/ck-code:build` Phase 8.6 already wrote `status: done`, so 6.1 **skips the status
+write** and the Phase 5 call above has already regenerated the views. Had the status still
+read `in-progress` (and both 6.1 conditions held):
 ```bash
-ck-index tasks/2026-01-04_realtime-app
-ck-project sync tasks/2026-01-04_realtime-app
+ck-story set tasks/2026-01-04_realtime-app/epics/02_server/stories/01_server-setup.md status=done
 ```
 
 The linked issue is resolved by the story frontmatter `issue: 42` (never by title).
@@ -104,7 +116,7 @@ label (SKILL.md 6.4).
 
 ### Commit
 - **Hash:** a1b2c3d
-- **Branch:** story/01-03-server-setup
+- **Branch:** story/02-01-server-setup
 - **Message:** feat(realtime): live updates without refresh
 
 ### PR

@@ -3,7 +3,7 @@ name: ship
 description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
 effort: medium
-allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git push*) Bash(gh auth status*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(ck-issues*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -89,8 +89,10 @@ git branch --show-current
 - **Protected branch (`main`, `develop`, …):** STOP before staging. AskUserQuestion —
   "You are on a protected branch. How to proceed?" with options **Create branch**
   (propose `story/EE-SS-<slug>`, `fix/EE-SS-<slug>`, or `<type>/<slug>`), **Rename**
-  (move current commits onto a new branch), **Commit here** (warn: not recommended).
+  (move current commits onto a new branch), **Abort** (stop; nothing is staged).
   On create/rename: `git checkout -b <branch-name>`. Applies to standalone commits too.
+  **There is no "commit here" option** — the RULE below is absolute, so declining both
+  moves leaves the work uncommitted rather than landing it on the trunk.
 
 ### 1.2 Detect existing PR for current branch
 
@@ -266,9 +268,15 @@ still routes to 5.A, whose base is already fixed.
 1. AskUserQuestion — show PR (number, title, URL): "Push to `<branch>` and update PR
    #`<n>`?" options **Update PR**, **Skip push** (→ Phase 6), **New PR** (→ 5.B).
 2. `git push origin "$(git branch --show-current)"`.
-2b. Record the pointer when the story does not already carry it — an existing PR opened
-   before 6.4, or by hand, still needs `pr:` or it can never reach Done. Edit the story
-   frontmatter: `pr: <n>` and `delivery: pr`. Skip when both already read that.
+2b. Record the pointer when the story does not already carry it — a PR opened by hand, or
+   before this step existed, still needs `pr:` or the story can never reach Done:
+
+   ```bash
+   ck-story set <story-path> pr=<n> delivery=pr
+   ```
+
+   One call writes both fields, regenerates the views and syncs the card. Re-running it when
+   they already read that is harmless — it reports `already current — no change`.
 3. Read `existing_pr.body` and append under a `## Updates` section (create it if absent):
    `- <YYYY-MM-DD>: <commit subject> — <one-line plain-language summary>`.
 3b. **Repair a missing `Closes` footer in the same edit.** Run `ck-project closes` for this
@@ -344,11 +352,21 @@ still routes to 5.A, whose base is already fixed.
 
 **Skip the status write when the frontmatter already reads `status: done`** —
 `/ck-code:build` Phase 8.6 flips it before invoking this skill; a second flip is duplicate
-work. Otherwise, if this ship completes the story's work:
+work. Otherwise flip it **only when both of these hold in the story file** — there is no
+judgment call here:
+
+1. every acceptance criterion in the body is checked `[x]`, and
+2. the body carries the record of a passed manual-test gate (build 8.5) — an
+   `## Implementation Summary`, or a Bug Report `### Resolution` at `Status: FIXED`.
 
 ```bash
 ck-story set <story-path> status=done
 ```
+
+**A story this run only *inferred*** — matched from the branch name or the touched files at
+2.2 steps 2–3 rather than given as `$ARGUMENTS` — **never flips**, even when both conditions
+read true. An inferred link is a guess about which story the commit belongs to; say which
+story was inferred in Phase 7 and leave its `status` untouched.
 
 Never cell-edit an index or flip an EPIC checkbox for status.
 
@@ -377,8 +395,9 @@ Resolve by the `story_issue` number from 2.3. Templates: [issue-templates.md](re
   plain-language summary. No AC lists, no test counts.
 - **Existing PR updated (5.A):** `gh issue comment <story_issue>` noting the new commit
   hash + summary; don't repeat the PR number if already posted.
-- **Commit-only on a protected branch:** `gh issue close <story_issue>` with the commit
-  hash + summary.
+- **Commit only, no PR yet:** `gh issue comment <story_issue>` with the commit hash +
+  summary. Never `gh issue close` here — an issue closes through the `Closes #` footer of a
+  merging PR, and Phase 1.1 guarantees the commit is not on a protected branch anyway.
 
 ### 6.3 Update the epic issue checklist (only if `epic_issue` is set)
 
