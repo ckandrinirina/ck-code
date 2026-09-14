@@ -18,7 +18,7 @@ selecting **Run it** once.
 
 | Tier | Skills | Who calls `Skill` |
 |---|---|---|
-| **DIRECT** | `build` `config` `design` `fix` `migrate` `plan` `ship` `spec` `team` | The skill itself, via `Skill({ skill: "ck-code:<name>", args: "<resolved args>" })`. |
+| **DIRECT** | `build` `config` `design` `fix` `migrate` `plan` `ship` `spec` `sync` `team` | The skill itself, via `Skill({ skill: "ck-code:<name>", args: "<resolved args>" })`. |
 | **DIRECTIVE** | `doctor` `explain` `guide` `track` | Nobody, inside the skill. It prints a terminal `NEXT:` line; the main session runs the prompt below on its behalf. |
 
 The DIRECTIVE tier is not a weaker form of consent — it asks the same single question. It
@@ -74,6 +74,11 @@ prompt above. A read-only skill never calls `Skill` itself.
   `fix → build → fix` structurally rather than by judgement.
 - The chain travels in the announce line (`[fix → build]`), so depth and loops are visible to
   the user at a glance and readable by each callee.
+- **A dispatched subagent starts a new chain.** `build` PARALLEL MODE's `story-implementer`,
+  a `qa-validator` dispatch, or a `conflict-analyzer` run is a fresh invocation for depth and
+  repeat-checking purposes, not a continuation of the orchestrator's own chain — the guard
+  tracks hand-offs between skills the user consents to, not the fan-out a single skill runs
+  internally to do its own job.
 
 ## Argument discipline
 

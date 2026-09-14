@@ -9,8 +9,9 @@ Skills that select stories (`build`, `track`, `fix`) read this file
 for status, size, and dependencies instead of opening every story file.
 
 Columns: `Epic | ID | Title | Status | Delivery | Size | Blocked by | File`. **`Delivery`
-is the integration axis** — `—` (nothing open), `PR #<n>` (open), or `MERGED` (on the trunk
-branch) — rendered from the story's `delivery:`/`pr:` frontmatter
+is the integration axis** — `—` (nothing open), `PR #<n>` (open), `MERGED` (on the trunk
+branch via a merged PR), or `DIRECT` (on the trunk branch, no PR ever opened) — rendered
+from the story's `delivery:`/`pr:` frontmatter
 ([`data-model.md`](data-model.md#two-axes-status-is-work-delivery-is-integration)).
 `Status` is unchanged: a story reads `DONE` the moment its work is finished, whether or not
 it has reached the trunk, so selection and dependency logic behave exactly as before.
@@ -56,7 +57,7 @@ Mutable fields are the state set only — `status`, `prior_status`, `delivery`, 
 `title`, `blocked_by`, `files`) is refused, because those belong to `plan`/`migrate`. Edit
 those by hand, then run `ck-index tasks/<slug>` yourself.
 
-There is no cell-edit protocol and no cross-file reconciliation in v5: the view is a
+There is no cell-edit protocol and no cross-file reconciliation in v6: the view is a
 pure function of the frontmatter, so it cannot drift. Inside a `build` PARALLEL MODE
 worktree an agent edits only its own story's frontmatter; the orchestrator regenerates
 the views once on the target branch after merges.

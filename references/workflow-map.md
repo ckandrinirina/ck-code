@@ -27,6 +27,7 @@ duplicating the workflow graph.
    /ck-code:config       (Anytime) Project settings — issue tracking, GitHub Project board
    /ck-code:doctor       (Anytime) Report what is broken in the project + how to fix it
    /ck-code:sync         (Anytime) Reconcile indexes, delivery, board and Issues with GitHub
+                        — not /ck-code:design sync, which scaffolds missing feature docs
 ```
 
 ## Hand-offs
@@ -73,6 +74,8 @@ user is asked.
 | `track next` | `build <path>` | DIRECTIVE | next ready story selected |
 | `doctor` | `migrate` / `config` | DIRECTIVE | a finding carries a repair command |
 | `guide` | any | DIRECTIVE | free-text task routed |
+| `sync` | `track` / `doctor` | DIRECTIVE | after reconciliation, for the refreshed picture or to confirm nothing is left |
+| `sync` | `ship --to-issues` | DIRECT | the report named entries with no `issue:` |
 
 No other pair may hand off. A skill that believes it needs an edge not listed here adds it
 to this table first.
@@ -105,9 +108,11 @@ the last column instead.
 | `design` | no stakeholder spec yet and you want one | `spec` (first) |
 | `design` | breaking work into epics/stories | `plan` (design runs *before* plan) |
 | `team` | no `docs/architecture/` exists yet | `design` (first) |
+| `team` | breaking the architecture into epics/stories | `plan` |
 | `plan` | one small addition to an existing plan | `plan --quick` |
 | `plan` | no architecture docs yet | `design` (first) |
 | `plan` | stakeholder-facing spec, not a task breakdown | `spec` |
+| `plan` | a bug in already-implemented code | `fix` |
 | `build` | an **un-triaged** bug in already-implemented code | `fix` (first — a `bug`-status story is already triaged and stays in `build` Bug-Fix Mode) |
 | `build` | no story exists for the work | `plan --quick` or `plan` |
 | `fix` | new functionality / new acceptance criteria (not a bug) | `plan --quick` then `build` |
@@ -158,4 +163,5 @@ command reference.
 - **Bug Report sub-status** (`DIAGNOSED` → `FIXED`) lives in the story body only; it is
   narrative and does not affect the frontmatter `status:`.
 - **Indexes are generated, never hand-edited.** To change status, edit the frontmatter
-  and run `ck-index`. There is no reconciler — the views cannot drift.
+  and run `ck-index`. There is no *index* reconciler — the views cannot drift. `/ck-code:sync`
+  reconciles the separate GitHub axis instead — see [`data-model.md`](data-model.md).

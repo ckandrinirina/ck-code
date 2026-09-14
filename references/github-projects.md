@@ -1,7 +1,7 @@
 # GitHub Projects Board — Shared Contract
 
-One definition, four consumers (`config`, `ship`, `build`, `doctor`). Never restate
-these rules in a skill file — link here.
+One definition, six consumers (`config`, `ship`, `build`, `fix`, `sync`, `doctor`). Never
+restate these rules in a skill file — link here.
 
 ## The board is a generated view
 

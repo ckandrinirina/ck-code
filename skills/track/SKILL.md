@@ -107,8 +107,8 @@ an orphan left by a rename — list it under the tree as `orphan`.
 - **Never** hand-maintain or bootstrap an index by globbing story files — the story
   frontmatter is the source of truth and `ck-index` produces the views.
 - **Never** cache state — every run re-reads the index through `ck-view`.
-- **Always** reference current skills only (`build`, `fix`, `ship`, `plan`, `migrate`);
-  never `parallel-build`, `start`, `advise`, `help`, `sync`, or `to-issues`.
+- **Always** reference current skills only (`build`, `fix`, `ship`, `plan`, `migrate`,
+  `sync`); never `parallel-build`, `start`, `advise`, `help`, or `to-issues`.
 - **Always** end a `next` run with the `NEXT: /ck-code:build <path>` line `ck-view`
   emitted and nothing after it, per
   [`../../references/skill-invocation.md`](../../references/skill-invocation.md). The main

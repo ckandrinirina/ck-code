@@ -15,10 +15,9 @@ epic numbering at `01` in each new plan folder, so two plans could both own `01`
 collision to whichever plan it happened to reach first. Nothing else changes: the ID
 *format* is byte-identical to v5, only its scope widened.
 
-**A v5 project with no collision needs no migration.** Tier 2 finds no marker, stamps
-`v6`, and PASSes — the overwhelmingly common single-plan case upgrades silently. Only a
-project that actually holds duplicate epic numbers is blocked and routed to
-`/ck-code:migrate`.
+**A v5 project with no collision needs no migration** — Tier 2 finds no marker, stamps
+`v6`, and PASSes; only a project that actually holds duplicate epic numbers is blocked and
+routed to `/ck-code:migrate`.
 
 v5 differed from v4 in one artifact only: `/ck-code:team` writes
 `.claude/skills/expert-<role>/SKILL.md` and `.claude/skills/guide-<tech>/SKILL.md`
@@ -110,21 +109,17 @@ find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null |
 ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md 2>/dev/null | grep -q . && echo NESTED  # v4 nested team skills
 ls docs/architecture/DESIGN_LEDGER.md 2>/dev/null | grep -q . && echo OLD                  # v3 design ledger
 grep -lq "Schema: v1\|Schema: v2" tasks/*/STORIES_INDEX.md tasks/FEATURE_INDEX.md 2>/dev/null && echo OLD  # v3 hand-kept index
-for f in tasks/*/epics/*/stories/*.md; do [ -e "$f" ] || continue; IFS= read -r l < "$f"; [ "$l" = "---" ] || { echo OLD; break; }; done  # a story without frontmatter = pre-v4
+find tasks -type f -path 'tasks/*/epics/*/stories/*.md' -exec grep -L '^id: ' {} + 2>/dev/null | grep -q . && echo OLD  # a story with no frontmatter id = pre-v4
 ls docs/architecture/features/*.md 2>/dev/null | grep -q . && echo OLD                     # pre-v3 flat feature doc
 ls docs/architecture/{components,api-contracts,database-schema,data-flow}.md 2>/dev/null | grep -q . && echo OLD  # pre-v3 layer docs
 ls tasks/PLAN.md 2>/dev/null | grep -q . && echo LITE                                      # ck-code-lite flat plan
 ```
 
 The **`DUPES`** marker is the v5→v6 case. It fires only when the same epic number appears
-in more than one plan folder — the collision that makes `EE-SS` ambiguous. Listing every
-`epics/NN_*` directory across all plans and taking `uniq -d` on the number is exact: plan
-folders are the only place epic numbers live, so a repeat in that list *is* a collision.
-(`find`, not a `ls tasks/*/…` glob — an unmatched glob aborts the whole command under
-zsh, which would silently skip the probe on a greenfield project.)
-`migrate` Phase R renumbers, so the marker cannot re-fire afterwards. **A v5 project with
-one plan — or several whose numbers already do not overlap — carries no marker and simply
-re-stamps to `v6`.** That is the intended common path; it costs nothing and asks nothing.
+in more than one plan folder — the collision that makes `EE-SS` ambiguous. Plan folders are
+the only place epic numbers live, so `uniq -d` over every `epics/NN_*` number is exact.
+(Both probes use `find` rather than a `tasks/*/…` glob, because an unmatched glob aborts the
+command under zsh.) `migrate` Phase R renumbers, so the marker cannot re-fire afterwards.
 
 The **`NESTED`** marker is the v4→v5 case and fires on an otherwise current project: the
 stories and docs are already right, but `/ck-code:team` wrote its skills one directory too
@@ -190,6 +185,12 @@ Then run the hand-off prompt from
 - **Run it** → `migrate` writes the stamp as its final step. When it returns, **re-run this
   gate from Tier 1** (now PASSes) and **continue the original skill with its original
   arguments** — the user never retypes either command.
+- **Run it, but the re-run still does not PASS** → `migrate` returned without stamping
+  (cancelled at one of its own gates, or it hit a blocker it reported). Print the reason
+  `migrate` gave and **stop the original skill**. Never re-offer the hand-off, never call
+  `migrate` a second time in the same run: that is the callee-failed case in
+  [`skill-invocation.md`](skill-invocation.md#failure-handling) — report the broken link and
+  stop.
 - **Skip** → stop the current skill. Do not read or write any project state. The stamp is
   left unwritten, so the next session re-detects.
 
@@ -208,13 +209,20 @@ and omit the `ck-code:` line).
 
 | Skills | Gate behavior |
 |---|---|
-| `design`, `plan`, `build`, `fix`, `spec`, `ship` (incl. `--to-issues`), `team`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
+| `design`, `plan`, `build`, `fix`, `spec`, `ship` (incl. `--to-issues`), `sync`, `team`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
+| `ship` STANDALONE (no `tasks/` in the repo at all) | **Exempt** — a standalone commit/PR on a repo that has never been planned touches no ck-code state, so an absent stamp is not a stale one. Skip the gate entirely; never stamp. The moment `tasks/` exists, the hard-block row applies. |
 | `explain`, `guide`, `track`, `doctor` | **Hint only** — run Tier 1 + Tier 2, but on a marker emit one line (`ℹ pre-v6 layout — run /ck-code:migrate`) and continue read-only. Never block, never stamp. (`doctor` reports the stamp as its own check 1.) |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here.
 It inlines the Tier-1 stamp check so the common case costs one small read; it never
 restates the Tier-2 detection.
+
+**Required Bash grants.** Running this gate costs tool permissions, so every skill in the
+table above carries these four in its `allowed-tools`, whatever else it needs:
+`Bash(ck-bootstrap*) Bash(find*) Bash(grep*) Bash(ls*)` — `find`/`grep`/`ls` for the Tier-2
+probe, `ck-bootstrap` for the guard install that ships with the stamp. A new
+change-producing skill inherits this list by being added to the table.
 
 ## Rules
 

@@ -217,7 +217,7 @@ If `<name>` is not a current command, say so and list the valid command names.
   as prose instead.
 - **Never** write, edit, or generate any file (including running `ck-index`) —
   Bash is for read-only probes only.
-- **Never** reference retired skills (`start`, `advise`, `help`, `sync`,
+- **Never** reference retired skills (`start`, `advise`, `help`,
   `doc-optimizer`, `quick-story`, `to-issues`, `pre-spec`, `convention`,
   `parallel-build`) — route only to the current roster in
   [`../../references/workflow-map.md`](../../references/workflow-map.md).

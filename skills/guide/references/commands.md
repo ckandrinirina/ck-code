@@ -12,20 +12,20 @@ read that rather than restating it here. This file is the per-command syntax onl
 
 | Command | Argument | Purpose | Writes |
 | --- | --- | --- | --- |
-| `guide` | `[task description] \| --command [name]` | Recommend the next step, route a task to a skill, or look up syntax | read-only |
-| `spec` | `[description \| notes-file \| slug \| issue-url]` | Draft or adjust a stakeholder-facing spec | `docs/specs/` (+ issue) |
-| `design` | `<spec-file> \| [optimize\|sync\|ds]` | Spec → architecture docs; `optimize`/`sync` slim or refresh existing docs; `ds` links a design-system cache | `docs/architecture/` |
-| `team` | `[--basic\|--standard\|--max] [--check\|--regenerate\|--conventions\|--workflow] [--new expert\|guide <slug>] [--adjust <slug>]` | Architecture → expert + guide skills; offers house-conventions capture in the same run | `.claude/skills/` |
-| `plan` | `<spec-file> \| --quick [brief] [--epic NN]` | Architecture → epics, stories, roadmap; `--quick` adds one small story | `tasks/` (+ regenerated views) |
+| `guide` | `[task description \| --command [name]]` | Recommend the next step, route a task to a skill, or look up syntax | read-only |
+| `spec` | `[feature-description \| notes-file \| existing-slug \| issue-url]` | Draft or adjust a stakeholder-facing spec | `docs/specs/` (+ issue) |
+| `design` | `[path-to-spec \| optimize \| sync \| ds [design-url]]` | Spec → architecture docs; `optimize`/`sync` slim or refresh existing docs; `ds [url]` links (or refreshes) a design-system cache | `docs/architecture/` |
+| `team` | `[--basic\|--standard\|--max] [--check\|--regenerate] [--conventions] [--new expert\|guide <slug>] [--adjust <slug>] [--workflow]` | Architecture → expert + guide skills; offers house-conventions capture in the same run | `.claude/skills/` |
+| `plan` | `<path-to-spec> \| --quick [brief] [--epic NN]` | Architecture → epics, stories, roadmap; `--quick` adds one small story | `tasks/` (+ regenerated views) |
 | `track` | `[status\|next\|progress]` | Progress dashboard / next ready story (regenerates missing views) | read-only |
 | `build` | `[story-path] \| [story-ids...] \| --epic NN` | TDD-implement stories end-to-end — one inline, several in worktrees, or a whole epic in waves; also a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter + views; a branch per story in PARALLEL MODE |
-| `fix` | `[story-path]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
-| `ship` | `[story-path] \| --promote [--epic NN] \| --integration <level> \| --to-issues [tasks-folder] [--mode feature\|epics\|stories]` | Commit, open PR (`--promote` for a whole epic/feature), set an epic's integration level, or publish a plan to GitHub Issues | git + GitHub; story `pr:`/`delivery:` + views |
+| `fix` | `[path-to-story.md]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, frontmatter + views |
+| `ship` | `[path-to-story.md] \| --promote [--epic NN] \| --integration <level> \| --to-issues [tasks-folder] [--mode feature\|epics\|stories]` | Commit, open PR (`--promote` for a whole epic/feature), set an epic's integration level, or publish a plan to GitHub Issues | git + GitHub; story `pr:`/`delivery:` + views |
 | `config` | `[show \| board \| trunk <branch> \| on \| off]` | Project settings: issue tracking, the Projects board mapping, and the trunk branch every PR targets | `tasks/SETTINGS.md` + board |
 | `migrate` | `[--dry-run]` | Upgrade a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter, flat team-skill folders, unique epic numbers), then stamp `tasks/VERSION.md` | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
 | `doctor` | `[tasks/<slug>] [--quiet]` | Report what is broken in this project — layout stamp, story frontmatter, index drift, dependencies, feature docs, team skills, the committed ck-code-required guard | read-only |
-| `sync` | `[tasks/<slug>] [--apply\|--dry-run\|--local]` | Reconcile indexes, `delivery:`/`pr:`, the board and GitHub Issues with what GitHub actually did — including work merged straight to the trunk with no PR; commits the `tasks/` diff | `tasks/` frontmatter + views, board, Issues/PRs |
-| `explain` | `[file-or-concept]` | Explain what was built and how to verify it | read-only |
+| `sync` | `[tasks/<slug>] [--apply] [--dry-run] [--local]` | Reconcile indexes, `delivery:`/`pr:`, the board and GitHub Issues with what GitHub actually did — including work merged straight to the trunk with no PR; commits the `tasks/` diff | `tasks/` frontmatter + views, board, Issues/PRs |
+| `explain` | `[file-or-concept] \| --epic NN` | Explain what was built and how to verify it, or `--epic NN` for that epic's goal and each story's goal | read-only |
 
 ## Examples
 

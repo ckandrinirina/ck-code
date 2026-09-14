@@ -4,8 +4,11 @@ The v6 layout has **one writable source of truth for story state: the story file
 YAML frontmatter.** Every index (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) is a
 **generated, read-only view** regenerated from frontmatter — never hand-edited,
 never independently mutated. This is what removes drift: a view is a pure function
-of the frontmatter, so it cannot disagree with it. There is no reconciler skill
-because there is nothing to reconcile — you regenerate.
+of the frontmatter, so it cannot disagree with it. There is no *index* reconciler —
+regenerating is the whole repair. `/ck-code:sync` reconciles a separate axis instead:
+`delivery`, the GitHub Projects board, and Issues state against what GitHub actually
+did ([`github-projects.md`](github-projects.md)) — it never repairs index drift,
+because there is none to repair.
 
 The layout constant is `v6` (see [`version-gate.md`](version-gate.md)). A pre-v6
 project is blocked and routed to `/ck-code:migrate`.
@@ -21,14 +24,6 @@ consumes an ID — `build --epic NN`, `build EE-SS`, `blocked_by`, the `epic/<NN
 branch glob ([`branch-topology.md`](branch-topology.md)), `ck-doctor`'s dependency
 graph — then had no way to tell which plan was meant, and silently resolved to
 whichever it reached first.
-
-What the invariant buys, stated plainly:
-
-- **An ID never needs a plan qualifier.** `--epic 07` and `07-02` resolve on their
-  own — no feature gate, no "which plan?" prompt.
-- **`blocked_by` may cross plans**, because a dependency on any story in the project
-  is now expressible.
-- **`epic/<NN>-*` matching more than one branch means a stale branch**, never two plans.
 
 `plan` allocates each new epic from the project-wide maximum, derived from the folders
 on every run and never stored:
@@ -171,8 +166,10 @@ true of files a later story created.
 | `delivery` | empty \| `pr` \| `merged` \| `direct` | the epic PR's state — same enum and same writers as a story's |
 | `integration` | `story` \| `epic` \| `feature` \| empty | where this epic's work is proposed for review; empty ≡ `story`. Branch names are **derived, never stored** — see [`branch-topology.md`](branch-topology.md) |
 
-Same format contract as story frontmatter. `title` and `description` must not
-contain `|` (they are emitted into markdown table cells).
+Same format contract as story frontmatter. The generator escapes a raw `|` in
+`title`/`description` before emitting either into a markdown table cell, so it will
+not break the table — but an escaped pipe still reads awkwardly in the rendered
+row, so avoid it anyway.
 
 ## Feature doc (`design` output)
 
@@ -191,7 +188,7 @@ design: planned
   `design` sets `pending`, `plan` flips it to `planned`. No separate ledger file, no
   dated design-record journal — git is the design history.
 
-Delta/journal docs are **not** written in v5. A change's history is its commits.
+Delta/journal docs are **not** written in v6. A change's history is its commits.
 `index.md` always holds current truth.
 
 ## Project settings (`tasks/SETTINGS.md`)
@@ -221,7 +218,7 @@ regenerates them in the same phase by running the script; it never edits a cell.
   story statuses. `build` reads it first to pick a feature.
 
 Status rollup (computed, never stored): a feature is `MERGED` when every non-`skip` story
-is `done` **and** `delivery: merged`; `DONE` when every non-`skip` story is `done` but at
+is `done` **and** `delivery: merged` **or** `direct`; `DONE` when every non-`skip` story is `done` but at
 least one has not reached the trunk; `IN PROGRESS` when any story is `in-progress`/`bug`
 or some-but-not-all are `done`; `TODO` when none has started. A `bug` story counts as
 not-done. `MERGED` and `DONE` are both **finished** states — every consumer that computes
@@ -255,12 +252,12 @@ fast path; `migrate` writes it as its final step.
 | `blocked_by` confined to its own plan | may name any story in the project |
 | `epic/<NN>-*` matching twice = two plans, ask which | matching twice = a stale branch |
 
-## What v3 had that v5 removed
+## What v3 had that v6 removes
 
-| v3 | v5 |
+| v3 | v6 |
 |---|---|
 | status cell-edited in story file + `STORIES_INDEX` + `FEATURE_INDEX` + `EPIC.md` | status in frontmatter only; views regenerated |
-| `sync` skill to repair story↔index↔epic drift | deleted — views are generated, nothing drifts |
+| `sync` skill to repair story↔index↔epic drift | deleted — views are generated, nothing drifts; the `/ck-code:sync` skill reintroduced later reconciles GitHub state (delivery, board, Issues), never index drift |
 | `DESIGN_LEDGER.md` pending/planned rows | `design:` frontmatter flag on the feature doc |
 | dated design-record + delta journal docs (write-only, never read) | none — git is history |
 | `EPIC.md` `## Stories` table (a second story list) | dropped — `STORIES_INDEX` is the only story listing |

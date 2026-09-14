@@ -3,7 +3,7 @@ name: sync
 description: Use when a ck-code project's bookkeeping has drifted from GitHub — a PR merged without the story showing it, a story merged straight to the trunk with no PR and stuck in Ready to Ship, a card in the wrong column, a delivered issue still open, an epic checklist with unticked merged stories, or a PR whose body closes nothing. Reconciles indexes, delivery, the board and GitHub Issues in one pass, then commits the result. Argument is an optional `tasks/<slug>` path.
 argument-hint: "[tasks/<slug>] [--apply] [--dry-run] [--local]"
 effort: low
-allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git diff*) Bash(git rev-parse*) Bash(gh auth status*) Read Glob Skill
+allowed-tools: Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git diff*) Bash(git rev-parse*) Bash(gh auth status*) Bash(find*) Bash(grep*) Bash(ls*) Read Glob Skill
 hooks:
   PreToolUse:
     - matcher: Bash

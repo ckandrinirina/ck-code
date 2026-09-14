@@ -3,7 +3,7 @@ name: config
 description: Use when setting up or changing this project's ck-code settings in `tasks/SETTINGS.md` — turning GitHub issue tracking on or off, setting the trunk branch every PR targets, picking or creating the GitHub Project whose board mirrors story status, re-mapping board columns after the board changes, or just showing what is currently configured. Argument is `show`, `board`, `trunk <branch>`, `on`, or `off`. Board work needs `gh` authenticated with the `project` scope.
 argument-hint: "[show | board | trunk <branch> | on | off]"
 effort: low
-allowed-tools: Bash(ck-project*) Bash(ck-doctor*) Bash(gh auth status*) Bash(gh project list*) Bash(git rev-parse*) Read Edit Write Skill
+allowed-tools: Bash(ck-project*) Bash(ck-doctor*) Bash(ck-bootstrap*) Bash(gh auth status*) Bash(gh project list*) Bash(git rev-parse*) Bash(find*) Bash(grep*) Bash(ls*) Read Edit Write Skill
 ---
 
 # Config — Project Settings & Board Mapping
@@ -94,8 +94,9 @@ ck-project init --project <N> --reorder    # rearrange the existing columns to t
 ck-project init --create "<title>"         # create, link, provision all seven
 ```
 
-The preset is seven columns in flow order: **Blocked · Todo · In Progress · Ready to Ship ·
-In Review · Bugs · Done**. `--extend` appends missing ones at the *end* (it never disturbs
+The preset column order is fixed
+([`github-projects.md`](../../references/github-projects.md#role--column)). `--extend`
+appends missing ones at the *end* (it never disturbs
 the user's order), so offer `--reorder` only when the user says the order bothers them —
 it rewrites the whole option set and therefore re-syncs every card afterwards.
 

@@ -15,7 +15,7 @@ plan ([`data-model.md`](data-model.md#epic-and-story-numbers-are-globally-unique
 the `Feature` cell identifies its epic on its own and the `Plan` cell is informational,
 never needed to disambiguate. `Status` and `Stories` are
 **computed** from that epic's story statuses (never stored): `MERGED` when every non-`skip`
-story is `done` **and** `delivery: merged`; `DONE` when every non-`skip` story is `done`
+story is `done` **and** `delivery: merged` **or** `direct`; `DONE` when every non-`skip` story is `done`
 but at least one has not reached the trunk; `IN PROGRESS` when any story is
 `in-progress`/`bug` or some-but-not-all are `done`; `TODO` when none has started. A `bug`
 story counts as not-done. The `Docs` cell routes to
