@@ -45,6 +45,11 @@ After **Epic [NN]**: [what a human can click, run, or call, and with which comma
 tasks/YYYY-MM-DD_[project-slug]/
 ```
 
+The epic numbers above (`Epic 01`, `Epic 02`, the final `NN_integration-e2e`) are
+**illustrative shape only**. Real numbers are allocated from the project-wide maximum
+(`plan` 3.1), so a second plan folder in an existing project starts at whatever comes next —
+`Epic 07`, not `Epic 01`. Never renumber a plan to make it match this example.
+
 The ordering strategy is shown so **Adjust** can change it; do not add a separate prompt for it.
 
 `AskUserQuestion` — "Proceed with generating this plan?" → **Proceed** (Phase 5) /

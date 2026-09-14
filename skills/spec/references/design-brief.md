@@ -1,6 +1,6 @@
 # Claude Design Brief — Template & Authoring Rules
 
-> Read by `spec` Phase 4.5 only. Produces `design-brief.md` inside the spec folder: a
+> Read by `spec` PHASE 5 only. Produces `design-brief.md` inside the spec folder: a
 > self-contained brief the user pastes into [claude.ai/design](https://claude.ai/design)
 > to build the project's design system.
 
@@ -130,7 +130,7 @@ the repository, and makes every later UI implementation build against it.
 
 ## After writing the brief
 
-`spec` Phase 4.5 owns the rest: stamp `designSystem` in `.metadata.json`
+`spec` PHASE 5 owns the rest: stamp `designSystem` in `.metadata.json`
 (`status: "awaiting-link"`, `briefPath`), and print the hand-off — open
 [claude.ai/design](https://claude.ai/design), paste the brief, then return with
 `/ck-code:design ds <url>`. Nothing else is written, and no `DesignSync` call is made:

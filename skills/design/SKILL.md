@@ -3,7 +3,7 @@ name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync | ds [design-url]]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(mkdir*) Bash(shasum*) DesignSync Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -15,11 +15,10 @@ The architecture is a few **global** docs (overview, folder-structure, tech-stac
 `_shared.md`, configuration, dev-guide) plus one **self-contained feature doc** per
 feature at `docs/architecture/features/<slug>/index.md`. Each feature doc carries
 frontmatter `slug: <slug>` and `design: pending`; a later `build`/`fix` story routes to
-the one doc it needs. There are **no journal/delta docs and no `DESIGN_LEDGER.md`** in
-v6 — git is the design history, and the `design:` flag (which `plan` flips to `planned`)
-is the whole design→plan bridge. The retired layer docs (`components.md`,
-`api-contracts.md`, `database-schema.md`, `data-flow.md`) are not generated — their
-content lives in each feature's doc so a story reads only that doc.
+the one doc it needs. There are **no journal/delta docs, no `DESIGN_LEDGER.md`, and no
+layer docs** (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) —
+git is the design history, the `design:` flag (which `plan` flips to `planned`) is the
+whole design→plan bridge, and every layer's content lives in the feature doc that owns it.
 
 **Five modes** (chosen by `$ARGUMENTS`):
 
@@ -125,9 +124,24 @@ ADD FEATURE / FULL REFRESH / DIFFERENT PROJECT) from
 - **ADD FEATURE:** read the architecture context per Phase 1.1b (globals + README index
   only — NOT every feature doc), read the spec, ask what feature to add, continue Phase 1
   feature-scoped.
-- **FULL REFRESH:** back up existing docs to a timestamped sibling
-  (`cp -r docs/architecture "docs/architecture.backup-$(date +%Y-%m-%d)"`), then proceed as
-  New Project Mode.
+- **FULL REFRESH:** rewrites every global doc, so it needs a **clean tree and a backup**,
+  in that order:
+
+  1. Run `git status --porcelain`. **Non-empty → STOP** and tell the user to commit or
+     stash first; git is the only way back from a refresh, so a dirty tree makes the run
+     unrevertable. Never refresh on a dirty tree.
+  2. Back the current docs up to a **second-resolution** timestamped sibling, and refuse
+     rather than write into a path that already exists:
+
+     ```bash
+     BACKUP="docs/architecture.backup-$(date +%Y-%m-%d_%H%M%S)"
+     if [ -e "$BACKUP" ]; then echo "refusing: $BACKUP already exists"; else cp -r docs/architecture "$BACKUP"; fi
+     ```
+
+     `%Y-%m-%d_%H%M%S` (not a bare date) is what keeps two refreshes on the same day from
+     landing on one path. If the `refusing:` line prints, STOP and report it — never merge
+     a refresh into an existing backup.
+  3. Then proceed as New Project Mode, naming the backup path in the Phase 4 summary.
 - **DIFFERENT PROJECT:** proceed as New Project Mode.
 
 ---
@@ -186,13 +200,37 @@ Fill gaps and clarify ambiguities through adaptive questioning.
   Stack → Data Flow & APIs → Database & State → Configuration → Build & Run →
   Non-Functional).
 
-**Design-system offer (New Project Mode only, at most once).** When the answers so far put a
-UI in the stack AND `docs/architecture/design-system/` does not exist, append the
-design-system option to an existing question round — never as a standalone prompt, never in
-Feature Mode. Wording: [references/qna-examples.md](references/qna-examples.md) § Design
-system offer. Skip is a first-class answer and writes nothing; on accept, run
-[PHASE DS](#phase-ds-claude-design-system-optional) after Phase 3 completes, so the
-architecture docs exist first.
+**Design-system offer (New Project Mode only, at most once per project).** Offer only when
+the answers so far put a UI in the stack **and both guards below come back empty** — one
+probe, run once:
+
+```bash
+ls -d docs/architecture/design-system 2>/dev/null
+find docs/specs -maxdepth 2 -name .metadata.json -exec grep -ho '"status": *"\(none\|awaiting-link\|linked\)"' {} + 2>/dev/null
+```
+
+- Any output from the first line → a design system is already cached. Do not offer.
+- Any output from the second → some spec already carries a `designSystem.status`, so the
+  question has already been answered for this project. **`none` counts**: a decline is a
+  decision, not a gap to re-fill ([`design-system.md` § Pending
+  link](../../references/design-system.md#pending-link) — *never re-offer*). Do not offer.
+
+When it does run, append the design-system option to an existing question round — never as
+a standalone prompt, never in Feature Mode. Wording:
+[references/qna-examples.md](references/qna-examples.md) § Design system offer.
+
+**Write the answer back** when this run's spec argument was a `docs/specs/*_<slug>/` folder
+(a sibling `.metadata.json` exists), so the offer can never fire twice:
+
+- **Skip** → set `designSystem.status: "none"`, the other four sub-keys `null`.
+- **Accept** → set `designSystem.status: "awaiting-link"` with `briefPath: null`, then run
+  [PHASE DS](#phase-ds-claude-design-system-optional) after Phase 3 completes (the
+  architecture docs exist first), whose step 3 closes that `awaiting-link` to `linked`.
+
+Either way, re-emit the whole file in the canonical key order from
+[`templates.md`](../spec/references/templates.md#write-procedure) — never a text patch. With
+no spec folder there is nothing to write back; the `design-system/` directory itself is then
+the only guard, which is correct.
 
 Full wording of every question and the CLEAR/PARTIAL confirmation phrasing:
 [references/qna-examples.md](references/qna-examples.md).
@@ -341,13 +379,19 @@ content, only restructures and reports. Dedup rules and the token report format 
    [../../references/subagent-fanout.md](../../references/subagent-fanout.md); each returns
    `{token estimate, candidate shared sections}` and writes nothing. Merge here. Below 3
    docs, measure inline. All writes stay sequential in the orchestrator.
-3. **Dedup** — find content that appears in 2+ feature docs (shared components, base tables,
-   common middleware). Move one canonical copy to `_shared.md` under the right heading and
-   replace each occurrence with a link under `## Shared dependencies`. Keep feature-specific
-   extensions in the feature doc — hoist only the shared core.
-4. **Prune** — flag sections that are empty, stale `[TO BE DEFINED]`, or duplicate the global
-   docs; remove redundant prose, keep tables/lists. Confirm (AskUserQuestion) before deleting
-   any non-empty content.
+3. **Plan the dedup (no writes).** Find content that appears in 2+ feature docs (shared
+   components, base tables, common middleware) and build the **hoist plan** — one row per
+   block: the docs that hold it, the `_shared.md` heading it would land under, and the lines
+   it saves. Keep feature-specific extensions in the feature doc; only the shared core is
+   ever a candidate. Write nothing yet: a hoist removes content from a feature doc, so it
+   goes through step 4's gate.
+4. **Plan the prune, then gate both.** Flag sections that are empty, stale
+   `[TO BE DEFINED]`, or duplicate the global docs. Present the **hoist plan (step 3) and
+   the prune list together**, then ask **one `AskUserQuestion`** — `Apply both` /
+   `Hoists only` / `Prunes only` / `Cancel`. Apply only what the answer covers: a hoist
+   moves the canonical copy into `_shared.md` and replaces each occurrence with a link under
+   `## Shared dependencies`; a prune removes redundant prose and keeps tables/lists. Nothing
+   in either list is written before the answer.
 5. **Right-size** — if a feature doc really covers two features, propose a split; on
    confirmation create the second doc + a note for the user to wire the new slug into `plan`.
 6. **Reindex** — if any feature doc was created/renamed, run
@@ -370,10 +414,30 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
    Feature Doc template (frontmatter `slug` + `design: pending`, header + section stubs + a
    `[TO BE DEFINED]` note), using the epic's description for `## Summary`. Do NOT invent
    component/API/data detail — leave stubs for a real `design`/`build` pass to fill.
-4. **Slug drift** → if a feature doc exists under a different slug than its epic (e.g. design
-   used `roles`, plan's epic is `role-management`), rename the `features/<slug>/` folder to
-   the epic slug and fix inbound links. Confirm (AskUserQuestion) before renaming on
-   ambiguous drift.
+4. **Slug drift** → a feature doc under a different slug than its epic (design used `roles`,
+   plan's epic is `role-management`) leaves `FEATURE_INDEX.Docs` unresolved. Fix it in three
+   steps, confirming with `AskUserQuestion` before renaming whenever the pairing is
+   ambiguous (two candidate docs, or two epics claiming one doc):
+
+   ```bash
+   git mv docs/architecture/features/roles docs/architecture/features/role-management
+   ```
+
+   `git mv`, never copy-then-delete — the doc's history is the design history.
+
+   Then fix the **inbound links**, which are exactly these three places and no others: the
+   `docs/architecture/README.md` Feature Documents table row; any other feature doc's
+   `## Shared dependencies` entry or prose link pointing at the old folder; and the renamed
+   `index.md`'s own `slug:` frontmatter (set it to the epic slug). Its `../../` links to
+   `_shared.md` and the globals are unaffected — the folder moved sideways, not deeper.
+
+   Verify with a grep that must come back **empty** before the step is done:
+
+   ```bash
+   grep -rn 'features/roles' docs/architecture/ tasks/ 2>/dev/null
+   ```
+
+   Any surviving hit is an inbound link the rename missed; fix it and re-run the grep.
 5. **Reindex** — run `ck-index` so each generated
    `FEATURE_INDEX.Docs` cell resolves to the doc, and update the `README.md` Feature
    Documents table.
@@ -447,6 +511,10 @@ instead). Every line here is re-read by every story that touches the feature.
   the `optimize` measurement pass (PHASE O step 2).
 - **Never invent information** — mark anything undetermined `[TO BE DEFINED]`; `sync`
   scaffolds stubs only, it does not author technical detail.
+- **Never leave a template's `[bracketed placeholder]` in a written file** — every one is
+  replaced with real content, or with the literal `[TO BE DEFINED]`, which is the **only**
+  bracketed string allowed to survive. A shipped `[Component Name]` or `[type]` is a defect,
+  not a stub.
 - **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v6 has
   none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
   writes or updates is left `design: pending`; `plan` flips it to `planned`.

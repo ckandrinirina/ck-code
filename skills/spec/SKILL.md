@@ -3,7 +3,7 @@ name: spec
 description: Use when the user wants a stakeholder-ready feature specification (descriptive, no code, no file paths, no tooling jargon) before any design or architecture work, or wants to revise an existing spec identified by a slug or a GitHub issue URL. Produces a reviewable feature-spec document, optionally published as a GitHub issue, that `/ck-code:design` later consumes. Runs before `/ck-code:design`.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
 effort: high
-allowed-tools: Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(mkdir*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(gh repo view*) Bash(gh label list*) Bash(gh project list*) Bash(gh project item-add*) Bash(mkdir*) Bash(mktemp*) Bash(diff*) Bash(rm -f*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -49,7 +49,7 @@ Per-feature folder, shared with later design output:
 ```
 docs/specs/YYYY-MM-DD_<slug>/
 ├── pre-spec.md       # this skill writes here
-├── design-brief.md   # Phase 4.5, only when a Claude Design link was accepted
+├── design-brief.md   # PHASE 5, only when a Claude Design link was accepted
 └── .metadata.json    # canonical, generated — see references/templates.md
 ```
 
@@ -120,8 +120,10 @@ this PASSes.
 4. **Setup gate — one `AskUserQuestion` call**, skipping any question already
    unambiguous from context or `$ARGUMENTS`:
    - **Language** — English / French / Spanish / Other (used end-to-end).
-   - **Audience** — Mixed / Product-focused / Technical reviewers (drop jargon
-     for the first two; keep precision for the third).
+   - **Audience** — **Mixed** / **Product** / **Technical** — exactly these three
+     labels, because they are the values written to `.metadata.json#audience`
+     ([templates.md](references/templates.md#key-contract)). Drop jargon for `Mixed` and
+     `Product`; keep precision for `Technical`.
    - **Output** — Local file only / GitHub issue only / Both.
    - **Slug** — `Use <proposed-slug>` / a custom kebab-case slug via Other.
 
@@ -245,6 +247,13 @@ Fields this run may change — everything else is carried through unmodified:
 - `status` per the readiness gate above
 - `tags` and the `github` object if labels, issue, or project changed (all four `github`
   sub-keys present, `null` where empty — never a partial object)
+- `audience` on ADJUST, only when the user changed it — one of `Mixed` / `Product` /
+  `Technical`, never a longer label
+- `linkedDesign` is **never** written here — `design` Phase 3.12 owns it
+- `designSystem` is written by PHASE 5, not by this phase: CREATE emits the whole block
+  (`status: "none"`, the other four `null`) so the key is always present, and PHASE 5
+  overwrites it if the offer runs. Never leave it out of a CREATE and never patch a
+  sub-key in place — the whole file is re-emitted in canonical key order
 
 ---
 

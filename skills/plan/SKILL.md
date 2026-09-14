@@ -3,7 +3,7 @@ name: plan
 description: Use when breaking a project spec or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle; redirects to full planning when no epic exists. Argument is the spec-file path, or the `--quick` flags.
 argument-hint: "<path-to-spec> | --quick [brief] [--epic NN]"
 effort: high
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git branch*) Bash(mkdir*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(git status*) Bash(git branch*) Bash(mkdir*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(ls*) Skill
 ---
 
 # Project Architect — Spec to Epics/Stories (+ Quick Single-Story)
@@ -383,10 +383,12 @@ templates in [templates.md](references/templates.md#project-overview-template).
 ### 5.3 EPIC.md (per epic) — with frontmatter, no story table
 
 Write `epics/NN_<slug>/EPIC.md` from
-[templates.md#epic-template](references/templates.md#epic-template). It carries
-frontmatter (`epic`, `slug`, `title`, `description`) — the generator reads `description`
-for the `FEATURE_INDEX.md` cell — and has **no `## Stories` table**: the story list is
-generated into `STORIES_INDEX.md`.
+[templates.md#epic-template](references/templates.md#epic-template). Its frontmatter is
+**eight keys, always all eight**: `epic`, `slug`, `title`, `description` filled in here, and
+`issue`, `pr`, `delivery`, `integration` present but **left empty** for `ship`, `build` and
+`ck-project sync` to fill. The generator reads `description` for the `FEATURE_INDEX.md`
+cell. There is **no `## Stories` table**: the story list is generated into
+`STORIES_INDEX.md`.
 
 ### 5.4 Story files (per story) — with frontmatter + Implementation Tasks
 
@@ -468,7 +470,16 @@ Adds one small story to an **existing epic**, no full cycle. (Phase 0 already ga
    `Glob "tasks/*/FEATURE_OVERVIEW.md"`; take the most recent. **No plan → redirect:**
    "No `tasks/` plan found. Run `/ck-code:plan <spec>` first." Stop. Multiple plans → ask
    which. Then list that plan's epic folders and ask which epic.
-3. Record the target epic's highest existing `SS` (Q.3 numbers the new story from it).
+3. Record the target epic's highest existing `SS`, read from **story frontmatter `id:`**,
+   never from a filename prefix — the frontmatter is the source of truth
+   ([`data-model.md`](../../references/data-model.md)) and a file whose `SS_` prefix drifted
+   from its `id` would otherwise hand out a duplicate:
+
+   ```bash
+   find tasks/<plan>/epics/NN_<epic-slug>/stories -name '*.md' -exec grep -h '^id:' {} + 2>/dev/null | sed 's/.*-//' | sort -n | tail -1
+   ```
+
+   Empty output = an epic with no stories. Q.3 numbers the new story from this value.
    **No epic exists anywhere → redirect to full plan** — there is nothing to add to.
 
 ### Q.2 Capture intent
@@ -480,8 +491,10 @@ Adds one small story to an **existing epic**, no full cycle. (Phase 0 already ga
 
 ### Q.3 Draft & confirm
 
-Compute the ID: `EE-SS` where `EE` is the epic number and `SS = max(existing SS in epic) + 1`,
-zero-padded; empty epic ⇒ `01`. Slug = kebab-case of the brief, ≤ 5 words.
+Compute the ID: `EE-SS` where `EE` is the epic number and `SS` is the Q.1 step 3 value
+(the highest `SS` across that epic's story **frontmatter `id:` values**) **+ 1**,
+zero-padded to two digits; an epic with no stories ⇒ `01`. Slug = kebab-case of the brief,
+≤ 5 words.
 
 Draft the full story from [templates.md#story-template](references/templates.md#story-template):
 title (title-case one-liner), description (1–2 sentences), 1–3 concrete testable
@@ -551,6 +564,8 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never create a new epic in `--quick` mode** — redirect to full plan when no epic exists.
 - **Never write story files inline when ≥3 are confirmed** (5.4) — the dispatch decision happens before the first file, never after the last.
 - **Never delegate shared writes to a subagent** (5.4) — overview, epics, indexes, roadmap are orchestrator-owned; subagents write only their own story file.
+- **Never leave a template's `[bracketed placeholder]` in a written file** — every one is replaced with real content, or with the literal `[TO BE DEFINED]`, which is the **only** bracketed string allowed to survive. A shipped `[Story Title]` or `[Criterion 1]` is a defect.
+- **Never derive a story's `SS` from a filename** (Q.1, Q.3) — read the epic's stories' frontmatter `id:` values; a drifted `SS_` prefix would otherwise mint a duplicate ID.
 - **Never hardcode** project names, technologies, or paths — derive everything from the spec.
 - **Always cover every functional requirement** with at least one story; flag vague ones for clarification.
 - **Always keep frontmatter generator-readable** — one `key: value` per line, inline `[…]` lists, no block scalars.

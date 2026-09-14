@@ -183,8 +183,7 @@ Sync labels / project membership with `gh issue edit --add-label` /
 
 ## Question bank (Phase 2 — Conversational refinement)
 
-Adapt to the feature type. Skip dimensions already clear from the user's
-description. Ask 2-3 per round, max 3-4 rounds.
+Adapt to the feature type; skip dimensions already clear from the user's description.
 
 1. **Scope & user benefit**
    - "What problem does this solve, in the user's own words?"
@@ -213,9 +212,6 @@ description. Ask 2-3 per round, max 3-4 rounds.
 7. **Success criteria**
    - "How would you know in 2 weeks that this works?"
    - "What metrics would you watch?"
-
-After each round, summarize what was learned in 1-2 sentences and gate with
-`AskUserQuestion` (Another round / Proceed to generate).
 
 ---
 
