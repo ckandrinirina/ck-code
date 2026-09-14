@@ -3,7 +3,13 @@ name: migrate
 description: Use when a change-producing skill's version gate has blocked a pre-v6 ck-code project, when the user asks to upgrade a project to v6, when the same epic number is used by more than one plan folder, when team-generated skills sit in nested .claude/skills/experts/ or guides/ folders, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow.
 argument-hint: "[--dry-run]"
 effort: medium
-allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git mv*) Bash(git branch*) Bash(git rev-parse*) Bash(gh pr list*) Bash(find*) Bash(grep*) Bash(ls*) Bash(mkdir*) Bash(mv*) Skill
+allowed-tools: Bash(ck-index*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git mv*) Bash(git branch*) Bash(git rev-parse*) Bash(gh pr list*) Bash(gh issue list*) Bash(find*) Bash(grep*) Bash(ls*) Bash(mkdir*) Bash(mv*) Bash(rm*) Bash(rmdir*) Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
 # Migrate — Upgrade a Project to the v6 Layout
@@ -27,11 +33,16 @@ Phases 2–4 must not touch them.
 **Phase R runs on every path**, last before the stamp — a v3 conversion can surface
 collisions too.
 
-One-shot, idempotent, safe: an already-v6 project is a no-op that just (re)stamps. All
-originals are converted in place behind a **single pre-migration commit** so the whole
-conversion is one revertable step. The field-by-field mapping and the pre-v3
-doc-layout conversion live in [references/migration-map.md](references/migration-map.md);
-the lite conversion in [references/lite-migration.md](references/lite-migration.md).
+One-shot, idempotent, safe: an already-v6 project is a no-op that just (re)stamps. Every
+original is converted in place and the whole conversion lands in **one post-migration
+commit** (Phase 5), so the run is a single revertable step — Phase 0 records the SHA that
+commit reverts to and commits nothing itself.
+
+**`--dry-run` makes the entire run read-only.** Every phase still executes and reports
+exactly what it would write; nothing is created, moved, deleted, stamped, regenerated,
+renamed or committed. The field-by-field mapping and the pre-v3 doc-layout conversion live
+in [references/migration-map.md](references/migration-map.md); the lite conversion in
+[references/lite-migration.md](references/lite-migration.md).
 
 ## PROGRESS TRACKING
 
@@ -43,12 +54,19 @@ updates to the end.
 
 ## PHASE 0: SAFETY GATE (hard)
 
-1. **Clean tree required.** Run `git status --porcelain`. If it is non-empty, STOP and
+1. **Resolve `--dry-run` before anything else.** `--dry-run` in `$ARGUMENTS` makes the
+   whole run read-only. Announce it in one line — `Dry run: reporting only, nothing will be
+   written.` — and carry the flag into every later phase, each of which reports its writes
+   instead of performing them. A dry run needs no clean tree (it writes nothing) and skips
+   step 4; steps 2 and 4 below are for a real migration only.
+2. **Clean tree required.** Run `git status --porcelain`. If it is non-empty, STOP and
    tell the user to commit or stash first — migration rewrites many files and must be a
    clean, revertable step. Do not proceed on a dirty tree.
-2. **Snapshot commit.** With a clean tree, note the current SHA (`git rev-parse HEAD`)
-   and report it — this is the one-command rollback point (`git reset --hard <sha>`).
-3. Confirm with the user: `AskUserQuestion` — "Migrate this project to the ck-code v6
+3. **Record the rollback SHA.** Run `git rev-parse HEAD` and report the SHA. **Nothing is
+   committed here** — this is the commit the conversion will be reverted to
+   (`git reset --hard <sha>`) once Phase 5 has made the migration's one commit. Keep the
+   SHA; Phase 6 compares `HEAD` against it.
+4. Confirm with the user: `AskUserQuestion` — "Migrate this project to the ck-code v6
    layout? All conversions land in one commit; rollback is `git reset --hard <sha>`."
    Options: `Migrate` / `Cancel`. On Cancel, stop.
 
@@ -84,12 +102,19 @@ Report the detected source layout before converting.
 For every `tasks/*/epics/NN_<slug>/stories/*.md`, prepend v6 frontmatter derived from
 the v3 prose, then leave the body intact.
 
-**Dispatch decision first.** Count the story files and announce the branch **before
-converting any of them**: at **≥3 epics' worth of stories**, fan out per the
+**Dispatch decision first.** The unit of dispatch is **one epic**, so the count is
+**epic folders that hold at least one story file** — an empty `epics/NN_<slug>/` is no
+agent's worth of work and is not counted:
+
+```bash
+find tasks -type f -path 'tasks/*/epics/*/stories/*.md' | sed 's|/stories/[^/]*$||' | sort -u | wc -l
+```
+
+Announce the branch **before converting any story**: at **≥3 such epics**, fan out per the
 [subagent-fanout contract](../../references/subagent-fanout.md) — one investigation agent
 per epic (`model: haiku`) returns each story's extracted frontmatter as structured data,
 and the **orchestrator** writes every file. Any story an agent cannot parse comes back in
-an `unparsed` list and is handled inline. Below that, convert inline and say so.
+an `unparsed` list and is handled inline. Below 3, convert inline and say so.
 
 Use the mapping in
 [references/migration-map.md](references/migration-map.md#story-fields). Key rules:
@@ -107,12 +132,17 @@ Use the mapping in
 Prepend the frontmatter block; never rewrite the body prose (acceptance criteria,
 notes, implementation summaries stay as-is).
 
+**Dry run:** name every story file and print the frontmatter block that would be prepended
+to it (plus any story that could not be parsed). Prepend nothing.
+
 ## PHASE 3: CONVERT EPICS + ARCHITECTURE
 
-**3a — EPIC.md.** For each `epics/NN_<slug>/EPIC.md`, add frontmatter
-(`epic`, `slug`, `title`, `description` from the Goal/first description line) and
+**3a — EPIC.md.** For each `epics/NN_<slug>/EPIC.md`, add the **eight-key** frontmatter —
+the same eight a freshly planned epic carries: `epic`, `slug`, `title`, `description`
+(derived from the Goal/first description line), plus `issue`, `pr`, `delivery`,
+`integration` **present and empty** for `ship`/`build`/`ck-project sync` to fill. Then
 **remove the `## Stories` table** — the story list is now generated into
-`STORIES_INDEX.md`. Keep all other authored prose. See
+`STORIES_INDEX.md`. Keep all other authored prose. Per-key sources:
 [migration-map.md](references/migration-map.md#epic-fields).
 
 **3b — architecture docs (only if Phase 1 found a pre-v3 doc layout).** Convert flat
@@ -126,13 +156,18 @@ doc (`planned` if the feature has any epic/story, else `pending`), folding in th
 from `DESIGN_LEDGER.md` if present, then **delete `DESIGN_LEDGER.md`** — the `design:`
 flag replaces it.
 
+**Dry run:** list each `EPIC.md` with the frontmatter that would be added and whether its
+`## Stories` table would be removed, each `features/<slug>.md` → `features/<slug>/index.md`
+move, each layer doc that would be split and into which feature docs, and that
+`DESIGN_LEDGER.md` would be deleted. Write, move and delete nothing.
+
 ## PHASE 4: RETIRE v3 ARTIFACTS
 
 - The old hand-maintained `STORIES_INDEX.md` / `FEATURE_INDEX.md` are overwritten by the
   generator in Phase 5 — no action needed beyond that.
 - Dated journal/delta docs (`features/<slug>/YYYY-MM-DD_*.md`, design records) are
   **left in place** as historical files (never deleted — they may hold notes a user
-  values); v5 simply stops writing new ones. Note in the report that they are now inert.
+  values); v6 simply stops writing new ones. Note in the report that they are now inert.
 
 ## PHASE S: FLATTEN THE TEAM SKILL FOLDERS
 
@@ -146,7 +181,7 @@ v5/v6 project already verified flat. It is the v4 → v5 step of the conversion
 `.claude/skills/<skill-name>/SKILL.md` and takes the command name from that directory,
 so nothing under `experts/` or `guides/` was ever registered — no `/expert-<role>`
 command existed and no guide auto-loaded. Only ck-code's own `Read`-by-path detection
-saw them. v5 puts each skill in its own top-level folder, where the name is real.
+saw them. The flat layout puts each skill in its own top-level folder, where the name is real.
 
 **S1 — enumerate (read-only):**
 
@@ -188,6 +223,10 @@ grep -rln 'skills/experts/\|skills/guides/' .claude/skills/ CLAUDE.md docs/ 2>/d
 Rewrite any surviving `.claude/skills/experts/…` or `…/guides/…` path found by the second
 grep to its flat form. Leave every other line of every skill body untouched — the
 `ck-code:team GENERATED` marker included, so `--regenerate` still behaves.
+
+**Dry run:** S1, S2 and the two greps in S4 are already read-only, so run them and print
+the `git mv` pairs S2 cleared, the `name:` mismatches, and the stale paths that would be
+rewritten. Run no `git mv`, no `rmdir`, and no rewrite.
 
 ## PHASE L: CONVERT A LITE PROJECT
 
@@ -239,18 +278,24 @@ Continue at Phase S (a no-op for lite — it has no team skills), then Phase R (
 becomes one plan folder, so it collides only if the project already held others), then
 Phase 5, committing with `chore: migrate ck-code-lite project to ck-code v6 layout`.
 
+**Dry run:** L1 and L2 run as written (the grouping gate still asks, because the map is the
+whole point of the preview). Then print the plan folder and every file L3 and L4 would
+create, the global docs `docs/ARCHITECTURE.md` would be split into, and the two renames and
+banners of L5. Create nothing, rename nothing, and do **not** offer the
+`.claude/settings.json` plugin swap — a dry run never edits settings.
+
 ## PHASE R: RENUMBER COLLIDING EPICS (every path)
 
 Runs on **every** migration path, immediately before Phase 5, and is the whole of a
 v5 → v6 migration. A no-op when no epic number is used by more than one plan.
 
-v6 requires an epic number — and therefore a story `id` — to be unique across every plan
-([`data-model.md`](../../references/data-model.md#epic-and-story-numbers-are-globally-unique)).
-Through v5, numbering restarted at `01` in each new plan folder, so two plans could both
-own epic `01` and story `01-01`, and every ID consumer silently resolved to whichever it
-reached first.
+v6 requires an epic number — and therefore a story `id` — to be unique across every plan:
+[`data-model.md`](../../references/data-model.md#epic-and-story-numbers-are-globally-unique).
 
-**`--dry-run` stops after R2**: print the ID map, write nothing.
+**Dry run:** R1, R2, R3 and R5's grep are read-only, so run them and print the full
+old → new ID map, the R3 open-PR result, and the R4 rewrite table (which folders, which
+frontmatter keys, which `blocked_by` entries). Perform no `git mv`, no frontmatter edit,
+no prose edit, and no branch rename.
 
 ### R1 — Detect (read-only)
 
@@ -387,8 +432,13 @@ run stays local and revertable by `git reset --hard <sha>`.
 2. **Stamp** `tasks/VERSION.md` with `layout: v6` per the
    [version gate](../../references/version-gate.md) (`mkdir -p tasks` first if needed).
    This is the **final** step — only after conversion succeeded.
-3. **Commit** all conversions in one commit:
+3. **Commit** all conversions in one commit — the migration's only commit:
    `git add -A && git commit -m "chore: migrate ck-code project to v6 layout"`.
+
+**Dry run:** report that `ck-index` would regenerate every `STORIES_INDEX.md` and
+`tasks/FEATURE_INDEX.md`, that `tasks/VERSION.md` would be stamped `layout: v6`, and the
+exact commit message. Run none of the three — `ck-index` writes files, so it does not run
+either. Go straight to Phase 6.
 
 ## PHASE 6: VERIFY + REPORT
 
@@ -413,7 +463,18 @@ Report a verification table so the user can trust the conversion:
     `[EE-SS]` token. Say plainly that this is cosmetic (`ship` resolves by issue number,
     never by title) and that migration wrote nothing to GitHub.
 - Confirm `tasks/VERSION.md` now reads `layout: v6` and the indexes regenerated.
-- Rollback reminder: `git reset --hard <pre-migration-sha>`.
+- **Assert the commit landed.** Run `git rev-parse HEAD` and compare it to the SHA recorded
+  in Phase 0 step 3. They **must differ** — a migration that converted files and did not
+  commit is not one revertable step. If they match, Phase 5 step 3 did not run: print
+  `⛔ Migration ran but nothing was committed — the whole conversion is sitting uncommitted in the working tree.`,
+  name `git add -A && git commit -m "chore: migrate ck-code project to v6 layout"` as the
+  fix, and do **not** report the migration as complete.
+- Rollback reminder: `git reset --hard <sha recorded in Phase 0>`.
+
+**Dry run:** report everything above as *would* statements, skip the commit assertion (no
+commit was attempted), end with `Dry run — no file was written. Re-run /ck-code:migrate
+without --dry-run to apply.`, and leave `tasks/VERSION.md` unstamped so the version gate
+still routes here.
 
 After a **lite** migration, add the items listed under "Report additions" in
 [references/lite-migration.md](references/lite-migration.md) — the ID map above all, since
@@ -421,7 +482,10 @@ every task ID in the project changed.
 
 ## RULES
 
-- **Never run on a dirty tree** — Phase 0 refuses; migration must be one revertable commit.
+- **`--dry-run` writes nothing, anywhere** — no file created, moved, deleted or stamped, no `ck-index`, no `git mv`, no branch rename, no `.claude/settings.json` edit, no commit. Every phase runs and reports what it *would* write.
+- **Never run on a dirty tree** — Phase 0 refuses; migration must be one revertable commit. A `--dry-run` is exempt, because it writes nothing.
+- **Never commit in Phase 0** — the rollback point is the SHA already at `HEAD`. The migration makes exactly **one** commit, in Phase 5, after the conversion succeeded.
+- **Always assert the Phase 5 commit landed** — Phase 6 compares `git rev-parse HEAD` to the Phase 0 SHA and says loudly when they match, because an uncommitted conversion is not revertable in one command.
 - **Never delete a story body, journal doc, or design record** — convert in place; only `DESIGN_LEDGER.md` is removed (its state moves to the `design:` flag).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never hand-write an index** — always regenerate with `ck-index` (Phase 5).
@@ -443,4 +507,4 @@ every task ID in the project changed.
 - **Never write epics or stories before the L2 grouping is confirmed** — the ID map changes every task ID, so the user sees it first.
 - **Never invent architecture detail in a lite migration** — feature docs are stubs; `/ck-code:design` fills them.
 - **Never leave `tasks/PLAN.md` live after a lite migration** — the rename is what stops a competing `/ck-code-lite:build` and clears the version-gate marker.
-- **Never edit `.claude/settings.json` without the Swap confirmation**, and never touch a key other than the two `enabledPlugins` entries.
+- **Never edit `.claude/settings.json` without the Swap confirmation**, and never touch a key other than the two `enabledPlugins` entries. `ck-bootstrap install` is exempt: it sets `ck-code@ck-marketplace: true` and wires the `SessionStart` guard as part of stamping, whatever the Swap answer was — so **Leave it** ends with both plugins enabled, and Phase 6 reports the final value of both keys ([lite-migration.md](references/lite-migration.md#plugin-swap)).

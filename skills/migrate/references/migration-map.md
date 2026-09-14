@@ -5,10 +5,10 @@ Exact source→target mappings for `/ck-code:migrate`. The v6 target layout is d
 
 ## Story fields
 
-v3 story files carry no frontmatter; state lives in prose. v5 prepends a frontmatter
-block and keeps the body untouched.
+v3 story files carry no frontmatter; state lives in prose. The migration prepends a
+frontmatter block and keeps the body untouched.
 
-| v5 frontmatter key | v3 source | Conversion |
+| v6 frontmatter key | v3 source | Conversion |
 |---|---|---|
 | `id` | `# Story EE-SS: …` heading, or the `EE-SS` filename/index | keep `EE-SS` |
 | `title` | text after `# Story EE-SS:` | strip the `Story EE-SS:` prefix |
@@ -51,12 +51,23 @@ it when it sits cleanly on its own line, to avoid a stale second copy.
 
 `EPIC.md` gains frontmatter and loses its `## Stories` table (now generated).
 
-| v5 frontmatter key | v3 source |
+The result is the **same eight keys** the `plan` skill's epic template writes
+([`plan/references/templates.md#epic-template`](../../plan/references/templates.md#epic-template)) —
+a migrated `EPIC.md` must be indistinguishable from a freshly planned one:
+
+| v6 frontmatter key | v3 source |
 |---|---|
 | `epic` | parent folder `NN` |
-| `slug` | parent folder slug (`NN_<slug>` → `<slug>`) |
+| `slug` | parent folder slug (`NN_<slug>` → `<slug>`); set it to the owning feature-doc dir name when one exists, so `FEATURE_INDEX.Docs` links |
 | `title` | the epic title heading |
-| `description` | the `Goal:` line or first description sentence |
+| `description` | the `Goal:` line or first description sentence (no `\|`) |
+| `issue` | a `#NNN` in the epic body, else empty. `ship --to-issues` writes it later |
+| `pr` | — empty. `ship --promote` writes it when it opens the epic PR |
+| `delivery` | — empty. `ck-project sync` owns it |
+| `integration` | — empty. `build` fills it on the epic's first story ([`branch-topology.md`](../../../references/branch-topology.md)) |
+
+Emit all eight lines even when four are empty: a missing key and an empty key read the same
+to the generator, but a present key is what tells the next skill the field exists to fill.
 
 Remove the entire `## Stories` table section. Keep Goal, scope, and any other authored
 prose. The generated `STORIES_INDEX.md` is now the only story listing.

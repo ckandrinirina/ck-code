@@ -76,6 +76,24 @@ One story file per `T-NN` at
 Frontmatter stays generator-readable: one `key: value` per line, inline `[…]` lists,
 no block scalars.
 
+## Epic frontmatter
+
+One `EPIC.md` per inferred epic, carrying the **same eight keys** a freshly planned epic
+does — a lite-migrated epic must be indistinguishable from a planned one:
+
+| lite source | v6 frontmatter | Rule |
+|---|---|---|
+| (grouping) | `epic` | `NN`, matches the folder |
+| (grouping) | `slug` | the kebab-cased epic slug; the same slug names its feature-doc folder, so `FEATURE_INDEX.Docs` links |
+| (grouping) | `title` | the epic name, title-cased |
+| (grouping) | `description` | one line summarising that epic's stories — becomes the `FEATURE_INDEX` Description cell; no `\|` |
+| — | `issue` | empty — lite publishes no issues |
+| — | `pr` | empty |
+| — | `delivery` | empty |
+| — | `integration` | empty (≡ `story`, one PR per story) — the right default for a just-migrated project; `build` fills it on the epic's first story |
+
+Emit all eight lines even though four are empty.
+
 ## Story body
 
 Moved **verbatim** — checkbox state included, so completed work stays completed.
@@ -96,7 +114,7 @@ A lite task has no description prose beyond its title. Never invent one — a th
 |---|---|
 | `PROJECT_OVERVIEW.md` | Project Overview Template in [`templates.md`](../../plan/references/templates.md); Vision from the `ARCHITECTURE.md` intro paragraph, Tech Stack from `## Stack`, Key Design Decisions from `## Decisions`. Anything lite does not record → `[TO BE DEFINED]`. |
 | `ROADMAP.md` | ROADMAP.md Template in [`roadmap-format.md`](../../plan/references/roadmap-format.md); phases follow the epic order, dependencies from the translated `blocked_by`. |
-| `epics/NN_<slug>/EPIC.md` | Epic Template in [`templates.md`](../../plan/references/templates.md). `description` is a one-line goal summarising that epic's stories — it becomes the `FEATURE_INDEX` Description cell. `integration:` is left **empty** (≡ `story`, one PR per story), which is the right default for a just-migrated project; `build` fills it on the first story. No `## Stories` table. |
+| `epics/NN_<slug>/EPIC.md` | Epic Template in [`templates.md`](../../plan/references/templates.md), frontmatter per [§ Epic frontmatter](#epic-frontmatter) above. No `## Stories` table. |
 
 ## `docs/ARCHITECTURE.md` → `docs/architecture/`
 
@@ -171,8 +189,17 @@ Read `.claude/settings.json`. If `enabledPlugins` has
 
 On **Swap**: set `"ck-code-lite@ck-marketplace": false` and
 `"ck-code@ck-marketplace": true`, in the migration commit, and tell the user the change
-takes effect after a session restart. On **Leave it**: change nothing and say so in the
-report. Never edit any other key in that file.
+takes effect after a session restart. On **Leave it**: change neither key yourself and say
+so in the report. Never edit any other key in that file.
+
+**`ck-bootstrap install` sets `"ck-code@ck-marketplace": true` regardless of this answer** —
+it is the guard installer Phase 5 runs beside the stamp
+([`version-gate.md`](../../../references/version-gate.md)), and it opts the project into the
+plugin whose layout the stamp now claims. So **Leave it** does not mean "ck-code stays
+disabled"; it means only that `ck-code-lite` is left enabled too, and the project ends the
+migration with **both** plugins on. That is the competing-skills state the question warns
+about, so the report names the final value of **both** keys rather than just the answer, and
+repeats that `/plugin` can flip the lite key later.
 
 ## Report additions
 
@@ -181,5 +208,7 @@ On top of the standard `migrate` report:
 - the full `T-NN → EE-SS` ID map
 - every task that was `blocked` and is now `todo`
 - feature-doc stubs written, with the `/ck-code:design` follow-up
-- whether the plugin swap was applied
+- the plugin swap: the answer, **and the final value of both `enabledPlugins` keys** —
+  `ck-code@ck-marketplace` is `true` either way because `ck-bootstrap install` sets it, so
+  say plainly whether `ck-code-lite@ck-marketplace` is still `true` and how to turn it off
 - lite artifacts renamed / bannered
