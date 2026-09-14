@@ -7,8 +7,8 @@ story file is the durable hand-off between the two skills.
 
 Bug Report status flow: `DIAGNOSED` (set by `fix`) → `FIXED` (set by `build`).
 Story frontmatter status flow: `done → bug` (set by `fix`, with `prior_status` recorded)
-→ `done` (restored by `build` from `prior_status`). The indexes are generated views —
-`fix`/`build` change frontmatter and run `ck-index`, never edit a cell.
+→ `done` (restored by `build` from `prior_status`). The indexes are generated views — both
+skills change frontmatter with `ck-story set`, which regenerates them; neither edits a cell.
 
 ---
 
@@ -78,10 +78,14 @@ Bug Report status stays `DIAGNOSED` — `fix` does not apply the fix.
 
 ---
 
-## Phase 6.2 — Unplanned Changes (build — append under Bug Report on first deviation)
+## Phase 6.2 — Unplanned Changes (build — append on first deviation)
 
 Written by `build` (Bug-Fix Mode) if applying the Fix Plan forces a touch outside
 its `Files to modify` list. Skipped on a clean run (no heading when empty).
+
+**This is a top-level `## Unplanned Changes` section of the story body** — the same one
+normal build writes at 5.2/6.2 ([story-template.md](../../build/references/story-template.md)),
+not a subsection of the Bug Report. One story has exactly one of it, whatever wrote it.
 
 ```markdown
 ## Unplanned Changes
@@ -103,7 +107,7 @@ Example:
 
 ---
 
-## Phase 6.4 — SOLID Verification (build — append under Bug Report after Refactor pass)
+## Phase 6.1 — SOLID Verification (build — append under Bug Report once the 6.2 refactorings land)
 
 Written by `build` (Bug-Fix Mode) once per code-touch cycle. Bounded to the diff —
 does not authorize widening the fix.
@@ -124,7 +128,7 @@ cycles correspond to manual-test loops.
 
 ---
 
-## Phase 8.6 — Manual-Test Reports (build — append on STILL BROKEN, then per-cycle)
+## Phase 8.5 — Manual-Test Reports (build — append on STILL BROKEN, then per-cycle)
 
 Written by `build` (Bug-Fix Mode) during its manual-test loop. Skipped on a clean
 run (no heading when empty).
@@ -148,9 +152,9 @@ run (no heading when empty).
 
 ## Phase 8.1 — Resolution + Files Touched (build — fill in at completion)
 
-Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status to
-`FIXED`, restores the story frontmatter `status` from `prior_status`, and regenerates
-the views with `ck-index`, then syncs the board with `ck-project sync`.
+Written by `build` (Bug-Fix Mode) when the fix is done. Flips Bug Report status to `FIXED`,
+then restores the frontmatter and regenerates every view in one call —
+`ck-story set <story-path> status=<prior_status> prior_status=`.
 
 ```markdown
 ### Resolution

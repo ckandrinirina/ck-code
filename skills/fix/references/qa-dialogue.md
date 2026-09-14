@@ -21,6 +21,9 @@ User-facing prompts emitted by the `fix` skill, indexed by phase. Use verbatim o
 Which story has the bug? (number, path, AUTO, or NONE)
 ```
 
+This one is a **typed reply**, not `AskUserQuestion` — the candidate list is as long as the
+index and the answer may be a path. Every later gate in this file is `AskUserQuestion`.
+
 ---
 
 ## Phase 2.1 — Bug Description Questionnaire
@@ -58,7 +61,7 @@ Story: [EE-SS] [Title]
 | 0.92 | [01-03] WebSocket gateway | overlaps `src/ws/handler.rs` (criterion #2) |
 | 0.41 | [02-01] Login form | shares 1 file but unrelated symptom |
 
-### Future coverage (todo — only when any score ≥ 0.5)
+### Future coverage (todo — only when any score ≥ 0.7)
 | Score | Story | Why |
 |-------|-------|-----|
 | 0.91 | [04-02] Validate profile fields | criterion match + file overlap |
@@ -146,7 +149,7 @@ Default to defer. On proceed anyway: fall through to the A/B/D verdict from `act
 These new stories are real feature work (todo), NOT part of this bug's bug set. `plan --quick` writes each story's frontmatter and regenerates the indexes.
 
 ### Routing
-Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` per story, or pass several story IDs to build them at once.
+Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` once per story — several story IDs in one run only when they all sit in the same epic.
 
 Proceed? (AskUserQuestion: Proceed / Adjust / Abort)
 ```
@@ -231,7 +234,7 @@ Each carries its Bug Report, failing reproduction test, and Fix Plan.
 
 Run when ready:
   /ck-code:build tasks/<slug>/epics/<epic>/stories/<file>.md      # one story
-  /ck-code:build 01-03 02-01                                      # several at once
+  /ck-code:build 01-03 01-07                                      # several at once - same epic only
 
 build enters Bug-Fix Mode, implements the recorded Fix Plan, and restores each story's prior_status.
 ```

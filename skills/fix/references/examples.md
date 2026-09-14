@@ -9,7 +9,7 @@ decision points but the rules in `SKILL.md` are authoritative.
 ## Example 1: Off-by-one in WebSocket handler (easy → AUTO-BUILD)
 
 ### Phase 1 — Story Selection
-- User runs `/ck-code:fix tasks/foundation/epics/01-foundation/stories/01-03-websocket-gateway.md`
+- User runs `/ck-code:fix tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md`
 - Story frontmatter `status: done`, `files: [src/server/ws/handler.rs]`.
 
 ### Phase 2 — Bug Description
@@ -29,9 +29,9 @@ decision points but the rules in `SKILL.md` are authoritative.
 - **5.2** Fix Plan recorded (status stays `DIAGNOSED`). **5.3** User confirms → `Record & route`.
 
 ### Phase 6 — Flip to bug & Route
-- **6.1** `01-03` frontmatter: set `status: bug`, `prior_status: done`; run `ck-index tasks/foundation`, then `ck-project sync tasks/foundation`. The views regenerate — `STORIES_INDEX.md` shows `bug`, `FEATURE_INDEX.md` rolls Foundation to `IN PROGRESS` automatically. No cell is hand-edited.
+- **6.1** one call flips it and regenerates: `ck-story set tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md status=bug prior_status=done`. The views regenerate — `STORIES_INDEX.md` shows `bug`, `FEATURE_INDEX.md` rolls Foundation to `IN PROGRESS` automatically. No cell is hand-edited.
 - **6.2 Auto-Build Eligibility Gate:** verdict A ✓, single cause ✓, 1 file ✓, LOW risk ✓, no new story ✓ → **AUTO-BUILD.**
-- **6.3** Announce, then invoke `/ck-code:build tasks/.../01-03-websocket-gateway.md`.
+- **6.3** Announce, then invoke `/ck-code:build tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md`.
   - `build` sees `status: bug`, enters Bug-Fix Mode, runs the repro test RED → applies the 1-line fix → GREEN → SOLID + QA + manual-test → ships (`fix/` branch, Bug ID in commit) → restores `01-03` frontmatter from `prior_status` (`done`) and regenerates the views (Foundation back to `DONE`).
 
 ### Key takeaway
@@ -51,9 +51,9 @@ decision points but the rules in `SKILL.md` are authoritative.
 
 ### Phase 5–6 — Plan & Route
 - Fix Plan: replace `unwrap()` with `unwrap_or_default()`. Files: 1. Risk: **MEDIUM** (intermittent, hard to fully reproduce).
-- **6.1** frontmatter `status: done → bug`, `prior_status: done`; `ck-index` regenerates the views, then `ck-project sync` updates the board.
+- **6.1** `ck-story set <story-path> status=bug prior_status=done` — one call writes both fields, regenerates the views and updates the board.
 - **6.2 Gate:** Risk = MEDIUM fails a box → **MANUAL hand-off.**
-- **6.3** Print the manual-build prompt: recommend `/ck-code:build tasks/.../profile-screen.md`. STOP.
+- **6.3** Print the manual-build prompt: recommend `/ck-code:build tasks/.../stories/03_profile-screen.md`. STOP.
 
 ### Key takeaway
 A `MEDIUM`/`HIGH` risk or a lingering competing cause stops the auto-build so the user reviews before implementing. Everything is recorded; the fix resumes with one `build` call.
@@ -64,7 +64,7 @@ A `MEDIUM`/`HIGH` risk or a lingering competing cause stops the auto-build so th
 
 - User runs `/ck-code:fix` (no args). Bug: profile form accepts blank `email`/`phone` → 500. File: `src/profile/profile_form.tsx`.
 - **Pass 1 (active):** `[01-03] Profile screen scaffold` 0.62. **Pass 2 (todo):** `[04-02] Validate profile fields` 0.91 → `future_coverage_matches = [04-02]`.
-- **Verdict E** takes precedence. Print the Phase 2.5e prompt recommending `/ck-code:build tasks/.../04-02-validate-profile.md`.
+- **Verdict E** takes precedence. Print the Phase 2.5e prompt recommending `/ck-code:build tasks/.../stories/02_validate-profile.md`.
 - User answers `Defer to build` → fix STOPS. No story write, no status flip.
 
 ### Key takeaway
@@ -76,8 +76,8 @@ Deferring keeps the planned story authoritative and the bug log clean — no dup
 
 - Bug: settings screen shows a stale device IP. Diagnosis pins a real bug in `[03-01] Settings screen` (`done`) AND surfaces that "persist IP to config" was never built (no story in epic 04).
 - **Verdict D.** Phase 2.5c confirmation: UPDATE `[03-01]` (→ `bug`); CREATE one story via `/ck-code:plan --quick "persist device IP to config" --epic 04` (stays `todo`).
-- **Phase 2.6** `plan --quick` scaffolds the new story's frontmatter + regenerates the indexes. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01]` frontmatter to `bug` (`prior_status: done`) and runs `ck-index`, then `ck-project sync`.
-- **6.2 Gate:** verdict D → **MANUAL hand-off.** Recommend `/ck-code:build tasks/.../03-01-settings-screen.md` for the bug; the new epic-04 story is normal `build` work later.
+- **Phase 2.6** `plan --quick` scaffolds the new story's frontmatter + regenerates the indexes. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01]` with one `ck-story set <story-path> status=bug prior_status=done` call (frontmatter + views + board).
+- **6.2 Gate:** verdict D → **MANUAL hand-off.** Recommend `/ck-code:build tasks/.../stories/01_settings-screen.md` for the bug; the new epic-04 story is normal `build` work later.
 
 ### Key takeaway
 `fix` never scaffolds stories itself — missing functionality goes through `plan --quick` (existing epic) or `design` (no epic, verdict C). The real bug and the missing feature stay cleanly separated.

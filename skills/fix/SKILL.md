@@ -3,7 +3,7 @@ name: fix
 description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Runs only on an explicit bug report or a hand-off from another ck-code skill, never speculatively. Argument is an optional story-file path.
 argument-hint: "[path-to-story.md]"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git bisect*) Bash(git add*) Bash(git commit*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git add*) Bash(git commit*) Bash(ls*) Bash(find*) Bash(grep*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -168,7 +168,10 @@ This prevents "grep-driven debugging" — reasoning about a fix without understa
 
 **Always delegate reproduction to `ck-code:qa-validator`** (Haiku) — it writes the minimal
 failing test and returns a root-cause hypothesis, keeping verbose test output off the
-orchestrator. Do the steps below inline **only** when that subagent_type is unregistered.
+orchestrator. The dispatch call is
+[agent-prompts.md § Inline QA dispatch](../build/references/agent-prompts.md#inline-qa-dispatch)
+(its `fix` variant: bug description instead of a command list, one failing test, no verdict
+line). Do the steps below inline **only** when that subagent_type is unregistered.
 
 ### 4.1 Locate the Buggy Code
 
@@ -234,7 +237,16 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
    ck-story set status=bug prior_status=<the status before this bug> <story-path> [<story-path>…]
    ```
 
-   `prior_status` is `done` or `in-progress`. The story frontmatter is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent; `ck-story` refuses any field outside the state set, so a stray `delivery=` is caught rather than written.
+   `prior_status` is `done` or `in-progress` — the status the story held **before this bug**.
+
+   **A story already at `status: bug`** (a second defect, or a re-triage of the same one)
+   keeps the `prior_status` it already carries: pass `status=bug` alone and leave that field
+   untouched. **Never write `prior_status=bug`** — `build` restores from it at Phase 8.6, and
+   `bug` there strands the story in the state it just left. If such a story carries an
+   **empty** `prior_status`, do not guess: ask (`AskUserQuestion`, `done` / `in-progress`)
+   which status the fix should restore, and write the answer.
+
+   The story frontmatter is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent; `ck-story` refuses any field outside the state set, so a stray `delivery=` is caught rather than written.
 2. `ck-story` runs `ck-index` and `ck-project sync` for the plan itself — there is no separate regenerate step to remember.
 
    The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to the **Bugs** column — its own column, because a diagnosed bug is actionable work, not something waiting on a dependency — and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
@@ -254,7 +266,7 @@ If **any** box is unchecked, it is a **MANUAL hand-off** (complex). Multi-story 
 ### 6.3 Route
 
 - **AUTO-BUILD** → announce with the Phase 6 auto-build prompt in `references/qa-dialogue.md`, then hand off to `/ck-code:build <story-path>` per [`skill-invocation.md`](../../references/skill-invocation.md) — one question, the story path already resolved. On **Run it**, `build` detects the `bug` status, enters **Bug-Fix Mode**, takes the reproduction test RED → GREEN per the Fix Plan, runs SOLID + QA + manual-test, ships, and restores the story's `prior_status`. On **Skip**, the story stays at `status: bug` and everything is recorded. `fix` ends here either way.
-- **MANUAL hand-off** → print the manual-build prompt in `references/qa-dialogue.md` (Phase 6 manual). Recommend `/ck-code:build <primary-story>` (highest-scored story), or `/ck-code:build <ids>` (PARALLEL MODE) for a multi-story bug. **STOP** — everything is recorded; the user runs `build` when ready. Do NOT implement the fix inside `fix`.
+- **MANUAL hand-off** → print the manual-build prompt in `references/qa-dialogue.md` (Phase 6 manual). Recommend `/ck-code:build <primary-story>` (the highest-scored story) and **one run per remaining story**; a multi-story bug is not one build. Only when every story of the set sits in the **same epic** may they go as one `/ck-code:build <ids>` batch — PARALLEL MODE is scoped to a single epic and refuses a cross-epic set at P1. **STOP** — everything is recorded; the user runs `build` when ready. Do NOT implement the fix inside `fix`.
 
 ## HARD GATES (cross-phase contract)
 
@@ -281,7 +293,8 @@ Each gate is enforced inside its phase; this is the checklist.
 
 - **Never reference AI, Claude, or generated-by notes** in any git or GitHub artefact — [full rule](../../references/no-ai-references.md).
 - **Always use the same `Bug ID`** (`BUG-YYYYMMDD-NN`) across every in-scope story.
-- **Always record `prior_status`** in the story frontmatter so `build` can restore it.
+- **Always record `prior_status`** in the story frontmatter so `build` can restore it — never
+  as `bug`, and never overwritten on a story that is already `bug` (§ 6.1).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Always regenerate the views in the same phase** you change any frontmatter — `ck-story set` does it (`ck-index` + `ck-project sync`) in the one call ([`github-projects.md`](../../references/github-projects.md)).
 - **Always output in English.**
