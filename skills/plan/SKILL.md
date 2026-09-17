@@ -240,26 +240,34 @@ then resolve to whichever plan they reach first. See
 
 **Ordering — demo-first (default).** Sequence epics so the product becomes runnable and
 exercisable at the earliest possible epic, then deepens. Never plan a layer that nothing
-can reach. Using the user-visible surface from 2.4:
+can reach. Using the user-visible surface from 2.4, the default shape is **three layers,
+three epics** — layers become epics, features never do:
 
-1. **Walking skeleton** — the first epic makes the app *run* and its primary surface render
-   real-looking output from fixtures: the stack's `dev`/`start` command shows something a
-   human can click or invoke. Only the scaffold that milestone needs — no speculative
-   infrastructure.
-2. **Surface epics** — each feature's UI/CLI/endpoint next, reading through **one typed seam
-   per feature** (a single adapter or service module returning fixtures), never mocks
-   scattered through components. The surface story owns the seam's contract file and lists
-   it in `files`.
-3. **Backend epics** — implement the seams the surface already consumes, one slice at a
-   time. The surface code does not change; only the seam's implementation swaps from fixture
-   to real.
-4. The mandatory Integration & E2E epic (3.6) closes the plan.
+1. **Runnable surface over fixtures** — one epic makes the app *run* and **every** screen,
+   route, or command of this scope render real-looking output from fixtures: the stack's
+   `dev`/`start` command shows something a human can click or invoke, end to end, with no
+   backend behind it. Each feature reads through **one typed seam** (a single adapter or
+   service module returning fixtures), never mocks scattered through components; the story
+   that builds the surface owns the seam's contract file and lists it in `files`. Only the
+   scaffold this milestone needs — no speculative infrastructure.
+2. **Real implementation behind the seams** — one epic swaps each seam from fixture to the
+   real API, datastore, or service, one story per seam. Surface code does not change; the
+   human re-runs the same click path from layer 1 and sees real data.
+3. The mandatory Integration & E2E epic (3.6) closes the plan.
 
-Within a step: no-dependency epics before dependents, and respect explicit spec phases.
+Open a **fourth or later epic only for a hard dependency boundary** the spec states (an
+external contract to conform to first, a migration that must land before anything else, a
+second deployable such as a worker or a mobile client) or a distinct milestone the user
+must sign off between — name the reason in the epic's `## Description` and in
+`ROADMAP.md`. Never split a layer by feature to "keep epics small": a small epic buys
+nothing (stories are already single-dispatch) while every extra epic costs a branch, an
+issue, a board column sweep and a promote. Within a layer: no-dependency stories before
+dependents, and respect explicit spec phases.
 
 **Headless projects** (surface `none` in 2.4 — library, daemon, pure API): say so in one
 line and order foundation-first instead — shared/core code, then feature code, then
-integration. There is no demo to bring forward.
+integration. There is no demo to bring forward, and the API *is* the surface, so its
+stories' human check is the automated contract test, not a REST console.
 
 **Override** demo-first only for a hard constraint the spec states (an external contract to
 conform to, a migration that must land first) — name the constraint in `ROADMAP.md`. Never
@@ -275,10 +283,16 @@ Each story: exactly one cohesive concern (a feature, component, or vertical slic
 sized **S or M only**; numbered sequentially within its epic (`01`, `02`, …) with a
 short slug; clear testable acceptance criteria and a `files` list.
 
-**Observable from the surface.** Under demo-first ordering, every story in the
-walking-skeleton and surface epics carries at least one acceptance criterion a human can
-check by running the app — a route renders, a command prints, a click path completes — not
-only a passing unit test.
+**Observable from the surface — every story, every layer.** Every story carries at least
+one acceptance criterion a human checks by running the app through the surface the plan
+has already built — a route renders, a command prints, a click path completes — not only a
+passing unit test. A layer-2 story inherits the click path of the layer-1 story whose seam
+it replaces: its human-check criterion is "the same path as EE-SS now shows real data and
+the fixture path is gone", never "`POST /api/x` returns 201". A criterion that can only be
+checked with a manual API client (Postman, curl, a REST console) is a planning defect —
+either the surface that exercises it belongs in layer 1, or the check belongs in the
+story's automated tests, which may hit the API directly. Manual verification is
+click-and-look; only the test suite talks to the API by hand.
 
 **Sizing rubric (S or M only, single-dispatch):**
 
@@ -302,6 +316,9 @@ Before presenting, merge only genuine redundancy — **never merge past one disp
   result still fits one dispatch**; else keep them split.
 - An epic left with a single story → fold it upward and drop the epic, unless it marks a
   distinct milestone or dependency boundary.
+- **Epic budget** — more than three epics for this scope means 3.1's default shape was
+  broken; for each extra epic, name the hard boundary that justifies it or fold it into
+  its layer. Two surface epics, or two backend epics, split by feature always fold.
 
 ### 3.4 Break each story into tasks
 
@@ -320,11 +337,11 @@ one verifiable action toward its acceptance criteria (e.g. "define the `X` inter
 For each story, identify blockers (must-complete-first story IDs → `blocked_by`),
 parallel-safe siblings, and cross-epic dependencies.
 
-**Every stub is owned.** A surface story that introduces a fixture-backed seam (3.1) is only
-plannable alongside the story that replaces it. That later story `blocked_by`s the surface
-story, and its acceptance criteria state that the surface works **unchanged** against the
-real implementation and the fixture path is gone. Record the pair in the roadmap's Stub
-Ledger (5.6). A seam with no replacing story in this plan is a mock shipped to production —
+**Every stub is owned.** A layer-1 story that introduces a fixture-backed seam (3.1) is
+only plannable alongside the layer-2 story that replaces it. That later story `blocked_by`s
+the surface story, and its acceptance criteria state that the surface works **unchanged**
+against the real implementation and the fixture path is gone. Record the pair in the
+roadmap's Stub Ledger (5.6). A seam with no replacing story in this plan is a mock shipped to production —
 plan the replacement or drop the stub.
 
 ### 3.6 Mandatory final Integration & E2E epic
@@ -344,8 +361,10 @@ Rules:
 - Slug it `integration-e2e` (`NN_integration-e2e`); its Goal states the end-to-end behavior proved.
 - `blocked_by` every prior epic's terminal stories — it runs only after the pieces exist,
   so it is last in the roadmap and never a parallel candidate alongside the work it verifies.
-- Its stories **exercise real user journeys through actual entry points** (API, CLI, UI,
-  message bus), asserting cross-component behavior and the seams from 2.7 — not more unit tests.
+- Its stories **exercise real user journeys through the entry point a human uses** (the UI
+  click path, the CLI command — the raw API only for a headless project or a message-bus
+  seam no surface reaches), asserting cross-component behavior and the seams from 2.7 —
+  not more unit tests, and never a manual API-client walkthrough.
 - **Each E2E story is still S or M, one dispatch** (3.2). When coverage exceeds one
   dispatch, split by journey (happy-path, error/edge, each integration point) — never one oversized E2E story.
 - Give each an ordered `## Implementation Tasks` list: set up fixtures → drive the flow → assert observable outcomes.
@@ -556,6 +575,8 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
 - **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
 - **Never plan a backend slice before something can exercise it** (3.1) — demo-first is the default ordering; a headless project (surface `none` in 2.4) says so in one line and falls back to foundation-first.
+- **Never split a layer into per-feature epics** (3.1, 3.3) — the default is three epics (surface over fixtures, real implementation, integration-e2e); every extra epic names the hard boundary that earns it.
+- **Never write an acceptance criterion that needs a manual API client to check** (3.2) — every story, backend included, is verified by a human through the surface already built; the API is exercised by hand only inside the automated test suite.
 - **Never introduce a stubbed seam without the story that replaces it** (3.5) — same plan, `blocked_by` the surface story, one Stub Ledger row, and the fixture path gone by its acceptance criteria.
 - **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index` (5.7, Q.5).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
