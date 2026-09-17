@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.15.1] — 2026-09-17
+
+### Changed
+- **plan**: the default plan shape is now **three epics** — the whole user-facing surface running over fixture seams, one epic replacing every seam with the real backend, and the final Integration & E2E epic — instead of one surface epic per feature and one backend epic per slice. A fourth epic must name the hard dependency boundary that earns it, and the consolidation pass enforces that budget. Every story, backend stories included, now carries a human-check criterion exercised through the surface already built (the backend story re-runs its surface story's click path and sees real data); a criterion that needs Postman or curl to verify is a planning defect — the API is hit by hand only inside the automated test suite. The confirmation view shows the epic count and a "How a Human Verifies" block.
+
 ## [6.15.0] — 2026-09-14
 
 Stabilization release from a full audit of every skill, reference and script. No layout
