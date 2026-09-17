@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.15.2] — 2026-09-17
+
+### Fixed
+- **plan**: 6.15.1 turned "as few epics as possible" into a three-epic ceiling; the intended metric is **epics before the app is testable**, which must be one. The walking-skeleton → surface → backend → E2E ordering is back with epic count unconstrained; no epic may precede the walking skeleton (a "setup" or "core models" epic that ships nothing visible folds into it), every later epic must leave the app runnable with something new to exercise, and the epic budget is gone. Surface-based verification (no Postman/curl criteria) from 6.15.1 is unchanged.
+
 ## [6.15.1] — 2026-09-17
 
 ### Changed
