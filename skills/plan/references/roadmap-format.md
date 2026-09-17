@@ -27,14 +27,14 @@ Shown to the user before any files are written. Present this text, then gate wit
 [... all epics, including the final NN_integration-e2e epic ...]
 
 ### Ordering Strategy
-Demo-first, [count] epics — [Epic NN] runs the whole surface over fixtures; [Epic MM]
-replaces the seams with the real implementation; [Epic PP] is integration-e2e.
-[Any epic beyond three: "Epic QQ split out because <hard boundary>."]
+Demo-first — [Epic NN] (the first built) makes the app runnable; surface epics follow, each
+demoable on merge; backend epics replace their seams behind an unchanged click path.
 (Headless project: "Foundation-first — no user-facing surface.")
 
 ### How a Human Verifies
 Every story, backend included, is checked by running the app — no manual API client.
-[Epic MM] stories re-run the click paths of [Epic NN] and see real data.
+Backend stories re-run the click path of the surface story whose seam they replace and
+see real data.
 
 ### First Runnable Demo
 After **Epic [NN]**: [what a human can click, run, or call, and with which command]
@@ -56,9 +56,9 @@ The epic numbers above (`Epic 01`, `Epic 02`, the final `NN_integration-e2e`) ar
 (`plan` 3.1), so a second plan folder in an existing project starts at whatever comes next —
 `Epic 07`, not `Epic 01`. Never renumber a plan to make it match this example.
 
-The ordering strategy and epic count are shown so **Adjust** can change them; do not add a
-separate prompt for either. A count above three with no boundary named beside each extra
-epic fails `plan` 3.3's epic budget — fix it before presenting.
+The ordering strategy is shown so **Adjust** can change it; do not add a separate prompt
+for it. A "First Runnable Demo" later than the first epic built is mis-ordered (`plan` 3.1)
+— fix it before presenting.
 
 `AskUserQuestion` — "Proceed with generating this plan?" → **Proceed** (Phase 5) /
 **Adjust** (ask what to change, loop to Phase 3) / **Cancel** (stop, write nothing).
