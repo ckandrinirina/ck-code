@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.16.0] — 2026-09-21
+
+### Added
+- **prompt-router** (`scripts/prompt-router.sh`, `UserPromptSubmit`): every free-text prompt in an adopted project (`docs/architecture/`, `docs/specs/`, `tasks/VERSION.md` or `tasks/*/epics`) now receives `references/prompt-routing.md` as context — a one-screen intent → skill table mirroring `guide` Mode B — so a bug report runs `/ck-code:fix`, "ship it" runs `/ck-code:ship`, and a one-off edit no story covers is still made under the project's expert/guide skills, without the user typing the slash command. The chosen skill is announced in one line and invoked; the prompt is the consent. Silent on a slash command, on a reply under 12 characters (an answer to a running skill), and in any repo that has not adopted ck-code. Bash 3.2, no jq, always exits 0; covered by `tests/smoke.sh`.
+
+### Changed
+- **guide**: Mode B names `references/prompt-routing.md` as the injected mirror of its intent table, so a row added or retired in one is changed in the other.
+
 ## [6.15.2] — 2026-09-17
 
 ### Fixed
