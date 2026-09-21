@@ -93,7 +93,7 @@ issues stay valid.
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge. A wave that narrows to a single story drops the worktree and runs one agent straight on the target branch — same delegation, none of the isolation overhead
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
 - **ck-code is required, and the repo says so** — a ck-code project keeps its plan, stories and architecture in a layout only the `/ck-code:*` commands maintain, so a clone on a machine that never installed the plugin has nothing that can read or write that state — and nothing able to *say* so, because the plugin is what is missing. `ck-bootstrap install` commits a ~1 KB guard (`.claude/ck-code-required.sh`, wired as the project's own `SessionStart` hook) that is silent wherever ck-code is present and stops the session with the install command wherever it is not. It is written automatically the first time a session starts in a stamped project
-- **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
+- **Native Claude Code integration** — `SessionStart`/`UserPromptSubmit`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, route every free-text prompt to the best-fit skill, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
 - **RTK-aware command forms (optional)** — [RTK](https://github.com/ckandrinirina/rtk) is a third-party `PreToolUse` hook that filters command output before it reaches context, returning a full test suite as its failures alone. ck-code writes the command forms its hook recognizes (`npm run test`, never the unfilterable `npm test` alias) so the savings need no setup, never hardcodes an `rtk` prefix, and never requires the tool. `/ck-code:doctor` reports whether it is installed and wired. See `references/rtk.md`
 
 ## Install
@@ -257,6 +257,19 @@ may run `ck-bootstrap install` when the committed guard is missing or stale. Tha
 `.claude/ck-code-required.sh` and adds its `SessionStart` entry to `.claude/settings.json`;
 it never touches an unstamped project, so cloning ck-code itself does not trigger it. See
 [ck-code is required in a ck-code project](#ck-code-is-required-in-a-ck-code-project).
+
+**Prompt router** (`scripts/prompt-router.sh`, `UserPromptSubmit`) makes the workflow the
+default for every prompt, not only for the ones typed as `/ck-code:*`. In an adopted project
+(one with `docs/architecture/`, `docs/specs/`, `tasks/VERSION.md` or a `tasks/*/epics`
+folder) it injects [`references/prompt-routing.md`](references/prompt-routing.md) — a
+one-screen intent → skill table — as context for each free-text prompt, so "the login form
+crashes on submit" runs `/ck-code:fix`, "ship it" runs `/ck-code:ship`, and a one-off edit
+no story covers is still made under the project's expert/guide skills. It announces the
+chosen skill in one line and invokes it; the prompt is the consent. It stays silent on a
+slash command (you already chose), on a reply shorter than 12 characters ("yes", "2" — an
+answer to a running skill, which routing would derail), and in any repo that has not
+adopted ck-code, so a scratch project never has its prompts routed. Pure local read, always
+exits 0.
 
 **`format.sh`** (`PostToolUse` on every `Write`/`Edit`) best-effort formats the file just
 touched: `gofmt` and `rustfmt` run whenever installed, no configuration needed — they are
@@ -511,7 +524,7 @@ ck-code/
 ├── references/                    # cross-skill shared contracts (version gate, data model,
 │                                  # skill detection, subagent fan-out, QA, workflow map, …)
 ├── hooks/
-│   └── hooks.json                 # SessionStart + PostToolUse(format) registrations
+│   └── hooks.json                 # SessionStart + UserPromptSubmit(router) + PostToolUse(format)
 ├── settings.json                  # subagent status line
 ├── CHANGELOG.md
 ├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
@@ -532,6 +545,7 @@ ck-code/
 │   ├── ck-issues.sh               # publish a plan to GitHub Issues (ship --to-issues)
 │   ├── ck-project.sh              # reconcile the GitHub Projects board from frontmatter
 │   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
+│   ├── prompt-router.sh           # UserPromptSubmit hook: inject references/prompt-routing.md
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
 │   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
 │   ├── statusline.sh              # opt-in status bar: active story + plan counts
