@@ -128,7 +128,10 @@ design system is ready at claude.ai/design.>
 ### B.1 Classify the intent
 
 Pick the **single best** fit; if two are plausible, the higher row wins and the other
-becomes the "Alternative".
+becomes the "Alternative". The one-screen version of this table that the `UserPromptSubmit`
+hook injects on every free-text prompt lives in
+[`../../references/prompt-routing.md`](../../references/prompt-routing.md) — a row added or
+retired here is added or retired there in the same change.
 
 | The user is describing… | Recommend |
 |---|---|
