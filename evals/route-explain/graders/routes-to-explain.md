@@ -1,0 +1,6 @@
+---
+type: tool_used
+tool: Skill
+input_match: 'ck-code:(explain)(?![a-z-])'
+min: 1
+---
