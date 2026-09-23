@@ -615,7 +615,20 @@ file that has drifted from it.
 > and your project is v5. The same gate catches a **ck-code-lite** project (`tasks/PLAN.md`)
 > and routes it to the same command.
 
-- **Claude Code** — required (CLI, IDE extension, or desktop app)
+- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 6.16.1 is built
+  and tested against Claude Code 2.1.280** (checked 2026-09-23). Its newest version-gated
+  features, and the release each first appeared in:
+
+  | Feature | Used by | Claude Code |
+  |---|---|---|
+  | `omitClaudeMd` agent field | `conflict-analyzer` | 2.1.271 |
+  | `AGENTS.md` as the project instructions file | `spec`, `team` | 2.1.277 |
+  | `experimental.cacheTtl` agent field | all three agents | 2.1.248 |
+  | `background` with `context: fork` | `track`, `guide`, `explain`, `doctor` | 2.1.218 |
+  | `/goal` (recommended, user-typed) | `build` NEXT | 2.1.139 |
+
+  On an older release, update with `claude update`. The Claude Code version each release was
+  checked against is recorded here and in the `CHANGELOG.md` entry that raised it.
 - **gh CLI** — required for `ship --to-issues` and `ship` GitHub Issue features
 - **git** — required for `build` PARALLEL MODE (uses worktrees)
 - **[context7](https://context7.com)** — recommended for `team`, `design`, `plan`, and `build` to fetch up-to-date framework documentation. Either the MCP server or the `ctx7` CLI (`npx -y @upstash/context7 setup`) works.

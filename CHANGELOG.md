@@ -5,6 +5,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+- **README**: Compatibility now records the Claude Code baseline — ck-code is built and tested against **Claude Code 2.1.280** — with the minimum release of each version-gated feature it uses.
+
 ## [6.16.1] — 2026-09-23
 
 Speed release driven by a profile of 20 delegated story-implementer runs and 63 QA runs.
