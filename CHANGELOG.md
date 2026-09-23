@@ -5,8 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.17.0] — 2026-09-23
+
+Adopts the older Claude Code features ck-code was not using yet, where each one helps without
+touching a gate. Built and tested against **Claude Code 2.1.280**.
+
+### Added
+- **doctor**: new `worktree` row. It WARNs when a gitignored `.env` exists but the project has no `.worktreeinclude`, because every `build` PARALLEL MODE worktree then starts without it and each per-story QA fails for a reason unrelated to the story. Covered by `tests/smoke.sh`.
+- **build** (`parallel-mode.md`): worktree bootstrap now routes gitignored config through `.worktreeinclude`. Claude Code copies it into each worktree and never links it, so no hand-copying happens in dispatch prompts. Dependency trees stay with the shared-cache table.
+- **plugin.json**: the three model-tier settings use `userConfig` `options` (Claude Code ≥ 2.1.271), so `/plugin` offers only `haiku`/`fable`/`sonnet`/`opus` and an invalid alias can no longer be entered.
+- **agents**: `color` on `story-implementer` (green), `qa-validator` (yellow) and `conflict-analyzer` (orange), so a wave's agents are told apart at a glance in `/tasks`.
+
 ### Changed
-- **README**: Compatibility now records the Claude Code baseline — ck-code is built and tested against **Claude Code 2.1.280** — with the minimum release of each version-gated feature it uses.
+- **README**: Compatibility records the Claude Code baseline (2.1.280) and the minimum release of each version-gated feature ck-code uses.
 
 ## [6.16.1] — 2026-09-23
 
