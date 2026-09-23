@@ -430,6 +430,18 @@ DOCTOR_PLAN_CLEAN_OUT=$(ck-doctor tasks/2026-01-01_demo 2>&1); DOCTOR_PLAN_CLEAN
 assert_exit "ck-doctor tasks/2026-01-01_demo: exits 0 on the clean fixture" 0 "$DOCTOR_PLAN_CLEAN_RC"
 
 echo
+echo "=== ck-doctor worktree include ==="
+assert_contains "ck-doctor worktree: OK with no gitignored .env" "$DOCTOR_CLEAN_OUT" "no gitignored .env to copy"
+printf '.env\n' > .gitignore; printf 'SECRET=1\n' > .env; printf 'SECRET=\n' > .env.example
+WT_WARN_OUT=$(ck-doctor 2>&1); WT_WARN_RC=$?
+assert_contains "ck-doctor worktree: WARNs on a gitignored .env with no .worktreeinclude" "$WT_WARN_OUT" "gitignored .env not in .worktreeinclude"
+assert_exit "ck-doctor worktree: a WARN still exits 0" 0 "$WT_WARN_RC"
+printf '.env\n' > .worktreeinclude
+WT_OK_OUT=$(ck-doctor 2>&1)
+assert_contains "ck-doctor worktree: OK once .worktreeinclude exists" "$WT_OK_OUT" ".worktreeinclude present"
+rm -f .gitignore .env .env.example .worktreeinclude
+
+echo
 echo "=== ck-story get/set round-trip ==="
 STORY_0203="tasks/2026-01-01_demo/epics/02_payments/stories/03_invoice.md"
 GET_BEFORE=$(ck-story get "$STORY_0203" size 2>&1)

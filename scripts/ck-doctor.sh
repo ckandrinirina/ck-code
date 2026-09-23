@@ -725,6 +725,31 @@ check_rtk() {
   return 0
 }
 
+# ---- 13. Worktree include (build PARALLEL MODE) ------------------------------
+# A fan-out wave runs each story in a fresh harness worktree: a bare checkout with no
+# gitignored files. A gitignored .env the suite needs is then missing in every worktree,
+# and every per-story QA fails for a reason that has nothing to do with the story.
+# Claude Code copies (never links) the gitignored files listed in .worktreeinclude into
+# each new worktree. Only WARN when such a file exists and there is no .worktreeinclude
+# at all -- whether the file lists the right patterns is the project's call.
+check_worktreeinclude() {
+  local envs
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  # --directory collapses ignored trees (node_modules/) so this stays fast on big repos.
+  envs=$(git ls-files --others --ignored --exclude-standard --directory 2>/dev/null \
+    | grep -E '(^|/)\.env(\.[^/]*)?$' | grep -v -E '\.(example|sample|template)$' \
+    | head -3 | tr '\n' ' ')
+  if [ -z "$envs" ]; then
+    row worktree "no gitignored .env to copy" OK
+  elif [ -f .worktreeinclude ]; then
+    row worktree ".worktreeinclude present" OK
+  else
+    row worktree "gitignored ${envs% } not in .worktreeinclude" WARN
+    [ "$QUIET" -eq 1 ] || note "parallel build worktrees start without it — list it in .worktreeinclude (gitignore syntax)"
+  fi
+  return 0
+}
+
 # ---- run ---------------------------------------------------------------------
 echo
 if [ -n "$ONLY_PLAN" ] && [ ! -d "$ONLY_PLAN" ]; then
@@ -745,6 +770,7 @@ check_settings
 check_board
 check_bootstrap
 check_rtk
+check_worktreeinclude
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."

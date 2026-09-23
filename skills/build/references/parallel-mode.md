@@ -327,6 +327,15 @@ changes a dependency must not be able to mutate another worktree mid-run.
 | Rust | `CARGO_TARGET_DIR=<absolute shared path>` — cargo file-locks it, so it is correct; concurrent builds then serialize on that lock, so measure before adopting | — |
 | Python | `UV_CACHE_DIR` / `PIP_CACHE_DIR` pointed at one shared path | One `.venv` shared across worktrees |
 
+**Gitignored config goes through `.worktreeinclude`.** A worktree also lacks every
+gitignored file the suite reads, such as `.env` or local credentials, so each story's QA fails
+on a missing file rather than on the story. List those files in a `.worktreeinclude` at the
+repo root, in gitignore syntax. Claude Code **copies** each match into every worktree it
+creates, and never links it, so no peer can change another worktree's copy. Never hand-copy
+them in a dispatch prompt. `/ck-code:doctor` warns when a gitignored `.env` has no
+`.worktreeinclude`. Dependency trees stay with the cache table above; `.worktreeinclude` is for
+config, not for `node_modules/`.
+
 Name the scheme in the dispatch prompt when the project has one, so every agent installs the
 same way. With no scheme, say so in the launch announce — the cold installs are then the
 expected cost, not a stall.
