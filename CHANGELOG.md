@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.17.1] — 2026-09-23
+
+### Added
+- **evals**: local `claude plugin eval` suite for skill routing (Claude Code ≥ 2.1.269). 19 cases check that a free-text prompt in a seeded ck-code project reaches the right `/ck-code:*` skill through the prompt router, that a question or a one-off edit routes nowhere, and that `plan` is not entered without `docs/architecture/`. Run with `bash tests/evals.sh`; it uses the logged-in account and is kept out of CI because every run spends model tokens. Documented in `tests/README.md`.
+
 ## [6.17.0] — 2026-09-23
 
 Adopts the older Claude Code features ck-code was not using yet, where each one helps without
