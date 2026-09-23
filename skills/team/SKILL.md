@@ -549,7 +549,7 @@ deltas marked below and continues to Phase 3.
 1. **Infer from the code first** (so questions are concrete): sample 3–6 representative
    files per primary language (naming case, file/folder layout, import ordering, error
    style, comment density); read lint/format configs (`.eslintrc`, `rustfmt.toml`,
-   `.prettierrc`, `ruff.toml`, `.editorconfig`) and any `CONVENTIONS.md`/`STYLE.md`/`CLAUDE.md`;
+   `.prettierrc`, `ruff.toml`, `.editorconfig`) and any `CONVENTIONS.md`/`STYLE.md`/`CLAUDE.md`/`AGENTS.md`;
    note the architectural shape (layering, module boundaries).
    **Inline delta:** Phase 1.3 already located the source files, test layout, and lint/format
    configs — open only the sampled files and convention docs not yet read. Never re-scan.

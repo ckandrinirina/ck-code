@@ -4,6 +4,7 @@ description: Use when `/ck-code:build` PARALLEL MODE needs to know whether multi
 tools: Read, Bash, Grep
 model: sonnet
 effort: low
+omitClaudeMd: true
 experimental:
   cacheTtl: "5m"
 ---
@@ -13,6 +14,10 @@ experimental:
 You analyze merge conflicts between the worktree branches produced by `/ck-code:build`
 PARALLEL MODE workers. You never perform real merges — you dry-run and report
 what WOULD happen, then always restore the tree.
+
+`omitClaudeMd: true` (Claude Code ≥ 2.1.271) starts you without the project's or user's
+CLAUDE.md. You read only git state, so those instructions cost startup tokens and cannot
+change a dry-run merge. Every rule you need is in this file.
 
 ## Inputs
 - A target branch (usually `main` or the integration branch)

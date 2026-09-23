@@ -113,4 +113,5 @@ reason a skill must **never** hardcode an `rtk` prefix: [`rtk.md`](rtk.md).
 | `cat tasks/VERSION.md` before a skill runs | injected into the skill at load time via `` !`…` `` — Phase 0 costs no turn |
 | `git commit` without an AI trailer | a skill-scoped `PreToolUse` hook blocks the commit if one is present |
 | Tracking which build phase you are in | `TodoWrite` — one todo per phase, updated as it runs |
-| Setting a subagent's effort or cache TTL | ck-code's registered agents pin `effort:` and `experimental.cacheTtl:` in their own frontmatter — `story-implementer` and `qa-validator` hold a 1-hour prompt cache so a repeated wave dispatch does not re-cache |
+| Setting a subagent's effort or cache TTL | ck-code's registered agents pin `effort:` and `experimental.cacheTtl:` in their own frontmatter — `story-implementer` and `qa-validator` hold a 1-hour prompt cache so a repeated wave dispatch does not re-cache; `conflict-analyzer` also sets `omitClaudeMd: true`, since a git-only dry-run needs no CLAUDE.md |
+| Re-running a slow suite to see more of its output | `build` and `qa-validator` capture each suite, lint, typecheck or e2e run to a `$TMPDIR` log once and read slices of it ([`rtk.md`](rtk.md#slow-commands--run-once-read-the-log)) |

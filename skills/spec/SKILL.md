@@ -106,7 +106,7 @@ this PASSes.
 1. Get a 1-3 sentence feature description (from `$ARGUMENTS` or ask).
 2. **Read project context** (don't invent — ask if missing). Every bullet below is an
    independent read — issue them all in **one parallel tool-call message**:
-   - `CLAUDE.md` at repo root
+   - `CLAUDE.md` at repo root, or `AGENTS.md` when the repo has no `CLAUDE.md`
    - Project memory at
      `~/.claude/projects/<encoded-path>/memory/MEMORY.md` and referenced
      files (memory may dictate where issues should be filed, label
