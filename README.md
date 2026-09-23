@@ -235,7 +235,8 @@ The three keys below live in [`.claude-plugin/plugin.json`](.claude-plugin/plugi
 | **Balanced tier model** | `model_balanced` | `sonnet` | default model for a story implementer in `build` PARALLEL MODE |
 | **Advanced tier model** | `model_advanced` | `opus` | model for stories with a high-reasoning signal (novel algorithm, concurrency, security- or perf-critical path) |
 
-Each accepts one of `haiku`, `fable`, `sonnet`, `opus`. Raise the balanced tier for a codebase
+Each accepts one of `haiku`, `fable`, `sonnet`, `opus`, offered as fixed choices in `/plugin`
+(Claude Code ≥ 2.1.271). Raise the balanced tier for a codebase
 where Sonnet consistently underperforms; lower the advanced tier to cap spend on a large epic.
 
 ## Permissions and guardrails
@@ -294,6 +295,10 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 
 ## Troubleshooting
 
+- **Every story in a parallel wave fails QA on a missing `.env` or credential file.** Worktrees
+  are bare checkouts with no gitignored files. List those files in `.worktreeinclude` at the
+  repo root (gitignore syntax), and Claude Code copies them into each new worktree.
+  `/ck-code:doctor` flags the case as a `worktree` WARN.
 - **Keep getting a permission prompt for a command a skill runs.** The skill's own
   `allowed-tools` should have pre-approved it — update the plugin (`/plugin update
   ck-code@ck-marketplace`); an older version may be missing that command form.
@@ -615,7 +620,7 @@ file that has drifted from it.
 > and your project is v5. The same gate catches a **ck-code-lite** project (`tasks/PLAN.md`)
 > and routes it to the same command.
 
-- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 6.16.1 is built
+- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 6.17.0 is built
   and tested against Claude Code 2.1.280** (checked 2026-09-23). Its newest version-gated
   features, and the release each first appeared in:
 
@@ -625,6 +630,8 @@ file that has drifted from it.
   | `AGENTS.md` as the project instructions file | `spec`, `team` | 2.1.277 |
   | `experimental.cacheTtl` agent field | all three agents | 2.1.248 |
   | `background` with `context: fork` | `track`, `guide`, `explain`, `doctor` | 2.1.218 |
+  | `userConfig` fixed `options` | the three model-tier settings | 2.1.271 |
+  | `.worktreeinclude` (project file, optional) | `build` PARALLEL MODE worktrees | 2.1.280 or earlier |
   | `/goal` (recommended, user-typed) | `build` NEXT | 2.1.139 |
 
   On an older release, update with `claude update`. The Claude Code version each release was
