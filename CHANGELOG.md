@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [6.16.1] — 2026-09-23
+
+Speed release driven by a profile of 20 delegated story-implementer runs and 63 QA runs.
+Model round trips were 60–70% of a story's wall clock, with 89% of turns issuing a single
+tool call. About 20% of suite runs repeated the identical command on an unchanged tree,
+only to see another slice of piped output. No gate and no QA run is removed.
+
+### Changed
+- **build**: a new TOOL-CALL DISCIPLINE section. Independent reads, greps and read-only git queries are batched into one message. RED, GREEN and each refactoring run the story's own test files, and the full suite still runs at 6.3 and in QA. In DELEGATED MODE, 6.3 and Phase 7 measure the same tree back to back, so they are one run.
+- **rtk.md**: new § Slow commands. Suite, lint, typecheck, build and e2e commands run once per code state, redirected to a `$TMPDIR` log, and are read from the log instead of re-run. Checked RTK-compatible: a redirect is rewritten, a pipe is not.
+- **qa-validator**, **agent-prompts.md** (P7, post-wave and inline QA prompts), **qa-validation.md**: every command runs once into a log, and excerpts come from that log. In one measured QA pass, jest ran six times and a five-minute e2e suite twice.
+
+### Added
+- **conflict-analyzer**: `omitClaudeMd: true` (Claude Code ≥ 2.1.271). A git-only dry-run needs no project or user CLAUDE.md.
+- **spec**, **team**: read `AGENTS.md` when a repo has no `CLAUDE.md` (Claude Code 2.1.277 reads it as the project instructions file).
+
 ## [6.16.0] — 2026-09-21
 
 ### Added
