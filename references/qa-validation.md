@@ -36,7 +36,9 @@ ones — the fix may have side effects on previously-passing criteria.
 ## Step 2 — Run the full test suite
 
 Run **all** tests (not just new ones) for the affected stack. Watch for
-regressions in previously-green tests.
+regressions in previously-green tests. Each command runs once, captured to a `$TMPDIR` log
+([`rtk.md` § Slow commands](rtk.md#slow-commands--run-once-read-the-log)). Read failures from
+the log, and never re-run the suite to see them.
 
 ## Step 3 — Code-quality checks
 

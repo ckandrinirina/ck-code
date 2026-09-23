@@ -78,6 +78,36 @@ does better, since `rtk test` returns failures only. Run the bare command.
 `cd sub && cargo test` becomes `cd sub && rtk cargo test` and `git add -A && git commit -m x`
 rewrites on both sides. Running a stack command in a subdirectory costs nothing.
 
+## Slow commands — run once, read the log
+
+A pipe is also how agents lose output they later need. `npm run test | tail -40` hides the
+first failure, so the agent runs the whole suite again with `| grep FAIL`, then again with
+`| grep -A 5`. Across 83 measured `build` and `qa-validator` runs, **about 20% of suite runs
+repeated the identical command on an unchanged tree**. One QA pass ran jest six times and a
+five-minute e2e suite twice.
+
+The full suite, lint, typecheck, build, and e2e commands therefore run **once per code
+state**, redirected to a log outside the repo, in a single Bash call:
+
+```bash
+npm run test > "${TMPDIR:-/tmp}/ck-02-05-test.log" 2>&1; echo "exit=$?"; tail -n 60 "${TMPDIR:-/tmp}/ck-02-05-test.log"
+```
+
+- **Exit 0** — the command passed, and the tail is all you need.
+- **Non-zero** — the tail usually names the failure. When it does not, `grep -n` or `sed -n`
+  **the log** (for example `grep -n -E 'FAIL|✕|error' <log>`) as often as you need. Never
+  re-run the command to see a different slice of output it already produced.
+- **Re-run only after the code changed**, or narrowed to the one failing test file.
+
+Name the log `ck-<story id>-<command>.log`. It stays under `$TMPDIR` and never goes in the
+working tree: a log in the tree dirties it, which fails P5's clean-tree check and breaks a
+read-only QA agent's contract.
+
+This is RTK-compatible, checked with `rtk hook check`: a redirect is not a pipe, so
+`npm run test > log` becomes `rtk npm run test > log` and the log holds the filtered output,
+while `tail -n 60 <log>` becomes `rtk read <log> --tail-lines 60`. A fast targeted run of the
+story's own test files may run bare. The rule is for the commands that cost minutes.
+
 ## Where ck-code gains the most
 
 | Phase | Command | Why it matters |
@@ -114,5 +144,7 @@ for, doing nothing), or when a different tool named `rtk` shadows it on `PATH`.
   same behaviour, and only the long form is filtered.
 - **Never pipe a stack command** (`cargo test | head`, `npm run test | tail`) — the piped
   command is left unfiltered, and RTK already returns failures only. `&&` chains are fine.
+- **Never re-run a slow command on an unchanged tree** — capture it once to a `$TMPDIR` log
+  and read slices of the log ([§ Slow commands](#slow-commands--run-once-read-the-log)).
 - **Never make RTK a prerequisite** — no skill may block, warn inline, or change behaviour
   because RTK is absent. `doctor` is the only place its absence is mentioned.

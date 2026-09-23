@@ -76,9 +76,12 @@ The orchestrator places you natively: per-story QA runs in that story's worktree
 QA runs in the main checkout on the target branch. Trust the placement and work where you land.
 
 1. Run each supplied stack QA command exactly, in order, from the given directory. The caller
-   supplies them — do not substitute your own.
-2. Stop at the first failure and capture a **short excerpt** (failing test names, lint or type
-   errors), not the whole log.
+   supplies them — do not substitute your own. Run each one **once**, captured to a `$TMPDIR`
+   log in the same Bash call
+   ([`rtk.md` § Slow commands](../references/rtk.md#slow-commands--run-once-read-the-log)).
+2. Stop at the first failure and take a **short excerpt** (failing test names, lint or type
+   errors) **from its log**. `grep`/`sed` the log as often as you need, but never run the
+   command again to see more of its output.
 3. When a story file is supplied, map results to its acceptance criteria where the suite covers them.
 4. Never attempt a fix.
 
@@ -96,7 +99,8 @@ QA: FAIL — <which command failed> — <one-line excerpt>
 - Never edit a story file or any generated index (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) — you read state, you never mutate it
 - Never commit or push — only report findings to the calling skill
 - Never return full build/test/lint output — the verdict line and a one-line excerpt only
-- Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the bare long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself
+- Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the unpiped long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself
+- Run every suite, lint, typecheck, build or e2e command **once**, redirected to `${TMPDIR:-/tmp}/ck-<story id>-<command>.log`, and read excerpts from that log. Never re-run a command on an unchanged tree. A re-run to see a different slice is the largest waste measured in this agent. Never write the log inside the repo
 - Tests must be deterministic and minimal
 - Cite specific file:line when reporting failures
 - If the test suite cannot be run, report that as an environment problem, not a story failure

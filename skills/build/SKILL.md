@@ -69,6 +69,24 @@ gate passes. Drop a phase that mode routing skips; never leave it pending. A lon
 view into where it is comes from this list, so update it as you go and never batch the
 updates to the end.
 
+## TOOL-CALL DISCIPLINE (every phase, every mode)
+
+Measured on real delegated runs, model round trips take 60–70% of a story's wall clock,
+and 89% of turns issue a single tool call. Speed comes from fewer turns and fewer repeated
+commands, never from skipping a check:
+
+- **Batch independent calls.** Every `Read`, `grep`, `ls`, and read-only `git` query that
+  does not need another call's result goes into **one message**. Examples: the source files
+  a change touches, plus their tests; `git status` beside `git log`. Chain dependent shell
+  steps with `&&` in one Bash call rather than across turns.
+- **Run slow commands once per code state.** The full suite, lint, typecheck, build, and e2e
+  commands are captured to a `$TMPDIR` log and read from there. Never re-run one on an
+  unchanged tree to see a different slice of its output
+  ([`rtk.md` § Slow commands](../../references/rtk.md#slow-commands--run-once-read-the-log)).
+- **Keep the inner loop targeted.** RED (4.4), GREEN iterations (5.2/5.3), and each
+  refactoring (6.2) run the story's own test files. The full suite runs at 6.3 and in QA
+  (7), where regressions are caught.
+
 ## PHASE 0: VERSION GATE (hard, before any project read/write)
 
 The stamp is injected at skill-load time — **do not spend a `Read` on it**:
@@ -372,7 +390,7 @@ Write the **minimum** code to make ALL tests pass.
 Phase 2 now — implementation must apply the loaded experts/guides.
 
 **5.2 Implement.** Order: (1) create new files from the story's `files:`; (2) modify existing
-files; (3) run tests after each significant change; (4) stop as soon as all tests pass — don't
+files; (3) run the story's test files after each significant change; (4) stop as soon as all tests pass — don't
 over-engineer. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
 existing code (check `docs/architecture/`, scan files); simplest code that passes; write to
 the clean-code and comment standard in [`code-craft.md`](../../references/code-craft.md) —
@@ -405,7 +423,7 @@ routes, no template. **Then the comment & readability scan** — the four checks
 (restating comments, missing *why*, doc comments, readability), same diff, same routes. Each
 hit from either scan is an ISSUE for 6.2 like any SOLID violation.
 
-**6.2 Apply refactorings.** For each issue: apply the refactoring, run tests (must stay green),
+**6.2 Apply refactorings.** For each issue: apply the refactoring, run the story's test files (must stay green),
 revert and reconsider if they break. Common refactorings: collapse a reimplementation into
 the existing code, delete dead code, inline a single-caller wrapper, delete a restating
 comment, add the missing *why* line, extract function, rename,
@@ -414,7 +432,9 @@ correct module per `folder-structure.md`. Refactors touching files outside the s
 also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
 
 **6.3 Final green check.** Run the full suite once more; report REFACTOR as **one line**
-(output-blocks).
+(output-blocks). This is where a regression the targeted runs could not see surfaces. On
+red, fix it and re-run 6.3 before QA. **DELEGATED MODE folds 6.3 into Phase 7** (see the
+table there).
 
 ---
 
@@ -590,8 +610,8 @@ is no user to ask.
 | 1.4 | Skipped — never offer waves from inside a wave. |
 | 1.6 / 8.6 | `ck-story set … --no-sync` — **this story's frontmatter only**; never regenerate an index, the orchestrator does that once on the target after the wave. |
 | 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
-| 4–6 | Unchanged. RED still gates GREEN. |
-| 7 | Run the QA commands inline; never delegate to `qa-validator` — the orchestrator runs one per story. |
+| 4–6.2 | Unchanged. RED still gates GREEN. |
+| 6.3 + 7 | **One run.** Phase 7's inline command set (full suite, lint, typecheck) is the final green check. Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
 | 8.5 | Skipped — manual sign-off happens once on the target, after the wave lands. |
 | 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
 
@@ -654,6 +674,9 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never keep work off `<trunk>` by picking a different base** — escalate the epic's
   `integration:` level instead, or `ship` targets `<trunk>` from the stored level regardless.
 - **Never edit a test to force GREEN.**
+- **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
+  wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner
+  loop is targeted, and the full suite still runs at 6.3 and 7.
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 

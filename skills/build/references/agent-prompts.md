@@ -142,8 +142,10 @@ description: "QA story EE-SS: <title>"
 isolation: worktree                    # fan-out only — per-branch QA gets that branch's worktree
 prompt: |
   Run QA for story EE-SS, read-only — never edit any file. Check out / operate on branch
-  <branch>. Run these stack commands exactly, in order, capturing only the first failure's
-  short excerpt (failing test names / lint / type errors):
+  <branch>. Run these stack commands exactly, in order, each ONCE, redirected to
+  ${TMPDIR:-/tmp}/ck-EE-SS-<command>.log in the same Bash call. Take the first failure's
+  short excerpt (failing test names / lint / type errors) from that log, and never re-run a
+  command to see more of its output:
     <concrete commands from parallel-mode.md § P7>
   End with exactly one line:
     QA: PASS
@@ -176,8 +178,10 @@ prompt: |
 
   Story file: <repo-relative story path>   # acceptance criteria are in its body
 
-  Run these commands exactly, in order, stopping at the first failure and capturing a short
-  excerpt (failing test names, lint or type errors) — not the whole log:
+  Run these commands exactly, in order, each ONCE, redirected to
+  ${TMPDIR:-/tmp}/ck-EE-SS-<command>.log in the same Bash call. Stop at the first failure and
+  take a short excerpt (failing test names, lint or type errors) from its log, never by
+  re-running the command:
     <this story's stack commands from parallel-mode.md § P7>
 
   Follow qa-validation.md Steps 0–7: load the QA expert skills yourself, verify every
