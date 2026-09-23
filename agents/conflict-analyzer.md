@@ -5,6 +5,7 @@ tools: Read, Bash, Grep
 model: sonnet
 effort: low
 omitClaudeMd: true
+color: orange
 experimental:
   cacheTtl: "5m"
 ---

@@ -4,6 +4,7 @@ description: Use when `/ck-code:build` (inline or PARALLEL MODE) or `/ck-code:fi
 tools: Read, Bash, Grep, Glob, Write, Edit
 model: haiku
 effort: low
+color: yellow
 experimental:
   cacheTtl: "1h"
 ---

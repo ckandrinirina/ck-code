@@ -104,7 +104,9 @@ invalid call. Translate before dispatch:
 Those three placeholders are substituted into this file at load time from the plugin's
 `userConfig`, so the table already shows the operator's real choice. They are configured in
 `/plugin` → ck-code, not by exporting environment variables. A value that is not one of the
-four aliases is invalid — report it rather than dispatching it.
+four aliases is invalid — report it rather than dispatching it. On Claude Code ≥ 2.1.271
+`/plugin` offers only those four as fixed choices (`userConfig` `options`), so this case
+remains only for a value set before that release.
 
 ## Resume an incomplete story (P5)
 
