@@ -654,6 +654,24 @@ assert_contains "ck-qa run --parallel: reports every failure" "$QA_PAR" "ck-qa: 
 assert_contains "ck-qa run --parallel: shows each failing log's tail" "$QA_PAR" "lint-broke"
 assert_contains "ck-qa run: a command that edits the tree is flagged" "$(QA run 01-01 fmt='echo x >>a.txt')" "changed the working tree"
 assert_contains "ck-qa run --reuse: a tree-editing command is never stamped" "$(QA run 01-01 --reuse fmt='true; echo x >>a.txt')" "fmt: PASS"
+git -C "$QA_REPO" checkout -q -- a.txt
+# A run longer than the wait budget keeps going detached; wait and a repeat run attach to it.
+QA_LONG=$(CK_QA_WAIT=0 QA run 01-02 e2e="sleep 3; echo e2e-ran >>'$QA_TMP/count'"); QA_LONG_RC=$?
+assert_exit "ck-qa run: past the wait budget it exits 3" 3 "$QA_LONG_RC"
+assert_contains "ck-qa run: past the wait budget it prints RUNNING" "$QA_LONG" "ck-qa: RUNNING"
+assert_contains "ck-qa run: the same run again attaches, never restarts" \
+  "$(CK_QA_WAIT=0 QA run 01-02 e2e="sleep 3; echo e2e-ran >>'$QA_TMP/count'")" "already running"
+QA_DIFF=$(QA run 01-02 e2e='true'); QA_DIFF_RC=$?
+assert_exit "ck-qa run: a different run for a busy id is refused" 2 "$QA_DIFF_RC"
+assert_contains "ck-qa wait: prints the detached run's result" "$(QA wait 01-02)" "ck-qa: PASS"
+assert_eq "ck-qa run: the detached command ran exactly once" "1" "$(wc -l <"$QA_TMP/count" | tr -d ' ')"
+assert_contains "ck-qa wait: an ended run prints its result again" "$(QA wait 01-02)" "e2e: PASS"
+QA_NONE=$(QA wait 09-09); QA_NONE_RC=$?
+assert_exit "ck-qa wait: an id with no run exits 2" 2 "$QA_NONE_RC"
+CK_QA_WAIT=0 QA run 01-03 slow='sleep 30' >/dev/null
+kill "$(cat "$QA_TMP/ck-qa-run/01-03/pid")"; kill_wait=0
+while kill -0 "$(cat "$QA_TMP/ck-qa-run/01-03/pid")" 2>/dev/null && [ "$kill_wait" -lt 20 ]; do sleep 0.1; kill_wait=$((kill_wait+1)); done
+assert_contains "ck-qa wait: a run that died without a result says so" "$(QA wait 01-03)" "stopped without a result"
 rm -rf "$QA_REPO" "$QA_TMP"
 
 echo

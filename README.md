@@ -591,7 +591,7 @@ ck-code/
 │   ├── ck-issues.sh               # publish a plan to GitHub Issues (plan --publish)
 │   ├── ck-project.sh              # reconcile delivery, the board and GitHub Issues
 │   ├── ck-plan.sh                 # read and set a plan's OVERVIEW.md record
-│   ├── ck-qa.sh                   # run QA commands once per code state (reuse, parallel)
+│   ├── ck-qa.sh                   # run QA commands once per code state (reuse, parallel, wait past the Bash cap)
 │   ├── ck-team.sh                 # the team-skill refresh contract (SOURCES digest)
 │   ├── ck-migrate.sh              # deterministic v6 → v7 conversion
 │   ├── ck-bootstrap.sh            # the committed ck-code-required guard

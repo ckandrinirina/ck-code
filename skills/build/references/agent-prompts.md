@@ -154,6 +154,8 @@ prompt: |
     <concrete commands from parallel-mode.md § P7>
   Take the first failure's short excerpt (failing test names / lint / type errors) from the
   tail it prints or from its log, and never re-run a command to see more of its output.
+  Use a 600000 ms Bash timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the
+  result prints, and never start the run again.
   End with exactly one line:
     QA: PASS
   or  QA: FAIL — <which command failed> — <one-line excerpt>
@@ -163,8 +165,8 @@ prompt: |
 **Post-wave QA (P8)** dispatches ONE qa-validator on `$TARGET` in the main checkout (no
 worktree — the wave's stories must sit together to surface integration failures). It guards
 on `git rev-parse --abbrev-ref HEAD == $TARGET`, runs the de-duplicated union of the wave's
-stories' commands **with `--reuse`** (`ck-qa run wave-N --reuse …`), and returns the same
-verdict line. On a solo wave where nothing moved since P7, every command reports `REUSED`,
+stories' commands **with `--reuse`** (`ck-qa run wave-N --reuse …`, then `ck-qa wait wave-N`
+while it prints `RUNNING`), and returns the same verdict line. On a solo wave where nothing moved since P7, every command reports `REUSED`,
 which is a `QA: PASS` for exactly the state P7 checked. After a fan-out merge a `QA: FAIL` there
 is a cross-branch integration failure by construction — each branch already passed in
 isolation. After a solo wave it means the target's own moving state broke what P7 had
@@ -192,7 +194,9 @@ prompt: |
     ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, verbatim>' <label>='<command>' …
     <this story's stack commands from parallel-mode.md § P7>
   Take a short excerpt of each failure (failing test names, lint or type errors) from the
-  tail it prints or from its log, never by re-running the command.
+  tail it prints or from its log, never by re-running the command. Use a 600000 ms Bash
+  timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the result prints, and never
+  start the run again.
 
   Follow qa-validation.md Steps 0–7: load the QA expert skills yourself, verify every
   acceptance criterion with file:line evidence, then the suite, the quality checks, the

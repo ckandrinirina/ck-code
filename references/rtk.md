@@ -130,6 +130,17 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   `target/`, one CMake build tree). Those stay one chained `label='a && b'` command.
 - A command that edits the tree (a formatter, a snapshot update) prints a `WARN` and is never
   stamped. Fix the command rather than trusting that pass.
+- **A run can outlast one Bash call.** One Bash call is capped at 600 s, after which Claude
+  Code moves it to the background. A serial e2e suite passes that cap. An agent then polls an
+  empty output file or starts a second copy of the suite against the same test database.
+  Both happened on a measured e2e epic. To avoid this, `ck-qa run` starts the commands
+  detached and waits up to `CK_QA_WAIT` seconds (default 540). A longer run prints
+  `ck-qa: RUNNING` (exit 3), and **`ck-qa wait <id>`** picks up the same run and prints its
+  result. Call it again until the result arrives. Give every `ck-qa` Bash call a
+  `timeout` of `600000`. If a call is moved to the background anyway, run `ck-qa wait <id>`.
+  Never poll the output file, never `sleep`, and never repeat the `run`. A repeated identical
+  `run` only attaches to the existing run, and a different command set for an id that is
+  still running is refused.
 
 ## Where ck-code gains the most
 

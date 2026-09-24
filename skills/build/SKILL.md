@@ -87,7 +87,9 @@ commands, never from skipping a check:
   ([`rtk.md` § Slow commands](../../references/rtk.md#slow-commands--run-once-read-the-log)).
   The 6.3 check and every QA pass run through `ck-qa`, which stamps each pass with its code
   state so a later step that may reuse it (`--reuse`) skips an identical run
-  ([§ QA runs go through `ck-qa`](../../references/rtk.md#qa-runs-go-through-ck-qa)).
+  ([§ QA runs go through `ck-qa`](../../references/rtk.md#qa-runs-go-through-ck-qa)). A run
+  past the 600 s Bash cap (a serial e2e suite) prints `ck-qa: RUNNING`. Continue it with
+  `ck-qa wait <id>`, and never start it again or poll its output.
 - **Keep the inner loop targeted.** RED (4.4), GREEN iterations (5.2/5.3), and each
   refactoring (6.2) run the story's own test files. The full suite runs at 6.3 and in QA
   (7), where regressions are caught.
