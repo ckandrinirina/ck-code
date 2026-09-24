@@ -5,6 +5,102 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.0.0] — 2026-09-24
+
+A major built from an audit of 6.17.1 and of a real 12-epic project, where 113 of 277
+commits were bookkeeping: regenerated indexes, wave markers and delivery pointers. v7
+removes that bookkeeping, fixes three bugs in the state model, tests the GitHub side of
+the scripts for the first time, and cuts the questions a story costs. Built and tested
+against **Claude Code 2.1.280**. Run `/ck-code:migrate` once per project; it converts v6,
+older layouts and ck-code-lite projects in one revertable commit.
+
+### Changed — breaking
+- **Layout v7.** `STORIES_INDEX.md` and the epic view are generated and never committed.
+  `tasks/.gitignore` keeps them out of git, and the session-start hook, `ck-view` and
+  `ck-story` regenerate them whenever they are missing or older than the frontmatter.
+- **`FEATURE_INDEX.md` is now `EPICS_INDEX.md`**, with an `Epic` column. The word
+  *feature* now means an architecture doc and nothing else.
+- **Plan record.** Each plan's `PROJECT_OVERVIEW.md` or `FEATURE_OVERVIEW.md` is now
+  `OVERVIEW.md`, whose frontmatter holds the plan's `integration`, `branch`, `issue`, `pr`
+  and `delivery`. `integration:` left `EPIC.md`. The levels are `story`, `epic` and
+  `plan`, where `plan` replaces `feature`, and new plan branches are `plan/<slug>`.
+- **Stable stamp.** `tasks/VERSION.md` holds `layout: v7` and
+  `requires: ck-code >= 7.0.0`. The session hook no longer rewrites it after every plugin
+  update, so an update never dirties the tree.
+- **`/ck-code:sync` is removed.** `/ck-code:doctor --fix` does the same job: it recovers
+  missing PR pointers, reconciles delivery, the board and GitHub Issues, confirms any
+  unproven direct merge, and commits the story files. `/ck-code:doctor` without the flag
+  stays read-only.
+- **`ship --to-issues` is now `plan --publish [--mode plan|epics|stories]`**, and
+  `--mode feature` is now `--mode plan`, which records the plan issue in `OVERVIEW.md`.
+  Board creation and adoption live in `/ck-code:config board` alone.
+- **`ship --integration` is now `/ck-code:config integration <plan> <level>`.** `plan`
+  asks the level once, when it creates a plan, and `build` never asks it.
+- **Specs** are `spec.md` (was `pre-spec.md`), and `.metadata.json` drops the constant
+  `stage` key. **Design-system** metadata lives in `manifest.json` only. Its `index.md`
+  has no frontmatter.
+- **Team skills** carry a `SOURCES` stamp and link the architecture docs instead of
+  copying the stack table and folder tree into every skill.
+
+### Added
+- **`scripts/lib/ck-common.sh`**: one implementation of every rule the scripts share. It
+  replaces 13 frontmatter readers, 3 writers that disagreed, and 3 Ready rules that gave
+  different answers.
+- **`ck-migrate v7`**: a deterministic, tested v6 → v7 converter. It keeps each file's own
+  formatting and keeps an existing `feat/` branch in the plan record. It refuses a dirty
+  tree or a newer layout, and a second run does nothing. On a clone of a real v6 project
+  the conversion was 16 lines added and 104 removed.
+- **`ck-plan get|set`** for the plan record, and **`ck-team digest|stale`** for the team
+  refresh contract.
+- **`ck-project reconcile`**: one pass over landed work, PR delivery, the views, the board
+  and GitHub Issues, in the one order every caller uses.
+- **`ck-story files`** records the paths a story actually touched. `build` runs it at
+  done, so parallel conflict detection and expert-skill matching read real data.
+- **`/ck-code:team --refresh`** regenerates only the skills a `tech-stack.md` or
+  `folder-structure.md` change made stale, and offers to delete guides for technologies
+  the stack no longer lists. `/ck-code:doctor` and the session start name stale skills.
+- **`/ck-code:config experts ask|none`**, plus a "Never ask in this project" answer on the
+  team gate. A project that chose no experts is no longer asked on every build.
+- **Session start checks the layout in both directions.** An older layout is sent to
+  `migrate`, and a newer layout or an unmet `requires:` asks for a plugin update, never
+  a migration.
+- **Tests.** `tests/fake-gh/gh` drives `ck-project` and `ck-issues` in CI for the first
+  time. The smoke suite grew from 57 to 138 checks, and the routing evals from 19 to 22
+  cases.
+
+### Fixed
+- **Delivery never reached `merged` without a Projects board.** `sync` required a board
+  before it reconciled delivery. It now reconciles with or without one, and asks GitHub
+  nothing when no recorded PR can still change.
+- **A skipped blocker was ready in one place and blocked in another.** It now releases
+  its dependants in `ck-view`, the board and `ck-doctor` alike.
+- **`files:` was promised to `build` but never written**, which silently disabled
+  parallel conflict detection and skill matching.
+- **Frontmatter writes failed silently.** `ck-story` reported success on a file with no
+  frontmatter fence or with CRLF endings. Writes are now atomic, keep CRLF, and fail loudly.
+- **A plugin older than the project was told to migrate.** The session hook treated any
+  layout mismatch as an older project.
+- **Worktree safety.** `ck-story` no longer syncs the shared board from a story worktree,
+  and paths containing spaces no longer drop out of the script loops.
+- **The status lines count acceptance criteria only.** Implementation-task checkboxes
+  no longer inflate the total, and the subagent row reads the worktree's own story file.
+
+### Removed
+- `ck-project set`, `ck-story path`, the `status/done` issue label,
+  `references/skill-detection-fallbacks.md` and `migrate/references/migration-map.md`.
+  The v3–v5 conversion steps moved to `migrate/references/legacy-v6.md`, which loads only
+  when a legacy layout is detected. `migrate/SKILL.md` went from 510 lines to 206.
+
+### Changed — fewer questions
+- `build` no longer asks whether to build the whole epic; it prints one hint line.
+- `ship` asks once: files, message and PR target together.
+- `fix` asks nothing when given a story path.
+- `design` and `plan` find the spec or pending feature docs the previous step wrote.
+- `plan --quick` hands its story to `build`, and a finished parallel epic hands off to
+  `ship --promote`.
+- The hand-off chain limit rose from 3 to 5, so spec → design → team → plan → publish runs
+  without a retype.
+
 ## [6.17.1] — 2026-09-23
 
 ### Added
