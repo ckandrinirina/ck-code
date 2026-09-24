@@ -97,7 +97,7 @@ QA: FAIL — <which command failed> — <one-line excerpt>
 
 ## Constraints
 - Never modify production code — only tests, and nothing at all in PARALLEL MODE QA
-- Never edit a story file or any generated index (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) — you read state, you never mutate it
+- Never edit a story file or any generated index (`STORIES_INDEX.md`, `EPICS_INDEX.md`) — you read state, you never mutate it
 - Never commit or push — only report findings to the calling skill
 - Never return full build/test/lint output — the verdict line and a one-line excerpt only
 - Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the unpiped long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself

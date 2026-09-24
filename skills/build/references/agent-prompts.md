@@ -45,6 +45,7 @@ prompt: |
   You are implementing story EE-SS in an isolated worktree the harness created for you.
 
   Story file: <repo-relative story path from the index File column>
+  Base SHA: <git rev-parse "$TARGET" after the P4 wave-start commit>
 
   Your task:
   1. Invoke /ck-code:build via the Skill tool:
@@ -53,11 +54,15 @@ prompt: |
      begins `MODE: delegated`, build applies its DELEGATED MODE deltas: no branch question,
      no `ck-index`, no manual-test gate, no ship. **Commit after every TDD cycle /
      phase** so an early stop still leaves resumable, committed work.
+  3. At done (build 8.6), record what you actually touched in your own story, then commit
+     the story file with your last cycle:
+       ck-story files <story path> $(git diff --name-only <Base SHA>...HEAD -- . ':!tasks')
 
   Constraints:
-  - Edit only files relevant to this story, and only this story's own frontmatter. Do NOT
-    edit the generated indexes (STORIES_INDEX.md, FEATURE_INDEX.md) and do NOT run
-    ck-index — the orchestrator regenerates them once after merge.
+  - Edit only files relevant to this story, and only this story's own frontmatter (status
+    via `ck-story set … --no-sync`, files via `ck-story files`). Do NOT edit or commit the
+    generated views (STORIES_INDEX.md, EPICS_INDEX.md) and do NOT run ck-index — they are
+    gitignored, and the orchestrator regenerates them once after merge.
 
   Return the structured object {status, branch, commits, remaining, criteria_met}. Read
   `branch` from `git branch --show-current`. Report `status: done` only if build finished
@@ -74,7 +79,7 @@ tiering, `MODE: delegated`, task steps, constraints, return object) is identical
 2. **Replace the opening line** with:
    `You are implementing story EE-SS in the main checkout, already on branch <$WORKBRANCH>.`
    `You are the only agent running — no worktree, no peer, nothing to isolate from.`
-3. **Insert the branch guard** directly after the `Story file:` line:
+3. **Insert the branch guard** directly after the `Base SHA:` line (on a solo dispatch that SHA is the P4 base SHA — the same commit):
 
 ```
   Branch guard — before your first edit, run `git rev-parse --abbrev-ref HEAD` and confirm
@@ -160,8 +165,8 @@ worktree — the wave's stories must sit together to surface integration failure
 on `git rev-parse --abbrev-ref HEAD == $TARGET`, runs the de-duplicated union of the wave's
 stories' commands, and returns the same verdict line. After a fan-out merge a `QA: FAIL` there
 is a cross-branch integration failure by construction — each branch already passed in
-isolation. After a solo wave it means the index-regenerate commit, or the target's own moving
-state, broke what P7 had green.
+isolation. After a solo wave it means the target's own moving state broke what P7 had
+green.
 
 ## Inline QA dispatch
 

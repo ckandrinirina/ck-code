@@ -77,7 +77,7 @@ refactor and completion fold into their phases rather than getting their own row
 5. "QA validation for [story title]"
    - activeForm: "Running QA for [story title]"
 
-6. "Complete [story title] — update docs and commit"
+6. "Complete [story title] — summary, status and files:"
    - activeForm: "Completing [story title]"
 ```
 

@@ -23,6 +23,8 @@ The Implementation Summary block (template in `story-template.md`) must record:
 - MODIFIED files: path + exact line numbers — e.g. `MODIFIED src/main.rs:12,45-48,92`
 - Use `git diff --stat` and `git diff` to collect precise lines
 - No descriptions — paths + line numbers only
+- The same paths (no line numbers) go into frontmatter `files:` at 8.6 via `ck-story files`
+  — the body list is for the reader, `files:` is what conflict detection reads
 
 ## 8.5.3 — Manual-Test Bug-Fix Sub-Loop
 

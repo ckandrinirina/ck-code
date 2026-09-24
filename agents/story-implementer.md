@@ -48,6 +48,7 @@ high-reasoning signal (novel algorithm, concurrency correctness, security-critic
   resolved inside your worktree, or in the main checkout when dispatched solo
 - The story `id` (e.g. `02-01`)
 - Solo dispatches only: the branch the orchestrator placed you on
+- `Base SHA:` — the target commit your work started from; `files:` is recorded against it
 - A read-only slice of frozen context from the orchestrator (story scope, stack QA commands)
 
 ## Outputs
@@ -86,11 +87,16 @@ criterion checked and QA green. If you did no work or hit a blocker, return
 4. Let `ck-code:build` **commit after every TDD cycle / phase on the branch you are on** —
    that committed state is the only thing the orchestrator can resume (via `SendMessage`)
    if you stop early, so never suppress build's per-phase commits or leave work uncommitted.
-5. Return the structured verdict above.
+5. At done (build 8.6), in your worktree (or solo branch), flip and record your own story
+   with no sync, then commit the story file with your last cycle:
+   `ck-story set <story path> status=done --no-sync` and
+   `ck-story files <story path> $(git diff --name-only <Base SHA>...HEAD -- . ':!tasks')`.
+   In a story worktree `ck-story` refuses the board sync by itself anyway.
+6. Return the structured verdict above.
 
 ## Constraints
 - Never implement story changes directly — all work is delegated to `ck-code:build` via the `Skill` tool.
-- Update only THIS story's own frontmatter `status` (build does this on the story file). Never edit the shared generated views (`STORIES_INDEX.md`, `FEATURE_INDEX.md`) and never run the generator `scripts/ck-index.sh` — the orchestrator regenerates the views once on the target branch after the wave. If build is about to touch a shared index or run the generator, skip that step.
+- Update only THIS story's own frontmatter — `status` (always `--no-sync`) and `files:` (via `ck-story files`). Never edit, regenerate or commit the generated views (`STORIES_INDEX.md`, `EPICS_INDEX.md` — gitignored) and never run `ck-index` — the orchestrator regenerates the views once on the target branch after the wave. If build is about to touch a shared view or run the generator, skip that step.
 - You commit only on the branch you were placed on, through `ck-code:build`. **Committing is deliberately not forbidden here** — unlike `qa-validator` and `conflict-analyzer`, your committed branch *is* the hand-off: it is the only thing the orchestrator can verify at P5, merge at P8, or resume through `SendMessage`. Never switch or create a branch, never push to any remote, never merge into another branch. Solo, that branch is shared with the orchestrator — which is exactly why you must not move off it or leave it dirty.
 - Never modify files outside your worktree (fan-out), and never outside this story's scope (either placement).
 - Never return `status: done` without every criterion checked and QA green — the orchestrator verifies completion from git, and a false "done" silently loses work.
