@@ -24,13 +24,15 @@ EOF
 )"
 ```
 
-## Story Issue: Direct Close (commit only, on main/develop)
+## Story Issue: Commit Only (no PR yet)
 
-When committing directly without a PR, close the issue:
+When the work was committed (or merged into an epic or plan branch) without a PR of its
+own, comment — never close. The issue closes through the `Closes #` footer of the PR that
+reaches the trunk, or through `ck-project reconcile` once the work is delivered:
 
 ```bash
-gh issue close <story_issue> --comment "$(cat <<'EOF'
-Shipped in <commit_hash>.
+gh issue comment <story_issue> --body "$(cat <<'EOF'
+Committed in <commit_hash>.
 
 <1–2 sentences in plain language: what users can now do or notice.>
 EOF
@@ -44,9 +46,10 @@ frontmatter `issue:` number, read its body with `gh issue view`, flip the story'
 (`- [ ] #<story_issue>`, or the bracketed padded token `- [ ] [EE-SS]` when no story
 issue exists) to `- [x]`, and write it back with `gh issue edit`.
 
-## Status Labels
+## Labels
 
-Commands live in SKILL.md Phase 6.4: `--add-label "status/done"`, plus `"has-bugfix"` for bug fixes.
+None. Ship adds no status labels (SKILL.md 6.4): native sub-issues and the board carry
+status.
 
 ## Things to avoid in issue comments
 

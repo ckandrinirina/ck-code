@@ -5,7 +5,7 @@ stay in conventional-commit format for changelog and CI tooling. Every `Closes #
 line below is the pasted output of `ck-project closes <story-path>` — never typed by
 hand (SKILL.md RULES).
 
-## Example: Full Feature Ship (Commit + PR + Issue Updates)
+## Example: Full Story Ship (Commit + PR + Issue Updates)
 
 ### Phase 3.2 — Commit Message
 
@@ -21,6 +21,24 @@ needing to refresh the page.
 - Connects through the existing service layer, no extra setup needed
 
 Closes #42
+```
+
+### Phase 3.3 — The One Confirmation
+
+```
+Branch   story/02-01-server-setup
+Source   src/realtime/channel.ts, src/realtime/format.ts, …
+Tests    test/realtime/channel.test.ts
+Plan     tasks/2026-01-04_realtime-app/epics/02_server/stories/01_server-setup.md
+Excluded .env.local — likely secret
+Message  feat(realtime): live updates without refresh  (full body above)
+Issues   story #42 · epic #10
+
+Q: "Ship this?"
+   > Commit and open a PR into main   (Recommended)
+     Commit only
+     Edit the message
+     Abort
 ```
 
 ### Phase 4.1 — Execute Commit (HEREDOC)
@@ -53,7 +71,7 @@ git push -u origin story/02-01-server-setup
 
 gh pr create \
   --title "feat(realtime): live updates without refresh" \
-  --base <resolved base — SKILL.md 5.B step 1, never asked for> \
+  --base <resolved base — SKILL.md 3.3, never asked for> \
   --body "$(cat <<'EOF'
 ## What's new
 The app now receives live updates from the server without users needing
@@ -106,8 +124,8 @@ EOF
 ```
 
 Then update the parent epic issue — resolved by the epic's `EPIC.md` frontmatter
-`issue: 10`, flip `- [ ] #42` to `- [x] #42` (SKILL.md 6.3) — and add the `status/done`
-label (SKILL.md 6.4).
+`issue: 10`, flip `- [ ] #42` to `- [x] #42` (SKILL.md 6.3). No label is added (SKILL.md
+6.4): the native sub-issue link and the board carry status.
 
 ### Phase 7 — Summary Output
 

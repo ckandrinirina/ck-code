@@ -7,7 +7,7 @@ These bodies are read by PMs, designers, and leadership — not just
 engineers. Write them in plain language: describe what users can now do
 or notice, not which classes changed or how many tests pass.
 
-## Feature PR Body
+## New Behaviour PR Body
 
 ```markdown
 ## What's new
@@ -46,10 +46,11 @@ Never author it. It is generated from frontmatter, because a PR closes an issue 
 merge only when its **body** names the issue, and the set differs per PR level:
 
 ```bash
-ck-project closes tasks/<slug>/epics/NN_x/stories/SS_y.md   # story PR  → 1 line
-ck-project closes tasks/<slug>/epics/NN_x                   # epic PR   → epic + stories
-ck-project closes tasks/<slug>                              # feature PR → every
-                                                            #   feature-level epic
+ck-project closes tasks/<plan>/epics/NN_x/stories/SS_y.md   # story PR → 1 line
+ck-project closes tasks/<plan>/epics/NN_x                   # epic PR  → epic + stories
+ck-project closes tasks/<plan>                              # plan PR  → plan issue + every
+                                                            #   epic and story (only at
+                                                            #   integration: plan)
 ```
 
 ```
@@ -67,8 +68,9 @@ Paste those lines verbatim as the body's last block. Points to watch:
 - **A squash or rebase merge rewrites commit messages**, so a `Closes` that lives only
   in a commit footer can be lost. The body is the reliable channel; keep it there.
 - **Closing keywords only fire when the PR merges into the default branch.** A story PR
-  into `epic/NN-*` closes nothing on its own — its issues close when the epic PR lands,
-  which is why the epic footer enumerates the stories too.
+  into `epic/NN-*`, or an epic PR into the plan branch, closes nothing on its own — its
+  issues close when the PR that reaches the trunk lands, which is why the epic and plan
+  footers enumerate everything beneath them.
 
 ## gh pr create Command
 
