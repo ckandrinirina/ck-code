@@ -64,7 +64,7 @@ code the diff should have used; for a comment hit, the line to delete or the *wh
 ## Step 4 — Architecture compliance
 
 Check the implementation against the story's **feature doc**
-(`docs/architecture/features/<slug>/index.md`, routed via `FEATURE_INDEX`) +
+(`docs/architecture/features/<slug>/index.md`, routed via the `Docs` column of `EPICS_INDEX.md`) +
 `folder-structure.md`:
 
 - New files in correct directories per `folder-structure.md`.

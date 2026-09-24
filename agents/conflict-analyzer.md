@@ -21,7 +21,7 @@ CLAUDE.md. You read only git state, so those instructions cost startup tokens an
 change a dry-run merge. Every rule you need is in this file.
 
 ## Inputs
-- A target branch (usually `main` or the integration branch)
+- A target branch — the `$TARGET` epic branch PARALLEL MODE merges into (never the trunk)
 - A list of source branches (one per worktree)
 
 ## Outputs

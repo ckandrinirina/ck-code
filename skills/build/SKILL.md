@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -23,7 +23,9 @@ every gate below still applies); a `status: bug` story handed off by `/ck-code:f
 in **Bug-Fix Mode** (Phase 1.3.5). Argument shapes: [INPUT](#input).
 
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
-views are **generated read-only** — this skill changes frontmatter, then regenerates. See [`data-model.md`](../../references/data-model.md).
+views are **generated, gitignored and never committed** — this skill changes frontmatter
+through `ck-story`, which regenerates them, and commits only story files. The plan record
+(`tasks/<plan>/OVERVIEW.md`) is read with `ck-plan get`. See [`data-model.md`](../../references/data-model.md).
 
 References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [`code-craft.md`](../../references/code-craft.md) (clean-code + comment standard, 6.1 scan) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
 
@@ -50,7 +52,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 - **A story path** (`tasks/<slug>/epics/02_<epic>/stories/05_<story>.md`) — build that one story
   inline through Phases 1–8. Validate it before anything else (Phase 1.1).
-- **Two or more story IDs** (`02-05 03-01`) — PARALLEL MODE, one wave.
+- **Two or more story IDs** (`02-05 02-07`) — PARALLEL MODE, one wave.
 - **`--epic NN`** — PARALLEL MODE over every non-`done` story of that epic, in
   dependency-ordered waves.
 - **Empty** — interactive selection (Phase 1.2), which also offers the parallel set and
@@ -93,9 +95,9 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
+or newer layout, offers `/ck-code:migrate` (older only), and stamps a greenfield project. Never read or write project state before
 this PASSes.
 
 ---
@@ -113,23 +115,25 @@ Explicit **story IDs** or `--epic NN` instead of a path skip to
 
 ### 1.2 If No Story Path (Interactive — index-driven)
 
-**1.2.0 Feature gate (read `tasks/FEATURE_INDEX.md` FIRST).** Before any story index, run
-the feature-selection gate in [`feature-index.md`](../../references/feature-index.md) — it
+**1.2.0 Epic gate (read `tasks/EPICS_INDEX.md` FIRST).** Before any story index, run
+the epic-selection gate in [`epics-index.md`](../../references/epics-index.md) — it
 owns the regenerate condition, the unfinished-set rule, and the 0/1/2/>2 branches; do not
-restate them here. The chosen feature's `Plan` + `NN` scope the story index read below.
+restate them here. The chosen epic's `Plan` + `NN` scope the story index read below.
 Interactive mode only — explicit `$ARGUMENTS` skips this.
 
-1. Read the chosen feature's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN`.
-   Regenerate first if it is missing or lacks the `GENERATED` header
+1. Read the chosen epic's `tasks/<Plan>/STORIES_INDEX.md` and filter to its epic `NN`.
+   The view is gitignored, so a fresh clone has none: run `ck-index tasks/<Plan>` first if it
+   is missing or lacks the `GENERATED` header
    ([`stories-index.md`](../../references/stories-index.md)), then re-read. **In the
-   two-unfinished-features case** the gate chose nothing, so read *each* unfinished feature's
+   two-unfinished-epics case** the gate chose nothing, so read *each* unfinished epic's
    `tasks/<Plan>/STORIES_INDEX.md` (they may be the same file) and filter each to its own
    epic `NN`; every step below stays per-epic, and the menu shows both epics' rows.
-2. Filter to actionable rows: `Status: TODO` or `Status: IN PROGRESS` whose every `Blocked by`
-   ID resolves to `Status: DONE`, **plus every `Status: BUG` row** (a triaged bug from
-   `/ck-code:fix`, always actionable → Bug-Fix Mode). Surface `BUG` rows first with a 🐛
-   marker — an open bug in shipped code outranks new work — and mark an `IN PROGRESS` row
-   with ↻ (resume: an interrupted run left it there, and it is picked up, never re-started).
+2. Filter to actionable rows. A story is **ready** when `status: todo` and every `blocked_by`
+   story is `done` or `skip`, or when `status: bug` (a triaged bug from `/ck-code:fix` →
+   Bug-Fix Mode). Surface `BUG` rows first with a 🐛 marker — an open bug in shipped code
+   outranks new work. An `IN PROGRESS` row is **not ready**; list it separately with ↻ as a
+   resume entry (an interrupted run left it there). Picking it names it explicitly, so it is
+   resumed, never re-started.
 3. Sort by epic, then story number, then size (S < M).
 4. **Detect whole-epic options:** group every row that is neither `DONE` nor `SKIP` by epic
    (`NN`); any epic with > 1 such story is a wave candidate. A `SKIP` story is deliberately
@@ -144,7 +148,7 @@ Interactive mode only — explicit `$ARGUMENTS` skips this.
    recommended parallel set (⚡, when ≥ 2) → epics → single stories. The selection is the
    one confirmation — parallel and epic choices enter [PARALLEL MODE](#parallel-mode) at P1
    with the scope already resolved (P3 does not re-ask which stories); a single story
-   proceeds to 1.3 (Phase 1.4 then skips its offer). If none ready, say so + which deps are
+   proceeds to 1.3 (Phase 1.4 then skips its hint). If none ready, say so + which deps are
    missing (suggest `/ck-code:plan` if the index is empty).
 
 ### 1.3 Load Story Context
@@ -166,26 +170,27 @@ Technical Notes reference it explicitly.
   left is the RED target; completion fills the Bug Report **Resolution** and restores
   `prior_status` instead of writing an Implementation Summary. If `status: bug` but there is
   no `DIAGNOSED` Bug Report, STOP — tell the user to run `/ck-code:fix <story>` (the tree
-  drifted from diagnosis). Skip the epic-wave offer (1.4).
+  drifted from diagnosis). Skip the epic-wave hint (1.4).
 - **Story Mode** — normal fresh-story implementation. Continue below.
 
-### 1.4 Epic-Wave Offer (explicit-path only, before status change)
+### 1.4 Epic-Wave Hint (explicit-path only, no question)
 
 Runs ONLY for an explicit `$ARGUMENTS` story path — **skip** when the 1.2 menu ran, in
-Bug-Fix Mode, in DELEGATED MODE, or non-interactively. Never auto-pull parallel-safe peers:
-an explicit single-story request is respected, and batch routing belongs to the 1.2 menu.
+Bug-Fix Mode, in DELEGATED MODE, or non-interactively. Never ask and never auto-pull
+parallel-safe peers: an explicit single-story request is respected, and batch routing
+belongs to the 1.2 menu.
 
 Count the selected story's epic (`NN`) rows in `STORIES_INDEX.md` whose `Status` is neither
-`DONE` nor `SKIP`.
-If only this story remains, skip silently → 1.5. Otherwise ask (`AskUserQuestion`):
+`DONE` nor `SKIP`, this story excluded. Zero → print nothing. Otherwise print one line and
+continue to 1.5:
 
-- **Build the whole epic in dependency-ordered waves** — leave this story `status: todo`
-  (do NOT run 1.6) and enter [PARALLEL MODE](#parallel-mode) at P1 with scope `--epic NN`.
-- **Stay on this story** — proceed to 1.5.
+```
+Epic NN has K more open stories — /ck-code:build --epic NN builds them in dependency-ordered waves.
+```
 
 ### 1.5 Detect and Claim the Linked GitHub Issue
 
-The story's `issue:` frontmatter field is the linkage (v6 uses the number, never a
+The story's `issue:` frontmatter field is the linkage (the number, never a
 title-substring match). If `issue:` is set, present `Linked GitHub Issue: #<n>` and claim it
 for the account running the build:
 
@@ -219,13 +224,14 @@ ck-story set <story-path> status=in-progress
 `ck-story` validates the value against the `status` enum, writes the `status:` line, then
 runs `ck-index` and `ck-project sync` for that story's plan — the three steps that must
 never be half-done. That is the whole mutation: the generator recomputes every view from
-frontmatter, so there is no index cell, `EPIC.md`, or rollup to touch. The board is one more generated view
+frontmatter, so there is no index cell, `EPIC.md`, or rollup to touch, and the views are
+never staged (they are gitignored). The board is one more generated view
 ([`github-projects.md`](../../references/github-projects.md)): `ck-project` is a no-op when
 the project has no `tasks/SETTINGS.md` or `github_issues` is off, and a board failure never
 blocks the build — report it and continue. **DELEGATED MODE adds `--no-sync`**
 (`ck-story set <story-path> status=in-progress --no-sync`) — a worktree agent writes only
 its own story's frontmatter; the orchestrator regenerates and syncs once on the target
-branch after merge. In that mode the frontmatter edit is normally a **no-op**: P4
+branch after merge (`ck-story` already refuses the board sync inside a story worktree). In that mode the frontmatter edit is normally a **no-op**: P4
 already flipped this story to `in-progress` on the target before cutting the worktree
 ([parallel-mode.md](references/parallel-mode.md)). Finding `in-progress` where `todo` was
 expected is the normal case, never drift — leave it and carry on.
@@ -263,8 +269,9 @@ re-run — a non-empty project must never reach Phase 3 with zero skills loaded,
 
 Follow [`skill-detection.md`](../../references/skill-detection.md) end to end — it owns this
 phase: the arch-doc reads (Step 1), manifest-driven detection (Steps 2–3), the `ls` +
-**team gate** for a project with no skills (Step 4a / 4a.1 — `RUN TEAM FIRST` invokes
-`Skill({ skill: "ck-code:team" })`, then redo this phase), the `Read`-only loading (Step 4b),
+**team gate** for a project with no skills (Step 4a / 4a.1 — `Run /ck-code:team first`
+invokes `Skill({ skill: "ck-code:team" })`, then redo this phase; `Never ask in this project`
+writes `experts: none` to `tasks/SETTINGS.md`, and with `experts: none` the gate never fires), the `Read`-only loading (Step 4b),
 and the mandatory "Skills loaded" report (Step 5). Do not restate its gates here; run them.
 
 Two build-specific bindings on top of that procedure:
@@ -309,13 +316,19 @@ records only frontmatter status, the final summary, and unplanned changes.
 ### 3.5 Confirm Plan + Base Branch (single gate)
 
 **Never start on whatever branch this run was launched from.** Resolve the base first, in one
-batched call:
+batched call. The integration level is the **plan's**, read from its record — this skill never
+asks for it (`plan` sets it once; `/ck-code:config integration` changes it):
 
 ```bash
 git fetch origin --quiet
 git branch --show-current
 git branch --list "story/<EE>-<SS>-*" "fix/<EE>-<SS>-*"
+ck-plan get tasks/<Plan> integration branch
 ```
+
+The level derives the base: `story` → `<trunk>`; `epic` → `epic/<NN>-<slug>` (cut from
+`<trunk>`); `plan` → `epic/<NN>-<slug>` cut from the plan branch, which is the record's
+`branch:` (cut from `<trunk>`). An empty `integration:` reads as `story`.
 
 `resolve_base(...)`
 ([`branch-topology.md`](../../references/branch-topology.md#start-point--the-base-a-new-story-branch-is-cut-from))
@@ -335,23 +348,15 @@ this project, and always keep **Adjust plan** last (the user can type any other 
 | **New branch from `<base>`** | always (recommended) | `git checkout -b story/<EE>-<SS>-<slug> <base>` — `fix/…` for a bug story, slug = kebab-case of the title; creates the parent chain first if absent ([Creation](../../references/branch-topology.md#creation)). Verify with `git branch --show-current` |
 | **Resume `story/<EE>-<SS>-*`** | that branch already exists | `git checkout` it — never re-cut a branch that has commits |
 | **Sync base from `origin/<base>` first** | the base is behind its remote | `git merge origin/<base>` on the base, then cut |
-| **Cut from `<trunk>` instead** | level is `epic`/`feature` | this story gets its own PR into `<trunk>` rather than joining the epic's |
-| **Cut from `epic/<NN>-*`** or **`feat/<plan-slug>`** | that branch exists or the level reaches it | say which PR the story then joins |
 | **Current branch `<name>`** | `<name>` is a legal base (`resolve_base` step 3) | ship commits here. **Never** offered for `main`/`develop`/`<trunk>`, nor for another story's branch |
 | **Adjust plan** | always | revise the plan, then re-ask |
 
-**A further field, only when the epic's `EPIC.md` `integration:` is empty** — fold it into the
-*same* `AskUserQuestion` call (the tool takes 4 questions; splitting a known question into a
-second call is forbidden by RULES): "How should epic `<NN>` land?" → **a PR per story**
-(`story`) · **one PR per epic** (`epic`) · **one PR for the whole feature** (`feature`).
-Write the answer to `EPIC.md` `integration:` in this phase, then re-resolve the base from it.
-Answering `story` writes the literal `story`, so the question never returns for that epic.
-
-**When the user's real objection is `<trunk>`, change the level, not the base.** A request to
-keep this work off the trunk — stated in the answer, or implied by picking an epic/feature base
-under a `story`-level epic — is an escalation: offer to write `epic`/`feature` to `EPIC.md` and
-re-resolve, in the same gate. A hand-picked base with a stale level leaves `ship` opening the PR
-against `<trunk>` anyway. The change applies from this story onward, never retroactively.
+**The base follows the level; build never changes the level.** An objection to the derived base
+— wanting this work off `<trunk>` under a `story`-level plan, or straight onto `<trunk>` under an
+`epic`/`plan`-level plan — is a level change, not a base pick: name
+`/ck-code:config integration tasks/<Plan> <epic|plan>` (or `story`), and stop. When build is
+re-run, 3.5 re-resolves the base from the new level. A hand-picked base with a stale level leaves
+`ship` opening the PR against the wrong target.
 
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
 touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the whole base
@@ -515,7 +520,7 @@ pre-ask a gate whose outcome could change the work in between.
 `FIXED` → re-prompt at 8.5.1. **Cap = 3 cycles**; on the 3rd, escalate `FIX MANUALLY / ACCEPT
 AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never continue past 3.
 
-### 8.6 Set Status → done (frontmatter + regenerate)
+### 8.6 Set Status → done (frontmatter + regenerate + touched files)
 
 **Bug-Fix Mode:** restore `prior_status` (from the Bug Report — normally `done`) instead of
 `done`, and clear `prior_status` in the same call. Then 8.7 as usual (`fix/` branch, Bug ID
@@ -539,13 +544,29 @@ defect found in already-merged code keeps `delivery: merged` while it is fixed, 
 restore touches `status`/`prior_status` alone.
 
 `ck-story` regenerates in the same call — recomputing `STORIES_INDEX.md` and the
-`FEATURE_INDEX.md` rollup (a feature whose stories are all `done` rolls up to `DONE`, or to
-`MERGED` once every one of them is on the trunk) and syncing the board.
+`EPICS_INDEX.md` rollup (an epic whose stories are all `done` rolls up to `DONE`, or to
+`MERGED` once every one of them is on the trunk) and syncing the board. The views stay
+local; nothing here stages them.
 
-No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist in v6.
+No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist.
 The sync moves this story's card to Done and rolls its epic card up
 ([`github-projects.md`](../../references/github-projects.md)).
 **DELEGATED MODE passes `--no-sync`** (see 1.6).
+
+**Record the touched files — both modes, same phase.** `files:` was the plan's guess; after
+the work it must hold what was actually touched, because parallel conflict detection
+(`ck-view waves`) and expert-skill matching read it. Diff against the base recorded at 3.5,
+working tree included (inline work is not committed until `ship`), `tasks/` excluded:
+
+```bash
+ck-story files <story-path> $(git diff --name-only "$(git merge-base <base> HEAD)" -- . ':!tasks') $(git ls-files --others --exclude-standard -- . ':!tasks')
+```
+
+`ck-story files` merges (sorted, de-duplicated, never shrunk) and touches nothing else — no
+regenerate, no sync. An empty diff makes it print a usage error; ignore it.
+**DELEGATED MODE** diffs its committed work against the `Base SHA` the dispatch prompt names
+(`git diff --name-only <base-sha>...HEAD -- . ':!tasks'`) and commits the story file with its
+last cycle.
 
 ### 8.7 Ship (Commit + PR + Issue Updates)
 
@@ -574,7 +595,7 @@ no worktree, no cross-branch conflict stage, nothing to merge between branches. 
 exists to keep concurrent agents off each other's files; with no peer there is nothing to
 isolate from, and the cold dependency install it forces is pure cost.
 
-**Scope is exactly one epic — never a feature.**
+**Scope is exactly one epic — never a whole plan.**
 
 **First action of this mode: `Read` [parallel-mode.md](references/parallel-mode.md).** It owns
 P1–P9 — the P-step map with each step's non-negotiable, the exact commands, the resume prompt,
@@ -589,9 +610,9 @@ decision** before the first dispatch (`Fan-out: N stories → dispatching N agen
 `Solo: 1 story → dispatching 1 agent on <branch> (no worktree).`).
 
 The four gates that bind even before that read: **P1** checks out and verifies `$TARGET`
-before any dispatch, and never lets it be the trunk (a `story`-level epic escalates at P3, or
-the run cancels) · **P3** never dispatches into a project with zero skills without asking
-(agents cannot prompt) · **P5** derives "done" from git, never from an agent's self-report ·
+before any dispatch, and never lets it be the trunk (a `story`-level plan switches to `epic`
+at P3, or the run cancels) · **P3** never dispatches into a project with zero skills without
+asking, unless `tasks/SETTINGS.md` says `experts: none` (agents cannot prompt) · **P5** derives "done" from git, never from an agent's self-report ·
 **P7/P8** never accept work that has not returned `QA: PASS`.
 
 ---
@@ -607,8 +628,8 @@ is no user to ask.
 | Phase | Change |
 |---|---|
 | 1.1–1.2 | Skipped — the story path is given. |
-| 1.4 | Skipped — never offer waves from inside a wave. |
-| 1.6 / 8.6 | `ck-story set … --no-sync` — **this story's frontmatter only**; never regenerate an index, the orchestrator does that once on the target after the wave. |
+| 1.4 | Skipped — never hint at waves from inside a wave. |
+| 1.6 / 8.6 | `ck-story set … --no-sync` and `ck-story files` against the prompt's `Base SHA` — **this story's frontmatter only**; never regenerate an index or commit a view, the orchestrator regenerates once on the target after the wave. |
 | 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
 | 4–6.2 | Unchanged. RED still gates GREEN. |
 | 6.3 + 7 | **One run.** Phase 7's inline command set (full suite, lint, typecheck) is the final green check. Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
@@ -624,25 +645,28 @@ dirty for the orchestrator. Commit messages are conventional
 
 ## HARD GATES (cross-phase contract, in phase order)
 
-- **0** — version gate PASSes (`layout: v6`) before any project read/write.
-- **1.2.0** — feature index read first; ask when > 2 features unfinished.
+- **0** — version gate PASSes (`layout: v7`) before any project read/write.
+- **1.2.0** — epics index read first; ask when > 2 epics unfinished.
 - **1.2** — interactive selection prefers the parallel set; an explicit path is single-story.
 - **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project
-  skills → warn + ask (`/ck-code:team` first) rather than proceed silently.
+  skills → warn + ask (`/ck-code:team` first) rather than proceed silently, unless
+  `experts: none` is set.
 - **1.7** — effort route fixed from `size:` and announced; it scales ceremony only, never a
   guarantee, and escalates LEAN → FULL when the work outgrows its size.
-- **3.5** — plan, base branch and (first story of an epic only) integration level confirmed in one gate before any code; the base is **resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`.
+- **3.5** — plan and base branch confirmed in one gate before any code; the base is **derived from the plan's `integration:` (`ck-plan get`), resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`. The level is never asked here.
 - **3.3 + 6.1** — SOLID applied at design, verified after refactor (lean or full per 1.7).
 - **4** — failing tests before implementation (trivial boilerplate exempt).
 - **5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
 - **7** — QA delegated to `qa-validator`; iteration cap = 3, then escalate.
 - **8.5** — manual-test gate; bug-fix loop cap = 3.
+- **8.6** — `files:` records what the story actually touched (`ck-story files`) in the same
+  phase that flips its status.
 - **1.3.5 (Bug-Fix Mode)** — implement only the recorded Fix Plan; the failing repro test is
   the RED target; restore `prior_status`, never an Implementation Summary. `status: bug`
   without a `DIAGNOSED` Bug Report → STOP (run `/ck-code:fix`).
 - **P1 / P3 (PARALLEL MODE)** — `$TARGET` is resolved, created, checked out and verified
-  before any dispatch, and it is **never the trunk**: a `story`-level epic escalates to
-  `integration: epic` through the P3 question, or the run cancels. This mode never commits or
+  before any dispatch, and it is **never the trunk**: a `story`-level plan switches to
+  `integration: epic` (`ck-plan set`) through the P3 question, or the run cancels. This mode never commits or
   merges on `main`/`develop`/`<trunk>`.
 - **P3 / P4 / P5 / P7 (PARALLEL MODE)** — team gate asked once per batch; every story
   implemented by an agent, worktrees only for waves of ≥ 2; "done" derived from git; nothing
@@ -651,12 +675,15 @@ dirty for the orchestrator. Commit messages are conventional
 ## RULES
 
 - **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`
-  or `FEATURE_INDEX.md` — run `ck-story set <story-path> status=<value>`, which writes the field and regenerates
+  or `EPICS_INDEX.md` — run `ck-story set <story-path> status=<value>`, which writes the field and regenerates
   in the same phase (one atomic mutation; [`github-projects.md`](../../references/github-projects.md)).
-- **`EPIC.md` is the one file this skill edits directly, and only its `integration:` field** —
-  written at 3.5 (or by the PARALLEL MODE P3 escalation). `ck-story` refuses it, so that edit
-  is followed by `ck-index tasks/<Plan>` + `ck-project sync tasks/<Plan>` in the **same phase**;
-  its `pr:`/`delivery:` fields belong to `ship`, and it has no story table or checklist to touch.
+- **Never stage or commit a generated view** — `STORIES_INDEX.md` and `EPICS_INDEX.md` are
+  gitignored and disposable; a stale one is regenerated on the next read. Commits carry story
+  files (and `OVERVIEW.md` when the level changed), never views.
+- **Never edit `EPIC.md` or `OVERVIEW.md` by hand** — the plan's level changes only through
+  `ck-plan set tasks/<Plan> integration=<level>` (build writes it only at the PARALLEL MODE P3
+  switch; 3.5 names `/ck-code:config integration` instead), followed by `ck-project sync tasks/<Plan>` in the **same phase**; `pr:`/`delivery:`
+  belong to `ship`.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
@@ -671,8 +698,9 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never treat the checked-out branch as the base** — resolve it (3.5), show it with its
   reason, and offer the alternatives; the launch branch is a legal base only when it is the one
   that resolved ([`branch-topology.md`](../../references/branch-topology.md#start-point--the-base-a-new-story-branch-is-cut-from)).
-- **Never keep work off `<trunk>` by picking a different base** — escalate the epic's
-  `integration:` level instead, or `ship` targets `<trunk>` from the stored level regardless.
+- **Never keep work off `<trunk>` by picking a different base** — name
+  `/ck-code:config integration tasks/<Plan> <level>` and stop, or `ship` targets `<trunk>` from
+  the stored level regardless.
 - **Never edit a test to force GREEN.**
 - **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
   wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner
@@ -693,14 +721,16 @@ is the rest of this contract; these four are the traps it does not carry.
 - **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
   names, statuses, SHAs, and structured returns only. Every implementation is a sub-agent.
 - **Never let a dispatched agent run `ck-index` or edit a generated index** — it changes
-  only its own story's frontmatter; this context regenerates once per wave after merge.
+  only its own story's frontmatter (`status`, `files:`); this context runs `ck-index` and
+  `ck-project sync` once per wave after merge and commits no view.
 - **Never span epics in one run** — every wave and every batch is scoped to a single epic.
 
 ## NEXT
 
 After manual-test PASS (8.5), run `/ck-code:ship <story-path>` to commit, open the PR, and
-update the linked GitHub Issue — once per story, or per merged branch after a parallel run.
-If more stories remain, follow with `/ck-code:track next`.
+update the linked GitHub Issue. After a PARALLEL MODE run the stories sit merged on an epic
+branch, so P9 hands off (one ask) to `/ck-code:ship --promote --epic NN` — never ship each
+story. If more stories remain, follow with `/ck-code:track next`.
 
 **Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
 `/goal "all acceptance criteria in <story> pass and the suite is green"` autonomises the

@@ -3,11 +3,13 @@
 # Claude Code status bar — the active story (derived from the git branch) plus
 # the counts of the plan that branch belongs to.
 #
-# The branch picks the plan, never the directory alone: story ids and epic numbers
-# are unique per plan, not across plans, so a `tasks/` holding several features (or a
-# multi-repo project whose code repo carries a stale `tasks/` of its own) can offer
-# several answers for one branch. A plan is used only when the branch confirms it, and
-# a branch no visible plan owns renders nothing at all.
+# The branch picks the plan, never the directory alone: a multi-repo project whose code
+# repo carries a stale `tasks/` of its own can offer several answers for one branch. A
+# plan is used only when the branch confirms it, and a branch no visible plan owns
+# renders nothing at all.
+#
+# The views are not committed. The session-start hook regenerates them, so a checkout
+# that has none yet simply renders nothing until then.
 #
 # Costs zero tokens by design. The status bar is rendered by the terminal, never
 # by the model, so this buys legibility without spending output tokens or
@@ -105,11 +107,11 @@ repo_dir=$PWD
 # Active story: derived from the branch name, never stored (branch-topology.md).
 # story/<EE>-<SS>-<slug> and fix/<EE>-<SS>-<slug> both carry the id outright.
 # epic/<NN>-<slug> carries only the epic, so the story is resolved from the index:
-# an epic branch is where an `integration: epic|feature` session sits while its
-# stories are built, and it names no story of its own.
+# an epic branch is where an `integration: epic` session sits while its stories are
+# built, and it names no story of its own.
 #
 # The trailing slug is kept too: with several plans in play the id alone is ambiguous
-# (every feature has an epic 02), and the slug is the only part of the branch name that
+# (every plan has an epic 02), and the slug is the only part of the branch name that
 # says WHICH one.
 story_id=""
 epic_id=""
@@ -230,14 +232,14 @@ if [ -n "$story_id" ] || [ -n "$epic_id" ]; then
 $roots
 EOF
   # The branch names ck-code work that no visible plan owns. Say nothing rather than
-  # answer with another feature's scoreboard — the plan is simply not in this checkout,
+  # answer with another plan's scoreboard — the plan is simply not in this checkout,
   # and a confident wrong number is worse than an empty status bar.
   [ "$best" -gt 0 ] || exit 0
 fi
 
 if [ -n "$plan" ]; then
-  # Counts are the FEATURE's, not the project's: with the plan known, folding in every
-  # other feature ever planned would answer a question nobody asked.
+  # Counts are the PLAN's, not the project's: with the plan known, folding in every
+  # other plan ever planned would answer a question nobody asked.
   set -- "$plan/STORIES_INDEX.md"
 else
   # No ck-code branch to go on (`main`, a detached HEAD): nothing identifies one plan,
@@ -254,18 +256,18 @@ case "$story_id" in
   *)   epic_ctx="$epic_id" ;;
 esac
 
-# Names, not just numbers. `epic 02` is only meaningful once you know WHICH feature's
-# epic 02 it is — the exact question a plan holding several features raises, and one no
+# Names, not just numbers. `epic 02` is only meaningful once you know WHICH plan's
+# epic 02 it is — the exact question a plan holding several plans raises, and one no
 # branch name answers on a story branch. Both are folder names, so they cost no file read.
 #
 # Shown only when a plan was resolved: without one the numbers are project-wide and
-# there is no single feature to name.
+# there is no single plan to name.
 feat_name=""
 epic_name=""
 if [ -n "$plan" ]; then
   feat_name=${plan##*/}
-  # Strip the date stamp and the `feature-` prefix every plan folder carries: filing
-  # metadata, identical on every row, and never what distinguishes one feature.
+  # Strip the date stamp (and the `feature-` prefix older plan folders carry): filing
+  # metadata, identical on every row, and never what distinguishes one plan.
   case "$feat_name" in
     [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_*) feat_name=${feat_name#*_} ;;
     [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*) feat_name=${feat_name#????-??-??-} ;;
@@ -365,10 +367,10 @@ record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epi
       if (st == "DONE") edn++
     }
 
-    # Per-epic tallies, so the feature can be reported in EPICS rather than in stories.
-    # A story count spanning a whole feature answers "how much work is left" with a
-    # number too coarse to act on; an epic is the unit a feature is actually planned,
-    # branched, reviewed and shipped in, so `1/5` says where the feature stands.
+    # Per-epic tallies, so the plan can be reported in EPICS rather than in stories.
+    # A story count spanning a whole plan answers "how much work is left" with a
+    # number too coarse to act on; an epic is the unit a plan is actually planned,
+    # branched, reviewed and shipped in, so `1/5` says where the plan stands.
     ep = id; sub(/-.*$/, "", ep)
     if (ep != "") {
       if (!(ep in eptot)) epn++
@@ -407,7 +409,7 @@ record=$(awk -F'|' -v want="$story_id" -v want_epic="$epic_id" -v epic_ctx="$epi
     # character, so bash `read` would collapse the empty fields a branch with no
     # active story legitimately produces, shifting every field after it.
     US = sprintf("%c", 31)
-    # `dn+0`, not `dn`: a feature whose stories are all still open never incremented it,
+    # `dn+0`, not `dn`: a plan whose stories are all still open never incremented it,
     # and an uninitialised awk variable prints as the empty string — which reads as the
     # broken `/12 ✓` rather than `0/12 ✓`. Feature-scoped counts hit this constantly;
     # project-wide ones almost never did.
@@ -430,31 +432,32 @@ EOF
 # "am I done" signal that otherwise only the model knows. Ticked / total, like every level
 # above it, so `10/11` reads as nearly done where a bare `1 ☐` had to be interpreted.
 #
-# The ratio only, never a percentage. Percentages are the FEATURE's and the EPIC's, where
+# The ratio only, never a percentage. Percentages are the PLAN's and the EPIC's, where
 # they summarise many rows and the reader has no denominator of their own; over 8 criteria
 # `5/8` is already the finer statement, and the percentage was a second rendering of the
 # two numbers beside it.
 crit=""
 if [ -n "$wfile" ] && [ -f "$wdir/$wfile" ]; then
+  # Only the `## Acceptance Criteria` section: Implementation Tasks carry checkboxes too,
+  # and counting them reported 0/3 for a story with two criteria.
   crit=$(awk '
+    /^## / { inac = ($0 ~ /^## +Acceptance Criteria/); next }
+    !inac { next }
     /^[[:space:]]*-[[:space:]]*\[[xX]\]/ { d++ }
     /^[[:space:]]*-[[:space:]]*\[ \]/    { o++ }
     END { t = d + o; if (t > 0) printf "%d/%d", d+0, t }' \
     "$wdir/$wfile" 2>/dev/null)
 fi
 
-# Integration level of the epic in context (branch-topology.md). Only `epic` and
-# `feature` are shown — `story` (the default, and an absent key) merges straight to
-# the default branch, which is what everyone already assumes.
+# Integration level of the plan in context (branch-topology.md), from its OVERVIEW.md
+# record. Only `epic` and `plan` are shown — `story` (the default, and an absent key)
+# merges straight to the trunk, which is what everyone already assumes.
 integ=""
-if [ -n "$epic_ctx" ] && [ -n "$plan" ]; then
-  # Read from the resolved plan only — an epic number means nothing outside it.
-  for e in "$plan"/epics/"$epic_ctx"_*/EPIC.md; do
-    [ -f "$e" ] || continue
-    integ=$(awk '/^integration:[[:space:]]*(epic|feature)[[:space:]]*$/ {
-      sub(/^integration:[[:space:]]*/, ""); gsub(/[[:space:]]/, ""); print; exit }' "$e" 2>/dev/null)
-    [ -n "$integ" ] && break
-  done
+if [ -n "$plan" ] && [ -f "$plan/OVERVIEW.md" ]; then
+  integ=$(awk 'NR==1 && $0!="---" { exit } NR==1 { next } $0=="---" { exit }
+    /^integration:[[:space:]]*(epic|plan)[[:space:]]*$/ {
+      sub(/^integration:[[:space:]]*/, ""); gsub(/[[:space:]]/, ""); print; exit }' \
+    "$plan/OVERVIEW.md" 2>/dev/null)
 fi
 
 # Live fan-out: worktrees beyond the main one are PARALLEL MODE implementers, which are
@@ -473,7 +476,7 @@ fi
 # fan-out worktree, where the session is not the first record.
 #
 # Only worktrees on a `story/` or `fix/` branch count: those are implementers. A checkout
-# parked on an epic or feature branch is somewhere you work, not something running, and
+# parked on an epic or plan branch is somewhere you work, not something running, and
 # counting it would report a fan-out that is not happening.
 wt_ids=""
 wt_extra=0
@@ -526,12 +529,12 @@ SEP="${DIM} · ${RESET}"
 # of once per segment:
 #
 #   dim    structure — the `ck-code` mark, the `epic`/`⚙` labels, separators
-#   cyan   identity  — what a thing is called: feature, epic, story id, story title
+#   cyan   identity  — what a thing is called: plan, epic, story id, story title
 #   green  progress  — a done/total ratio, wherever it appears
 #   dim    percentage — always, so it reads as the ratio's echo and never competes with it
 #   yellow / red  status only — `⚡` open, `✗` bug, and the story glyph
 #
-# Percentages appear at the FEATURE and EPIC levels only — the two whose ratios summarise
+# Percentages appear at the PLAN and EPIC levels only — the two whose ratios summarise
 # many rows. Below them the ratio's own numbers are small enough to read directly.
 #
 # Colour therefore says what KIND of value you are looking at, never which level it came
@@ -541,31 +544,31 @@ SEP="${DIM} · ${RESET}"
 # The line reads top-down, one level of the plan per segment, each counted in the unit
 # below it and each narrower than the last:
 #
-#   ck-code <feature> <epics> · epic <NN> <name> <stories> · <story> <criteria> · ⚙ <live>
+#   ck-code <plan> <epics> · epic <NN> <name> <stories> · <story> <criteria> · ⚙ <live>
 #
 # Nothing jumps levels and nothing repeats what a wider segment already said, so scanning
-# left to right answers "which feature, which epic, which story, how far" in that order —
+# left to right answers "which plan, which epic, which story, how far" in that order —
 # the order the questions are actually asked in.
 out="${DIM}ck-code${RESET} "
 
-# A level's numbers: green ratio, dim percentage. The `✓` the feature ratio used to carry
+# A level's numbers: green ratio, dim percentage. The `✓` the plan ratio used to carry
 # is gone — with every level reading done/total it marked nothing the others lacked.
 ratio() { printf '%s' "${GRN}$1/$2${RESET}${DIM} $(($1 * 100 / $2))%${RESET}"; }
 
-# 1. FEATURE, counted in epics. Everything after it is scoped to this one plan.
+# 1. PLAN, counted in epics. Everything after it is scoped to this one plan.
 if [ -n "$feat_name" ]; then
   out="${out}${CYN}${feat_name}${RESET}"
-  # The percentage is the feature's STORY progress, deliberately finer than the epic
+  # The percentage is the plan's STORY progress, deliberately finer than the epic
   # ratio it follows — it moves inside an epic, where `1/5` cannot.
   [ "${epn:-0}" -gt 0 ] && out="${out} ${GRN}${epdone}/${epn}${RESET}${DIM} $((dn * 100 / total))%${RESET}"
-  # The feature's own health, kept at the level it describes: somewhere in this plan N
+  # The plan's own health, kept at the level it describes: somewhere in this plan N
   # stories are open and N are bugs. Attached, not separated, so it cannot be read as
   # belonging to the epic or the story segment further right.
   [ "${ip:-0}"  -gt 0 ] && out="${out} ${YEL}${ip}⚡${RESET}"
   [ "${bug:-0}" -gt 0 ] && out="${out} ${RED}${bug}✗${RESET}"
   out="${out}${SEP}"
 else
-  # No feature resolved (`main`, a detached HEAD): there is no one plan to report in
+  # No plan resolved (`main`, a detached HEAD): there is no one plan to report in
   # epics, so project-wide story counts are all there is to say.
   out="${out}$(ratio "$dn" "$total")"
   [ "${ip:-0}"  -gt 0 ] && out="${out} ${YEL}${ip}⚡${RESET}"
@@ -606,10 +609,10 @@ if [ -n "$integ" ]; then
   if [ -n "$epic_id" ]; then
     # Already sitting on the epic branch: naming it as the target is noise. Only the
     # level above it — where the epic PR will go — is news worth a segment.
-    [ "$integ" = feature ] && out="${out}${DIM}→${RESET} ${CYN}feat${RESET}${SEP}"
+    [ "$integ" = plan ] && out="${out}${DIM}→${RESET} ${CYN}plan${RESET}${SEP}"
   else
     out="${out}${DIM}→${RESET} ${CYN}epic/${epic_ctx}${RESET}"
-    [ "$integ" = feature ] && out="${out}${DIM} → ${RESET}${CYN}feat${RESET}"
+    [ "$integ" = plan ] && out="${out}${DIM} → ${RESET}${CYN}plan${RESET}"
     out="${out}${SEP}"
   fi
 fi

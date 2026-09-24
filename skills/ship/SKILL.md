@@ -1,9 +1,9 @@
 ---
 name: ship
-description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` opens the PR for a completed epic or feature; `--integration` sets an epic's integration level; `--to-issues [--mode feature|epics|stories]` instead publishes a `tasks/` plan to GitHub Issues and writes each issue number back into frontmatter. Argument is a story path, or a `tasks/<slug>/` path for `--to-issues`. Issue work needs `gh` authenticated.
-argument-hint: "[path-to-story.md] | --promote [--epic NN] | --integration <level> | --to-issues [tasks-folder] [--mode feature|epics|stories]"
+description: Use when finished work needs committing and its PR and linked GitHub Issue opened or updated after a story or fix — or for any standalone commit. `--promote` promotes a completed epic (its PR, or its merge into the plan branch) or opens the PR for a whole plan. Argument is an optional story path, or `--promote` with `--epic NN` or a `tasks/<plan>` path. Issue work needs `gh` authenticated.
+argument-hint: "[path-to-story.md] | --promote [--epic NN | tasks/<plan>]"
 effort: medium
-allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(ck-issues*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(find*) Bash(grep*) Bash(ls*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -12,16 +12,16 @@ hooks:
           command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
-# Ship — Commit, PR, Issue Update & Plan Publishing
+# Ship — Commit, PR & Issue Update
 
-Ship delivers finished code (commit + PR + issue updates), and — in `--to-issues`
-mode — publishes a `tasks/` plan to GitHub Issues. GitHub-issue linkage is by the
-story/epic frontmatter `issue:` number (see [`data-model.md`](../../references/data-model.md)),
-never by matching issue titles.
+Ship delivers finished code: commit + PR + issue updates, and with `--promote` the
+promotion of a finished epic or plan. GitHub-issue linkage is by the story/epic/plan frontmatter
+`issue:` number (see [`data-model.md`](../../references/data-model.md)), never by matching
+issue titles.
 
 **CRITICAL RULE — No AI references in any artefact.** Full rule in [`no-ai-references.md`](../../references/no-ai-references.md): no co-author tags, no "Generated with…" lines, no Claude/AI/assistant mentions in commits, PRs, comments, branch names, or any GitHub output. Absolute and non-overridable.
 
-References: [examples.md](references/examples.md) (worked ship walkthrough) · [pr-templates.md](references/pr-templates.md) (PR bodies + commands) · [issue-templates.md](references/issue-templates.md) (issue comment/close/checklist) · [issue-bodies.md](references/issue-bodies.md) (what `ck-issues` publishes per mode, + the P5 summary shape).
+References: [examples.md](references/examples.md) (worked ship walkthrough) · [pr-templates.md](references/pr-templates.md) (PR bodies + commands) · [issue-templates.md](references/issue-templates.md) (issue comments + checklist).
 
 ## ROUTING CHECK (do first)
 
@@ -29,7 +29,8 @@ This skill **commits finished work**, opens or updates a PR, and updates the lin
 issue. If the request is actually something else, STOP and recommend the better skill:
 
 - The story isn't implemented yet → `/ck-code:build` or `/ck-code:fix` first.
-- Publishing the *plan* (not code) into GitHub Issues → this skill's `--to-issues` mode.
+- Publishing the *plan* (not code) into GitHub Issues → `/ck-code:plan --publish`.
+- Changing how a plan's work merges (story / epic / plan) → `/ck-code:config integration <tasks/plan> <level>`.
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:track next` or `/ck-code:explain`.
@@ -38,14 +39,11 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 Parse `$ARGUMENTS`:
 
-- Contains `--to-issues` → **PUBLISH MODE** (bottom half of this file). Also parse an
-  optional `tasks/<slug>/` path and `--mode feature|epics|stories` (any order).
+- Contains `--to-issues` or `--integration` → both left this skill in 7.0. Say where they
+  went (`/ck-code:plan --publish`, `/ck-code:config integration <tasks/plan> <level>`) and
+  stop.
 - Contains `--promote` → **PROMOTE MODE** (§6.5 on demand). Also parse an optional
-  `--epic NN`. Mutually exclusive with `--to-issues` — if both appear, say so and stop.
-- Contains `--integration <story|epic|feature>` → write that level to the epic's `EPIC.md`
-  and stop (optionally scoped by `--epic NN`). Writes the field only: creates no branch and
-  moves nothing. A level change is **not** retroactive — it applies from the next story
-  onward; say so when stories are already merged.
+  `--epic NN` or `tasks/<plan>` path.
 - Otherwise → **SHIP MODE** (default). `$ARGUMENTS` may be a story-file path:
   - **Provided** → read the story for its frontmatter `issue:` and context.
   - **Empty** → detect context from branch name or recent git activity; if none, run as a standalone commit (STANDALONE MODE).
@@ -58,16 +56,16 @@ gate passes. Drop a phase that mode routing skips; never leave it pending. A lon
 view into where it is comes from this list, so update it as you go and never batch the
 updates to the end.
 
-## PHASE 0: VERSION GATE (hard gate — both modes)
+## PHASE 0: VERSION GATE (hard gate — every mode)
 
 The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
-this PASSes.
+Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
+or newer layout, offers `/ck-code:migrate` or a plugin update, and stamps. Never read or
+write project state before this PASSes.
 **Exception:** a SHIP-MODE standalone commit in a repo with **no `tasks/` directory** is
 not a ck-code project — skip the gate and do not stamp; just commit.
 
@@ -77,7 +75,7 @@ not a ck-code project — skip the gate and do not stamp; just commit.
 
 ## PHASE 1: BRANCH & PR CHECK
 
-**Goal:** ensure work is on a feature branch and detect any existing PR — never commit directly to `main` or `develop`.
+**Goal:** ensure work is on a work branch and detect any existing PR — never commit directly to `main` or `develop`.
 
 ### 1.1 Resolve current branch
 
@@ -85,7 +83,7 @@ not a ck-code project — skip the gate and do not stamp; just commit.
 git branch --show-current
 ```
 
-- **Feature branch** (`story/02-01-*`, `fix/02-01-*`, `feat/*`, …): continue to 1.2.
+- **Work branch** (`story/02-01-*`, `fix/02-01-*`, `epic/*`, `plan/*`, …): continue to 1.2.
 - **Protected branch (`main`, `develop`, …):** STOP before staging. AskUserQuestion —
   "You are on a protected branch. How to proceed?" with options **Create branch**
   (propose `story/EE-SS-<slug>`, `fix/EE-SS-<slug>`, or `<type>/<slug>`), **Rename**
@@ -108,15 +106,22 @@ Store as `existing_pr`:
 
 If `gh` is missing or unauthenticated, treat as "no existing PR" and continue.
 
-### 1.3 Resolve branch topology
+### 1.3 Resolve branch topology (runs after 2.2)
 
-Read the parent epic's `EPIC.md` frontmatter `integration:` (absent or empty ≡ `story`),
-then resolve `parent` and `pr_base` per
-[`branch-topology.md`](../../references/branch-topology.md#resolution) — one file read plus
-one `git branch --list`. Do not restate the rule here.
+It needs the story's plan, so run it once 2.2 has resolved the story and `tasks/<plan>/` —
+never before. Read the plan record — the integration level is a **plan** property, never an
+epic's:
 
-At `story` the parent is the default branch and Phases 5–7 behave exactly as before.
-**STANDALONE MODE skips this step** — no story means no epic, so no topology.
+```bash
+ck-plan get tasks/<plan> integration branch
+```
+
+Empty `integration:` ≡ `story`. Then resolve `parent` and `pr_base` per
+[`branch-topology.md`](../../references/branch-topology.md#resolution) — one call plus one
+`git branch --list`. Do not restate the rule here.
+
+At `story` the parent is the trunk and Phases 5–7 open one PR per story.
+**STANDALONE MODE skips this step** — no story means no plan, so no topology.
 
 ## PHASE 2: GATHER CONTEXT
 
@@ -137,18 +142,21 @@ Find the linked story in this order:
 
 1. **`$ARGUMENTS`** — read the story file if a path was given.
 2. **Branch name** — parse `story/EE-SS-*` or `fix/EE-SS-*`, then locate the story at
-   `tasks/<slug>/epics/NN_*/stories/SS_*.md` (`NN`=`EE`, `SS`=story number).
+   `tasks/<plan>/epics/NN_*/stories/SS_*.md` (`NN`=`EE`, `SS`=story number).
 3. **Recent files** — match modified files against story frontmatter `files:` lists.
 
 If found, extract from frontmatter: `id` (EE-SS), `title`, `epic`, `status`, `issue`,
-and the plan root `tasks/<slug>/`. From the body: acceptance criteria and the
+and the plan root `tasks/<plan>/`. From the body: acceptance criteria and the
 Implementation Summary / Bug Resolution for the plain-language commit copy.
+
+With the story and its plan resolved, run 1.3 now. No story found → STANDALONE MODE, and
+1.3 never runs.
 
 ### 2.3 Resolve linked GitHub issues (by number — never by title)
 
 - **Story issue:** the story frontmatter `issue:` number. Empty → no story issue linked;
   do commit + PR only and say so. Never search the repo by issue title.
-- **Epic issue:** read the parent epic's `tasks/<slug>/epics/NN_*/EPIC.md` frontmatter
+- **Epic issue:** read the parent epic's `tasks/<plan>/epics/NN_*/EPIC.md` frontmatter
   `issue:` number. Empty → no epic checklist to update.
 
 Store `story_issue` and `epic_issue` (both may be empty).
@@ -157,36 +165,41 @@ Store `story_issue` and `epic_issue` (both may be empty).
 
 `git log --oneline -10` — match the repo's existing commit-message style.
 
-### 2.5 Reconcile merged PRs before staging (skip in STANDALONE MODE)
+### 2.5 Reconcile before staging (skip in STANDALONE MODE)
 
 A PR merges on github.com with no skill running, so the `delivery: pr → merged` flip is
-always discovered later. Run it **here**, before 3.1 picks files, and the flip rides the
-commit this run was already making instead of needing a branch and PR of its own:
+always discovered later. Run the one full pass **here**, before 3.1 picks files, and the
+flip rides the commit this run was already making instead of needing a branch and PR of
+its own:
 
 ```bash
-ck-project sync --dry-run          # what GitHub says changed since the last sync
-ck-project sync                    # apply it; also runs ck-index
+ck-project reconcile tasks/<plan>
 ```
 
-Skip both when `tasks/SETTINGS.md` is absent or `github_issues` is not `true`. Never
-fatal: report a failure and continue to 3.1 — a board that is down must not block a commit.
+It runs with or without a board: delivery from recorded PRs and from git always, card
+moves only when a board is configured, and the GitHub issue repair only when
+`github_issues: true`. Never fatal: report a failure and continue to 3.1 — a board or a
+network that is down must not block a commit.
 
-`sync` writes two frontmatter fields and no more: `delivery:`, and the `pr:` it
-materializes onto a story that inherits its epic's PR. Both are derived from the PR number
-already in the plan, so they need no confirmation of their own — 3.1 stages them and 3.3
-shows them.
+The frontmatter it writes is derived: `delivery:`, and the `pr:` it materializes onto a
+story that inherits its epic's or plan's PR. Both come from a PR number already in the
+plan, so they need no confirmation of their own — 3.1 stages them and 3.3 shows them.
 
 ## PHASE 3: PREPARE COMMIT
 
 ### 3.1 Select files to stage (no prompt yet)
 
 Run `git status`. **Auto-select** the story's modified/new source files, test files, the
-story-file frontmatter change, and any `tasks/` file 2.5 just rewrote (story/`EPIC.md`
-frontmatter, `STORIES_INDEX.md`, `FEATURE_INDEX.md`) — list those under a **Plan** group so
-the user sees plan bookkeeping travelling with the code. **Never stage** `.env`,
-credentials, secrets, `.DS_Store`, or IDE configs. Build the grouped lists (Source / Tests /
-Docs / Plan / Excluded) but do **not** ask yet — 3.3 confirms the file set and the message
-in one round-trip.
+story-file frontmatter change, and any story, `EPIC.md` or `OVERVIEW.md` file 2.5 just
+rewrote — list those under a **Plan** group so the user sees plan bookkeeping travelling
+with the code. The generated views (`STORIES_INDEX.md`, `EPICS_INDEX.md`) are gitignored
+and never staged.
+
+**Never stage a likely secret or local noise.** Move each to an **Excluded** group with
+its reason: `.env*` (except `*.example`), `*.pem`, `*.key`, `id_rsa*`, `credentials*`
+("likely secret"), and `.DS_Store` or IDE config ("local noise"). Build the grouped lists
+(Source / Tests / Docs / Plan / Excluded) but do **not** ask yet — 3.3 confirms the file
+set, the message and the PR in one round-trip.
 
 **When 2.5's flip is the *only* change** (a merge landed, no code in flight), there is
 nothing to ride along. Do not open a PR for it: offer a single commit on the current branch
@@ -201,22 +214,39 @@ Subject stays in **conventional commits** (`feat`, `fix`, `refactor`, `test`, `d
 - **Subject:** `<type>(<scope>): <imperative summary, ≤70 chars>`
 - **Body:** what users can now do, see, or notice. No story IDs, epic names, AC counts,
   test tallies, class/function names, or file paths.
-- **Footer:** `Closes #<story_issue>` when a story issue is linked.
+- **Footer:** the output of `ck-project closes <story-path>` when a story issue is linked
+  (5.B step 4) — never typed by hand.
 
 Full templates: [examples.md](references/examples.md).
 
-### 3.3 Confirm files + message (ONE batched gate)
+### 3.3 The one confirmation (files + message + PR)
 
-Show a preview (Branch / Files to stage grouped per 3.1 / full Message / Linked issues),
-then ask **both** questions in a **single `AskUserQuestion` call** — never two sequential
-calls:
+**Resolve the PR base first — never ask for it.** `<trunk>` is resolved exactly as
+[`branch-topology.md`](../../references/branch-topology.md#resolution) orders it
+(`trunk_branch` → `origin/HEAD` → the `gh` repo default → `main`); do not restate it. At
+level `epic`/`plan` the story's target is `parent` (1.3), not the trunk.
 
-1. "Stage these files?" → **Stage all**, **Adjust** (user drops/adds specific files).
-2. "Commit this message?" → **Commit**, **Edit message**, **Abort**.
+Show a preview — Branch / Files grouped per 3.1 (Excluded with reasons) / full Message /
+Linked issues — then ask **one** `AskUserQuestion`, "Ship this?":
 
-Resolve the answers together: `Abort` stops regardless of Q1. On `Adjust` and/or `Edit
-message`, apply the revisions and re-ask the same batched pair once — the happy path
-(Stage all + Commit) costs one round-trip, not two.
+1. **(Recommended)** at level `story`: `Commit and open a PR into <trunk>` — or
+   `Commit, push and update PR #<n>` when 1.2 found one. At level `epic`/`plan`:
+   `Commit and merge into <parent>`.
+2. `Commit only` — the work stays on this branch.
+3. `Edit the message`
+4. `Abort`
+
+A change to the file set comes back as the free-text answer: apply it, show the new
+preview, and re-ask the same question once. **Edit the message** does the same for the
+message. At level `epic`/`plan` a free-text answer may also ask for a story PR into
+`<parent>` instead of the merge (5.B with `--base <parent>`, keeping the story branch). The
+happy path costs one round-trip.
+
+Only with no `trunk_branch`, a `develop` branch present, and a default that is not
+`develop` (`git rev-parse --verify --quiet origin/develop`) is the PR base genuinely
+ambiguous — then add a **second question to the same call** ("PR base?" `<default>` /
+`develop`) and suggest setting `trunk_branch` via `/ck-code:config trunk <branch>` so it
+never returns. Never a second call.
 
 ## PHASE 4: COMMIT
 
@@ -240,35 +270,20 @@ Present hash, branch, file count, first message line.
 
 ## PHASE 5: PR (CREATE OR UPDATE)
 
-### 5.1 Route by existing-PR detection
+### 5.1 Route by the 3.3 answer
 
-Route on the Phase 1.3 level first, then on `existing_pr` from Phase 1.2.
-
-**Level `story` or empty** — unchanged: found → **5.A** (push + update); none → **5.B** (create).
-
-**Level `epic` or `feature`** — the story merges into `parent` instead of opening its own PR
-into the default branch. Ask **one** question:
-
-```
-Q: "Story <EE>-<SS> is committed. What next?"
-   > Merge into <parent>            local --no-ff merge, delete the story branch
-     Merge + push <parent>
-     Open a story PR into <parent>
-     Leave on story branch
-```
-
-Commands, the clean-tree guard and the conflict path are in
-[`branch-topology.md`](../../references/branch-topology.md#story-merge) — follow it exactly;
-do not improvise a merge here. **Open a story PR** runs 5.B with `--base <parent>` and
-**keeps** the story branch (the open PR needs it). An existing open PR for the story branch
-still routes to 5.A, whose base is already fixed.
+- **Commit only** → Phase 6.
+- **Commit and open a PR** → 5.B. **Commit, push and update PR #n** → 5.A.
+- **Commit and merge into `<parent>`** (level `epic`/`plan`) → the story merge in
+  [`branch-topology.md`](../../references/branch-topology.md#story-merge): commands, the
+  clean-tree guard and the conflict path — follow it exactly; do not improvise a merge
+  here. An existing open PR for the story branch still routes to 5.A, whose base is
+  already fixed.
 
 ### 5.A Update existing PR
 
-1. AskUserQuestion — show PR (number, title, URL): "Push to `<branch>` and update PR
-   #`<n>`?" options **Update PR**, **Skip push** (→ Phase 6), **New PR** (→ 5.B).
-2. `git push origin "$(git branch --show-current)"`.
-2b. Record the pointer when the story does not already carry it — a PR opened by hand, or
+1. `git push origin "$(git branch --show-current)"`.
+2. Record the pointer when the story does not already carry it — a PR opened by hand, or
    before this step existed, still needs `pr:` or the story can never reach Done:
 
    ```bash
@@ -295,29 +310,12 @@ still routes to 5.A, whose base is already fixed.
 
 ### 5.B Create new PR
 
-1. **Resolve the base branch — never ask for it.** The project answers first, the repo
-   second ([`branch-topology.md`](../../references/branch-topology.md#resolution)):
-
-   ```bash
-   ck-project show | grep trunk_branch          # tasks/SETTINGS.md trunk_branch:
-   gh repo view --json defaultBranchRef -q .defaultBranchRef.name
-   ```
-
-   A non-empty `trunk_branch` **is** the base — ask nothing. Otherwise use the repo
-   default, falling back to `main` when `gh` fails. Only with no `trunk_branch`, a
-   `develop` branch present, and a default that is not `develop`
-   (`git rev-parse --verify --quiet origin/develop`) is the target genuinely ambiguous —
-   then offer it inside the single question below, and suggest setting `trunk_branch` so
-   the question never returns.
-2. AskUserQuestion — one call, "Open a PR into `<base>`?": **Yes** (create now),
-   **Commit only** (→ Phase 6), **Push, PR later** (push branch, skip PR → Phase 6),
-   **Different base** (only when step 1 found a genuine ambiguity — then ask for the base).
-3. `git push -u origin <branch-name>`.
-4. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
-   — no story IDs, AC checkboxes, or test tallies. Bodies (feature / bug fix) + the exact
-   `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
-
-   **The `Closes` footer is generated, never written by hand** — GitHub closes an issue on
+1. The base is the one 3.3 resolved and the user approved — never ask again.
+2. `git push -u origin <branch-name>`.
+3. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
+   — no story IDs, AC checkboxes, or test tallies. Bodies (new behaviour / bug fix) + the
+   exact `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
+4. **The `Closes` footer is generated, never written by hand** — GitHub closes an issue on
    merge only when the PR body names it, and an author-composed footer is exactly what let
    a promotion PR close every issue once, all but the epic issue the next time, and none
    the time after:
@@ -337,14 +335,14 @@ still routes to 5.A, whose base is already fixed.
 
    Leave `status` alone; the two axes are independent
    ([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)),
-   and `ck-story` regenerates the views and syncs the card in the same call.
+   and `ck-story` regenerates the views and syncs the card in the same call. In Review is
+   derived from `delivery: pr` like every other column; there is no command that pushes a
+   card there by hand. A story whose PR is never recorded here is stranded in *Ready to
+   Ship* forever.
 
-   Do **not** push the card with `ck-project set … in_review`. In Review is now derived
-   from `delivery: pr` like every other column, so the Phase 6.1 sync places it. A story
-   whose PR is never recorded here is stranded in *Ready to Ship* forever.
-
-   At level `epic`/`feature` the PR belongs to the epic, so write `pr:`/`delivery: pr` to
-   that `EPIC.md` instead — its stories inherit it.
+   A story PR opened into `<parent>` at level `epic`/`plan` (the free-text choice in 3.3)
+   records nothing: it never reaches the trunk, and the epic or plan PR is the anchor its
+   stories inherit (§6.5).
 
 ## PHASE 6: MARK DONE & UPDATE ISSUES
 
@@ -368,21 +366,12 @@ ck-story set <story-path> status=done
 read true. An inferred link is a guess about which story the commit belongs to; say which
 story was inferred in Phase 7 and leave its `status` untouched.
 
-Never cell-edit an index or flip an EPIC checkbox for status.
+Never cell-edit a view or flip an EPIC checkbox for status.
 
-**Always regenerate and sync, even when the status write was skipped** — Phase 5 wrote
-`pr:`/`delivery:`, so frontmatter changed on every path through this skill. `ck-story`
-regenerates on every call; when Phase 5's `ck-story` was the only write, that already
-happened and this is a no-op. If neither ran (nothing changed at all):
-
-```bash
-ck-index tasks/<slug>
-ck-project sync tasks/<slug>
-```
-
-The sync places the card from both axes: `done` + `delivery: pr` is In Review, and it
-becomes Done by itself once the PR merges and any later sync re-asks GitHub
-([`github-projects.md`](../../references/github-projects.md)). Nothing here needs to
+`ck-story` regenerates the views and syncs the card on every call, so there is nothing
+else to run after it. The sync places the card from both axes: `done` + `delivery: pr` is
+In Review, and it becomes Done by itself once the PR merges and a later reconcile re-asks
+GitHub ([`github-projects.md`](../../references/github-projects.md)). Nothing here needs to
 predict the merge.
 
 If the story is not yet fully done, leave `status` as is and skip issue-close steps.
@@ -395,9 +384,10 @@ Resolve by the `story_issue` number from 2.3. Templates: [issue-templates.md](re
   plain-language summary. No AC lists, no test counts.
 - **Existing PR updated (5.A):** `gh issue comment <story_issue>` noting the new commit
   hash + summary; don't repeat the PR number if already posted.
-- **Commit only, no PR yet:** `gh issue comment <story_issue>` with the commit hash +
-  summary. Never `gh issue close` here — an issue closes through the `Closes #` footer of a
-  merging PR, and Phase 1.1 guarantees the commit is not on a protected branch anyway.
+- **Commit only, or merged into `<parent>`:** `gh issue comment <story_issue>` with the
+  commit hash + summary. Never `gh issue close` here — an issue closes through the
+  `Closes #` footer of a merging PR (or `ck-project reconcile` once the work is
+  delivered), and Phase 1.1 guarantees the commit is not on a protected branch anyway.
 
 ### 6.3 Update the epic issue checklist (only if `epic_issue` is set)
 
@@ -411,61 +401,73 @@ Flip this story's checklist item to `[x]`, then `gh issue edit <epic_issue> --bo
 Match the item exactly: `#<story_issue>` when a story issue exists, else the bracketed
 padded token `[EE-SS]` (e.g. `[02-01]`, which never collides with `[02-10]`).
 
-### 6.4 Labels (only if `story_issue` is set)
+### 6.4 Labels — none
 
-```bash
-gh issue edit <story_issue> --add-label "status/done"
-gh issue edit <story_issue> --add-label "has-bugfix"   # bug fix only
-```
+Ship adds no status labels. Native sub-issues and the board carry status; a label would be
+a third copy that drifts.
 
-### 6.5 Promotion gate (levels `epic` and `feature` only)
+### 6.5 Promotion gate (levels `epic` and `plan` only)
 
 Runs at the end of Phase 6 regardless of whether 6.1 did any work — 6.1 is **skipped** on the
 normal path (`/ck-code:build` Phase 8.6 already flipped the status), so this gate keys off
 project *state*, never off 6.1 having acted. Skip entirely at level `story`, and skip when
 6.1 determined the story is not yet fully done.
 
-**Detect from story frontmatter, never from an index cell:** the epic has reached DONE when
+**Detect from story frontmatter, never from a view cell:** the epic has reached DONE when
 every non-`skip` story of epic `NN` reads `status: done`. Fire the gate only on the ship run
 that completes the epic — if the epic was already DONE and already promoted, say nothing.
 
-Then run the **epic gate**, and — when its condition holds — the **feature gate**, both
-defined with their staleness handling in
-[`branch-topology.md`](../../references/branch-topology.md#promotion). Choosing
-**Merge into `feat/<plan-slug>`** also writes `integration: feature` to that `EPIC.md`;
-regenerate the views in the same phase if any frontmatter changed.
+Then run the **epic gate**, and — at level `plan`, when its condition holds — the **plan
+gate**, both defined with their staleness handling in
+[`branch-topology.md`](../../references/branch-topology.md#promotion):
 
-**A promotion PR records its number too.** Opening the epic PR writes `pr:` +
-`delivery: pr` to that `EPIC.md`; opening the feature PR writes them to every
-`feature`-level `EPIC.md` in the plan. Their stories inherit that pointer, which is the
-only way work shipped through an epic PR ever reaches Done.
+- **Level `epic`** — the epic PR goes `epic/NN-<slug>` → trunk.
+- **Level `plan`** — an epic gets **no PR of its own**: promoting it merges
+  `epic/NN-<slug>` into the plan record's `branch:` locally with `--no-ff` (the Story-merge
+  guard and abort path) and pushes the plan branch. The plan PR, plan branch → trunk, is
+  the one review. An epic PR into the plan branch would strand every story at
+  `delivery: pr` — stories inherit the epic's `pr:` before the plan's, and only a PR merged
+  into the trunk counts as delivered.
 
-Then **run `ck-index` + `ck-project sync` again, in this phase** — the 6.1 sync ran before
-the `EPIC.md` write and cannot have seen it. This second pass is what pushes the new `pr:`
-down onto every story of the epic, so no story is left with a `delivery:` and no anchor.
+**A promotion PR records its number, on the record its stories inherit through:**
 
-Its body takes the generated footer for the whole epic — one call, not a story-by-story
-guess:
+| PR | Record | Write |
+|---|---|---|
+| epic PR → trunk (level `epic`) | that `EPIC.md` | `pr: <n>` + `delivery: pr` (frontmatter edit) |
+| plan PR → trunk (level `plan`) | `OVERVIEW.md` | `ck-plan set tasks/<plan> pr=<n> delivery=pr` |
+
+Their stories inherit that pointer (story → epic → plan), which is the only way work
+shipped through an epic or plan PR ever reaches Done.
+
+Then **run `ck-project sync tasks/<plan>` again, in this phase** — the reconcile at 2.5 ran
+before the record write and cannot have seen it. This second pass pushes the new `pr:` down
+onto every story it covers, so no story is left with a `delivery:` and no anchor.
+
+Its body takes the generated footer for the whole epic or plan — one call, not a
+story-by-story guess:
 
 ```bash
-ck-project closes tasks/<slug>/epics/NN_<slug>
+ck-project closes tasks/<plan>/epics/NN_<slug>     # epic PR
+ck-project closes tasks/<plan>                     # plan PR (emits only at integration: plan)
 ```
 
-Declining is never a dead end — **Not yet** points at `/ck-code:ship --promote --epic NN`.
+Declining is never a dead end — **Not yet** points at `/ck-code:ship --promote --epic NN`
+(or `--promote tasks/<plan>`).
 
 ### 6.6 Commit the plan state onto the branch
 
-6.1 and 6.5 wrote frontmatter and regenerated views, so `tasks/` is dirty again after the
-Phase 4 commit:
+6.1 and 6.5 wrote frontmatter, so `tasks/` may be dirty again after the Phase 4 commit:
 
 ```bash
 git status --porcelain tasks/
 ```
 
-Clean → nothing to do. Otherwise commit those files **on the current branch** and say so:
+Clean → nothing to do. Otherwise stage **only** the story, `EPIC.md` and `OVERVIEW.md`
+files it lists — by name, never a view — and commit them **on the current branch**, saying
+so:
 
 ```bash
-git add tasks/
+git add <changed story / EPIC.md / OVERVIEW.md paths>
 git commit -m "chore(plan): record delivery pointers"
 ```
 
@@ -480,14 +482,14 @@ Skip this step in STANDALONE MODE (no `tasks/` writes) and when the repo has no 
 Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
 Story (status + delivery/path), Next steps. State the delivery plainly — "in review, not
 yet on `<trunk>`" — so "done" is never mistaken for "shipped"; it turns to `merged` on the
-first sync after the PR lands. Worked shape: [examples.md](references/examples.md).
+first reconcile after the PR lands. Worked shape: [examples.md](references/examples.md).
 
 - More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.
 - Epic complete → note the epic issue can be closed manually or auto-closes once all its
   checkboxes are checked.
 - Merged story branches were already deleted at merge time. Remind the user only about
-  branches ship cannot clean: a story branch with an **open** PR, and the epic branch once
-  its PR merges ([`branch-topology.md`](../../references/branch-topology.md#cleanup)).
+  branches ship cannot clean: a story branch with an **open** PR, and the epic or plan
+  branch once its PR merges ([`branch-topology.md`](../../references/branch-topology.md#cleanup)).
 
 ## STANDALONE MODE (no story)
 
@@ -495,147 +497,31 @@ first sync after the PR lands. Worked shape: [examples.md](references/examples.m
 2. AskUserQuestion — change type (feat/fix/refactor/…).
 3. Ask for a brief description.
 4. Craft a conventional commit message (plain-language body).
-5. Commit, optionally PR (Phase 5).
-6. No issue updates and no frontmatter/index changes (no story to link).
+5. The same one confirmation as 3.3 (secret exclusion included), then commit and
+   optionally open the PR (Phase 5).
+6. No issue updates and no frontmatter changes (no story to link).
 
 ## PROMOTE MODE (`--promote`)
 
-Runs the §6.5 gate on demand so **Not yet** is never a dead end. Uses the *promotable*
+Runs the §6.5 gates on demand so **Not yet** is never a dead end. Uses the *promotable*
 definition in [`branch-topology.md`](../../references/branch-topology.md#promotion).
 Resolution order:
 
 1. `--epic NN` given → promote that epic; if it is not promotable, say why and stop.
-2. Exactly one promotable epic → use it, announcing which.
-3. Several → `AskUserQuestion` which one.
-4. None promotable but the feature-gate condition holds → run the feature gate.
-5. Otherwise → report that there is nothing to promote, and why.
+2. A `tasks/<plan>` path given → run the plan gate for that plan; the plan must be at
+   `integration: plan` (`ck-plan get tasks/<plan> integration branch`), else say so and
+   stop.
+3. Exactly one promotable epic → use it, announcing which.
+4. Several → `AskUserQuestion` which one.
+5. None promotable but a plan-gate condition holds → run the plan gate.
+6. Otherwise → report that there is nothing to promote, and why.
 
 No staging of source, and no *authored* story change — this mode only promotes branches.
 The writes it does make are all derived: a promotion PR records its `pr:` + `delivery: pr`
-on `EPIC.md` (§6.5), then `ck-index` + `ck-project sync` materialize that anchor down onto
-the epic's stories, and §6.6 commits the result onto the branch so it rides the promotion
-PR. Run §6.5 then §6.6; skip every other phase.
-
----
-
-# PUBLISH MODE (`--to-issues`) — plan → GitHub Issues
-
-Publishes a generated `tasks/<slug>/` plan to GitHub Issues at the chosen granularity,
-then **writes each new issue number back into frontmatter** (`issue:`) so SHIP MODE can
-later resolve issues by number.
-
-**Resolve the plan path.** If a `tasks/<slug>/` path was given, use it. Else
-`Glob "tasks/*/PROJECT_OVERVIEW.md"` (or `FEATURE_OVERVIEW.md`): one → use it (confirm);
-several → ask which; none → tell the user to run `/ck-code:plan` first.
-
-| Mode | Issues created | Frontmatter write-back |
-|---|---|---|
-| `feature` | **1** whole-feature issue (epics + stories as nested checklists) | none (coarse tracking; no per-story issue) |
-| `epics` | **1 per epic** (stories are an in-body checklist) | epic issue → each `EPIC.md` `issue:` |
-| `stories` | epic issues **+** 1 per story (full hierarchy) | epic issue → `EPIC.md` `issue:`; story issue → story `issue:` |
-
-## PHASE P1: VALIDATE ENVIRONMENT
-
-```bash
-gh auth status
-gh repo view --json nameWithOwner -q .nameWithOwner
-ck-project discover
-```
-
-If either `gh` call fails, stop and tell the user what to fix.
-
-`ck-project discover` reports in one call whether `tasks/SETTINGS.md` exists and which
-GitHub Projects the owner already has. Store it — P3 folds the board choice into its
-existing confirm rather than asking a second time. If the token lacks the `project`
-scope, note it and continue: the publish itself does not need it, only the board does.
-
-## PHASE P2: PREVIEW THE PLAN
-
-`ck-issues` parses the plan — **never read the epic and story files yourself**. One
-dry run reports everything the confirm prompt needs and creates nothing:
-
-```bash
-ck-issues tasks/<slug> --mode stories --dry-run
-```
-
-- the header line gives `N epics / M stories`, which is the issue count for **every**
-  mode (`feature`=1, `epics`=N, `stories`=N+M);
-- each `would create:` line is the exact title and label set;
-- each `reused` line is a plan file whose frontmatter already carries an `issue:` — it
-  will never be published twice, so a re-run after a partial publish is safe.
-
-Only when `reused` lines are absent but the repo already holds `epic`/`story` issues
-(a publish whose write-back was lost) check for strays:
-`gh issue list --state all --limit 200 --json number,title,labels`.
-
-## PHASE P3: SELECT MODE & CONFIRM
-
-**Mode:** if `--mode` was passed, use it; else AskUserQuestion — "How to publish this
-plan?" options **feature** (1 issue), **epics** (1 per epic), **stories** (epics + one
-per story), each labelled with its count from P2.
-
-**Confirm:** present the repo, project name, mode, and issue count. AskUserQuestion —
-"Proceed?" options **Create**, **Abort**. Fold a **Skip duplicates / Proceed anyway**
-choice into the same call when P2 found strays — never a second round-trip.
-
-**Board:** fold a third question into the *same* call when P1 found no `tasks/SETTINGS.md`
-— "Track these issues on a GitHub Project board?" with one option per existing project,
-plus **Create a new board**, plus **Not now**. `AskUserQuestion` takes up to 4 questions;
-this must not become its own round-trip. Skip the question entirely when settings already
-exist. Apply the answer after P4 publishes, since a board needs issues to place:
-
-```bash
-ck-project init --project <N>            # adopt the board as it is
-ck-project init --create "<title>"       # create, link, provision the seven columns
-```
-
-Full contract: [`github-projects.md`](../../references/github-projects.md).
-
-## PHASE P4: PUBLISH
-
-One call does labels, issue creation, `issue:` write-back, the epic→story relink, and
-the `ck-index` regeneration:
-
-```bash
-ck-issues tasks/<slug> --mode stories
-```
-
-Options: `--repo OWNER/REPO` (default: current repo), `--pace N` (seconds between `gh`
-calls, default `1`), `--no-index`.
-
-Exit `0` = every issue created. Exit `1` = at least one `gh` call failed; the failing
-titles are on stderr and everything else still published. **Re-run the identical command
-to finish a partial publish** — entries with an `issue:` are reused, and epic bodies are
-relinked from the current numbers on every run, so an interrupted run repairs itself.
-
-Relay any `ck-issues: WARN` or `ck-index: WARN` line to the user — a warned story is
-skipped by the publisher *and* invisible in every generated view.
-
-The same call also attaches every story issue to its epic as a **native sub-issue**, which
-is what gives the epic a progress bar and lets the board roll story cards up. Already-linked
-stories are skipped, so re-running a plan published before this existed back-fills the
-links and creates no issues.
-
-### P4.1 Place the cards
-
-Only when a board is configured (settings already existed, or P3's board answer was just
-applied):
-
-```bash
-ck-project sync tasks/<slug> --dry-run
-ck-project sync tasks/<slug>
-```
-
-Show the dry-run counts, then apply. Cards land in the column each story's `status:` calls
-for, so a plan whose stories are already `done` does not arrive as a wall of Todo. Board
-failures never fail the publish — the issues are created either way.
-
-## PHASE P5: SUMMARY
-
-Fill the summary shape from [issue-bodies.md](references/issue-bodies.md) for the mode
-that ran, using the script's own output lines (`epic NN #X created → path`,
-`story EE-SS #X created → path`) — they already name every issue number and every file
-that received an `issue:`. Never re-read the plan to build the summary.
+on `EPIC.md` or, for the plan PR, on `OVERVIEW.md` through `ck-plan set` (§6.5); then
+`ck-project sync` materializes that anchor down onto the stories, and §6.6 commits the
+result onto the branch so it rides the promotion PR. Run §6.5 then §6.6; skip every other
+phase.
 
 ---
 
@@ -643,32 +529,30 @@ that received an `issue:`. Never re-read the plan to build the summary.
 
 - **Never reference AI, Claude, or generated-by notes** in any artefact — [full rule](../../references/no-ai-references.md).
 - **Never resolve a GitHub issue by matching its title** — resolve by the frontmatter `issue:` number (story) or `EPIC.md` `issue:` (epic). No `contains("[EE-SS]")` title search.
-- **Never store story status anywhere but frontmatter** — `ck-story set <story-path> status=done`; never cell-edit an index or flip an EPIC checkbox for status.
-- **Never open or update a PR without writing `pr:` + `delivery: pr`** to the story (or to `EPIC.md` at level `epic`/`feature`) — an unrecorded PR strands the story in Ready to Ship, and `ck-project sync` has no anchor to re-check.
-- **Never push a card to the review column with `ck-project set`** — In Review is derived from `delivery: pr`. The sticky rule is gone; a manual push is undone by the next sync.
-- **Never write `delivery: merged` by hand** — only `ck-project sync` promotes it, from GitHub's answer about the PR.
+- **Never store story status anywhere but frontmatter** — `ck-story set <story-path> status=done`; never cell-edit a view or flip an EPIC checkbox for status.
+- **Never open or update a PR without recording `pr:` + `delivery: pr`** on the record its stories inherit through — the story, the `EPIC.md` for an epic PR into the trunk, or `OVERVIEW.md` (`ck-plan set`) for a plan PR (§6.5). An unrecorded PR strands the story in Ready to Ship, and `ck-project sync` has no anchor to re-check. The one exception is a story PR into `<parent>`, which never reaches the trunk and is anchored by the epic or plan PR.
+- **Never write the plan record by hand** — `ck-plan set` is its one writer.
+- **Never write `delivery: merged` by hand** — only `ck-project sync` (inside `reconcile`) promotes it, from GitHub's answer about the PR.
 - **Never compose a `Closes #` footer by hand** — run `ck-project closes <story|epic-dir|plan-dir>` and paste its output. GitHub closes an issue on merge only when the PR body names it, and a hand-written footer silently omits the epic issue, or every issue.
-- **Never open a promotion PR without re-running `ck-project sync` after recording `pr:` on `EPIC.md`** (§6.5) — the sync is what materializes the anchor onto the epic's stories; without it they carry a `delivery:` with no `pr:`, which `ck-doctor` reports as an ERROR and `STORIES_INDEX.md` renders as a bare `PR`.
-- **Always commit a dirty `tasks/` before finishing** (§6.6) — plan bookkeeping is derived from PR numbers already in the plan, so it belongs on the current branch with no PR and no prompt. Leaving it uncommitted is what forces a hand-made "record merged delivery" PR later.
+- **Never open an epic PR at level `plan`** — the epic merges into the plan branch and the plan PR is the one review (§6.5).
+- **Never open a promotion PR without re-running `ck-project sync` after recording its `pr:`** (§6.5) — the sync is what materializes the anchor onto the stories; without it they carry a `delivery:` with no `pr:`, which `ck-doctor` reports as an ERROR.
+- **Always commit dirty story / `EPIC.md` / `OVERVIEW.md` files before finishing** (§6.6) — plan bookkeeping is derived from PR numbers already in the plan, so it belongs on the current branch with no PR and no prompt. Leaving it uncommitted is what forces a hand-made "record merged delivery" PR later.
+- **Never stage or commit a generated view** — `STORIES_INDEX.md` and `EPICS_INDEX.md` are gitignored and regenerated on every read.
 - **Never open a PR whose only content is a `delivery:`/`pr:` change** — it is derived state; commit it on the current branch (§3.1, §6.6).
-- **Always regenerate in the same phase** you change any story or epic frontmatter: `ck-story set` does it for a story-state field, `ck-index` + `ck-project sync` for an `EPIC.md` edit, and `ck-issues` already does it under `--to-issues` — [`github-projects.md`](../../references/github-projects.md).
-- **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
+- **Always relay `ck-index: WARN` lines** — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
-- **Never ask the user for the PR base branch** — derive it from `trunk_branch` and the epic's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); prompt only on a genuine `main`/`develop` ambiguity with no `trunk_branch` set.
-- **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, three consumers.
+- **Never ask the user for the PR base branch** — derive it from `trunk_branch` and the plan's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); fold a second question into the 3.3 call only on a genuine `main`/`develop` ambiguity with no `trunk_branch` set.
+- **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, several consumers.
 - **Never merge without the clean-tree guard**, and never leave a merge half-applied — `git merge --abort`, return to the story branch, report the conflicting paths, and stop.
 - **Never auto-open a promotion PR** — §6.5 always confirms, and a level change is never retroactive.
-- **Never split a confirmation into sequential `AskUserQuestion` calls** when the questions are known at the same time — `AskUserQuestion` takes up to 4 questions per call, and each extra call is a full round-trip. Phase 3.3 batches file-set + message.
-- **Never `git add -A` or `git add .`** — stage files by name; never stage secrets or env files.
+- **Never ask more than the one 3.3 confirmation** for stage + commit + PR — `AskUserQuestion` takes up to 4 questions per call, and each extra call is a full round-trip.
+- **Never `git add -A` or `git add .`** — stage files by name; never stage `.env*` (except `*.example`), `*.pem`, `*.key`, `id_rsa*` or `credentials*` — list each as Excluded with the reason.
 - **Never mention story IDs, epic names, AC checklists, test counts, or file paths** in a commit body, PR body, or issue comment — they are plain-language, read by non-engineers.
 - **Never overwrite a PR description** — append beneath the existing body and prior `## Updates` entries.
 - **Never open a second PR for a branch** that already has an open one (Phase 1.2).
 - **Never block the commit on GitHub failures** — if `gh` is missing, unauthenticated, or a lookup returns nothing, surface it and continue commit-only. This covers the board too: a failed `ck-project` call is reported, never fatal.
 - **Never move a board card with `gh project`** — call `ck-project`, the only board interface ([github-projects.md](../../references/github-projects.md)).
-- **Never ask the board question as its own round-trip** — it folds into the P3 confirm, and is skipped outright when `tasks/SETTINGS.md` already exists.
-- **Never publish `--to-issues` by hand** — no per-issue `gh issue create`, no throwaway publisher script, no `Edit` per `issue:` field. Run `ck-issues`: rate-limit pacing, ordering (epics before the story bodies that reference them), write-back, relink and `ck-index` all live inside it. Hand-driving a 12-epic plan is ~200 tool calls, and the `sleep` that paces them is blocked as a foreground call in most harnesses — that dead end is what makes agents improvise a fragile script.
-- **Never create issues outside the chosen `--to-issues` mode** — `feature`=1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
-- **Never re-run `--to-issues` with a different mode against the same plan** — `issue:` holds one number per file, so a second mode publishes a parallel hierarchy the frontmatter cannot point at.
+- **Never publish a plan or change an integration level here** — `/ck-code:plan --publish` and `/ck-code:config integration` own those.
 - **Always close issues with a `Closes #X` footer**, and only when the work is complete.
 
 ## NEXT

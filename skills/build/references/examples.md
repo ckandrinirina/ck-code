@@ -27,7 +27,7 @@ per story in a wave of ≥ 2, one solo agent in the main checkout for a wave of 
 
 | #  | Set                      | Scope                    |
 |----|--------------------------|--------------------------|
-| P  | 01-04, 01-02, 02-01 (3)  | one wave, 3 worktrees    |
+| P  | 01-04, 01-02 (2)         | one wave, 2 worktrees    |
 
 ## Or build a whole epic in dependency-ordered waves (drives every story to DONE)
 
@@ -38,6 +38,10 @@ per story in a wave of ≥ 2, one solo agent in the main checkout for a wave of 
 
 Pick P to build the parallel set, an epic (E1/E2) for waves, or a single story (number/path).
 ```
+
+A parallel set never spans epics — it is Wave 1 of `ck-view waves --epic NN`. `IN PROGRESS`
+stories are not ready; when any exist, list them under a `↻ Resume` heading after the single
+stories — picking one names it explicitly, so it is resumed, never re-started.
 
 **Routing (the selection is the single confirm — PARALLEL MODE does not re-prompt for scope):**
 

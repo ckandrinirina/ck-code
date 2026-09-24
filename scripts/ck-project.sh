@@ -19,13 +19,18 @@
 #   ck-project.sh init --project N [--extend]        # adopt an existing project
 #   ck-project.sh init --project N --reorder         # rewrite the column order to the preset
 #   ck-project.sh init --create "<title>"            # create one, provision the 7 columns
+#   ck-project.sh reconcile [tasks/<slug>] [--dry-run] # sync, then issues: the one full pass
 #   ck-project.sh sync [tasks/<slug>] [--dry-run]    # refresh delivery, then every card
 #   ck-project.sh landed [tasks/<slug>]              # find work merged to trunk with no PR
 #   ck-project.sh backfill [tasks/<slug>]            # recover pr: for pre-6.4 work
 #   ck-project.sh closes <story|epic-dir|plan-dir>   # print the PR body's Closes footer
-#   ck-project.sh issues [tasks/<slug>] [--dry-run]  # close delivered issues, tick epics
-#   ck-project.sh set <issue> <role>                 # push one card (manual escape hatch)
+#   ck-project.sh issues [tasks/<slug>] [--dry-run]  # close delivered issues, tick checklists
 #   ck-project.sh show                               # print resolved settings
+#
+# `sync` needs no board. Without one (no tasks/SETTINGS.md, github_issues off, or no
+# project configured) it still reconciles delivery from the recorded PRs and from git,
+# regenerates the views, and skips only the card moves. It asks GitHub nothing when no
+# story, epic or plan carries a PR whose answer could still change.
 #
 # Options:
 #   --owner LOGIN    project owner (default: the repo owner; "@me" for yourself)
@@ -58,8 +63,6 @@ CREATE_TITLE=""
 EXTEND=0
 REORDER=0
 PACE="${CK_PROJECT_PACE:-1}"
-SET_ISSUE=""
-SET_ROLE=""
 INCLUDE_LIKELY=0
 
 # Roles, in board order. The order is the column order a provisioned board gets, and
@@ -67,7 +70,7 @@ INCLUDE_LIKELY=0
 # ambiguous name (bug over blocked) has to be listed before its rival.
 ROLES="blocked todo in_progress ready_to_ship in_review bug done"
 
-usage() { sed -n '2,35p;42,43p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
+usage() { sed -n '2,40p;47,48p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -92,28 +95,28 @@ while [ $# -gt 0 ]; do
     --include-likely) INCLUDE_LIKELY=1; shift ;;
     -h|--help)  usage 0 ;;
     -*)         echo "ck-project: unknown option $1" >&2; usage 1 ;;
-    *)
-      case "$CMD" in
-        set) if [ -z "$SET_ISSUE" ]; then SET_ISSUE="$1"; else SET_ROLE="$1"; fi ;;
-        *)   PLAN="${1%/}" ;;
-      esac
-      shift ;;
+    *)          PLAN="${1%/}"; shift ;;
   esac
 done
 
+CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+# shellcheck source=scripts/lib/ck-common.sh
+. "$CK_HERE/lib/ck-common.sh"
+
 # Run from the repo root so tasks/ and tasks/SETTINGS.md resolve identically no
 # matter which subdirectory the caller sat in.
-if [ ! -d tasks ]; then
-  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ] && { cd "$ROOT" || exit 1; }
-fi
+ck_root || true
 SETTINGS="$SETTINGS_REL"
+
+# Every gh call reads /dev/null for stdin: most of them run inside `while read` loops,
+# and a gh that touched stdin would swallow the rest of the loop's input.
+gh() { command gh "$@" </dev/null; }
 
 # `closes` answers from frontmatter alone and `landed` from frontmatter plus git, so both
 # must work with no gh and no network — ship pastes a footer into a PR body on a machine
 # that may never have authenticated, and a direct merge is a purely local event.
 case "$CMD" in
-  closes|landed) ;;
+  closes|landed|sync|reconcile|show|-h|--help|help) ;;
   *) command -v gh >/dev/null 2>&1 || { echo "ck-project: gh not found on PATH" >&2; exit 1; } ;;
 esac
 
@@ -152,57 +155,14 @@ optkey() {
 }
 
 # ---------------------------------------------------------------------------
-# Frontmatter helpers — same contract as ck-issues.sh (one key per line, no
-# block scalars; see references/data-model.md "Format contract").
+# Frontmatter — the shared library's reader and atomic writer
 # ---------------------------------------------------------------------------
 
-# fm FILE KEY — print a frontmatter scalar, surrounding quotes stripped.
-fm() {
-  [ -f "$1" ] || return 0
-  awk -v key="$2" '
-    function unquote(s) {
-      if (s ~ /^".*"$/ || s ~ /^'"'"'.*'"'"'$/) s = substr(s, 2, length(s)-2)
-      return s
-    }
-    { sub(/\r$/,"") }
-    FNR==1 && $0!="---" { exit }
-    FNR==1 { next }
-    $0=="---" { exit }
-    { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1);
-        gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v);
-        if(k==key){print unquote(v); exit} } }
-  ' "$1"
-}
+fm() { ck_fm "$@"; }
+set_fm() { ck_fm_set "$@" || { warn "'$2' not written to $1"; return 1; }; }
 
-# set_fm FILE KEY VALUE — set a frontmatter scalar, adding the line if absent.
-# Content is copied back through the original file so its inode and permissions
-# survive.
-set_fm() {
-  local f="$1" k="$2" v="$3" tmp
-  [ "$(head -1 "$f" 2>/dev/null | tr -d '\r')" = "---" ] || {
-    warn "no frontmatter fence in $f — '$k' not written"
-    return 1
-  }
-  tmp="$WORK/fm.$$"
-  awk -v key="$k" -v val="$v" '
-    { sub(/\r$/,"") }
-    FNR==1 { inb=1; print; next }
-    inb && $0=="---" {
-      if (!done) { print (val=="" ? key ":" : key ": " val); done=1 }
-      inb=0; print; next
-    }
-    inb {
-      i=index($0,":")
-      if (i>0) { k2=substr($0,1,i-1); gsub(/^[ \t]+|[ \t]+$/,"",k2)
-        if (k2==key) { print (val=="" ? key ":" : key ": " val); done=1; next } }
-      print; next
-    }
-    { print }
-  ' "$f" > "$tmp" || return 1
-  cat "$tmp" > "$f" || return 1
-  rm -f "$tmp"
-  return 0
-}
+# epic_dirs — the epic directories in scope: one plan when PLAN is set, else all.
+epic_dirs() { ck_epic_dirs "$PLAN"; }
 
 # ---------------------------------------------------------------------------
 # Settings
@@ -246,7 +206,7 @@ trunk_branch:
 
 # Project Settings
 
-Written by `/ck-code:ship --to-issues` and `/ck-code:config`; safe to edit by hand.
+Written by `/ck-code:config` and `/ck-code:plan --publish`; safe to edit by hand.
 
 `github_issues` is the master switch: when it is `false` or absent, every board
 call in `build` and `ship` becomes a no-op and no GitHub Project is touched.
@@ -390,14 +350,6 @@ EOF
 # Story → role
 # ---------------------------------------------------------------------------
 
-story_files() { # story_files [PLAN]
-  if [ -n "${1:-}" ]; then
-    find "$1/epics" -type f -path '*/stories/*.md' 2>/dev/null | sort
-  else
-    find tasks -type f -path '*/epics/*/stories/*.md' 2>/dev/null | sort
-  fi
-}
-
 # build_status_map — id → status for EVERY story in the project. blocked_by may
 # name a story in another plan (data-model.md: ids are globally unique), so this
 # always scans all of tasks/ even when sync is scoped to one plan.
@@ -410,19 +362,14 @@ build_status_map() {
   done
 }
 
-deps_met() { # deps_met FILE → 0 when every blocked_by story is done
-  local raw d st
-  raw=$(fm "$1" blocked_by)
-  [ -n "$raw" ] || return 0
-  # blocked_by is a raw YAML flow list, e.g. ["02-01", "02-03"]: strip brackets
-  # AND per-element quotes before splitting, or a quoted id like "02-01" never
-  # matches the unquoted $WORK/status/<id> filename and looks permanently unmet.
-  for d in $(printf '%s' "$raw" | tr -d "[]'\"" | tr ',' ' '); do
+deps_met() { # deps_met FILE → 0 when every blocker is released (ck_blocker_met)
+  local d st
+  while IFS= read -r d; do
     [ -n "$d" ] || continue
     st=""
     [ -f "$WORK/status/$d" ] && st=$(cat "$WORK/status/$d")
-    [ "$st" = "done" ] || [ "$st" = "skip" ] || return 1
-  done
+    ck_blocker_met "$st" || return 1
+  done < <(ck_flow_list "$(fm "$1" blocked_by)")
   return 0
 }
 
@@ -456,7 +403,8 @@ role_for_story() {
 
 role_for_epic() { # role_for_epic EPICDIR → rollup role
   local f st dv any=0 any_bug=0 any_pr=0 any_started=0 all_done=1 all_merged=1
-  for f in $(find "$1/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
     st=$(fm "$f" status)
     dv=$(fm "$f" delivery)
     [ "$st" = "skip" ] && continue
@@ -468,7 +416,7 @@ role_for_epic() { # role_for_epic EPICDIR → rollup role
       in-progress) any_started=1; all_done=0; all_merged=0 ;;
       *) all_done=0; all_merged=0 ;;
     esac
-  done
+  done < <(ck_story_files "$1")
   [ "$any" -eq 1 ] || { echo todo; return; }
   [ "$any_bug" -eq 1 ] && { echo bug; return; }
   if [ "$all_done" -eq 1 ]; then
@@ -503,7 +451,13 @@ resolve_trunk() {
   [ -n "$TRUNK" ] && return 0
   TRUNK=$(fm "$SETTINGS" trunk_branch)
   [ -n "$TRUNK" ] && return 0
-  TRUNK=$(gh repo view "$REPO" --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+  # The clone already knows the remote's default branch; asking git costs no network.
+  TRUNK=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)
+  TRUNK=${TRUNK#origin/}
+  [ -n "$TRUNK" ] && return 0
+  if [ -n "$REPO" ] && command -v gh >/dev/null 2>&1; then
+    TRUNK=$(gh repo view "$REPO" --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+  fi
   [ -n "$TRUNK" ] || TRUNK="main"
 }
 
@@ -542,7 +496,9 @@ pr_base()  { [ -f "$WORK/pr/$1" ] && cut -f2 "$WORK/pr/$1"; }
 # hand-made "anchor delivered work" commit.
 resolve_one() {
   local f="$1" n="$2" inherit="${3:-}" st base want cur label
-  label=$(fm "$f" id); [ -n "$label" ] || label="epic $(fm "$f" epic)"
+  label=$(fm "$f" id)
+  [ -n "$label" ] || { [ -n "$(fm "$f" epic)" ] && label="epic $(fm "$f" epic)"; }
+  [ -n "$label" ] || label="plan $(ck_plan_of "$f")"
   if ! pr_lookup "$n"; then
     warn "PR #$n (referenced by $f) not found on $REPO — delivery left unchanged"
     return 0
@@ -603,7 +559,7 @@ resolve_one() {
 #            on main — and equally consistent with a later story having created those
 #            files. Reported always, written only under --include-likely.
 #
-# The tasks/-only exclusion is what stops `/ck-code:sync`'s own bookkeeping commit from
+# The tasks/-only exclusion is what stops the `/ck-code:doctor --fix` bookkeeping commit from
 # reading as a delivery: that commit carries the story file to the trunk and nothing else.
 
 TRUNK_REF=""
@@ -650,15 +606,12 @@ landed_with_code() {
 
 # landed_files_present FILE → 0 when `files:` is non-empty and every path is on the trunk.
 landed_files_present() {
-  local raw p n=0
-  raw=$(fm "$1" files)
-  raw=${raw#[}; raw=${raw%]}
-  for p in $(printf '%s' "$raw" | tr ',' ' '); do
-    p=$(printf '%s' "$p" | sed 's/^["'"'"']//; s/["'"'"']$//')
+  local p n=0
+  while IFS= read -r p; do
     [ -n "$p" ] || continue
     n=$((n+1))
     git cat-file -e "$TRUNK_REF:$p" 2>/dev/null || return 1
-  done
+  done < <(ck_flow_list "$(fm "$1" files)")
   [ "$n" -gt 0 ]
 }
 
@@ -680,21 +633,21 @@ landed_branch() {
 # a `pr:` of its own or an epic's is resolve_one's business, and re-deciding it here would
 # fight the PR state GitHub just gave us.
 detect_landed() {
-  local tier="$1" dir ef epr sf id dv spr ev why branch
+  local tier="$1" dir ef sf id dv spr ev why branch plan ov
   if ! resolve_trunk_ref; then
     [ "$tier" = "all" ] && warn "no '$TRUNK' branch in this clone — cannot tell what has landed"
     return 0
   fi
-  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
-    case "$PLAN" in
-      "") ;;
-      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
-    esac
+  while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
     ef="$dir/EPIC.md"
     [ -f "$ef" ] || continue
-    epr=$(fm "$ef" pr)
-    [ -n "$epr" ] && continue
-    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+    # An epic or plan PR anchors every story under it; resolve_one owns those.
+    [ -n "$(fm "$ef" pr)" ] && continue
+    plan=$(ck_plan_of "$dir"); ov=$(ck_plan_overview "$plan" || true)
+    [ -n "$ov" ] && [ -n "$(fm "$ov" pr)" ] && continue
+    while IFS= read -r sf; do
+      [ -n "$sf" ] || continue
       [ "$(fm "$sf" status)" = "done" ] || continue
       dv=$(fm "$sf" delivery); [ -n "$dv" ] && continue
       spr=$(fm "$sf" pr); [ -n "$spr" ] && continue
@@ -716,46 +669,121 @@ detect_landed() {
         LANDED_LIKELY=$((LANDED_LIKELY+1))
         [ "$tier" = "all" ] && echo "  likely   ${id:-$sf}  $why — not written without --include-likely"
       fi
-    done
-  done
+    done < <(ck_story_files "$dir")
+  done < <(epic_dirs)
 }
 
 # reconcile_delivery — refresh every delivery: in scope, materializing inheritance.
 # A story with no PR of its own resolves through its epic's (integration: epic or
 # feature never gives a story its own PR) and the answer is written onto the STORY,
 # so ck-index, track and ck-doctor each read one field on one file.
+# scoped_plans — the plans in scope: PLAN when set, else every plan.
+scoped_plans() {
+  if [ -n "$PLAN" ]; then printf '%s\n' "$PLAN"; else ck_plans; fi
+}
+
+# open_anchors — 0 when some file in scope carries a PR whose answer can still change:
+# a `pr:` not yet `delivery: merged`, or a story with no PR of its own under an epic or a
+# plan that has one and has not been materialized onto it. Nothing else needs GitHub, so
+# a project with no open PR never makes a network call — ck-story syncs on every write.
+open_anchors() {
+  local plan ov list
+  list="$WORK/anchor-files"
+  : > "$list"
+  while IFS= read -r plan; do
+    [ -n "$plan" ] || continue
+    ov=$(ck_plan_overview "$plan" || true)
+    [ -n "$ov" ] && printf '%s\n' "$ov" >> "$list"
+    find "$plan/epics" -mindepth 2 -maxdepth 2 -name EPIC.md 2>/dev/null >> "$list"
+    ck_story_files "$plan" >> "$list"
+  done < <(scoped_plans)
+  [ -s "$list" ] || return 1
+  tr '\n' '\0' < "$list" | xargs -0 awk '
+    function unq(s) { gsub(/^[ \t"\047]+|[ \t"\047]+$/,"",s); return s }
+    function plan(f,   d) { d=f; if (!sub(/\/epics\/.*$/,"",d)) sub(/\/[^\/]*$/,"",d); return d }
+    FNR==1 { sub(/\r$/,""); infm=($0=="---"); pr[FILENAME]=""; dv[FILENAME]=""; next }
+    { sub(/\r$/,"") }
+    infm && $0=="---" { infm=0; next }
+    infm { i=index($0,":"); if (i>0) { k=substr($0,1,i-1); v=unq(substr($0,i+1))
+             if (k=="pr") pr[FILENAME]=v; else if (k=="delivery") dv[FILENAME]=v } }
+    END {
+      for (f in pr) {
+        if (pr[f]!="" && dv[f]!="merged") { found=1; break }
+        if (pr[f]=="") continue
+        if (f ~ /\/EPIC\.md$/) epr[f]=1
+        else if (f !~ /\/epics\//) ppr[plan(f)]=1
+      }
+      if (!found) for (f in pr) {
+        if (f !~ /\/stories\//) continue
+        if (pr[f]!="" || dv[f]=="merged") continue
+        e=f; sub(/\/stories\/[^\/]*$/,"/EPIC.md",e)
+        if ((e in epr) || (plan(f) in ppr)) { found=1; break }
+      }
+      exit (found ? 0 : 1)
+    }'
+}
+
+# github_ready — gh on PATH and a repository to ask about. Quiet: the no-board path must
+# not print an error for a project that simply never used GitHub.
+github_ready() {
+  command -v gh >/dev/null 2>&1 || return 1
+  [ -n "$REPO" ] && return 0
+  REPO=$(fm "$SETTINGS" github_repo)
+  [ -n "$REPO" ] && return 0
+  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || true)
+  [ -n "$REPO" ]
+}
+
+# reconcile_delivery — refresh every delivery: in scope, materializing inheritance.
+# A story with no PR of its own resolves through its epic's, and failing that its plan's
+# (integration: epic or plan never gives a story its own PR). The answer is written onto
+# the STORY, so ck-index, track and ck-doctor each read one field on one file.
 reconcile_delivery() {
-  local dir ef epr sf spr
+  local plan ov ppr dir ef epr upr sf spr
   resolve_trunk
-  load_prs
-  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
-    case "$PLAN" in
-      "") ;;
-      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
-    esac
-    ef="$dir/EPIC.md"
-    [ -f "$ef" ] || continue
-    epr=$(fm "$ef" pr)
-    [ -n "$epr" ] && resolve_one "$ef" "$epr"
-    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
-      spr=$(fm "$sf" pr)
-      # A materialized anchor that was closed without merging is stale, not authoritative:
-      # drop it so the story falls back to whatever PR the epic carries now. Without this
-      # the story would re-resolve the dead number on every sync and never see its
-      # replacement.
-      if [ -n "$spr" ] && [ -n "$epr" ] && [ "$spr" != "$epr" ] \
-         && pr_lookup "$spr" && [ "$(pr_state "$spr")" = "CLOSED" ]; then
-        echo "  anchor   $(fm "$sf" id)  PR #$spr closed unmerged → re-inheriting from epic"
-        [ "$DRY" -eq 1 ] || set_fm "$sf" pr ""
-        spr=""
+  if open_anchors; then
+    if ! github_ready; then
+      warn "PRs are recorded but gh is unavailable or no repository resolves — their delivery is not re-checked"
+    else
+      load_prs
+      if [ -z "$(ls "$WORK/pr" 2>/dev/null)" ] && ! gh auth status >/dev/null 2>&1; then
+        warn "gh is not authenticated — run 'gh auth login'; PR delivery is not re-checked"
+      else
+        while IFS= read -r plan; do
+          [ -n "$plan" ] || continue
+          ov=$(ck_plan_overview "$plan" || true)
+          ppr=""; [ -n "$ov" ] && ppr=$(fm "$ov" pr)
+          [ -n "$ppr" ] && resolve_one "$ov" "$ppr"
+          while IFS= read -r dir; do
+            [ -n "$dir" ] || continue
+            ef="$dir/EPIC.md"
+            [ -f "$ef" ] || continue
+            epr=$(fm "$ef" pr)
+            [ -n "$epr" ] && resolve_one "$ef" "$epr"
+            upr="${epr:-$ppr}"
+            while IFS= read -r sf; do
+              [ -n "$sf" ] || continue
+              spr=$(fm "$sf" pr)
+              # A materialized anchor that was closed without merging is stale, not
+              # authoritative: drop it so the story falls back to the PR its epic or plan
+              # carries now, instead of re-resolving the dead number on every sync.
+              if [ -n "$spr" ] && [ -n "$upr" ] && [ "$spr" != "$upr" ] \
+                 && pr_lookup "$spr" && [ "$(pr_state "$spr")" = "CLOSED" ]; then
+                echo "  anchor   $(fm "$sf" id)  PR #$spr closed unmerged → re-inheriting"
+                [ "$DRY" -eq 1 ] || set_fm "$sf" pr ""
+                spr=""
+              fi
+              if [ -n "$spr" ]; then
+                resolve_one "$sf" "$spr"
+              elif [ -n "$upr" ]; then
+                resolve_one "$sf" "$upr" inherit
+              fi
+            done < <(ck_story_files "$dir")
+          done < <(ck_epic_dirs "$plan")
+        done < <(scoped_plans)
       fi
-      if [ -n "$spr" ]; then
-        resolve_one "$sf" "$spr"
-      elif [ -n "$epr" ]; then
-        resolve_one "$sf" "$epr" inherit
-      fi
-    done
-  done
+    fi
+  fi
   # Whatever GitHub could not answer for — because there was no PR to ask about — git
   # can. Runs last so it only ever sees stories the PR pass left undelivered.
   detect_landed certain
@@ -766,15 +794,7 @@ reconcile_delivery() {
 # stderr is deliberately NOT swallowed: ck-index WARN lines must reach the user.
 regen_views() {
   [ "$DELIV_CHANGED" -gt 0 ] || return 0
-  local gen
-  gen="$(dirname "$0")/ck-index.sh"
-  if [ -f "$gen" ]; then
-    bash "$gen" ${PLAN:+"$PLAN"} >/dev/null || warn "ck-index failed — the generated views are stale"
-  elif command -v ck-index >/dev/null 2>&1; then
-    ck-index ${PLAN:+"$PLAN"} >/dev/null || warn "ck-index failed — the generated views are stale"
-  else
-    warn "ck-index not found — run it by hand to refresh the generated views"
-  fi
+  ck_run ck-index ${PLAN:+"$PLAN"} >/dev/null || warn "ck-index failed — the generated views are stale"
 }
 
 # ---------------------------------------------------------------------------
@@ -1077,14 +1097,22 @@ require_board() {
     echo "ck-project: github_issues is not enabled in $SETTINGS — nothing to do"
     exit 0
   fi
+  command -v gh >/dev/null 2>&1 || { echo "ck-project: gh not found on PATH" >&2; exit 1; }
   resolve_repo || exit 1
-  [ -n "$OWNER" ] && [ -n "$NUMBER" ] || { echo "ck-project: $SETTINGS has no project configured — run /ck-code:config" >&2; exit 1; }
+  [ -n "$OWNER" ] && [ -n "$NUMBER" ] || { echo "ck-project: $SETTINGS has no project configured — run /ck-code:config board" >&2; exit 1; }
   if [ -z "$PROJECT_ID" ]; then
     PROJECT_ID=$(gh project view "$NUMBER" --owner "$OWNER" --format json --jq .id 2>/dev/null)
     [ -n "$PROJECT_ID" ] || { echo "ck-project: project $NUMBER not reachable for $OWNER" >&2; exit 1; }
   fi
   load_field || exit 1
   reconcile_ids
+}
+
+# board_configured — 0 when tasks/SETTINGS.md turns issue tracking on AND names a
+# project. Anything less is a project with no board, which sync serves without one.
+board_configured() {
+  load_settings >/dev/null 2>&1 || return 1
+  [ "$ISSUES_ON" = "true" ] && [ -n "$OWNER" ] && [ -n "$NUMBER" ]
 }
 
 # reconcile_ids — settings hold names AND cached ids. Names win: re-derive every
@@ -1109,42 +1137,77 @@ reconcile_ids() {
 }
 
 cmd_sync() {
-  require_board
+  local board=0
+  if board_configured; then
+    if command -v gh >/dev/null 2>&1; then
+      require_board
+      board=1
+    else
+      warn "a board is configured but gh is not on PATH — cards are not moved"
+    fi
+  fi
 
-  echo "ck-project: syncing $([ -n "$PLAN" ] && echo "$PLAN" || echo 'every plan') → project #$NUMBER ($OWNER)$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+  if [ "$board" -eq 1 ]; then
+    echo "ck-project: syncing $([ -n "$PLAN" ] && echo "$PLAN" || echo 'every plan') → project #$NUMBER ($OWNER)$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+  else
+    echo "ck-project: reconciling delivery for $([ -n "$PLAN" ] && echo "$PLAN" || echo 'every plan')$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
+  fi
 
   # Delivery first: a card cannot be placed correctly until we know what GitHub did
   # with its PR. This is also the step that repairs a merge nobody told us about.
   reconcile_delivery
   regen_views
 
+  if [ "$board" -eq 0 ]; then
+    [ "$LANDED_LIKELY" -gt 0 ] && \
+      echo "ck-project: $LANDED_LIKELY story(ies) look merged to $TRUNK_REF but git cannot prove it — run 'ck-project landed' to review them"
+    echo "ck-project: no board configured — $DELIV_CHANGED delivery updated, cards skipped"
+    return 0
+  fi
+
   build_status_map
   load_items
 
   local dir ef enum eissue sf sissue role
-  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
-    case "$PLAN" in
-      "") ;;
-      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
-    esac
+  while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
     ef="$dir/EPIC.md"
     [ -f "$ef" ] || continue
     enum=$(fm "$ef" epic)
     eissue=$(fm "$ef" issue)
     [ -n "$eissue" ] && place "$eissue" "$(role_for_epic "$dir")" "epic $enum"
 
-    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+    while IFS= read -r sf; do
+      [ -n "$sf" ] || continue
       sissue=$(fm "$sf" issue)
       [ -n "$sissue" ] || continue
       role=$(role_for_story "$sf")
       place "$sissue" "$role" "$(fm "$sf" id)"
-    done
-  done
+    done < <(ck_story_files "$dir")
+  done < <(epic_dirs)
 
-  echo "ck-project: $ADDED added, $CHANGED changed, $SKIPPED already correct, $DELIV_CHANGED delivery updated, $FAILURES failures"
   [ "$LANDED_LIKELY" -gt 0 ] && \
     echo "ck-project: $LANDED_LIKELY story(ies) look merged to $TRUNK_REF but git cannot prove it — run 'ck-project landed' to review them"
+  echo "ck-project: $ADDED added, $CHANGED changed, $SKIPPED already correct, $DELIV_CHANGED delivery updated, $FAILURES failures"
   return "$(( FAILURES == 0 ? 0 : 1 ))"
+}
+
+# ---------------------------------------------------------------------------
+# Subcommand: reconcile
+# ---------------------------------------------------------------------------
+#
+# The one full pass, in the one order every caller uses (doctor --fix, config, ship):
+# landed work and PR delivery, the views, the board when there is one, then the GitHub
+# issues when issue tracking is on. Each step depends on the one before it: an issue is
+# closed only once delivery says the work is on the trunk.
+
+cmd_reconcile() {
+  local rc=0
+  cmd_sync || rc=1
+  if [ -f "$SETTINGS" ] && [ "$(fm "$SETTINGS" github_issues)" = "true" ] && command -v gh >/dev/null 2>&1; then
+    cmd_issues || rc=1
+  fi
+  return "$rc"
 }
 
 # ---------------------------------------------------------------------------
@@ -1193,44 +1256,36 @@ cmd_landed() {
 # `Closes #<issue>` footer — so the pointer is recoverable rather than lost.
 
 cmd_backfill() {
-  require_board
-  local dir ef sf f issue prnum found=0 miss=0
+  require_repo
+  local dir f issue prnum found=0 miss=0
 
   echo "ck-project: backfilling pr: from closed issues$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
 
-  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
-    case "$PLAN" in
-      "") ;;
-      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    dir=$(dirname "$f"); [ "$(basename "$dir")" = "stories" ] && dir=$(dirname "$dir")
+    [ -n "$(fm "$f" pr)" ] && continue          # never overwrite a known pointer
+    # Only finished work can have been delivered by a PR. Asking GitHub about a `todo`
+    # story costs a network round-trip to learn nothing, and a plan is mostly todo.
+    case "$f" in
+      */EPIC.md) [ "$(role_for_epic "$dir")" = "todo" ] && continue ;;
+      *) case "$(fm "$f" status)" in todo|in-progress|skip) continue ;; esac ;;
     esac
-    ef="$dir/EPIC.md"
-    for f in "$ef" $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
-      [ -f "$f" ] || continue
-      [ -n "$(fm "$f" pr)" ] && continue          # never overwrite a known pointer
-      # Only finished work can have been delivered by a PR. Asking GitHub about a `todo`
-      # story costs a network round-trip to learn nothing, and a plan is mostly todo —
-      # unfiltered, a 60-story plan spent ~60 calls to recover four pointers. The same
-      # holds for an epic no story of which has started.
-      case "$f" in
-        */EPIC.md) [ "$(role_for_epic "$dir")" = "todo" ] && continue ;;
-        *) case "$(fm "$f" status)" in todo|in-progress|skip) continue ;; esac ;;
-      esac
-      issue=$(fm "$f" issue)
-      [ -n "$issue" ] || continue
-      # The newest linking PR wins: a story reopened for a fix has more than one.
-      prnum=$(gh issue view "$issue" --repo "$REPO" \
-                --json closedByPullRequestsReferences \
-                --jq '[.closedByPullRequestsReferences[]?.number] | max // empty' 2>/dev/null)
-      if [ -z "$prnum" ]; then
-        miss=$((miss+1))
-        echo "  skip     issue #$issue — no linking PR found  ($f)"
-        continue
-      fi
-      found=$((found+1))
-      echo "  pr       issue #$issue ← PR #$prnum  ($f)"
-      [ "$DRY" -eq 1 ] || set_fm "$f" pr "$prnum"
-    done
-  done
+    issue=$(fm "$f" issue)
+    [ -n "$issue" ] || continue
+    # The newest linking PR wins: a story reopened for a fix has more than one.
+    prnum=$(gh issue view "$issue" --repo "$REPO" \
+              --json closedByPullRequestsReferences \
+              --jq '[.closedByPullRequestsReferences[]?.number] | max // empty' 2>/dev/null)
+    if [ -z "$prnum" ]; then
+      miss=$((miss+1))
+      echo "  skip     issue #$issue — no linking PR found  ($f)"
+      continue
+    fi
+    found=$((found+1))
+    echo "  pr       issue #$issue ← PR #$prnum  ($f)"
+    [ "$DRY" -eq 1 ] || set_fm "$f" pr "$prnum"
+  done < <(epic_dirs | while IFS= read -r d; do printf '%s\n' "$d/EPIC.md"; ck_story_files "$d"; done)
 
   if [ "$found" -eq 0 ] && [ "$miss" -eq 0 ]; then
     echo "ck-project: nothing to backfill — every entry already carries a pr: or has no issue:"
@@ -1257,7 +1312,8 @@ cmd_backfill() {
 # Scope follows the argument, which mirrors what the PR actually delivers:
 #   a story file  → that story's issue
 #   an epic dir   → the epic issue + every non-skip story issue under it
-#   a plan dir    → every `feature`-level epic of the plan, with its stories
+#   a plan dir    → the plan issue + every epic and story of the plan, when the plan's
+#                   OVERVIEW.md says `integration: plan` (only then does one PR carry it)
 #
 # Reads frontmatter only: no gh, no network, safe to run before a repo has issues.
 
@@ -1274,40 +1330,47 @@ emit_closes() { # emit_closes FILE LABEL → print one footer line, count it
 closes_epic() { # closes_epic EPICDIR — the epic issue, then its stories in id order
   local dir="$1" sf
   [ -f "$dir/EPIC.md" ] && emit_closes "$dir/EPIC.md" "epic $(fm "$dir/EPIC.md" epic)"
-  for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+  while IFS= read -r sf; do
+    [ -n "$sf" ] || continue
     [ "$(fm "$sf" status)" = "skip" ] && continue
     emit_closes "$sf" "story $(fm "$sf" id)"
-  done
+  done < <(ck_story_files "$dir")
+}
+
+# closes_scope TARGET — the Closes lines for a story file, an epic dir or a plan dir.
+# Returns 2 when TARGET is none of those.
+closes_scope() {
+  local target="$1" dir ov
+  case "$target" in */EPIC.md) target="${target%/EPIC.md}" ;; esac
+  if [ -f "$target" ]; then
+    emit_closes "$target" "story $(fm "$target" id)"
+  elif [ -d "$target/stories" ] || [ -f "$target/EPIC.md" ]; then
+    closes_epic "$target"
+  elif [ -d "$target/epics" ]; then
+    ov=$(ck_plan_overview "$target" || true)
+    if [ -z "$ov" ] || [ "$(fm "$ov" integration)" != "plan" ]; then
+      warn "$target is not at integration: plan — a plan PR closes nothing"
+      return 0
+    fi
+    emit_closes "$ov" "plan $(basename "$target")"
+    while IFS= read -r dir; do
+      [ -n "$dir" ] && closes_epic "$dir"
+    done < <(ck_epic_dirs "$target")
+  else
+    return 2
+  fi
 }
 
 CLOSES_N=0
 CLOSES_MISS=0
 
 cmd_closes() {
-  local target="$PLAN" dir
-  [ -n "$target" ] || { echo "ck-project: closes needs a story file, an epic directory, or a plan directory" >&2; exit 1; }
-  # An EPIC.md path means the epic, not "a file with an issue:" — resolve it to its dir
-  # so the caller gets the whole promotion set either way.
-  case "$target" in */EPIC.md) target="${target%/EPIC.md}" ;; esac
-
-  if [ -f "$target" ]; then
-    emit_closes "$target" "story $(fm "$target" id)"
-  elif [ -d "$target/stories" ] || [ -f "$target/EPIC.md" ]; then
-    closes_epic "$target"
-  elif [ -d "$target/epics" ]; then
-    # Feature PR: only `feature`-level epics ride the feature branch. Epics left at
-    # `story` or `epic` land independently and must not be closed by this PR.
-    for dir in $(find "$target/epics" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort); do
-      [ "$(fm "$dir/EPIC.md" integration)" = "feature" ] || continue
-      closes_epic "$dir"
-    done
-    [ "$CLOSES_N" -eq 0 ] && [ "$CLOSES_MISS" -eq 0 ] && \
-      warn "no epic in $target is at integration: feature — a feature PR closes nothing"
-  else
-    echo "ck-project: '$target' is not a story file, an epic directory, or a plan directory" >&2
+  [ -n "$PLAN" ] || { echo "ck-project: closes needs a story file, an epic directory, or a plan directory" >&2; exit 1; }
+  closes_scope "$PLAN"
+  if [ $? -eq 2 ]; then
+    echo "ck-project: '$PLAN' is not a story file, an epic directory, or a plan directory" >&2
     exit 1
   fi
-
   # Nothing on stdout is a valid answer (an unpublished plan), and the caller must be
   # able to tell it apart from a failure — so it is stderr plus exit 0, never an error.
   [ "$CLOSES_N" -eq 0 ] && warn "no linked issues — the PR body gets no Closes footer"
@@ -1386,24 +1449,26 @@ close_issue() { # close_issue NUM LABEL REASON
 # Items are matched by `#<story issue>` when the story has one, else by the bracketed
 # padded id `[EE-SS]` — the same tokens `ship` writes, and `[02-01]` never collides
 # with `[02-10]`.
-tick_epic() {
-  local dir="$1" n="$2" sf tok body cnt tf bf
+tick_issue() { # tick_issue NUM LABEL STORYFILE… — tick every delivered story's item
+  local n="$1" label="$2" sf tok body cnt tf bf
+  shift 2
   tf="$WORK/tokens"; bf="$WORK/body"
   : > "$tf"
-  for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
+  for sf in "$@"; do
     delivered "$sf" || continue
     tok=$(fm "$sf" issue)
     if [ -n "$tok" ]; then tok="#$tok"; else tok="[$(fm "$sf" id)]"; fi
     printf '%s\n' "$tok" >> "$tf"
+    # A plan body lists stories by `[EE-SS]` even once they have issues.
+    [ "${tok#\#}" != "$tok" ] && printf '[%s]\n' "$(fm "$sf" id)" >> "$tf"
   done
   [ -s "$tf" ] || return 0
   body=$(gh issue view "$n" --repo "$REPO" --json body -q .body 2>/dev/null)
   [ -n "$body" ] || return 0
-  # An epic body carries TWO kinds of unchecked box: the story links this owns, and the
-  # epic's own acceptance criteria, which it must never touch. Matching on the story
+  # A body carries TWO kinds of unchecked box: the story links this owns, and the
+  # issue's own acceptance criteria, which it must never touch. Matching on the story
   # token is what separates them. `#13` is anchored against a following digit so it
-  # cannot tick `#130`; `[EE-SS]` needs no anchor — the brackets already delimit it,
-  # and they are why `[02-01]` never matches `[02-10]`.
+  # cannot tick `#130`; `[EE-SS]` needs no anchor — the brackets already delimit it.
   cnt=$(printf '%s\n' "$body" | awk -v tf="$tf" -v out="$bf" '
     BEGIN { while ((getline t < tf) > 0) if (t != "") toks[++nt] = t }
     {
@@ -1420,10 +1485,10 @@ tick_epic() {
     END { print n+0 }
   ')
   [ "${cnt:-0}" -gt 0 ] || return 0
-  echo "  tick     #$n  epic $(fm "$dir/EPIC.md" epic) — $cnt item(s) now checked"
+  echo "  tick     #$n  $label — $cnt item(s) now checked"
   ISS_TICKED=$((ISS_TICKED + cnt))
   [ "$DRY" -eq 1 ] && return 0
-  gh issue edit "$n" --repo "$REPO" --body-file "$bf" >/dev/null 2>&1 || fail "could not edit epic issue #$n"
+  gh issue edit "$n" --repo "$REPO" --body-file "$bf" >/dev/null 2>&1 || fail "could not edit $label issue #$n"
   pace
 }
 
@@ -1437,8 +1502,7 @@ repair_footer() {
   pr_lookup "$n" || return 0
   [ "$(pr_state "$n")" = "OPEN" ] || return 0
 
-  if [ -f "$scope" ]; then want=$(emit_closes "$scope" "$label" 2>/dev/null)
-  else want=$(closes_epic "$scope" 2>/dev/null); fi
+  want=$(closes_scope "$scope" 2>/dev/null)
   [ -n "$want" ] || return 0
 
   body=$(gh pr view "$n" --repo "$REPO" --json body -q .body 2>/dev/null) || return 0
@@ -1467,75 +1531,67 @@ cmd_issues() {
   load_issues
   load_prs
 
-  local dir ef sf enum eissue sissue spr epr
-  for dir in $(find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sort); do
-    case "$PLAN" in
-      "") ;;
-      *) case "$dir" in "$PLAN"/*) ;; *) continue ;; esac ;;
-    esac
-    ef="$dir/EPIC.md"
-    [ -f "$ef" ] || continue
-    enum=$(fm "$ef" epic); eissue=$(fm "$ef" issue); epr=$(fm "$ef" pr)
+  local plan ov pissue ppr pall dir ef enum eissue epr sf sissue spr stories
+  while IFS= read -r plan; do
+    [ -n "$plan" ] || continue
+    ov=$(ck_plan_overview "$plan" || true)
+    pissue=""; ppr=""
+    [ -n "$ov" ] && { pissue=$(fm "$ov" issue); ppr=$(fm "$ov" pr); }
+    pall=1
 
-    for sf in $(find "$dir/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort); do
-      [ "$(fm "$sf" status)" = "skip" ] && continue
-      sissue=$(fm "$sf" issue)
-      spr=$(fm "$sf" pr)
-      if [ -z "$sissue" ]; then
-        ISS_MISS=$((ISS_MISS+1))
-        echo "  no issue story $(fm "$sf" id) — publish the plan to give it one  ($sf)"
-      elif delivered "$sf"; then
-        # A direct landing has no PR to name — say where it went instead, so the close
-        # comment never reads "Delivered in PR #" with nothing after it.
-        if [ -n "${spr:-$epr}" ]; then
-          close_issue "$sissue" "story $(fm "$sf" id)" "Delivered in PR #${spr:-$epr}."
-        else
-          close_issue "$sissue" "story $(fm "$sf" id)" "Delivered directly on $TRUNK."
+    while IFS= read -r dir; do
+      [ -n "$dir" ] || continue
+      ef="$dir/EPIC.md"
+      [ -f "$ef" ] || continue
+      enum=$(fm "$ef" epic); eissue=$(fm "$ef" issue); epr=$(fm "$ef" pr)
+
+      stories=$(ck_story_files "$dir")
+      while IFS= read -r sf; do
+        [ -n "$sf" ] || continue
+        [ "$(fm "$sf" status)" = "skip" ] && continue
+        sissue=$(fm "$sf" issue)
+        spr=$(fm "$sf" pr)
+        if [ -z "$sissue" ]; then
+          ISS_MISS=$((ISS_MISS+1))
+          echo "  no issue story $(fm "$sf" id) — publish the plan to give it one  ($sf)"
+        elif delivered "$sf"; then
+          # A direct landing has no PR to name — say where it went instead, so the close
+          # comment never reads "Delivered in PR #" with nothing after it.
+          if [ -n "${spr:-${epr:-$ppr}}" ]; then
+            close_issue "$sissue" "story $(fm "$sf" id)" "Delivered in PR #${spr:-${epr:-$ppr}}."
+          else
+            close_issue "$sissue" "story $(fm "$sf" id)" "Delivered directly on $TRUNK."
+          fi
         fi
+        [ -n "$spr" ] && [ "$spr" != "${epr:-$ppr}" ] && repair_footer "$spr" "$sf" "story $(fm "$sf" id)"
+      done <<<"$stories"
+
+      [ -n "$epr" ] && repair_footer "$epr" "$dir" "epic $enum"
+      [ "$(role_for_epic "$dir")" = "done" ] || pall=0
+
+      if [ -z "$eissue" ]; then
+        ISS_MISS=$((ISS_MISS+1))
+        echo "  no issue epic $enum — publish the plan to give it one  ($ef)"
+        continue
       fi
-      [ -n "$spr" ] && [ "$spr" != "$epr" ] && repair_footer "$spr" "$sf" "story $(fm "$sf" id)"
-    done
+      # Tick before closing: a closed issue still accepts an edit, but a reader seeing the
+      # close notification should already find every box checked.
+      # shellcheck disable=SC2046  # one story path per line; generated slugs carry no spaces
+      tick_issue "$eissue" "epic $enum" $(printf '%s\n' "$stories")
+      [ "$(role_for_epic "$dir")" = "done" ] && \
+        close_issue "$eissue" "epic $enum" "Every story in this epic is delivered."
+    done < <(ck_epic_dirs "$plan")
 
-    [ -n "$epr" ] && repair_footer "$epr" "$dir" "epic $enum"
-
-    if [ -z "$eissue" ]; then
-      ISS_MISS=$((ISS_MISS+1))
-      echo "  no issue epic $enum — publish the plan to give it one  ($ef)"
-      continue
+    [ -n "$ppr" ] && repair_footer "$ppr" "$plan" "plan $(basename "$plan")"
+    if [ -n "$pissue" ]; then
+      # shellcheck disable=SC2046
+      tick_issue "$pissue" "plan $(basename "$plan")" $(ck_story_files "$plan")
+      [ "$pall" -eq 1 ] && close_issue "$pissue" "plan $(basename "$plan")" "Every epic in this plan is delivered."
     fi
-    # Tick before closing: a closed issue still accepts an edit, but a reader seeing the
-    # close notification should already find every box checked.
-    tick_epic "$dir" "$eissue"
-    [ "$(role_for_epic "$dir")" = "done" ] && \
-      close_issue "$eissue" "epic $enum" "Every story in this epic is delivered."
-  done
+  done < <(scoped_plans)
 
   echo "ck-project: $ISS_CLOSED closed, $ISS_TICKED checklist item(s) ticked, $ISS_FOOTER PR footer(s) repaired, $ISS_MISS without an issue, $FAILURES failures"
   return "$(( FAILURES == 0 ? 0 : 1 ))"
-}
-
-# ---------------------------------------------------------------------------
-# Subcommand: set
-# ---------------------------------------------------------------------------
-
-cmd_set() {
-  [ -n "$SET_ISSUE" ] && [ -n "$SET_ROLE" ] || { echo "ck-project: set needs <issue> <role>" >&2; exit 1; }
-  case " $ROLES " in *" $SET_ROLE "*) ;; *) echo "ck-project: unknown role '$SET_ROLE' ($ROLES)" >&2; exit 1 ;; esac
-  require_board
-  load_items
-  # A manual escape hatch: it moves one card and writes no frontmatter, so the next
-  # sync will move it back to whatever the two axes say. Prefer fixing `delivery:`.
-  local want wantid iid
-  want=$(rget "ROLE_$SET_ROLE")
-  [ -n "$want" ] || { echo "ck-project: this board has no '$SET_ROLE' column — nothing to do"; exit 0; }
-  wantid=$(opt_id "$want")
-  iid=$(item_id "$SET_ISSUE")
-  if [ -z "$iid" ]; then
-    iid=$(add_item "$SET_ISSUE") || { echo "ck-project: could not add #$SET_ISSUE to the board" >&2; exit 1; }
-  fi
-  [ "$(item_col "$SET_ISSUE")" = "$want" ] && { echo "ck-project: #$SET_ISSUE already in $want"; exit 0; }
-  set_column "$SET_ISSUE" "$iid" "$wantid" "$want" || { echo "ck-project: could not move #$SET_ISSUE" >&2; exit 1; }
-  echo "ck-project: #$SET_ISSUE → $want"
 }
 
 # ---------------------------------------------------------------------------
@@ -1562,11 +1618,11 @@ case "$CMD" in
   discover) cmd_discover ;;
   init)     cmd_init ;;
   sync)     cmd_sync ;;
+  reconcile) cmd_reconcile ;;
   landed)   cmd_landed ;;
   backfill) cmd_backfill ;;
   closes)   cmd_closes ;;
   issues)   cmd_issues ;;
-  set)      cmd_set ;;
   show)     cmd_show ;;
   -h|--help|help) usage 0 ;;
   *) echo "ck-project: unknown command '$CMD'" >&2; usage 1 ;;

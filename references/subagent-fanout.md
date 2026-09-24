@@ -92,14 +92,14 @@ The orchestrator (the skill thread) — never a subagent — does all of:
 - **User interaction** — every prompt, confirmation, and refinement runs to completion
   _before_ dispatch and _after_ collection. Subagents get already-resolved context.
 - **Shared writes** — the story-status indexes (`STORIES_INDEX.md`,
-  `FEATURE_INDEX.md`) are **generated views**, so a shared-index write means running
+  `EPICS_INDEX.md`) are **generated, gitignored views** — never committed — so a shared-index write means running
   `ck-index` **once, in the orchestrator**, after it has
   merged the subagents' work and the story frontmatter is settled — never a subagent editing
   an index cell (see [`data-model.md`](data-model.md)). The stamp `tasks/VERSION.md`,
   `_shared.md`, and any append-target singleton are likewise authored/merged only by the
   orchestrator. A subagent writes only files unique to its own unit (its own story
   frontmatter, its own artifact path) and never runs the generator.
-- **The version gate** — runs once, in the orchestrator (see [`version-gate.md`](version-gate.md)). Subagents never re-run or re-stamp it.
+- **The version gate** — runs once, in the orchestrator (see [`version-gate.md`](version-gate.md)). Subagents never re-run it.
 - **Convergence** — merging reports, resolving contradictions to a single decision, and the
   final summary stay with the orchestrator.
 

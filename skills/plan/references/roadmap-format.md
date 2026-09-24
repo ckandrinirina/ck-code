@@ -7,8 +7,9 @@ post-generation summaries.
 
 ## Phase 4 Plan Confirmation Format
 
-Shown to the user before any files are written. Present this text, then gate with
-`AskUserQuestion` (**Proceed** / **Adjust** / **Cancel**).
+Shown to the user before any files are written. Present this text, then gate with one
+`AskUserQuestion` call (**Proceed** / **Adjust** / **Cancel**, plus the integration-level
+question for a new plan folder — SKILL.md Phase 4).
 
 ```
 ## Project Plan: [Project Name]
@@ -48,7 +49,7 @@ After **Epic [NN]**: [what a human can click, run, or call, and with which comma
 - `[seam path]` — stubbed by [EE-SS], replaced by [EE-SS]
 
 ### Output Location
-tasks/YYYY-MM-DD_[project-slug]/
+tasks/YYYY-MM-DD_[slug]/
 ```
 
 The epic numbers above (`Epic 01`, `Epic 02`, the final `NN_integration-e2e`) are
@@ -61,7 +62,10 @@ for it. A "First Runnable Demo" later than the first epic built is mis-ordered (
 — fix it before presenting.
 
 `AskUserQuestion` — "Proceed with generating this plan?" → **Proceed** (Phase 5) /
-**Adjust** (ask what to change, loop to Phase 3) / **Cancel** (stop, write nothing).
+**Adjust** (ask what to change, loop to Phase 3) / **Cancel** (stop, write nothing). In the
+same call, for a new plan folder: "How should this plan's work be reviewed?" → **story**
+(each story its own PR into the trunk — Recommended for small plans) / **epic** (one PR
+per epic) / **plan** (one PR for the whole plan).
 
 ---
 
@@ -138,6 +142,7 @@ verified through a manual API client (`plan` 3.2).
 
 **Mode:** New Project
 **Location:** tasks/YYYY-MM-DD_[project-slug]/
+**Integration:** [story | epic | plan] — change later with /ck-code:config integration
 **Epics:** [count]
 **Stories:** [total count]
 
@@ -145,42 +150,43 @@ verified through a manual API client (`plan` 3.2).
 - S stories: [count]
 - M stories: [count]
 
-(Every story is sized S/M — single-dispatch. Indexes regenerated from frontmatter.)
+(Every story is sized S/M — single-dispatch. Views regenerated from frontmatter.)
 
 ### Next Steps
 1. Review the generated plan in tasks/
 2. Adjust stories or sizing as needed
-3. Use `/ck-code:ship` to publish to GitHub Issues (optional)
+3. `/ck-code:plan --publish tasks/YYYY-MM-DD_[project-slug]` to publish to GitHub Issues (optional)
 4. Start with `/ck-code:build` (pass several story IDs to build independent stories at once)
 ```
 
-### Feature Mode — Add Feature Summary
+### Increment Mode Summary
 
 ```
-## Feature Plan Generated Successfully
+## Plan Generated Successfully
 
-**Mode:** Add Feature
-**Feature:** [feature name]
-**Location:** tasks/YYYY-MM-DD_feature-[feature-slug]/
+**Mode:** Increment
+**Plan:** [plan title]
+**Location:** tasks/YYYY-MM-DD_[slug]/
+**Integration:** [story | epic | plan] — change later with /ck-code:config integration
 **Epics:** [count]
 **Stories:** [total count]
 
 ### Integration Points
 - Existing components affected: [list]
 - New components introduced: [list]
-- Cross-references to main plan: [list of dependencies on existing stories/epics]
+- Cross-references to earlier plans: [list of dependencies on existing stories/epics]
 
 ### Quick Stats
 - S stories: [count]
 - M stories: [count]
 
 ### Next Steps
-1. Review the feature plan in tasks/
-2. Use `/ck-code:ship --to-issues tasks/YYYY-MM-DD_feature-[slug]` to publish to GitHub Issues
-3. Start with `/ck-code:build` on the first story in the feature roadmap
+1. Review the plan in tasks/
+2. `/ck-code:plan --publish tasks/YYYY-MM-DD_[slug]` to publish to GitHub Issues (optional)
+3. Start with `/ck-code:build` on the first story in the roadmap
 ```
 
-### Feature Mode — Continue Existing Plan Summary
+### Increment Mode — Continue Existing Plan Summary
 
 ```
 ## Plan Extended Successfully
@@ -198,5 +204,6 @@ verified through a manual API client (`plan` 3.2).
 ### Next Steps
 1. Review the new epics in tasks/[existing-folder]/epics/
 2. ROADMAP.md has been updated with the new epics
-3. Use `/ck-code:ship` to publish the new epics to GitHub Issues
+3. `/ck-code:plan --publish tasks/[existing-folder]` to publish the new epics to GitHub
+   Issues (entries already published are reused, never duplicated)
 ```

@@ -3,14 +3,14 @@
 **One base template + a short delta per role.** The base defines the shape shared by
 every expert; the delta supplies only what differs (title, focus, responsibilities,
 standards, workflow). The generator fills the base with the role's delta plus the Phase
-1.5 project context and the Phase 1.6 research — it does not copy prose per role.
+1.5 context links and the Phase 1.6 research — it does not copy prose per role.
 
 - **Anchor role** → base template + its [per-role delta](#per-role-deltas).
 - **Derived (project-specific) role** (`expert-graphics`, `expert-firmware`,
   `expert-compliance`…) → base template filled straight from project context + research.
 
-Every `[bracketed placeholder]` and `[PROJECT CONTEXT BLOCK]` is resolved from real
-project data. Keep every generated expert's section shape identical so the team stays uniform.
+Every `[bracketed placeholder]` is resolved from real project data. The **Project context**
+section links the architecture docs; it never copies the stack table or the folder tree. Keep every generated expert's section shape identical so the team stays uniform.
 
 ---
 
@@ -49,13 +49,22 @@ keywords:
   - "[trigger word]"                            # omit for qa / analyst / qa-project
 ---
 
-<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --regenerate. Delete this line to protect manual edits. -->
+<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --refresh or --regenerate. Delete this line to protect manual edits. -->
+<!-- ck-code:team SOURCES [output of `ck-team digest`] -->
 
 # Expert: Senior [Role Title]
 
 You are a senior [role title] working on **[project-name]**.
 
-[PROJECT CONTEXT BLOCK — injected from Phase 1.5]
+## Project context
+
+Read these on demand; they are the source of truth and this skill never copies them.
+
+- [`docs/architecture/overview.md`](../../../docs/architecture/overview.md) — what [project-name] is and who uses it
+- [`docs/architecture/tech-stack.md`](../../../docs/architecture/tech-stack.md) — languages, frameworks, versions
+- [`docs/architecture/folder-structure.md`](../../../docs/architecture/folder-structure.md) — where code lives; this role owns [owned dirs, one line]
+- Feature docs — `docs/architecture/features/<slug>/index.md`, found through the `Docs`
+  column of `tasks/EPICS_INDEX.md` or the feature-doc index in `docs/architecture/README.md`
 
 ## Your Expertise
 
@@ -70,8 +79,8 @@ You are a senior [role title] working on **[project-name]**.
 
 ## Before Writing Code
 
-1. Read the inputs in the delta's *Reads* line (feature doc sections routed via
-   `FEATURE_INDEX`, `_shared.md`, and any global doc the role needs).
+1. Read the inputs in the delta's *Reads* line (feature doc sections routed via the
+   `EPICS_INDEX` `Docs` column, `_shared.md`, and any global doc the role needs).
 2. Read `docs/architecture/folder-structure.md` for where this role's files live.
 3. Scan existing source in this role's directories to learn and reuse patterns.
 
@@ -152,7 +161,7 @@ the project needs):
 
 ### expert-qa-project (basic, always-on — omit paths/keywords)
 
-Distinct shape — a knowledge base, not a builder. Body: after the context block, use
+Distinct shape — a knowledge base, not a builder. Body: after the Project context section, use
 these sections instead of the builder ones.
 
 - **Title:** Project Knowledge Base. **Purpose:** answer any question about the project accurately.

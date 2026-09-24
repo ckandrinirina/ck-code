@@ -24,13 +24,12 @@ for a in "$@"; do
   esac
 done
 
-# Run from the repo root so every relative path below resolves the same way.
-if [ ! -d tasks ]; then
-  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ]; then cd "$ROOT" || exit 1; fi
-fi
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+# shellcheck source=scripts/lib/ck-common.sh
+. "$SCRIPT_DIR/lib/ck-common.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Run from the repo root so every relative path below resolves the same way.
+ck_root || true
 ERRORS=0
 WARNS=0
 
@@ -42,7 +41,7 @@ command -v python3 >/dev/null 2>&1 || HAVE_PY=0
 
 # Used only when version-gate.md is unreadable (a copied-out script); plugin-doctor's
 # layout-const check keeps this in lockstep with the gate.
-FALLBACK_LAYOUT="v6"
+FALLBACK_LAYOUT="v7"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -69,8 +68,7 @@ plans() {
     printf '%s\n' "$ONLY_PLAN"
     return 0
   fi
-  find tasks -maxdepth 2 \( -name PROJECT_OVERVIEW.md -o -name FEATURE_OVERVIEW.md \) 2>/dev/null \
-    | sed 's|/[^/]*$||' | sort -u
+  ck_plans
 }
 
 # story_glob / epic_glob — the find/glob pattern story- and epic-level checks scan.
@@ -86,33 +84,33 @@ story_glob() { [ -n "$ONLY_PLAN" ] && printf '%s' "$ONLY_PLAN/epics/*/stories/*.
 # Unquotes like the fm() helper in ck-index/ck-project/ck-story/ck-view — without
 # it a quoted `board: "123"` value in SETTINGS.md compares false against an
 # unquoted expectation and false-WARNs.
-fmv() { awk -v k="$2" '
-  function unquote(s) {
-    if (s ~ /^".*"$/ || s ~ /^'"'"'.*'"'"'$/) s = substr(s, 2, length(s)-2)
-    return s
-  }
-  { sub(/\r$/,"") } FNR==1 && $0!="---" { exit } FNR==1 { next } $0=="---" { exit }
-  { i=index($0,":"); if(i>0){ n=substr($0,1,i-1); v=substr($0,i+1);
-      gsub(/^[ \t]+|[ \t]+$/,"",n); gsub(/^[ \t]+|[ \t]+$/,"",v);
-      if(n==k){print unquote(v); exit} } }' "$1"; }
+fmv() { ck_fm "$1" "$2"; }
 
 # ---- 1. layout stamp ---------------------------------------------------------
 check_layout() {
   # The expected layout major is read from the plugin's own version-gate.md so this
   # script can never drift from it; the literal fallback only covers a copied-out
-  # script run away from the plugin tree. plugin-doctor cross-checks the fallback.
-  local want got=""
+  # script run away from the plugin tree. tests/smoke.sh keeps the three in lockstep.
+  local want got req run
   want=$(awk '/^LAYOUT[ \t]*=/{print $NF; exit}' "$SCRIPT_DIR/../references/version-gate.md" 2>/dev/null)
   [ -n "$want" ] || want="$FALLBACK_LAYOUT"
-  [ -f tasks/VERSION.md ] && got=$(awk -F: '/^layout:/{gsub(/[ \t]/,"",$2);print $2;exit}' tasks/VERSION.md)
+  got=$(ck_stamp layout)
+  req=$(ck_stamp requires)
+  run=$(ck_plugin_version)
   if [ -z "$got" ]; then
     row layout "tasks/VERSION.md missing" ERROR
     note "run /ck-code:migrate — every change-producing skill blocks until it is stamped"
+  elif [ "${got#v}" -gt "${want#v}" ] 2>/dev/null; then
+    row layout "stamped $got, newer than this ck-code ($want)" ERROR
+    note "update the plugin: /plugin update ck-code@ck-marketplace — never migrate a newer layout"
   elif [ "$got" != "$want" ]; then
     row layout "stamped $got, expected $want" ERROR
     note "run /ck-code:migrate to upgrade this project to $want"
+  elif [ -n "$req" ] && [ -n "$run" ] && ck_version_lt "$run" "$req"; then
+    row layout "$got, requires ck-code >= $req, running $run" ERROR
+    note "update the plugin: /plugin update ck-code@ck-marketplace"
   else
-    row layout "$got" OK
+    row layout "$got${req:+ (requires >= $req)}" OK
   fi
 
   if ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md >/dev/null 2>&1; then
@@ -187,37 +185,33 @@ PY
 # ---- 3. index drift ----------------------------------------------------------
 # Regenerate into a throwaway copy and diff. Exact, and it never touches the project.
 check_indexes() {
-  local missing="" drifted="" n=0
-  cp -R tasks "$TMP/tasks" 2>/dev/null || { row indexes "no tasks/ to check" WARN; return; }
-  mkdir -p "$TMP/docs"
-  [ -d docs/architecture ] && cp -R docs/architecture "$TMP/docs/architecture" 2>/dev/null
-  ( cd "$TMP" && "$SCRIPT_DIR/ck-index.sh" ) >/dev/null 2>&1
-
+  local tracked stale="" n=0 p
+  [ -d tasks ] || { row views "no tasks/ to check" WARN; return; }
+  # v7 keeps the views out of git. A committed one is a v6 leftover: every state change
+  # would dirty the tree again, and parallel worktrees would conflict on it at merge.
+  tracked=$(git ls-files -- 'tasks/STORIES_INDEX.md' 'tasks/*/STORIES_INDEX.md' \
+              tasks/EPICS_INDEX.md tasks/FEATURE_INDEX.md 2>/dev/null)
+  if [ -n "$tracked" ]; then
+    row views "committed to git" ERROR
+    printf '%s\n' "$tracked" | sed 's/^/                   ✗ tracked /'
+    note "run /ck-code:migrate — v7 regenerates the views and never commits them"
+  fi
+  if [ ! -f tasks/.gitignore ] || ! grep -qx 'STORIES_INDEX.md' tasks/.gitignore 2>/dev/null; then
+    row views "tasks/.gitignore does not exclude the views" WARN
+    note "run ck-index — it writes tasks/.gitignore when the file is missing"
+  fi
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     n=$((n+1))
-    if [ ! -f "$p/STORIES_INDEX.md" ]; then
-      missing="$missing$p/STORIES_INDEX.md"$'\n'
-    elif ! grep -q 'GENERATED by ck-code' "$p/STORIES_INDEX.md" 2>/dev/null; then
-      drifted="$drifted$p/STORIES_INDEX.md (hand-written — no GENERATED header)"$'\n'
-    elif ! diff -q "$p/STORIES_INDEX.md" "$TMP/$p/STORIES_INDEX.md" >/dev/null 2>&1; then
-      drifted="$drifted$p/STORIES_INDEX.md"$'\n'
-    fi
+    ck_view_fresh "$p" || stale="$stale$p/STORIES_INDEX.md"$'\n'
   done < <(plans)
-
-  if [ ! -f tasks/FEATURE_INDEX.md ]; then
-    missing="${missing}tasks/FEATURE_INDEX.md"$'\n'
-  elif ! diff -q tasks/FEATURE_INDEX.md "$TMP/tasks/FEATURE_INDEX.md" >/dev/null 2>&1; then
-    drifted="${drifted}tasks/FEATURE_INDEX.md"$'\n'
-  fi
-
-  if [ -n "$missing$drifted" ]; then
-    row indexes "stale or missing" ERROR
-    [ -n "$missing" ] && printf '%s' "$missing" | sed '/^$/d;s/^/                   ✗ missing /'
-    [ -n "$drifted" ] && printf '%s' "$drifted" | sed '/^$/d;s/^/                   ✗ stale   /'
-    note "run \"\${CLAUDE_PLUGIN_ROOT}/scripts/ck-index.sh\" — never hand-edit a generated view"
+  [ -f tasks/EPICS_INDEX.md ] || stale="${stale}tasks/EPICS_INDEX.md"$'\n'
+  if [ -n "$stale" ]; then
+    row views "stale or missing" WARN
+    printf '%s' "$stale" | sed '/^$/d;s/^/                   ✗ /'
+    note "harmless — every reader regenerates them; ck-index refreshes them now"
   else
-    row indexes "$n plan(s) in sync with frontmatter" OK
+    row views "$n plan(s) current" OK
   fi
 }
 
@@ -276,12 +270,12 @@ PY
   # and to migrate Phase R, yet still feeds check_deps below. Never renumber around it.
   orphans=$(find tasks -mindepth 2 -maxdepth 2 -type d -name epics 2>/dev/null \
             | sed 's|/epics$||' | while IFS= read -r d; do
-                [ -f "$d/PROJECT_OVERVIEW.md" ] || [ -f "$d/FEATURE_OVERVIEW.md" ] || printf '%s\n' "$d"
+                ck_plan_overview "$d" >/dev/null || printf '%s\n' "$d"
               done)
   if [ -n "$orphans" ]; then
     row "plan overview" "$(printf '%s\n' "$orphans" | awk 'END{print NR}') epics dir(s) with no overview" ERROR
     printf '%s\n' "$orphans" | sed 's/^/                   ✗ /'
-    note "add PROJECT_OVERVIEW.md or FEATURE_OVERVIEW.md — this plan is invisible to ck-index and migrate"
+    note "add OVERVIEW.md — this plan is invisible to ck-index and migrate"
   fi
 
   # Generated slugs never contain whitespace, but a hand-made plan folder can — and
@@ -372,18 +366,22 @@ check_docs() {
 
 # ---- 6. team skills ----------------------------------------------------------
 check_team() {
-  local n bad=""
+  local n bad="" stale
   n=$(ls -d .claude/skills/expert-*/ .claude/skills/guide-*/ 2>/dev/null | wc -l | tr -d ' ')
   if [ "${n:-0}" -eq 0 ]; then
-    row "team skills" "none generated" WARN
-    note "run /ck-code:team — build and fix rely on the expert and guide skills"
+    if [ "$(fmv tasks/SETTINGS.md experts)" = "none" ]; then
+      row "team skills" "none, by choice (experts: none)" OK
+    else
+      row "team skills" "none generated" WARN
+      note "run /ck-code:team — build and fix rely on the expert and guide skills"
+    fi
     return
   fi
   for f in .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md; do
     [ -f "$f" ] || continue
     local dir fmname
     dir=$(basename "$(dirname "$f")")
-    fmname=$(awk 'NR==1&&$0!="---"{exit} NR==1{next} $0=="---"{exit} /^name:/{sub(/^name:[ \t]*/,"");gsub(/["'"'"']/,"");print;exit}' "$f")
+    fmname=$(ck_fm "$f" name)
     [ "$dir" = "$fmname" ] || bad="$bad$f: folder '$dir' != name '$fmname'"$'\n'
     grep -q '^description:.*:[[:space:]]' "$f" 2>/dev/null \
       && bad="$bad$f: description contains \": \" — frontmatter will not parse"$'\n'
@@ -391,9 +389,16 @@ check_team() {
   if [ -n "$bad" ]; then
     row "team skills" "$n present, some invalid" ERROR
     printf '%s' "$bad" | sed '/^$/d;s/^/                   ✗ /'
-    note "run /ck-code:team --regenerate, or fix the frontmatter by hand"
+    note "run /ck-code:team --refresh, or fix the frontmatter by hand"
+    return
+  fi
+  stale=$(ck_team_stale)
+  if [ -n "$stale" ]; then
+    row "team skills" "$(printf '%s\n' "$stale" | grep -c .) of $n written against an older tech stack" WARN
+    printf '%s\n' "$stale" | head -6 | sed 's|^|                   ✗ |'
+    note "run /ck-code:team --refresh — it regenerates only these, keeping MANUAL blocks"
   else
-    row "team skills" "$n present and valid" OK
+    row "team skills" "$n present, valid and current" OK
   fi
 }
 
@@ -483,7 +488,7 @@ check_specs() {
   bad=$(python3 - "${files[@]}" <<'EOF'
 import json, sys
 KEYS = ["slug","title","language","audience","createdAt","updatedAt","status",
-        "stage","tags","github","linkedDesign","designSystem"]
+        "tags","github","linkedDesign","designSystem"]
 STATUS = {"draft","ready-for-design","design-in-progress"}
 AUDIENCE = {"Mixed","Product","Technical"}
 DS = {"none","awaiting-link","linked"}
@@ -502,8 +507,6 @@ for f in sys.argv[1:]:
         print("%s: keys are out of canonical order" % f)
     if d.get("status") not in STATUS:
         print("%s: status %r is outside the enum" % (f, d.get("status")))
-    if d.get("stage") not in (None, "spec"):
-        print("%s: stage %r is not \"spec\"" % (f, d.get("stage")))
     if d.get("audience") not in AUDIENCE:
         print("%s: audience %r is not one of Mixed|Product|Technical" % (f, d.get("audience")))
     ds = d.get("designSystem")
@@ -646,7 +649,7 @@ check_bootstrap() {
   local guard=".claude/ck-code-required.sh" want have rule
   [ -f tasks/VERSION.md ] || return 0
 
-  want=$(awk -F= '/^GUARD_VERSION=/{print $2; exit}' "$SCRIPT_DIR/ck-bootstrap.sh" 2>/dev/null)
+  want="$CK_GUARD_VERSION"
   have=$(awk '/^# ck-code-guard:/{print $3; exit}' "$guard" 2>/dev/null)
 
   if [ -z "$have" ]; then

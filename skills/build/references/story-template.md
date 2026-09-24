@@ -2,7 +2,9 @@
 
 Blocks written to the story file at specific phases of the build skill. **Status lives in
 the frontmatter** (`status:`) — the only status mutation is one `ck-story set` call, which
-writes the field and regenerates (SKILL.md 1.6 / 8.6). The blocks below are the free-form **body** additions
+writes the field and regenerates (SKILL.md 1.6 / 8.6). The only other frontmatter build
+writes is `files:` — at 8.6 `ck-story files` merges in every path the story actually
+touched, so it ends as the real set rather than the plan's guess. The blocks below are the free-form **body** additions
 (Unplanned Changes, Implementation Summary, checklist, Manual-Test Bugs); the body never
 records the plan or a status header.
 
@@ -29,13 +31,14 @@ empty). Add one bullet per unplanned change at the moment it happens.
   rather than adding a duplicate.
 - This section coexists with `Files Touched` — `Files Touched` records every
   file with line numbers; `Unplanned Changes` records only those outside the
-  Phase 3 "Files to Create/Modify" plan, with reasoning.
+  story's declared frontmatter `files:` set, with reasoning. Both paths also land in
+  `files:` at 8.6.
 
 Examples:
 
 - `- src/api/user.ts — added null check in getUser() — broke test for AC-2 without it`
 - `- src/queue/retry.go — extracted retryWithBackoff() — needed twice by planned handler, would have duplicated`
-- `- tests/helpers/mock_clock.ts — new file — planned tests required time-mocking, not anticipated in Files to Create/Modify`
+- `- tests/helpers/mock_clock.ts — new file — planned tests required time-mocking, not in the story's declared files:`
 
 ---
 
@@ -98,7 +101,7 @@ Mark all acceptance criteria as checked in the story file:
 
 Status is a **frontmatter field**, and `ck-story set <story-path> status=<value>` is the only
 way it changes — one call writes the `status:` line inside the leading `---` fences and
-regenerates both views. Values are lowercase `todo | in-progress | done | skip | bug`. There is no
+regenerates both views (gitignored, never committed). Values are lowercase `todo | in-progress | done | skip | bug`. There is no
 `EPIC.md` stories-table row and no index cell to touch — the generator recomputes both views
 from this field.
 

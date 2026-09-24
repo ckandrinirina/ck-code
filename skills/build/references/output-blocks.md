@@ -65,8 +65,9 @@ deliberate one.
 conditional set is the table in SKILL.md 3.5:
 
 - **New branch from `[base]`** — `story/<EE>-<SS>-<slug>` (`fix/…` for a bug story).
-- **Resume `story/<EE>-<SS>-…`** / **Sync base from origin first** / **Cut from `[trunk]`
-  instead** / **Cut from `epic/<NN>-…`** — each only when its condition holds.
+- **Resume `story/<EE>-<SS>-…`** / **Sync base from origin first** — each only when its
+  condition holds. No option cuts from a base the level does not derive; an objection to the
+  base names `/ck-code:config integration` and stops.
 - **Current branch `[name]`** — only when it is a legal base; never `main`/`develop`/trunk.
 - **Adjust plan** — revise, then re-ask.
 

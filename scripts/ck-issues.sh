@@ -7,7 +7,12 @@
 # by number instead of by title.
 #
 # Usage:
-#   ck-issues.sh tasks/<slug> --mode feature|epics|stories [options]
+#   ck-issues.sh tasks/<slug> --mode plan|epics|stories [options]
+#
+# Modes:
+#   plan     one issue for the whole plan; its number is written to OVERVIEW.md `issue:`
+#   epics    one issue per epic, written to each EPIC.md `issue:`
+#   stories  epic issues plus one issue per story, linked as native sub-issues
 #
 # Options:
 #   --dry-run        print every issue that would be created; create nothing
@@ -37,10 +42,12 @@ REPO=""
 PACE="${CK_ISSUES_PACE:-1}"
 RUN_INDEX=1
 
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+# shellcheck source=scripts/lib/ck-common.sh
+. "$CK_HERE/lib/ck-common.sh"
 
 usage() {
-  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-1}"
 }
 
@@ -60,9 +67,9 @@ done
 [ -n "$PLAN" ] || { echo "ck-issues: no plan directory given" >&2; usage 1; }
 
 case "$MODE" in
-  feature|epics|stories) ;;
-  "") echo "ck-issues: --mode is required (feature|epics|stories)" >&2; exit 1 ;;
-  *)  echo "ck-issues: invalid --mode '$MODE' (feature|epics|stories)" >&2; exit 1 ;;
+  plan|epics|stories) ;;
+  "") echo "ck-issues: --mode is required (plan|epics|stories)" >&2; exit 1 ;;
+  *)  echo "ck-issues: invalid --mode '$MODE' (plan|epics|stories)" >&2; exit 1 ;;
 esac
 
 # Locate the plan: fall back to the git repo root so a run from a subdirectory
@@ -116,54 +123,12 @@ summary() {
   echo "ck-issues: $CREATED $verb, $REUSED reused, $WRITTEN issue: fields written, $LINKED sub-issues linked, $FAILURES failures"
 }
 
-# fm FILE KEY — print a frontmatter scalar (between the first --- fences).
-# Surrounding quotes are stripped: YAML 1.1 reads a bare `01` as octal, so a plan
-# writer may legitimately quote `epic: "01"`.
-fm() {
-  awk -v key="$2" '
-    function unquote(s) {
-      if (s ~ /^".*"$/ || s ~ /^'"'"'.*'"'"'$/) s = substr(s, 2, length(s)-2)
-      return s
-    }
-    { sub(/\r$/,"") }
-    FNR==1 && $0!="---" { exit }
-    FNR==1 { next }
-    $0=="---" { exit }
-    { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1);
-        gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v);
-        if(k==key){print unquote(v); exit} } }
-  ' "$1"
-}
+fm() { ck_fm "$@"; }
 
-# set_fm FILE KEY VALUE — set a frontmatter scalar, adding the line if absent.
-# Rewrites through a temp file and copies content back, so the original file's
-# permissions and inode survive.
+# set_fm FILE KEY VALUE — ck_fm_set plus the write-back tally for the summary line.
 set_fm() {
-  local f="$1" k="$2" v="$3" tmp
-  [ "$(head -1 "$f" 2>/dev/null | tr -d '\r')" = "---" ] || {
-    warn "no frontmatter fence in $f — '$k' not written"
-    return 1
-  }
-  tmp="$WORK/fm.$$"
-  awk -v key="$k" -v val="$v" '
-    { sub(/\r$/,"") }
-    FNR==1 { inb=1; print; next }
-    inb && $0=="---" {
-      if (!done) { print (val=="" ? key ":" : key ": " val); done=1 }
-      inb=0; print; next
-    }
-    inb {
-      i=index($0,":")
-      if (i>0) { k2=substr($0,1,i-1); gsub(/^[ \t]+|[ \t]+$/,"",k2)
-        if (k2==key) { print (val=="" ? key ":" : key ": " val); done=1; next } }
-      print; next
-    }
-    { print }
-  ' "$f" > "$tmp" || return 1
-  cat "$tmp" > "$f" || return 1
-  rm -f "$tmp"
+  ck_fm_set "$1" "$2" "$3" || { warn "'$2' not written to $1"; return 1; }
   WRITTEN=$((WRITTEN + 1))
-  return 0
 }
 
 # section FILE HEADING — print one `## HEADING` body, blank lines trimmed off both
@@ -221,7 +186,7 @@ create_issue() {
   fi
 
   # shellcheck disable=SC2086
-  out=$(gh issue create $GH_REPO_ARGS --title "$title" --body-file "$body" $labels 2>&1)
+  out=$(gh issue create $GH_REPO_ARGS --title "$title" --body-file "$body" $labels 2>&1 </dev/null)
   num=$(printf '%s\n' "$out" | sed -n 's|.*/issues/\([0-9][0-9]*\).*|\1|p' | tail -1)
   pace
   if [ -z "$num" ]; then
@@ -235,26 +200,24 @@ create_issue() {
 # Read the plan
 # ---------------------------------------------------------------------------
 
-OVERVIEW=""
-for f in PROJECT_OVERVIEW.md FEATURE_OVERVIEW.md; do
-  [ -f "$PLAN/$f" ] && { OVERVIEW="$PLAN/$f"; break; }
-done
+OVERVIEW="$(ck_plan_overview "$PLAN" || true)"
 
 PROJECT_NAME=""
 if [ -n "$OVERVIEW" ]; then
-  PROJECT_NAME=$(awk '/^# / { sub(/^# /,""); sub(/^[A-Za-z ]+: /,""); print; exit }' "$OVERVIEW")
+  PROJECT_NAME=$(fm "$OVERVIEW" title)
+  [ -n "$PROJECT_NAME" ] || PROJECT_NAME=$(awk '/^# / { sub(/^# /,""); print; exit }' "$OVERVIEW")
 fi
 [ -n "$PROJECT_NAME" ] || PROJECT_NAME=$(basename "$PLAN")
 
-EPIC_DIRS=$(find "$PLAN/epics" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+EPIC_DIRS=$(ck_epic_dirs "$PLAN")
 [ -n "$EPIC_DIRS" ] || { echo "ck-issues: no epic folders under $PLAN/epics" >&2; exit 1; }
 
-SIZES=$(find "$PLAN/epics" -type f -path '*/stories/*.md' 2>/dev/null | sort | while read -r s; do
+SIZES=$(ck_story_files "$PLAN" | while IFS= read -r s; do
   fm "$s" size
 done | awk 'NF' | sort -u | while read -r sz; do is_valid_size "$sz" && printf '%s\n' "$sz"; done)
 
 N_EPICS=$(printf '%s\n' "$EPIC_DIRS" | awk 'NF' | wc -l | tr -d ' ')
-N_STORIES=$(find "$PLAN/epics" -type f -path '*/stories/*.md' 2>/dev/null | wc -l | tr -d ' ')
+N_STORIES=$(ck_story_files "$PLAN" | awk 'NF' | wc -l | tr -d ' ')
 
 echo "ck-issues: repo $REPO · mode $MODE · plan $PLAN · $N_EPICS epics / $N_STORIES stories$([ "$DRY" -eq 1 ] && echo ' · DRY RUN')"
 
@@ -271,7 +234,7 @@ mklabel() {
 }
 
 case "$MODE" in
-  feature) mklabel feature 0E8A16 "Whole-feature tracking issue" ;;
+  plan)    mklabel plan 0E8A16 "Whole-plan tracking issue" ;;
   epics)   mklabel epic 6F42C1 "Epic-level issue" ;;
   stories)
     mklabel epic 6F42C1 "Epic-level issue"
@@ -296,9 +259,7 @@ story_line() { # story_line FILE  → "[EE-SS] Title (SIZE)"
   printf '[%s] %s%s' "$id" "$title" "$([ -n "$size" ] && printf ' (%s)' "$size")"
 }
 
-epic_stories() { # epic_stories EPICDIR — sorted story files
-  find "$1/stories" -maxdepth 1 -type f -name '*.md' 2>/dev/null | sort
-}
+epic_stories() { ck_story_files "$1"; }
 
 # epic_body EPICDIR OUTFILE MODE — `epics` uses [EE-SS] tokens, `stories` uses issue
 # refs (falling back to #TBD for any story not yet created).
@@ -308,7 +269,8 @@ epic_body() {
   add_section "$out" "Description" "$(section "$ef" Description)"
   add_section "$out" "Goals" "$(section "$ef" Goals)"
 
-  for sf in $(epic_stories "$dir"); do
+  while IFS= read -r sf; do
+    [ -n "$sf" ] || continue
     if [ "$style" = "stories" ]; then
       id=$(fm "$sf" id)
       num=""
@@ -320,7 +282,7 @@ epic_body() {
       list="$list- [ ] $(story_line "$sf")
 "
     fi
-  done
+  done < <(epic_stories "$dir")
   add_section "$out" "Stories" "$list"
   add_section "$out" "Acceptance Criteria" "$(section "$ef" 'Acceptance Criteria')"
   add_section "$out" "Technical Notes" "$(section "$ef" 'Technical Notes')"
@@ -346,39 +308,48 @@ story_body() { # story_body STORYFILE OUTFILE EPICNUM EPICTITLE
 }
 
 # ---------------------------------------------------------------------------
-# MODE feature — one issue, no write-back
+# MODE plan — one issue for the whole plan, recorded on OVERVIEW.md
 # ---------------------------------------------------------------------------
 
-if [ "$MODE" = "feature" ]; then
+if [ "$MODE" = "plan" ]; then
+  [ -n "$OVERVIEW" ] || { echo "ck-issues: $PLAN has no OVERVIEW.md — nothing to record the plan issue on" >&2; exit 1; }
+  existing=$(fm "$OVERVIEW" issue)
+  if [ -n "$existing" ]; then
+    REUSED=$((REUSED + 1))
+    echo "plan #$existing reused — $PROJECT_NAME"
+    summary
+    exit 0
+  fi
   BODY="$WORK/body.md"
   : > "$BODY"
-  OV=""
-  if [ -n "$OVERVIEW" ]; then
-    OV=$(section "$OVERVIEW" Vision)
-    [ -n "$OV" ] || OV=$(section "$OVERVIEW" Overview)
-    [ -n "$OV" ] || OV=$(section "$OVERVIEW" Description)
-  fi
+  OV=$(section "$OVERVIEW" Vision)
+  [ -n "$OV" ] || OV=$(section "$OVERVIEW" Overview)
+  [ -n "$OV" ] || OV=$(section "$OVERVIEW" Description)
   add_section "$BODY" "Overview" "$OV"
 
-  for dir in $EPIC_DIRS; do
+  while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
     ef="$dir/EPIC.md"
     [ -f "$ef" ] || { warn "no EPIC.md in $dir — epic skipped"; continue; }
     enum=$(fm "$ef" epic); etitle=$(fm "$ef" title)
     block="$(fm "$ef" description)
 
 "
-    for sf in $(epic_stories "$dir"); do
+    while IFS= read -r sf; do
+      [ -n "$sf" ] || continue
       block="$block- [ ] $(story_line "$sf")
 "
-    done
+    done < <(epic_stories "$dir")
     add_section "$BODY" "Epic $enum: $etitle" "$block"
-  done
+  done <<<"$EPIC_DIRS"
 
-  [ -n "$OVERVIEW" ] && add_section "$BODY" "Acceptance Criteria" "$(section "$OVERVIEW" 'Acceptance Criteria')"
+  add_section "$BODY" "Acceptance Criteria" "$(section "$OVERVIEW" 'Acceptance Criteria')"
 
-  if num=$(create_issue "$BODY" "Feature: $PROJECT_NAME" feature); then
+  if num=$(create_issue "$BODY" "Plan: $PROJECT_NAME" plan); then
     CREATED=$((CREATED + 1))
-    [ "$DRY" -eq 0 ] && echo "feature #$num created — $PROJECT_NAME"
+    if [ "$DRY" -eq 0 ]; then
+      set_fm "$OVERVIEW" issue "$num" && echo "plan #$num created → $OVERVIEW"
+    fi
   else
     FAILURES=$((FAILURES + 1))
   fi
@@ -390,7 +361,8 @@ fi
 # MODE epics / stories — epic issues first (story bodies cross-reference them)
 # ---------------------------------------------------------------------------
 
-for dir in $EPIC_DIRS; do
+while IFS= read -r dir; do
+  [ -n "$dir" ] || continue
   ef="$dir/EPIC.md"
   [ -f "$ef" ] || { warn "no EPIC.md in $dir — epic skipped"; continue; }
   enum=$(fm "$ef" epic)
@@ -414,23 +386,25 @@ for dir in $EPIC_DIRS; do
   [ "$DRY" -eq 1 ] && continue
   echo "$num" > "$WORK/epicmap/$enum"
   set_fm "$ef" issue "$num" && echo "epic $enum #$num created → $ef"
-done
+done <<<"$EPIC_DIRS"
 
 if [ "$MODE" = "epics" ]; then
-  [ "$RUN_INDEX" -eq 1 ] && [ "$DRY" -eq 0 ] && [ "$WRITTEN" -gt 0 ] && "$here/ck-index.sh" "$PLAN"
+  [ "$RUN_INDEX" -eq 1 ] && [ "$DRY" -eq 0 ] && [ "$WRITTEN" -gt 0 ] && ck_run ck-index "$PLAN"
   summary
   exit "$(( FAILURES == 0 ? 0 : 1 ))"
 fi
 
 # --- story issues, in epic order then story order -------------------------
 
-for dir in $EPIC_DIRS; do
+while IFS= read -r dir; do
+  [ -n "$dir" ] || continue
   ef="$dir/EPIC.md"
   [ -f "$ef" ] || continue
   enum=$(fm "$ef" epic); etitle=$(fm "$ef" title)
   [ -n "$enum" ] || continue
 
-  for sf in $(epic_stories "$dir"); do
+  while IFS= read -r sf; do
+    [ -n "$sf" ] || continue
     id=$(fm "$sf" id)
     [ -n "$id" ] || { warn "no 'id:' in $sf — story skipped"; continue; }
     stitle=$(fm "$sf" title); size=$(fm "$sf" size)
@@ -459,8 +433,8 @@ for dir in $EPIC_DIRS; do
     [ "$DRY" -eq 1 ] && continue
     echo "$num" > "$WORK/storymap/$id"
     set_fm "$sf" issue "$num" && echo "story $id #$num created → $sf"
-  done
-done
+  done < <(epic_stories "$dir")
+done <<<"$EPIC_DIRS"
 
 # --- attach each story issue to its epic as a native sub-issue -------------
 # The `- [ ] #N` checklist in the epic body is a *description*; a sub-issue is a
@@ -487,7 +461,8 @@ link_subissues() {
     return 0
   }
 
-  for dir in $EPIC_DIRS; do
+  while IFS= read -r dir; do
+  [ -n "$dir" ] || continue
     ef="$dir/EPIC.md"
     [ -f "$ef" ] || continue
     enum=$(fm "$ef" epic)
@@ -497,7 +472,8 @@ link_subissues() {
     attached=$(gh api "repos/$REPO/issues/$eissue/sub_issues" --jq '.[].number' 2>/dev/null)
     pace
 
-    for sf in $(epic_stories "$dir"); do
+    while IFS= read -r sf; do
+    [ -n "$sf" ] || continue
       sid=$(fm "$sf" issue)
       [ -n "$sid" ] || continue
       printf '%s\n' "$attached" | grep -qx "$sid" && continue
@@ -512,8 +488,8 @@ link_subissues() {
         warn "could not link #$sid under epic #$eissue"
       fi
       pace
-    done
-  done
+    done < <(epic_stories "$dir")
+  done <<<"$EPIC_DIRS"
 }
 
 link_subissues
@@ -523,7 +499,8 @@ link_subissues
 # between the story issues and the relink.
 
 if [ "$DRY" -eq 0 ]; then
-  for dir in $EPIC_DIRS; do
+  while IFS= read -r dir; do
+  [ -n "$dir" ] || continue
     ef="$dir/EPIC.md"
     [ -f "$ef" ] || continue
     enum=$(fm "$ef" epic)
@@ -539,10 +516,10 @@ if [ "$DRY" -eq 0 ]; then
       fail "relink failed for epic $enum (#$eissue)"
     fi
     pace
-  done
+  done <<<"$EPIC_DIRS"
 fi
 
-[ "$RUN_INDEX" -eq 1 ] && [ "$DRY" -eq 0 ] && [ "$WRITTEN" -gt 0 ] && "$here/ck-index.sh" "$PLAN"
+[ "$RUN_INDEX" -eq 1 ] && [ "$DRY" -eq 0 ] && [ "$WRITTEN" -gt 0 ] && ck_run ck-index "$PLAN"
 
 summary
 exit "$(( FAILURES == 0 ? 0 : 1 ))"

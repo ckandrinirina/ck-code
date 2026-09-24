@@ -2,9 +2,9 @@
 
 Wave mode runs PARALLEL MODE once per **wave** and merges each wave before the next, so a
 dependent story always sees its blockers already `done`. Entered by `--epic NN`, or by the
-whole-epic option in the SKILL.md 1.2 menu / the 1.4 epic-wave offer.
+whole-epic option in the SKILL.md 1.2 menu (the 1.4 hint names the same `--epic NN` command).
 
-**Scope is exactly one epic — never a whole feature.** A multi-epic feature is built one
+**Scope is exactly one epic — never a whole plan.** A multi-epic plan is built one
 epic per `--epic` run; after an epic completes, the operator picks the next (no
 auto-chaining). Never plan a wave that spans epics.
 
@@ -21,10 +21,10 @@ Take the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status 
 skip}` (what `ck-view waves` does — a done or skipped story needs no wave and blocks
 nothing). Order them into dependency phases by `Blocked by`:
 
-- **Wave 1** = stories whose every blocker is `done` (or empty). A `BUG` story always
+- **Wave 1** = stories whose every blocker is `done` or `skip` (or that have none). A `BUG` story always
   qualifies for wave 1 regardless of its `blocked_by` — Bug-Fix Mode outranks dependency
   ordering, same as the Ready rule elsewhere.
-- **Wave k+1** = stories whose every blocker is `done` or scheduled in a wave < k (one
+- **Wave k+1** = stories whose every blocker is `done`, `skip`, or scheduled in a wave < k (one
   scheduled in the wave being filled right now does not count — it has not landed yet).
 
 Within one dependency level, stories are further split into **sub-waves** so no two
@@ -64,9 +64,10 @@ For each wave, in order:
      main checkout on the wave's `$WORKBRANCH` (P4 § Solo). Still an agent, never inline: the
      orchestrator's context stays free of build output either way. P6 is skipped for it.
 3. **Merge** this wave's merge-eligible branches into the target (P8 Option 1) — a solo wave
-   already on the target has nothing to merge — then **regenerate the indexes**,
+   already on the target has nothing to merge — then **regenerate the views**,
    `ck-index tasks/<Plan>` followed by `ck-project sync tasks/<Plan>`, so the next wave's
-   re-resolve sees these stories as `done` and their cards land in Done. Run the post-wave
+   re-resolve sees these stories as `done` and their cards land in Done. Both are local;
+   the views are gitignored and never committed. Run the post-wave
    QA on the target via a `qa-validator` agent, not inline.
 4. **Verify** the merged wave on the target (the P8 manual gate) before the next wave builds
    on it. A reverted story returns to `todo`/`in-progress`, holds its dependents, and its
@@ -80,5 +81,6 @@ For each wave, in order:
 
 A story left BLOCKED from merge holds every downstream story depending on it — those cannot
 dispatch (blocker not `done`). Report held and `UNSCHEDULABLE` stories in the final
-summary, then the standard NEXT (`/ck-code:ship` per story). When more not-`done` epics
-remain, list them and ask which to build next (`--epic NN`) — never auto-continue.
+summary, then the P9 hand-off (one ask) to `/ck-code:ship --promote --epic NN` — never
+`/ck-code:ship` per story. When more not-`done` epics remain, list them and ask which to
+build next (`--epic NN`) — never auto-continue.

@@ -1,31 +1,42 @@
 ---
 name: plan
-description: Use when breaking a project spec or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle; redirects to full planning when no epic exists. Argument is the spec-file path, or the `--quick` flags.
-argument-hint: "<path-to-spec> | --quick [brief] [--epic NN]"
+description: Use when breaking a project spec, feature doc or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle. With `--publish [--mode plan|epics|stories] [tasks/<plan>]`, publishes an existing plan to GitHub Issues. Argument is the spec path, or the `--quick` or `--publish` flags.
+argument-hint: "[path-to-spec] | --quick [brief] [--epic NN] | --publish [--mode plan|epics|stories] [tasks/<plan>]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(git status*) Bash(git branch*) Bash(mkdir*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(ls*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-plan*) Bash(ck-issues*) Bash(ck-project*) Bash(git status*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh issue list*) Bash(mkdir*) Bash(awk*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(tail*) Bash(npx*) Bash(ls*) Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
-# Project Architect — Spec to Epics/Stories (+ Quick Single-Story)
+# Project Architect — Spec to Epics/Stories (+ Quick Single-Story, Publish)
 
 Transform a specification into a structured implementation plan — epics, stories,
-dependencies, roadmap — under `tasks/`, or add one small story to an existing epic.
+dependencies, roadmap — under `tasks/`, add one small story to an existing epic, or
+publish a plan to GitHub Issues.
 
-**Two operating modes:**
+**Three operating modes:**
 
-- **Full plan** (default) — a spec/feature becomes epics, stories, and a roadmap.
-  Sub-modes: New Project, Add Feature, Continue Existing Plan.
+- **Full plan** (default) — a spec or feature doc becomes epics, stories, and a roadmap.
+  Sub-modes: New Project, Increment, Continue Existing Plan.
 - **Quick** (`--quick`) — one small story dropped into an existing epic, no full cycle.
+- **Publish** (`--publish`) — an existing plan becomes GitHub Issues, and each issue number
+  is written back into frontmatter.
 
-Story state lives in **story-file frontmatter**; `STORIES_INDEX.md` and
-`FEATURE_INDEX.md` are **generated** by `scripts/ck-index.sh` — never hand-written
-(see [`data-model.md`](../../references/data-model.md)).
+Story state lives in **story-file frontmatter**; each plan's record lives in
+`tasks/<plan>/OVERVIEW.md` frontmatter. `STORIES_INDEX.md` and `EPICS_INDEX.md` are
+**generated** by `ck-index`, gitignored, and never hand-written or committed (see
+[`data-model.md`](../../references/data-model.md)).
 
 **Hand-off:** requires `/ck-code:design` (architecture docs in `docs/architecture/`),
-then `/ck-code:team` (expert + guide skills). If no `.claude/skills/expert-*/` exists,
-say so and recommend `/ck-code:team` before continuing — `build` relies on it. Hands
-off to `/ck-code:build` (one story, several, or a whole epic) — or `/ck-code:ship` to
-publish issues first.
+then `/ck-code:team` (expert + guide skills). If no `.claude/skills/expert-*/` exists and
+`tasks/SETTINGS.md` does not read `experts: none`, say so and recommend `/ck-code:team`
+before continuing — `build` relies on it. Only `--quick` hands off to `/ck-code:build`
+(its new story); a full planning run ends by naming `/ck-code:build`, after its own
+`--publish` mode when issue tracking is on.
 
 ## HARD GATES
 
@@ -45,6 +56,8 @@ existing epic). If the request is something else, STOP and recommend the better 
 - A stakeholder-facing spec, not a task breakdown → `/ck-code:spec`
 - A bug in already-implemented code → `/ck-code:fix`
 - `--quick` but no `tasks/` plan or target epic exists → fall through to full plan (Phase 1.2)
+- `--publish` but no `tasks/<plan>/OVERVIEW.md` exists → there is nothing to publish; plan first
+- Committing or opening a PR for finished code → `/ck-code:ship`
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:build`.
@@ -76,24 +89,35 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
-this PASSes.
+Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
+or newer layout, offers `/ck-code:migrate` or a plugin update, and stamps. Never read or
+write project state before this PASSes. The gate covers `--quick` and `--publish` too.
 
 ---
 
 ## PHASE 1: INPUT & MODE
 
-### 1.1 Route quick vs full
+### 1.1 Route quick, publish or full
 
-If `$ARGUMENTS` contains `--quick` → **QUICK MODE**: go to [PHASE Q](#phase-q-quick-single-story-mode).
-Otherwise continue with **FULL PLAN MODE** (Phases 2–6).
+- `$ARGUMENTS` contains `--quick` → **QUICK MODE**: go to [PHASE Q](#phase-q-quick-single-story-mode).
+- `$ARGUMENTS` contains `--publish` → **PUBLISH MODE**: go to [PHASE P](#phase-p-publish-mode---publish).
+  Both flags together → say they are separate runs and stop.
+- Otherwise continue with **FULL PLAN MODE** (Phases 2–6).
 
-**Full-plan input:** `$ARGUMENTS` is a path to a spec/feature file.
+**Full-plan input:** `$ARGUMENTS` is a path to a spec or feature doc.
 
-- Empty or missing file → ask: "Please provide the path to your project specification
-  file (e.g., `docs/specifications.md`)." Validate with Read before proceeding.
+- **Empty** → never make the user retype a path `design` just wrote. Offer the feature
+  docs still waiting to be planned:
+
+  ```bash
+  grep -l 'design: pending' docs/architecture/features/*/index.md 2>/dev/null
+  ```
+
+  One → use it and say so. Several → `AskUserQuestion` with one option per feature doc
+  (plus **All of them**, planned together as one plan). None → ask for the spec path
+  ("e.g. `docs/specs/<date>_<slug>/spec.md`").
+- Missing file → say so and ask again. Validate with Read before proceeding.
 - File empty or < 50 words → warn and ask whether to continue.
 
 ### 1.2 Full-plan sub-mode
@@ -101,23 +125,24 @@ Otherwise continue with **FULL PLAN MODE** (Phases 2–6).
 Detect existing context, then pick the sub-mode with `AskUserQuestion`:
 
 ```
-IF docs/architecture/ exists OR tasks/ has prior plans → offer FEATURE-mode choice:
+IF docs/architecture/ exists OR tasks/ has prior plans → offer the INCREMENT-mode choice:
 ELSE → NEW PROJECT MODE (plan from scratch, no prompt).
 ```
 
 `AskUserQuestion` — "This project already has architecture/plans. How should I plan?"
 Options:
 
-- **Add Feature** — plan epics/stories for a new feature, reading existing architecture
-  and prior plans as context. New dated folder `tasks/YYYY-MM-DD_feature-<slug>/`,
-  epic numbering continues from the project-wide maximum (3.1);
-  `FEATURE_OVERVIEW.md` instead of `PROJECT_OVERVIEW.md`.
+- **Increment** — plan epics/stories for new work on the existing project, reading
+  existing architecture and prior plans as context. New dated folder
+  `tasks/YYYY-MM-DD_<slug>/` (no prefix; the slug names the work), epic numbering continues
+  from the project-wide maximum (3.1).
 - **Full Project Plan** — replan the whole project from scratch (new dated folder;
   existing plans untouched).
 - **Continue Existing Plan** — append epics/stories to a prior plan. List `tasks/*/`
   folders, ask which to extend, continue epic numbering from the **project-wide** maximum
   (3.1) — which may live in a newer plan than the one being extended, so never read it
-  off that folder's own last epic — write into the SAME folder, update `ROADMAP.md`.
+  off that folder's own last epic — write into the SAME folder, update `ROADMAP.md`. The
+  plan record and its integration level stay as they are.
 
 ---
 
@@ -129,16 +154,17 @@ Options:
 
 Read the entire `$ARGUMENTS` file.
 
-### 2.2 (Feature / Continue) read existing context
+### 2.2 (Increment / Continue) read existing context
 
 Groups 1–3 are independent — issue them as **one parallel tool-call message** (batched
 Reads + Globs), never three sequential rounds:
 
 1. **Global architecture + feature docs** — `overview.md`, `tech-stack.md`,
-   `folder-structure.md`, `_shared.md`, and the feature index. Open a full
+   `folder-structure.md`, `_shared.md`, and the `docs/architecture/README.md` index (its
+   Feature Documents table). Open a full
    `features/<slug>/index.md` only for a feature the new work directly integrates with.
-2. **Existing plans** — read `ROADMAP.md` and `EPIC.md` files to learn what is planned
-   and what numbering to continue from.
+2. **Existing plans** — read `tasks/EPICS_INDEX.md` (one row per epic, every plan),
+   then the `ROADMAP.md` and `EPIC.md` files it points at, to learn what is planned.
 3. **The codebase** — Glob to see which planned components already exist as source, so
    you plan only what is not built.
 
@@ -152,7 +178,7 @@ planned**: a `docs/architecture/features/<slug>/index.md` whose frontmatter carr
 `design: pending`. Those are the authoritative features to plan in this run — each
 `slug` points to the feature doc to plan from. In Phase 5.5 you flip them to
 `design: planned`. If no feature docs exist (design has not run), fall back to the
-spec / feature index.
+spec alone.
 
 ```bash
 grep -rl 'design: pending' docs/architecture/features/*/index.md 2>/dev/null
@@ -211,7 +237,7 @@ milestone under one epic; never create an epic that marks neither a milestone no
 boundary — fold it into an existing one.
 
 Each epic: a coherent deliverable chunk, numbered sequentially, a short descriptive slug.
-**Set the epic slug to match its feature-doc slug** so the generated `FEATURE_INDEX.md`
+**Set the epic slug to match its feature-doc slug** so the generated `EPICS_INDEX.md`
 links its `Docs` cell.
 
 **Epic numbers are unique across the whole project, never per-folder.** Allocate the first
@@ -343,13 +369,14 @@ plan the replacement or drop the stub.
 
 ### 3.6 Mandatory final Integration & E2E epic
 
-**Every plan run ends with a dedicated final epic that validates the whole feature (or
-project) end-to-end** — no plan is complete without it. Add it as this run's **last**
+**Every plan run ends with a dedicated final epic that validates the whole plan's scope
+end-to-end** — no plan is complete without it. Add it as this run's **last**
 epic, regardless of mode — which, since 3.1 allocates from the project-wide maximum, is
 also the highest-numbered epic in the project:
 
 - **New Project:** covers the whole project end-to-end.
-- **Add Feature:** covers the whole feature end-to-end, including its integration points.
+- **Increment:** covers the new work end-to-end, including its integration points with
+  what already exists.
 - **Continue:** a new final Integration & E2E epic for the appended scope only; do not
   touch the prior plan's epics.
 
@@ -366,8 +393,8 @@ Rules:
   dispatch, split by journey (happy-path, error/edge, each integration point) — never one oversized E2E story.
 - Give each an ordered `## Implementation Tasks` list: set up fixtures → drive the flow → assert observable outcomes.
 
-Do not fold this into a feature epic, and do not skip it because "the stories already
-have tests" — those are per-slice; this epic is the whole-feature guarantee.
+Do not fold this into another epic, and do not skip it because "the stories already
+have tests" — those are per-slice; this epic is the whole-plan guarantee.
 
 ---
 
@@ -375,12 +402,22 @@ have tests" — those are per-slice; this epic is the whole-feature guarantee.
 
 Present the planned structure (no files written yet) using
 [roadmap-format.md#phase-4-plan-confirmation-format](references/roadmap-format.md#phase-4-plan-confirmation-format),
-then gate with `AskUserQuestion` — "Proceed with generating this plan?" Options:
-**Proceed** / **Adjust** / **Cancel**.
+then gate with **one** `AskUserQuestion` call. New Project and Increment create a plan, so
+they carry a second question in the **same** call — the plan's integration level, asked
+once, here, and never again by any skill:
+
+1. "Proceed with generating this plan?" — **Proceed** / **Adjust** / **Cancel**.
+2. "How should this plan's work be reviewed?" (new plan folder only):
+   - **story** — each story its own PR into the trunk (Recommended for small plans)
+   - **epic** — stories merge into `epic/NN-<slug>`, one PR per epic
+   - **plan** — epics merge into the plan branch, one PR for the whole plan
 
 - **Adjust** → ask what to change, loop back to Phase 3.
 - **Cancel** → stop, write nothing.
-- **Proceed** → Phase 5.
+- **Proceed** → Phase 5, carrying the level for 5.2.
+
+Continue mode asks only question 1: the plan it extends already has a level
+(`/ck-code:config integration` changes it).
 
 ---
 
@@ -388,23 +425,35 @@ then gate with `AskUserQuestion` — "Proceed with generating this plan?" Option
 
 ### 5.1 Directory structure
 
-Use today's date for `YYYY-MM-DD` (ISO 8601). Layouts per mode:
-[examples.md](references/examples.md) (New Project / Add Feature / Continue).
+Use today's date for `YYYY-MM-DD` (ISO 8601). A new plan folder is
+`tasks/YYYY-MM-DD_<slug>/` in every mode — no prefix. Layouts per mode:
+[examples.md](references/examples.md) (New Project / Increment / Continue).
 
-### 5.2 Overview
+### 5.2 Overview — the plan record
 
-Write `PROJECT_OVERVIEW.md` (New/Full) or `FEATURE_OVERVIEW.md` (Add Feature) —
-templates in [templates.md](references/templates.md#project-overview-template).
+Write `OVERVIEW.md` from [templates.md](references/templates.md#overview-template): the
+frontmatter record (`slug`, `title`, then `integration`, `branch`, `issue`, `pr`,
+`delivery` left empty) and the prose body. Then record the level Phase 4 chose, through its
+one writer:
+
+```bash
+ck-plan set tasks/<plan> integration=<story|epic|plan>
+```
+
+At `plan` it also records `branch: plan/<slug>`. Never type the record's values by hand
+after the template is written. Continue mode leaves `OVERVIEW.md` untouched.
 
 ### 5.3 EPIC.md (per epic) — with frontmatter, no story table
 
 Write `epics/NN_<slug>/EPIC.md` from
 [templates.md#epic-template](references/templates.md#epic-template). Its frontmatter is
-**eight keys, always all eight**: `epic`, `slug`, `title`, `description` filled in here, and
-`issue`, `pr`, `delivery`, `integration` present but **left empty** for `ship`, `build` and
-`ck-project sync` to fill. The generator reads `description` for the `FEATURE_INDEX.md`
-cell. There is **no `## Stories` table**: the story list is generated into
-`STORIES_INDEX.md`.
+**seven keys, always all seven**: `epic`, `slug`, `title`, `description` filled in here, and
+`issue`, `pr`, `delivery` present but **left empty** for `plan --publish`, `ship` and
+`ck-project sync` to fill. There is **no `integration:` key** — the level is the plan's.
+The generator reads `description` for the `EPICS_INDEX.md` cell. There is **no
+`## Stories` table**: the story list is generated into `STORIES_INDEX.md`. Keep the
+`## Dependencies` section: it records *why* an epic waits on another, which `blocked_by`
+cannot.
 
 ### 5.4 Story files (per story) — with frontmatter + Implementation Tasks
 
@@ -424,7 +473,7 @@ The content is identical on both branches: `epics/NN_<slug>/stories/SS_<story-sl
 from [templates.md#story-template](references/templates.md#story-template). Frontmatter is
 the source of truth: `id`, `title`, `epic`, `status: todo`, `size` (`S`/`M`), `blocked_by`
 (inline `[…]` or `[]`), `files` (inline `[…]` or `[]`), and `issue:` / `pr:` / `delivery:` /
-`prior_status:` all empty — `ship` and `ck-project sync` own the last three.
+`prior_status:` all empty — `plan --publish`, `ship`, `ck-project sync` and `build`/`fix` fill them later.
 Body keeps `## Description`, `## Acceptance Criteria`, `## Implementation Tasks`,
 `## Technical Notes`.
 
@@ -445,17 +494,18 @@ Fill the **Stub Ledger** with one row per seam recorded in 3.5, and state which 
 yields a runnable demo. Continue mode: update the existing roadmap to include the new epics,
 appending Stub Ledger rows rather than replacing existing ones.
 
-### 5.7 Regenerate the indexes (never hand-write)
+### 5.7 Regenerate the views (never hand-write, never commit)
 
 After all story + epic files are written, regenerate `STORIES_INDEX.md` and
-`FEATURE_INDEX.md` from frontmatter — never write or cell-edit them by hand:
+`EPICS_INDEX.md` from frontmatter — never write or cell-edit them by hand:
 
 ```bash
 ck-index
 ```
 
-The script reads only frontmatter, so the views cannot disagree with the stories. It
-picks up the new plan, the epic descriptions, and the `Docs` cells automatically.
+The views are disposable: gitignored (`ck-index` writes `tasks/.gitignore` when it is
+missing), regenerated on every read, and never staged or committed. It picks up the new
+plan, the epic descriptions, and the `Docs` cells automatically.
 
 ---
 
@@ -463,7 +513,7 @@ picks up the new plan, the epic descriptions, and the `Docs` cells automatically
 
 Present a mode-tailored summary from
 [roadmap-format.md#phase-6-summary-formats](references/roadmap-format.md#phase-6-summary-formats)
-(New Project / Add Feature / Continue).
+(New Project / Increment / Continue).
 
 ---
 
@@ -482,8 +532,7 @@ Adds one small story to an **existing epic**, no full cycle. (Phase 0 already ga
 
    No match → show every epic with its plan and re-prompt. More than one match → the
    project has colliding epic numbers; stop and say to run `/ck-code:migrate`.
-2. **No `--epic`** — `Glob "tasks/*/PROJECT_OVERVIEW.md"` and
-   `Glob "tasks/*/FEATURE_OVERVIEW.md"`; take the most recent. **No plan → redirect:**
+2. **No `--epic`** — `Glob "tasks/*/OVERVIEW.md"`; take the most recent. **No plan → redirect:**
    "No `tasks/` plan found. Run `/ck-code:plan <spec>` first." Stop. Multiple plans → ask
    which. Then list that plan's epic folders and ask which epic.
 3. Record the target epic's highest existing `SS`, read from **story frontmatter `id:`**,
@@ -526,35 +575,143 @@ Path `tasks/<slug>/epics/NN_<epic-slug>/stories/SS_<story-slug>.md`, frontmatter
 (`status: todo`, `size` S/M, `blocked_by` `[]` unless a dependency was named, `files`,
 `issue:`/`pr:`/`delivery:`/`prior_status:` empty) + body with `## Implementation Tasks`.
 
-### Q.5 Regenerate the indexes
+### Q.5 Regenerate the views
 
-Never cell-edit an index and never touch `EPIC.md` — the story list is generated:
+Never cell-edit a view and never touch `EPIC.md` — the story list is generated:
 
 ```bash
 ck-index tasks/<slug>
 ```
 
-Print the created path and confirm the index regenerated (row `EE-SS`).
+Print the created path and confirm the view regenerated (row `EE-SS`).
 
-### Q.6 Hand-off
+### Q.6 Hand-off (DIRECT, one ask)
 
-Print suggestions; never auto-launch:
+Hand off to `/ck-code:build <the story path Q.4 wrote>` per
+[`skill-invocation.md`](../../references/skill-invocation.md) — one question with the path
+already resolved: **Run it** (implement now, TDD + QA) / **Skip** (the story stays `todo`;
+`/ck-code:track next` lists it). Never print a command list for the user to retype.
 
+When `plan --quick` was itself invoked by `build` (or by `fix`), skip the question and
+return: the caller is already on the chain and resumes with the new story.
+
+---
+
+## PHASE P: PUBLISH MODE (`--publish`)
+
+Publishes an existing `tasks/<plan>/` to GitHub Issues at the chosen granularity, then
+**writes each new issue number back into frontmatter** (`issue:`) so `/ck-code:ship` later
+resolves issues by number. (Phase 0 already gated.) What each mode's issues contain, and
+the P5 summary shape: [issue-bodies.md](references/issue-bodies.md).
+
+**Resolve the plan path.** A `tasks/<plan>/` path given → use it. Else the plan this run
+just wrote (the NEXT hand-off passes it). Else `find tasks -mindepth 2 -maxdepth 2 -name
+OVERVIEW.md`: one → use it and say so; several → ask which; none → tell the user to run
+`/ck-code:plan` first.
+
+| Mode | Issues created | Frontmatter write-back |
+|---|---|---|
+| `plan` | **1** issue for the whole plan (epics + stories as nested checklists) | plan issue → `OVERVIEW.md` `issue:` |
+| `epics` | **1 per epic** (stories are an in-body checklist) | epic issue → each `EPIC.md` `issue:` |
+| `stories` | epic issues **+** 1 per story, linked as native sub-issues | epic issue → `EPIC.md` `issue:`; story issue → story `issue:` |
+
+### P1. Validate environment
+
+```bash
+gh auth status
+gh repo view --json nameWithOwner -q .nameWithOwner
 ```
-Next steps (pick one):
-  /ck-code:build   <story-path>   # implement now (TDD + QA)
-  /ck-code:ship    <story-path>   # publish as a GitHub Issue
-  /ck-code:track   next           # see the updated dashboard
+
+If either fails, stop and tell the user what to fix. The publish needs no `project` scope:
+the board is `/ck-code:config board`'s job, never this mode's.
+
+### P2. Preview the plan
+
+`ck-issues` parses the plan — **never read the epic and story files yourself**. One dry run
+reports everything the confirm prompt needs and creates nothing:
+
+```bash
+ck-issues tasks/<plan> --mode stories --dry-run
 ```
+
+- the header line gives `N epics / M stories`, which is the issue count for **every**
+  mode (`plan`=1, `epics`=N, `stories`=N+M);
+- each `would create:` line is the exact title and label set;
+- each `reused` line is a plan file whose frontmatter already carries an `issue:` — it
+  will never be published twice, so a re-run after a partial publish is safe.
+
+Only when `reused` lines are absent but the repo already holds `plan`/`epic`/`story` issues
+(a publish whose write-back was lost) check for strays:
+`gh issue list --state all --limit 200 --json number,title,labels`.
+
+### P3. Select mode & confirm (ONE call)
+
+Ask in a **single** `AskUserQuestion` call:
+
+1. **Mode** — only when `--mode` was not passed: "How to publish this plan?" **plan**
+   (1 issue), **epics** (1 per epic), **stories** (epics + one per story), each labelled
+   with its count from P2.
+2. **Confirm** — the repo, the plan, and the issue count: **Create** / **Abort**. Fold a
+   **Skip duplicates / Proceed anyway** choice into this same call when P2 found strays.
+
+Never a second round-trip.
+
+### P4. Publish
+
+One call does labels, issue creation, `issue:` write-back, the epic→story relink, native
+sub-issue links and the `ck-index` regeneration:
+
+```bash
+ck-issues tasks/<plan> --mode <mode>
+```
+
+Options: `--repo OWNER/REPO` (default: current repo), `--pace N` (seconds between `gh`
+calls, default `1`), `--no-index`.
+
+Exit `0` = every issue created. Exit `1` = at least one `gh` call failed; the failing
+titles are on stderr and everything else still published. **Re-run the identical command
+to finish a partial publish** — entries with an `issue:` are reused, and epic bodies are
+relinked from the current numbers on every run, so an interrupted run repairs itself.
+
+Relay any `ck-issues: WARN` or `ck-index: WARN` line to the user — a warned story is
+skipped by the publisher *and* invisible in every generated view.
+
+### P4.1 Turn issue tracking on
+
+The plan now has issues, so the project tracks them. When `tasks/SETTINGS.md` is absent or
+does not read `github_issues: true`, write it: create the file with a frontmatter fence if
+it is absent, else edit only that key. Every other key stays as it is. This is what lets
+`ship` and `ck-project reconcile` close and tick these issues as work is delivered.
+
+The published files (`OVERVIEW.md`, `EPIC.md`, story files, `tasks/SETTINGS.md`) are real
+state: they travel with the next commit — `ship`'s, or a plain `chore(plan): record issue
+numbers` commit when the user asks for one. The views `ck-issues` regenerated are never
+staged.
+
+### P4.2 Board
+
+No board here. When `ck-project show` names no configured project, close with one line:
+`Track these issues on a GitHub Projects board with /ck-code:config board.` — never a
+question, never a board call. With a board already configured, run `ck-project sync
+tasks/<plan>` once so the new cards land in the column each story's `status:` calls for;
+a board failure never fails the publish.
+
+### P5. Summary
+
+Fill the summary shape from [issue-bodies.md](references/issue-bodies.md) for the mode
+that ran, using the script's own output lines (`plan #X created → path`, `epic NN #X
+created → path`, `story EE-SS #X created → path`) — they already name every issue number
+and every file that received an `issue:`. Never re-read the plan to build the summary.
 
 ---
 
 ## NEXT
 
-When `tasks/SETTINGS.md` shows issue tracking is **on**, hand off to
-`/ck-code:ship --to-issues <the tasks/ folder just written>` per
-[`skill-invocation.md`](../../references/skill-invocation.md) — one question, the path
-already resolved — to publish the epics and stories to GitHub Issues.
+After a full plan: when `tasks/SETTINGS.md` reads `github_issues: true`, switch to
+PUBLISH MODE for the plan just written — one question, the path already resolved
+(**Run it** publishes with the P3 confirm still ahead / **Skip** leaves the plan
+unpublished; `/ck-code:plan --publish tasks/<plan>` later). It is this skill's own mode, so
+no `Skill` call and no chain link ([`workflow-map.md`](../../references/workflow-map.md#invocation-matrix)).
 
 When issue tracking is **off**, ask nothing — an unwanted push to GitHub is exactly what the
 confirm gate exists to prevent, and asking every run is noise.
@@ -570,18 +727,25 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never store the next epic number** — derive it from the epic folders each run (3.1).
 - **Never ask which plan an `--epic NN` belongs to** (Q.1) — the number is unique project-wide; more than one match is a collision to migrate, not a question to ask.
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
-- **Never skip the final Integration & E2E epic** (3.6), and never fold it into a feature epic.
+- **Never skip the final Integration & E2E epic** (3.6), and never fold it into another epic.
 - **Never plan a backend slice before something can exercise it** (3.1) — demo-first is the default ordering; a headless project (surface `none` in 2.4) says so in one line and falls back to foundation-first.
 - **Never plan an epic before the walking skeleton** (3.1) — the first epic built makes the app runnable; a "setup" or "core models" epic that ships nothing a human can see is folded into it. Epic count is free; epics-before-demo is one.
 - **Never write an acceptance criterion that needs a manual API client to check** (3.2) — every story, backend included, is verified by a human through the surface already built; the API is exercised by hand only inside the automated test suite.
 - **Never introduce a stubbed seam without the story that replaces it** (3.5) — same plan, `blocked_by` the surface story, one Stub Ledger row, and the fixture path gone by its acceptance criteria.
-- **Never hand-write or cell-edit `STORIES_INDEX.md` / `FEATURE_INDEX.md`** — regenerate with `ck-index` (5.7, Q.5).
+- **Never hand-write, cell-edit, stage or commit `STORIES_INDEX.md` / `EPICS_INDEX.md`** — regenerate with `ck-index` (5.7, Q.5); they are gitignored and disposable.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Never write an `EPIC.md` `## Stories` table** — the story list is generated.
+- **Never write an `EPIC.md` `## Stories` table or `integration:` key** — the story list is generated, and the level is the plan's.
+- **Never ask the integration level more than once per plan** (Phase 4) — write it with `ck-plan set`; a later change is `/ck-code:config integration`.
+- **Never write the plan record's `integration`/`branch`/`issue`/`pr`/`delivery` by hand** — `ck-plan set` and `ck-issues` are their writers.
+- **Never prefix a new plan folder** — `tasks/YYYY-MM-DD_<slug>/`, whatever the mode.
 - **Never leave a planned feature `design: pending`** — flip it to `planned` (5.5).
 - **Never create a new epic in `--quick` mode** — redirect to full plan when no epic exists.
 - **Never write story files inline when ≥3 are confirmed** (5.4) — the dispatch decision happens before the first file, never after the last.
-- **Never delegate shared writes to a subagent** (5.4) — overview, epics, indexes, roadmap are orchestrator-owned; subagents write only their own story file.
+- **Never delegate shared writes to a subagent** (5.4) — overview, epics, views, roadmap are orchestrator-owned; subagents write only their own story file.
+- **Never publish by hand** (PHASE P) — no per-issue `gh issue create`, no throwaway publisher script, no `Edit` per `issue:` field. Run `ck-issues`: rate-limit pacing, ordering (epics before the story bodies that reference them), write-back, relink and `ck-index` all live inside it. Hand-driving a 12-epic plan is ~200 tool calls, and the `sleep` that paces them is blocked as a foreground call in most harnesses.
+- **Never create issues outside the chosen `--publish` mode** — `plan`=1 issue, `epics` makes no story issues, only `stories` builds the full hierarchy.
+- **Never re-publish a plan with a different mode** — `issue:` holds one number per file, so a second mode publishes a parallel hierarchy the frontmatter cannot point at.
+- **Never create or adopt a Projects board in this skill** — that is `/ck-code:config board`.
 - **Never leave a template's `[bracketed placeholder]` in a written file** — every one is replaced with real content, or with the literal `[TO BE DEFINED]`, which is the **only** bracketed string allowed to survive. A shipped `[Story Title]` or `[Criterion 1]` is a defect.
 - **Never derive a story's `SS` from a filename** (Q.1, Q.3) — read the epic's stories' frontmatter `id:` values; a drifted `SS_` prefix would otherwise mint a duplicate ID.
 - **Never hardcode** project names, technologies, or paths — derive everything from the spec.

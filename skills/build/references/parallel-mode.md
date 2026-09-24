@@ -24,7 +24,7 @@ conflict-and-merge stage that only exists because peers run concurrently.
 
 **Where solo commits.** The agent works in the main checkout on `$TARGET`, which P1 has
 already checked out. `$TARGET` is never a protected branch here — at `integration: story` P1
-raises the escalation gate instead of targeting the trunk (§ P1, § P3), so implementation
+raises the level-switch gate instead of targeting the trunk (§ P1, § P3), so implementation
 never lands on `main`/`develop` (forbidden project-wide, SKILL.md 3.5). The branch the solo
 agent is placed on is called `$WORKBRANCH` below, and it is always `$TARGET`; the separate
 name is what P5's drift guard and the dispatch prompt check against.
@@ -36,15 +36,15 @@ detailed in its section below.
 
 | Step | What this context does | Non-negotiable |
 |---|---|---|
-| **P1** | Resolve `$TARGET` from the epic's `integration:` level (dirty tree or detached HEAD stops the run), **check it out — creating it if absent — and verify HEAD**, announce it with its reason and staleness, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never dispatch before HEAD is on `$TARGET`; never merge into a hardcoded `main`, into whatever branch happened to be checked out, or into the trunk (level `story` escalates at P3) |
+| **P1** | Resolve `$TARGET` from the plan's `integration:` level (`ck-plan get`; dirty tree or detached HEAD stops the run), **check it out — creating it if absent — and verify HEAD**, announce it with its reason and staleness, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never dispatch before HEAD is on `$TARGET`; never merge into a hardcoded `main`, into whatever branch happened to be checked out, or into the trunk (level `story` → switch to `epic` or cancel at P3) |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
-| **P3** | Team gate (see § P3) + wave-plan confirmation + criteria ambiguity + the level-`story` escalation when P1 raised it, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking — agents cannot prompt |
+| **P3** | Team gate (see § P3) + wave-plan confirmation + criteria ambiguity + the level-`story` switch when P1 raised it, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking (unless `experts: none`) — agents cannot prompt |
 | **P4** | Dispatch the wave: **fan-out** (≥ 2) = one worktree `Agent` per story in a single message; **solo** (= 1) = one `Agent` on `$WORKBRANCH`, no worktree. Both `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` | Every story goes to an agent; a worktree only when a peer runs beside it. Tier the model by reasoning complexity, never `size` |
 | **P5** | Integrity **the moment an agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / ⚠ deletion review (ask accept-or-exclude) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
 | **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Cross-branch by construction — the fan-out wave's one barrier. **Skipped entirely on a solo wave.** Every dry-run is aborted; nothing lands here |
 | **P7** | One `ck-code:qa-validator` per ✓ story, launched as it clears P5 | Acceptable = ✓ complete + `QA: PASS` (+ conflict-free, fan-out only) |
-| **P8** | Fan-out: merge in P6's order. Solo: nothing to merge. Then regenerate the indexes **once**, run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never accept work that has not passed P7 |
-| **P9** | Re-resolve the next wave from the regenerated index and loop from P3 | A held story keeps its branch (and worktree, if any) and holds its dependents |
+| **P8** | Fan-out: merge in P6's order. Solo: nothing to merge. Then `ck-index` + `ck-project sync` **once** (local; no view is committed), run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never accept work that has not passed P7 |
+| **P9** | Re-resolve the next wave from the regenerated index and loop from P3; when the epic is done, hand off to `/ck-code:ship --promote --epic NN` (one ask) | A held story keeps its branch (and worktree, if any) and holds its dependents; never tell the user to ship each story |
 
 **P5 and P7 are pipelined, P6 and P8 are barriers.** P5 and P7 judge one story against
 itself, so each walks them as soon as its agent returns — the fastest story's QA runs
@@ -61,25 +61,32 @@ git status --porcelain && git branch --show-current
 
 A dirty tree or a detached HEAD stops the run — say which and stop.
 
+The level is the **plan's**, read once from its record (this mode never asks for it):
+
+```bash
+ck-plan get tasks/<Plan> integration branch
+```
+
 `$TARGET` is `resolve_parent(epic NN)`
 ([`branch-topology.md`](../../../references/branch-topology.md#resolution)) — **not** whatever
-branch is currently checked out. At `epic`/`feature` it is `epic/<NN>-*`; at level `story` it
-resolves to the default branch, which this mode never uses as `$TARGET` (escalation gate
-below). This mode is already scoped to a single epic, so exactly one `$TARGET` resolves.
-Every later phase merges into it, never a hardcoded `main`.
+branch is currently checked out. At `epic` and `plan` it is `epic/<NN>-*` (at `plan` that epic
+branch is cut from the plan branch, the record's `branch:`); at level `story` (or an empty
+`integration:`) it resolves to the default branch, which this mode never uses as `$TARGET`
+(level-switch gate below). This mode is already scoped to a single epic, so exactly one
+`$TARGET` resolves. Every later phase merges into it, never a hardcoded `main`.
 
-**Level `story` — escalate before anything is dispatched.** This mode records the wave on
-`$TARGET` (P4 commits there) and merges into it (P8), and **neither may ever happen on the
+**Level `story` — switch or cancel before anything is dispatched.** This mode records the wave
+on `$TARGET` (P4 commits there) and merges into it (P8), and **neither may ever happen on the
 trunk**. So when `resolve_parent` returns the default branch, do not check it out and do not
-plan a dispatch: carry the escalation into P3's single question — **Escalate epic `NN` to
-`integration: epic`** (write `integration: epic` to `EPIC.md`, create `epic/<NN>-<slug>` from
+plan a dispatch: carry the switch into P3's single question — **Switch this plan to epic
+level** (`ck-plan set tasks/<Plan> integration=epic`, create `epic/<NN>-<slug>` from
 `<trunk>`, and that branch becomes `$TARGET`) or **Cancel** (the stories stay untouched;
 build them one at a time inline). P2 may be planned meanwhile; nothing is dispatched until
 the answer lands.
 
 **Check out `$TARGET` and verify HEAD, before the announce.** Creating it when absent is part
 of this step ([Creation](../../../references/branch-topology.md#creation) builds the chain
-top-down, so `feat/<plan-slug>` comes first at level `feature`):
+top-down, so at level `plan` the plan branch — the record's `branch:` — comes first):
 
 ```bash
 git fetch origin --quiet
@@ -110,8 +117,8 @@ Resolving the scope set, by argument shape:
 
 | `$ARGUMENTS` | Scope |
 |---|---|
-| Story IDs (`02-05 03-01`) | exactly those stories; skip the feature gate — explicit scope is always respected |
-| `--epic NN` | every story of epic `NN` that is neither `DONE` nor `SKIP`; skip the feature gate |
+| Story IDs (`02-05 02-07`) | exactly those stories; skip the epic gate — explicit scope is always respected. Every ID must share one epic (`EE`): a set spanning more than one epic is **refused** — list the epics it touches, say to run one `build` per epic, and stop. A run merges into one epic branch, so a cross-epic set has no single target |
+| `--epic NN` | every story of epic `NN` that is neither `DONE` nor `SKIP`; skip the epic gate |
 | Empty (menu route) | the set the SKILL.md 1.2 menu already resolved — do not re-derive it |
 
 **Resolve the plan from the number, never by asking.** Epic numbers are unique across
@@ -128,21 +135,22 @@ find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/NN_*'
   to run `/ck-code:migrate`; never pick one, and never ask which — a wrong guess here
   builds the wrong story onto the wrong branch
 
-Then read that `tasks/<Plan>/STORIES_INDEX.md` (the generated view) to map IDs to file
-paths and `Blocked by` sets; regenerate it with `ck-index tasks/<Plan>` first if it is
-missing or lacks the `GENERATED by ck-code` header. **Never `Read` an individual story
+Then read that `tasks/<Plan>/STORIES_INDEX.md` (the generated, gitignored view) to map IDs
+to file paths and `Blocked by` sets; regenerate it with `ck-index tasks/<Plan>` first if it
+is missing or lacks the `GENERATED by ck-code` header. **Never `Read` an individual story
 body in this phase** — the index is the only discovery source.
 
-A story is **ready** when its `Status` is `TODO` or `IN PROGRESS` and every `Blocked by` ID
-resolves to `DONE` in the same table (empty `Blocked by` is always ready), **or** its
-`Status` is `BUG` (a triaged bug from `/ck-code:fix`; the dispatched run enters Bug-Fix
-Mode). If nothing in scope is ready, list the still-blocked rows with their unmet blockers
-and stop.
+A story is **ready** when `status: todo` and every `blocked_by` story is `done` or `skip`,
+or when `status: bug` (a triaged bug from `/ck-code:fix`; the dispatched run enters Bug-Fix
+Mode). A story is **dispatchable** when it is ready, or when it is `IN PROGRESS` inside the
+explicit scope (resumed, never re-started). If nothing in scope is dispatchable, list the
+still-blocked rows with their unmet blockers and stop.
 
-`IN PROGRESS` is ready because it is the state an interrupted run leaves behind: P4 flips
-the wave's stories before dispatching them, and a wave that aborted mid-flight must
-re-dispatch on the next `--epic NN` rather than strand its own stories. It is also the state
-a reverted story returns to ([wave-mode.md](wave-mode.md) step 4).
+An `IN PROGRESS` story is not ready, but an explicit scope names it, and it is the state an
+interrupted run leaves behind: P4 flips the wave's stories before dispatching them, and a
+wave that aborted mid-flight must re-dispatch on the next `--epic NN` rather than strand its
+own stories. It is also the state a reverted story returns to ([wave-mode.md](wave-mode.md)
+step 4).
 
 **One story in scope from anything other than `--epic NN`** — an explicit story path, a lone
 story ID, a single-story pick from the 1.2 menu — **is never orchestrated**: hand it to
@@ -178,38 +186,44 @@ ls .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md 2>/dev/null
 ```
 
 Empty output means `/ck-code:team` has never run and every dispatched agent would write
-generic code with no project experts, guides, or QA rules. Warn per
-[`skill-detection.md`](../../../references/skill-detection.md) § 4a.1: **RUN TEAM FIRST**
-(recommended) → `Skill({ skill: "ck-code:team" })`, then dispatch with the generated skills
-in place; **CONTINUE WITHOUT SKILLS** → dispatch as-is. Never dispatch without asking.
+generic code with no project experts, guides, or QA rules. When `tasks/SETTINGS.md` sets
+`experts: none` the gate never fires — dispatch as-is. Otherwise warn per
+[`skill-detection.md`](../../../references/skill-detection.md) § 4a.1: **Run /ck-code:team
+first** (recommended) → `Skill({ skill: "ck-code:team" })`, then dispatch with the generated
+skills in place; **Continue without experts this time** → dispatch as-is; **Never ask in this
+project** → write `experts: none` to the `tasks/SETTINGS.md` frontmatter, then dispatch as-is.
+Never dispatch without asking.
 
 Fold that question, the wave-plan confirmation (`PROCEED` / `DROP A STORY` / `ABORT`), the P1
-**Sync `$TARGET` from origin first** option when the target is behind, the P1 **escalation**
-question when the epic's level is `story`, and any genuine acceptance-criteria ambiguity into
+**Sync `$TARGET` from origin first** option when the target is behind, the P1 **level-switch**
+question when the plan's level is `story`, and any genuine acceptance-criteria ambiguity into
 **one `AskUserQuestion`, at most 4 questions** — the dispatched agents have no user, so
 ambiguity is resolved here or not at all. Skip the wave-plan question when the SKILL.md 1.2
 menu already resolved this exact scope; that selection was the confirmation, and re-asking it
-is a wasted round-trip. When the slots are contended the escalation question wins, then the
+is a wasted round-trip. When the slots are contended the level-switch question wins, then the
 team gate and the sync offer — without a target there is nothing to dispatch, and the other
 two change what every dispatched agent starts from.
 
-**The escalation question (level `story` only).** "Epic `<NN>` is `integration: story`, so its
-target would be `<trunk>` — this mode never commits or merges there. How should it land?"
+**The level-switch question (level `story` only).** "Plan `<Plan>` is `integration: story`, so
+its target would be `<trunk>` — this mode never commits or merges there. How should it land?"
+It offers exactly these two options, never a path into the trunk:
 
-- **Escalate epic `<NN>` to `integration: epic`** (recommended) — write `integration: epic`
-  to that `EPIC.md`, then run P1's checkout for the new target:
+- **Switch this plan to epic level** (recommended) — record it, then run P1's checkout for
+  the new target:
 
   ```bash
+  ck-plan set tasks/<Plan> integration=epic
   git branch "epic/<NN>-<slug>" "<trunk>"     # only if absent
   git checkout "epic/<NN>-<slug>"
-  ck-index tasks/<Plan> && ck-project sync tasks/<Plan>
+  ck-project sync tasks/<Plan>
   ```
 
   `epic/<NN>-<slug>` becomes `$TARGET` for the whole run, and every story of the epic lands in
-  that one PR. The level change applies from here onward, never retroactively — say so when
-  stories of the epic are already merged.
+  that one PR. The switch is plan-wide and applies from here onward, never retroactively —
+  say so when stories of the plan are already merged. `OVERVIEW.md` is now modified; the P4
+  wave-start commit records it.
 - **Cancel** — dispatch nothing and leave every story's status exactly as it is; a
-  `story`-level epic is built one story at a time inline (SKILL.md Phases 1–8), each on its
+  `story`-level plan is built one story at a time inline (SKILL.md Phases 1–8), each on its
   own `story/…` branch with its own PR.
 
 Never synthesize an epic branch without this answer, and never fall back to the trunk.
@@ -226,21 +240,22 @@ status and restores it at Phase 8.6).
 ```bash
 ck-story set status=in-progress <story-path>… --no-board
 git status --porcelain tasks/          # empty → nothing to record; skip the two commands below
-git add <the story files just edited> tasks/<Plan>/STORIES_INDEX.md tasks/FEATURE_INDEX.md
-git commit -m "chore: mark wave <N> in progress"
+git add <the story files just edited> [tasks/<Plan>/OVERVIEW.md — only after a P3 level switch]
+git commit -m "chore(tasks): mark wave <N> in progress"
 ck-project sync tasks/<Plan>
 ```
 
-One `ck-story` call takes every story of the wave and regenerates once. `--no-board` holds
-the card sync back until after the commit, so the board never advertises a wave that is not
-yet recorded on `$TARGET`.
+The commit holds **story files only** (plus `OVERVIEW.md` when P3 switched the level) —
+never a view: `STORIES_INDEX.md` and `EPICS_INDEX.md` are gitignored. It exists because the
+merge needs a clean target that already reads `in-progress`. One `ck-story` call takes every
+story of the wave and regenerates once. `--no-board` holds the card sync back until after
+the commit, so the board never advertises a wave that is not yet recorded on `$TARGET`.
 
 **A resumed wave usually changes nothing.** `ck-story` reports one line per story, and
 `<id>: already current — no change` means that story was already `in-progress`. When every
 story reports it, there is nothing to stage: skip the `git add`/`git commit` and go straight
-to the sync. Otherwise the porcelain check above is the gate — an empty `tasks/` porcelain
-with a non-empty change summary means the generated views were already current too. Never run
-`git commit` on an empty index; it exits non-zero and reads as a failed wave.
+to the sync. Otherwise the porcelain check above is the gate. Never run `git commit` on an
+empty index; it exits non-zero and reads as a failed wave.
 
 One commit and one sync per wave, whatever the wave's width. This is the only place
 In Progress can be expressed: a dispatched agent writes `in-progress` inside its own
@@ -287,7 +302,12 @@ they run concurrently. Per story (full prompt: [agent-prompts.md](agent-prompts.
 - `subagent_type: "ck-code:story-implementer"` (falls back to `general-purpose`).
 - A stable **name** per agent (`story-EE-SS`) so P5 can resume it with `SendMessage`.
 - A prompt beginning `MODE: delegated`, so the dispatched `build` run applies its
-  DELEGATED MODE deltas (no branch question, no `ck-index`, no manual gate, no ship).
+  DELEGATED MODE deltas (no branch question, no `ck-index`, no manual gate, no ship), and a
+  `Base SHA:` line — `git rev-parse "$TARGET"` after the P4 commit, the commit every worktree
+  is cut from — which the agent diffs against to record `files:` (SKILL.md 8.6).
+- Worktree agents flip their own story with `ck-story set … --no-sync`; `ck-story` also
+  refuses the board sync by itself inside a story worktree, so no card can move before the
+  merge.
 
 ### Solo (wave holds exactly 1 story)
 
@@ -295,11 +315,12 @@ One story has no peer to collide with, so it gets no worktree — the agent work
 checkout and its commits are already where they need to be.
 
 1. **Resolve `$WORKBRANCH` — it is `$TARGET`.** P1 already created and checked it out, and
-   its escalation gate guarantees it is an `epic/…` or `feat/…` branch, never the trunk.
+   its level-switch gate guarantees it is an `epic/…` branch, never the trunk.
    Re-verify with `git rev-parse --abbrev-ref HEAD` **here in the orchestrator, before
    dispatch** — never let the agent choose or change a branch.
 2. **Record the base SHA** — `git rev-parse HEAD` on `$WORKBRANCH`. P5 has no second branch to
-   diff against, so this SHA *is* the baseline. Capture it before the agent starts.
+   diff against, so this SHA *is* the baseline. Capture it before the agent starts; it is also
+   the prompt's `Base SHA:` line the agent records `files:` against.
 3. **Announce**: `Solo: 1 story → dispatching 1 agent on <$WORKBRANCH> (no worktree).`
 4. **Dispatch one `Agent`** — same `subagent_type`, same stable `story-EE-SS` name, same
    model tiering, same `MODE: delegated` prompt, but **no `isolation` field** and the extra
@@ -493,24 +514,26 @@ abort-and-report path on conflict, and `git branch -d` (never `-D`) once it land
 improvise a merge here, and do not write a story-id merge message — the shape there is the
 one every consumer uses.
 
-Then **regenerate the indexes once** on the target branch — every dispatched agent, worktree
-or solo, carries only its own story frontmatter at `done` (sub-agents never touch the shared
-views); the generator rebuilds them from that frontmatter with no cell-editing and no
-sole-writer hazard:
+Then **regenerate the views once** on the target branch — every dispatched agent, worktree
+or solo, carries only its own story frontmatter at `done` with its touched `files:`
+(sub-agents never touch the shared views); the generator rebuilds them from that frontmatter
+with no cell-editing and no sole-writer hazard:
 
 ```bash
 ck-index tasks/<Plan>
 ck-project sync tasks/<Plan>
 ```
 
-Commit the regenerated views. The sync moves every story merged in this wave to Done and rolls the epic card up; a board failure is reported and never blocks the merge ([`github-projects.md`](../../../references/github-projects.md)). Then dispatch **one** post-merge `ck-code:qa-validator` on
+Both are local bookkeeping: the views are gitignored, so there is **nothing to commit** —
+never stage a view. The sync moves every story merged in this wave to Done and rolls the epic card up; a board failure is reported and never blocks the merge ([`github-projects.md`](../../../references/github-projects.md)). Then dispatch **one** post-merge `ck-code:qa-validator` on
 `$TARGET` in the main checkout (the union of the wave's stories' commands, de-duplicated) — a
 merge does not make integration failures cheap to find. `QA: FAIL` here is a cross-branch
 integration failure by construction; keep the branches and offer `git revert -m 1 <merge-sha>`
 or a fix agent on `$TARGET`.
 
 **Solo wave:** run this post-wave QA too, even though P7 just passed on the same branch — P7
-judged the story before the index regenerate committed on top of it. Its failure is not a
+judged the story mid-run, and the target may have moved since (a manual fix, an earlier
+wave). Its failure is not a
 cross-branch integration failure (there was no merge); recover with a fix agent on
 `$WORKBRANCH`, or `git revert <sha>` of this wave's commits when the story must come back out.
 
@@ -538,5 +561,20 @@ say `Cleanup: none (solo on <$TARGET>).` rather than skipping the step silently.
 Re-resolve the following wave from the freshly regenerated index and loop from P3. A story
 held back from merge stays non-`done` and holds every story that depends on it — those cannot
 dispatch. When no scheduled story remains, print the batch report naming every held,
-`UNSCHEDULABLE`, and blocked story with its reason, then point at `/ck-code:ship <story-path>`
-per merged branch and `/ck-code:track next` for the following batch.
+`UNSCHEDULABLE`, and blocked story with its reason.
+
+Then hand off — **DIRECT, one ask** per
+[`skill-invocation.md`](../../../references/skill-invocation.md). The merged stories sit on
+`$TARGET`, an epic branch, and land through `ship --promote`, never story by story. The first
+option follows the level:
+
+- level `epic` — **Open the epic PR now** → `Skill({ skill: "ck-code:ship", args: "--promote --epic NN" })`,
+  which opens the epic PR into `<trunk>`.
+- level `plan` — **Merge epic NN into `<planbr>`** → the same `Skill` call; at plan level
+  `ship --promote` opens no epic PR, it merges the epic `--no-ff` into the plan branch and
+  pushes — the plan PR is the one review.
+- **Not yet** → print `/ck-code:ship --promote --epic NN` and `/ck-code:track next` for later.
+
+Never tell the user to ship each story. When stories remain held or blocked, say so in the
+question: promotion waits until the epic is complete, so the hand-off becomes
+`/ck-code:track next` for the remaining work.

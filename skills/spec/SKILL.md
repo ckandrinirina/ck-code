@@ -3,7 +3,7 @@ name: spec
 description: Use when the user wants a stakeholder-ready feature specification (descriptive, no code, no file paths, no tooling jargon) before any design or architecture work, or wants to revise an existing spec identified by a slug or a GitHub issue URL. Produces a reviewable feature-spec document, optionally published as a GitHub issue, that `/ck-code:design` later consumes. Runs before `/ck-code:design`.
 argument-hint: "[feature-description | notes-file | existing-slug | issue-url]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(gh repo view*) Bash(gh label list*) Bash(gh project list*) Bash(gh project item-add*) Bash(mkdir*) Bash(mktemp*) Bash(diff*) Bash(rm -f*) Bash(find*) Bash(grep*) Bash(ls*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(awk*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh issue view*) Bash(gh issue create*) Bash(gh issue edit*) Bash(gh repo view*) Bash(gh label list*) Bash(gh project list*) Bash(gh project item-add*) Bash(mkdir*) Bash(mktemp*) Bash(diff*) Bash(rm -f*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -48,7 +48,7 @@ Per-feature folder, shared with later design output:
 
 ```
 docs/specs/YYYY-MM-DD_<slug>/
-├── pre-spec.md       # this skill writes here
+├── spec.md           # this skill writes here
 ├── design-brief.md   # PHASE 5, only when a Claude Design link was accepted
 └── .metadata.json    # canonical, generated — see references/templates.md
 ```
@@ -56,7 +56,7 @@ docs/specs/YYYY-MM-DD_<slug>/
 `.metadata.json#status` evolves through exactly three states:
 `draft` → `ready-for-design` → `design-in-progress`.
 
-**`.metadata.json` has one fixed shape** — twelve keys, fixed order, closed set, emitted
+**`.metadata.json` has one fixed shape** — eleven keys, fixed order, closed set, emitted
 from the template in
 [`references/templates.md`](references/templates.md#metadatajson--canonical-schema) and
 never assembled from memory. That file owns the key contract, the enums, the localization
@@ -69,10 +69,10 @@ table, and the CREATE/ADJUST write procedure.
 Resolve `$ARGUMENTS` against on-disk state:
 
 - **slug** → glob `docs/specs/*_<slug>/.metadata.json` → ADJUST
-- **path** to `pre-spec.md` or its folder → ADJUST
+- **path** to `spec.md` or its folder → ADJUST
 - **issue URL or `#NNN`** → glob `.metadata.json` files for matching
   `github.issueUrl` → ADJUST if found; otherwise ask
-- **empty** → if any `docs/specs/*/pre-spec.md` exist, list them and gate
+- **empty** → if any `docs/specs/*/spec.md` exist, list them and gate
   CREATE-vs-ADJUST with `AskUserQuestion`; else CREATE
 - **free-text description / unknown path** → CREATE
 
@@ -92,9 +92,10 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
+or newer layout, offers `/ck-code:migrate` for an older one, or a plugin update for a newer
+one (never migrate a newer layout), and stamps. Never read or write project state before
 this PASSes.
 
 ---
@@ -114,7 +115,7 @@ this PASSes.
    - `README.md`, `docs/SPEC.md`, `docs/specifications.md`,
      `docs/product/*`, `docs/functional-spec.md` if present
    - Glob `docs/architecture/*.md` (the global docs + `README.md` index) and
-     `docs/specs/*/pre-spec.md`. Do NOT read every `docs/architecture/features/*/index.md`;
+     `docs/specs/*/spec.md`. Do NOT read every `docs/architecture/features/*/index.md`;
      open a single feature doc only when this spec extends that existing feature.
 3. Propose a kebab-case ASCII slug from the feature name.
 4. **Setup gate — one `AskUserQuestion` call**, skipping any question already
@@ -131,7 +132,7 @@ this PASSes.
 
 1. Read `.metadata.json` at the resolved folder; if missing/malformed,
    ask the user how to recover.
-2. Read `pre-spec.md` and present a brief summary: title, language,
+2. Read `spec.md` and present a brief summary: title, language,
    status, dates, linked issue, list of section headings.
 3. Ask "What would you like to change?" (open-ended input).
 
@@ -170,7 +171,7 @@ Proceed to generate**.
 
 ### CREATE: generate the document
 
-Generate `pre-spec.md` section-by-section following
+Generate `spec.md` section-by-section following
 [`references/templates.md`](references/templates.md), then write it locally (Phase 4).
 A local Markdown write is safe and revertable — the setup gate already locked title,
 slug, language, audience, and destinations, so no separate free-text confirmation is
@@ -182,7 +183,7 @@ ASCII. The single external-action confirmation (GitHub) is the publish gate in P
 Loop until the user is satisfied:
 
 1. User describes a change in plain language.
-2. Read current `pre-spec.md`.
+2. Read current `spec.md`.
 3. Apply via `Edit`, anchored on stable text (headings, table rows).
 4. Show a 1-3 line diff summary (paths and section titles only — do NOT
    echo full content).
@@ -204,7 +205,7 @@ Editing rules:
 
 ```
 mkdir -p docs/specs/YYYY-MM-DD_<slug>/
-write docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
+write docs/specs/YYYY-MM-DD_<slug>/spec.md
 write docs/specs/YYYY-MM-DD_<slug>/.metadata.json
 ```
 
@@ -343,9 +344,9 @@ Brief block reporting:
 ## NEXT
 
 Once stakeholders sign off and the spec status is `ready-for-design`, hand off to
-`/ck-code:design <the pre-spec.md path just written>` per
+`/ck-code:design docs/specs/YYYY-MM-DD_<slug>/spec.md` (the path just written) per
 [`skill-invocation.md`](../../references/skill-invocation.md) — one question, the path
-already resolved.
+already resolved. The user never retypes it.
 
 Ask **only** when the status reached `ready-for-design` in this run. While the spec is still
 in review the next step is stakeholder sign-off, not architecture; say so and stop. On
@@ -356,7 +357,7 @@ in review the next step is stakeholder sign-off, not architecture; say so and st
 ## CROSS-SKILL CONVENTION — feeding /ck-code:design
 
 When the user marks the spec ready (Phase 4 readiness gate), `status` becomes
-`ready-for-design`. The NEXT hand-off passes `pre-spec.md` to `/ck-code:design`, which
+`ready-for-design`. The NEXT hand-off passes the `spec.md` path to `/ck-code:design`, which
 treats it as its input spec, writes the architecture docs under
 `docs/architecture/features/`, sets `linkedDesign` to the feature-doc folder(s) it
 wrote, and bumps status to `design-in-progress` (design Phase 3.12).
@@ -370,7 +371,7 @@ wrote, and bumps status to `design-in-progress` (design Phase 3.12).
 - **Never rename a slug or break issue sync** without confirmation — both silently break external links.
 - **Never guess a conflict resolution** — every contradiction goes through the `AskUserQuestion` gate.
 - **Always let user-saved memory override repo inference** for issue location, labels, and default branch.
-- **Never hand-assemble `.metadata.json`** — emit it from the canonical template in `references/templates.md`, twelve keys in fixed order, closed set. A key this skill invents is a bug in the next reader.
+- **Never hand-assemble `.metadata.json`** — emit it from the canonical template in `references/templates.md`, eleven keys in fixed order, closed set. A key this skill invents is a bug in the next reader.
 - **Never offer the Claude Design link more than once per project** (Phase 5.1) — a declined offer is recorded as `none` and never re-asked.
 - **Never call `DesignSync` from this skill** — it writes a brief and stops; linking belongs to `/ck-code:design ds`.
 - **Always write descriptively, not prescriptively** — `MUST`/`SHALL` only for non-negotiable product invariants.

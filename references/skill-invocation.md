@@ -14,17 +14,25 @@ out of the output, typing `/ck-code:build tasks/2026-07-11_auth/epics/01_login/s
 hand, and then approving a `Skill` permission prompt on top. After it, saying yes is
 selecting **Run it** once.
 
+**The one exception is the prompt router** (an owner decision). In an adopted project,
+[`scripts/prompt-router.sh`](../scripts/prompt-router.sh) injects
+[`prompt-routing.md`](prompt-routing.md) on every free-text prompt, and the main session
+invokes the routed skill without asking: the user's prompt is the consent. That covers only
+the prompt → first skill step. Every hand-off *between* skills after it still asks, per this
+contract.
+
 ## Two tiers
 
 | Tier | Skills | Who calls `Skill` |
 |---|---|---|
-| **DIRECT** | `build` `config` `design` `fix` `migrate` `plan` `ship` `spec` `sync` `team` | The skill itself, via `Skill({ skill: "ck-code:<name>", args: "<resolved args>" })`. |
+| **DIRECT** | `build` `config` `design` `fix` `migrate` `plan` `ship` `spec` `team` | The skill itself, via `Skill({ skill: "ck-code:<name>", args: "<resolved args>" })`. |
 | **DIRECTIVE** | `doctor` `explain` `guide` `track` | Nobody, inside the skill. It prints a terminal `NEXT:` line; the main session runs the prompt below on its behalf. |
 
 The DIRECTIVE tier is not a weaker form of consent — it asks the same single question. It
-exists because these four skills run `context: fork` + `agent: Explore`, and an Explore
-subagent has no `Write`/`Edit` tools, so a `build` invoked from inside one would fail at its
-first file write.
+exists because these four skills run without `Write`/`Edit` — `explain`, `guide` and
+`track` as a `context: fork` + `agent: Explore` subagent, `doctor` through
+`disallowed-tools` (its `--fix` writes only through `ck-project`, `ck-story` and `git`) —
+so a `build` invoked from inside one would fail at its first file write.
 
 `Skill` must appear in a DIRECT skill's `allowed-tools`. Without it the user answers **two**
 prompts — the skill's own question, then a `Skill` permission prompt. That entry is what
@@ -69,9 +77,13 @@ prompt above. A read-only skill never calls `Skill` itself.
 
 ## Chain guard
 
-- **Max depth 3.** A fourth nested invocation stops and reports instead of invoking.
+- **Max depth 5.** A sixth nested invocation stops and reports instead of invoking. Five covers
+  the longest planned path, `spec → design → team → plan` then publish, with room to spare.
 - **No repeats.** A skill may not invoke a skill already on the current chain. This kills
   `fix → build → fix` structurally rather than by judgement.
+- **A mode switch inside one skill is not a link.** `plan` running its own `--publish` mode
+  (an INTERNAL row in the matrix) asks once but adds nothing to the chain and does not trip
+  the no-repeats rule.
 - The chain travels in the announce line (`[fix → build]`), so depth and loops are visible to
   the user at a glance and readable by each callee.
 - **A dispatched subagent starts a new chain.** `build` PARALLEL MODE's `story-implementer`,
@@ -94,10 +106,11 @@ link in the chain broke.
 
 ## Rules
 
-- **Never** hand off without asking — there is no silent-invocation tier.
+- **Never** hand off without asking — there is no silent-invocation tier. The prompt router's
+  first invocation is the only exception, and it is not a hand-off.
 - **Never** make the user retype a command the skill already resolved.
 - **Never** call `Skill` from a read-only skill (`disallowed-tools: Write, Edit, NotebookEdit`) — emit `NEXT:`.
-- **Never** invoke a skill already on the current chain, or at depth > 3.
+- **Never** invoke a skill already on the current chain, or at depth > 5.
 - **Never** pass a referential argument; always a resolved path or ID.
 - **Always** leave the project valid and resumable before asking, so **Skip** is safe.
 - **Always** link here for the mechanics and to `workflow-map.md` for the graph; restate neither.

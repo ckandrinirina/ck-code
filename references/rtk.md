@@ -115,7 +115,7 @@ story's own test files may run bare. The rule is for the commands that cost minu
 | `build` Phase 4/6 — the TDD loop | the project's `test` command | run on every RED and GREEN cycle; `rtk test` returns failures only |
 | `build` Phase 7 / `ck-code:qa-validator` | full suite + lint + typecheck | the biggest single output in the workflow, and it repeats per QA iteration (cap 3) |
 | `build` PARALLEL MODE | per-worktree suites | multiplied by the number of stories in the wave |
-| `ship`, `sync` | `git`, `gh` | many small calls whose boilerplate dominates their signal |
+| `ship`, `doctor --fix` | `git`, `gh` | many small calls whose boilerplate dominates their signal |
 | `fix` Phase 4 | reproduction test runs | tight loop, repeated until the bug reproduces |
 
 `qa-validator` already absorbs suite output in a throwaway context and returns only a

@@ -1,13 +1,13 @@
 ---
 name: track
-description: Use to view project progress, list ready stories, or pick the next one to implement. Reads the generated story/feature indexes; read-only. Argument is `status` (default), `next`, or `progress`.
+description: Use when the user wants to see project progress, list ready stories, or pick the next one to implement. Reads the generated story and epic views; read-only. Argument is `status` (default), `next`, or `progress`.
 argument-hint: "[status|next|progress]"
 effort: low
 model: haiku
 context: fork
 agent: Explore
 background: false
-allowed-tools: Bash(ck-view*) Bash(ck-index*) Bash(git branch*) Bash(git status*) Bash(git rev-list*)
+allowed-tools: Bash(ck-view*) Bash(ck-index*) Bash(ck-plan get*) Bash(git branch*) Bash(git status*) Bash(git rev-list*)
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -17,8 +17,8 @@ Presents a live view of project progress, story statuses, and what to implement 
 
 The dashboard is **rendered by `ck-view`**, not by this skill. Every figure in it — the
 ready/blocked split, the epic rollups, the percentages, the `next` selection — is a pure
-function of `STORIES_INDEX.md` / `FEATURE_INDEX.md`, the read-only projections of story
-frontmatter produced by `scripts/ck-index.sh` (see
+function of `STORIES_INDEX.md` / `EPICS_INDEX.md`, the generated, gitignored projections of
+story frontmatter produced by `scripts/ck-index.sh` (see
 [`../../references/data-model.md`](../../references/data-model.md)). Computing it in the
 model costs tokens for an answer a script already gets exactly right, so this skill runs
 one command and relays it.
@@ -33,11 +33,16 @@ one command and relays it.
 | `next` | Suggest the next story ready for implementation |
 | `progress` | Epic completion percentages and overall progress |
 
-## PHASE 0: VERSION GATE (hint only)
+## PHASE 0: VERSION GATE (hint only — Tier 1)
 
-Read `tasks/VERSION.md`. If `layout: v6` → proceed silently. Otherwise emit one line —
-`ℹ pre-v6 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
-[`../../references/version-gate.md`](../../references/version-gate.md).
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Read the injected stamp; never spend a `Read` call on `tasks/VERSION.md`. `layout: v7` →
+proceed silently. A newer layout → emit `ℹ newer ck-code layout — update the plugin`;
+anything else (older, or `ABSENT` with a `tasks/` folder) → emit
+`ℹ older ck-code layout — run /ck-code:migrate`. Then **continue read-only**. Never run
+Tier 2, never block, never stamp. See
+[`../../references/version-gate.md`](../../references/version-gate.md#scope).
 
 ## PHASE 1: RENDER (one call)
 
@@ -48,19 +53,22 @@ ck-view status tasks/<slug>     # optional: restrict to one plan
 
 Relay its stdout **verbatim** — that output is the deliverable. `ck-view` already:
 
-- regenerates a missing or unstamped `STORIES_INDEX.md` (a read-only regeneration of a
-  projection — it invents no state) and reports it on stderr;
-- applies **The Ready rule** ([`../guide/SKILL.md`](../guide/SKILL.md#the-ready-rule)),
-  resolving `blocked_by` across every plan, and marks `bug` rows 🐛;
+- regenerates any view that is missing, unstamped or older than the frontmatter it
+  projects (`STORIES_INDEX.md` per plan and `tasks/EPICS_INDEX.md`). The views are
+  gitignored and disposable, so this invents no state and changes nothing git tracks;
+- applies **The Ready rule** ([`../guide/SKILL.md`](../guide/SKILL.md#the-ready-rule)): a
+  story is ready when `status: todo` and every `blocked_by` story is `done` or `skip`, or
+  when `status: bug`. It resolves `blocked_by` across every plan and marks `bug` rows 🐛;
 - reports the two axes separately — `Status` is *is the work finished?*, `Delivery` is
   *how far did it travel toward the trunk?*. A `DONE` row with an empty Delivery prints
   as `not shipped`, which is the exact gap this view exists to close
   ([`../../references/data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration));
 - runs the `next` selection algorithm (open bugs first, then epic order, story order,
   size) and ends `next` with the `NEXT: /ck-code:build <path>` directive line;
-- renders every plan of a multi-plan project, each under its own heading.
+- renders every plan of a multi-plan project, each under its own heading, named by its
+  `OVERVIEW.md` `title:`.
 
-**Never re-derive any of it.** Do not read a story file, an index, `FEATURE_INDEX.md`, or
+**Never re-derive any of it.** Do not read a story file, `STORIES_INDEX.md`, `EPICS_INDEX.md`, or
 [`references/dashboard-templates.md`](references/dashboard-templates.md) to recompute a
 count, a percentage or a recommendation — the templates file documents what `ck-view`
 emits and is read only when a *field* needs explaining, never to render.
@@ -74,21 +82,31 @@ If `ck-view: command not found` appears, the plugin is disabled or predates `bin
 
 ## PHASE 2: BRANCH TOPOLOGY (conditional)
 
-Read each `EPIC.md` `integration:`. **If every epic is `story` or empty, skip this phase
-entirely** — the block would be noise for the majority of projects. Otherwise collect,
-with read-only git, and render the tree **above** the `ck-view` output:
+The integration level belongs to the plan, not the epic. Read it once per plan:
 
 ```bash
-git branch --list "epic/*" "feat/*" "story/*"
-git rev-list --count <parent>..<branch>      # per non-story epic and its open stories
+ck-plan get tasks/<plan> integration branch
 ```
 
+**If every plan is at `story` level (or has no level set), skip this phase entirely** —
+the block would be noise for the majority of projects. Otherwise collect, with read-only
+git, and render the tree **above** the `ck-view` output:
+
+```bash
+git branch --list "epic/*" "story/*" "fix/*" "<recorded plan branch>"
+git rev-list --count <parent>..<branch>      # per epic of an epic/plan-level plan, and its open stories
 ```
-feat/auth-system        -> main       2 epics, no PR
-  epic/02-auth          -> feat/…     DONE 4/4, merged
-  epic/03-profile       -> feat/…     IN PROGRESS 2/5
-    story/03-03-avatar  -> epic/03    2 commits unmerged
-  epic/04-billing       -> main       TODO, integration: story
+
+The plan branch is whatever the record's `branch:` says (`plan/<slug>` for a new plan; a
+migrated plan may still record `feat/<slug>` — the field wins, never guess it from the
+folder name).
+
+```
+plan/auth-system        -> main          plan level, 2 epics, no PR
+  epic/02-auth          -> plan/…        DONE 4/4, merged
+  epic/03-profile       -> plan/…        IN PROGRESS 2/5
+    story/03-03-avatar  -> epic/03       2 commits unmerged
+epic/04-billing         -> main          epic level
 ```
 
 Branch names derive per
@@ -99,8 +117,8 @@ an orphan left by a rename — list it under the tree as `orphan`.
 ## RULES
 
 - **Never** write, edit, or create any project file — this skill is read-only. The only
-  permitted Bash calls are `ck-view`, a `ck-index` fallback, and the **read-only** git
-  queries in Phase 2. Never `checkout`, `merge`, `push` or `branch -d`.
+  permitted Bash calls are `ck-view`, a `ck-index` fallback (it rewrites only the
+  gitignored views), `ck-plan get`, and the **read-only** git queries in Phase 2. Never `checkout`, `merge`, `push` or `branch -d`.
 - **Never** re-render, summarize, reformat or "improve" `ck-view` output — relay it
   verbatim. This skill runs forked, so its result is relayed; rewriting it discards the
   one thing the fork was for and reintroduces the arithmetic the script exists to remove.
@@ -108,7 +126,7 @@ an orphan left by a rename — list it under the tree as `orphan`.
   frontmatter is the source of truth and `ck-index` produces the views.
 - **Never** cache state — every run re-reads the index through `ck-view`.
 - **Always** reference current skills only (`build`, `fix`, `ship`, `plan`, `migrate`,
-  `sync`); never `parallel-build`, `start`, `advise`, `help`, or `to-issues`.
+  `doctor`); never `sync`, `parallel-build`, `start`, `advise`, `help`, or `to-issues`.
 - **Always** end a `next` run with the `NEXT: /ck-code:build <path>` line `ck-view`
   emitted and nothing after it, per
   [`../../references/skill-invocation.md`](../../references/skill-invocation.md). The main

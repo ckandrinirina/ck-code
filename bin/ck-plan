@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-plan — see scripts/ck-plan.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-plan.sh" "$@"

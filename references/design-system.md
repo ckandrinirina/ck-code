@@ -34,8 +34,8 @@ user's design system, so no `DesignSync` permission prompt ever originates from 
 
 ```
 docs/architecture/design-system/
-  index.md          # distilled and human-readable: tokens, inventory, fidelity rules
-  manifest.json     # machine state: ids, timestamps, per-card sha256
+  index.md          # distilled and human-readable: tokens, inventory, fidelity rules (no frontmatter)
+  manifest.json     # all machine state: project id/name, timestamps, tokensPath, per-card sha256
   cards/…           # verbatim card sources, mirroring remote paths
 ```
 
@@ -62,11 +62,14 @@ Skip any card over 256 KiB (the tool's own `get_file` cap) with
 ### `index.md`
 
 Generated from [`architecture-templates.md`](../skills/design/references/architecture-templates.md)
-§ `design-system/index.md`. Frontmatter carries `project_id`, `project_name`,
-`project_updated_at`, `synced_at`, and `tokens_path`. Body carries `## Foundations`
-(token table), `## Components` (inventory table), `## Fidelity rules`, and `## Off-ramp`.
+§ `design-system/index.md`. It has **no frontmatter**: it is the human-readable body only,
+`## Foundations` (token table), `## Components` (inventory table), `## Fidelity rules`, and
+`## Off-ramp`. Every machine value lives in `manifest.json`, so there is one place to read
+and one place to write.
 
 ### `manifest.json`
+
+The one home of the design-system metadata.
 
 ```json
 {
@@ -74,6 +77,7 @@ Generated from [`architecture-templates.md`](../skills/design/references/archite
   "projectName": "…",
   "projectUpdatedAt": "…",
   "syncedAt": "…",
+  "tokensPath": "pending",
   "cards": [
     {
       "path": "components/button/index.html",
@@ -95,6 +99,14 @@ shasum -a 256 docs/architecture/design-system/cards/components/button/index.html
 It detects local tampering and lets a refresh rewrite only what actually moved. A card
 with `cached: false` has no `sha256`.
 
+| Key | Meaning |
+|---|---|
+| `projectId`, `projectName` | the linked Claude Design project |
+| `projectUpdatedAt` | the project's `updatedAt` at the last sync; the freshness check compares against it |
+| `syncedAt` | when this cache was last synced |
+| `tokensPath` | `"pending"` until the first UI story materializes the token file, then its repo-relative path ([Token materialization](#token-materialization)) |
+| `cards[]` | the inventory, one entry per remote card |
+
 ## Linking a project
 
 Run only from `/ck-code:design ds` when `docs/architecture/design-system/` does not exist.
@@ -110,7 +122,8 @@ Run only from `/ck-code:design ds` when `docs/architecture/design-system/` does 
 4. `DesignSync { method: "list_files", projectId }` — build the inventory.
 5. Fetch every foundations card with `get_file`, write each to `cards/<path>`, and record
    its `sha256`.
-6. Extract tokens (below) and write `index.md` + `manifest.json`.
+6. Extract tokens (below) and write `index.md` + `manifest.json` (with
+   `"tokensPath": "pending"`).
 7. Report: project name, card count, tokens extracted, low-confidence extractions.
 
 ### From a handed-back URL
@@ -159,7 +172,8 @@ inherently a two-visit flow with an unbounded gap between the visits. `spec` han
 brief and stops; the user may return in an hour or next week, in a new Claude Code session
 with none of that conversation in context. The gap is bridged on disk.
 
-**The state lives in the spec's `.metadata.json`**, in the `designSystem` block whose key
+**The state lives in the spec's `.metadata.json`** (`docs/specs/<date>_<slug>/.metadata.json`,
+beside `spec.md` and the handed-out `design-brief.md`), in the `designSystem` block whose key
 contract is in [`templates.md`](../skills/spec/references/templates.md#designsystem-block).
 There is no second state file and no marker in `docs/architecture/` — a pending link is a
 property of the spec that asked for it.
@@ -198,9 +212,9 @@ Tiered, so an unchanged design system costs exactly one call.
 
 | Tier | Call | Runs when | Outcome |
 |---|---|---|---|
-| 0 | `list_projects`, compare the entry's `updatedAt` against `project_updated_at` | every freshness check | equal → **stop. Zero further calls.** |
+| 0 | `list_projects`, compare the entry's `updatedAt` against `manifest.json` `projectUpdatedAt` | every freshness check | equal → **stop. Zero further calls.** |
 | 1 | `list_files`, diff against `manifest.cards` | Tier 0 shows movement | added / removed / possibly-changed paths |
-| 2 | `get_file` per flagged path → `shasum -a 256` → rewrite only if the digest differs | Tier 1 produced paths | `cards/` + `manifest.json` updated |
+| 2 | `get_file` per flagged path → `shasum -a 256` → rewrite only if the digest differs | Tier 1 produced paths | `cards/` + `manifest.json` updated (`projectUpdatedAt`, `syncedAt` rewritten) |
 
 **Fallback (required, not optional):** `list_projects` is documented to return
 `updatedAt`, but if the field is absent, empty, or not comparable to the stored value,
@@ -234,11 +248,11 @@ scoped-style syntax). Structure, class names, and values are not adaptations.
 
 ### Token materialization
 
-On the first UI story, if `index.md` frontmatter has `tokens_path: pending`, write the
+On the first UI story, if `manifest.json` has `"tokensPath": "pending"`, write the
 token file to the stack's styles location (path from `folder-structure.md`), emitting
 every `## Foundations` token as a CSS custom property (or the stack's equivalent — a theme
-object for React Native, a `_tokens.scss` partial for Sass), then set `tokens_path` to
-that repo-relative path. Every later story references the tokens, never a literal.
+object for React Native, a `_tokens.scss` partial for Sass), then set `tokensPath` in
+`manifest.json` to that repo-relative path and commit both with the story. Every later story references the tokens, never a literal.
 
 ## Fidelity rules
 

@@ -17,8 +17,8 @@ largest avoidable latency in `build`/`fix` Phase 2):
 
 1. **`docs/architecture/folder-structure.md`** — always (small, universally useful).
 2. **The story's feature doc.** The caller already read the generated
-   `tasks/FEATURE_INDEX.md` during selection; the story's epic `NN` maps to one feature
-   row. Read the path in that row's **`Docs`** column
+   `tasks/EPICS_INDEX.md` during selection ([`epics-index.md`](epics-index.md)); the
+   story's epic `NN` maps to one row. Read the path in that row's **`Docs`** column
    (`docs/architecture/features/<slug>/index.md`).
 3. **`docs/architecture/_shared.md`** — only when the work touches cross-cutting infra:
    the feature doc's `## Shared dependencies` section links into it, OR the story's
@@ -36,7 +36,7 @@ see [`design-system.md`](design-system.md).
 is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run
 `/ck-code:design sync` to scaffold the missing feature doc. The retired layer docs
 (`components.md`, `api-contracts.md`, `database-schema.md`, `data-flow.md`) do not exist
-in a v6 project — the version gate migrates any pre-v6 project before this runs, and
+in a v7 project — the version gate sends any older project to `/ck-code:migrate` before this runs, and
 migrated originals live under `docs/architecture/archive/`. Never read them.
 
 Skip files absent on disk. Do NOT read `ROADMAP.md` here — it is loaded
@@ -51,7 +51,7 @@ frontmatter. Match those, not a hardcoded table.
 
 For each expert present on disk (from Step 4a), read its frontmatter and load it when:
 
-- any `paths:` glob matches a file the story/bug **touches** (the story frontmatter's `files:` list — the precise signal; prefer this), OR
+- any `paths:` glob matches a file the story/bug **touches** (the story frontmatter's `files:` list — the precise signal; prefer this. `plan` seeds it with the expected paths and `build` keeps it true with `ck-story files <story> <path…>`, merging in every path it actually touched), OR
 - any `keywords:` entry appears in the story's **title or Technical Notes**.
 
 A `paths` match is authoritative; treat a `keywords`-only match as the weaker fallback signal — when a skill matches on neither the touched files nor a title/Technical-Notes keyword, do not load its body.
@@ -61,10 +61,10 @@ A `paths` match is authoritative; treat a `keywords`-only match as the weaker fa
 These three — `expert-qa`, `expert-qa-project`, `expert-analyst` — carry no
 `paths`/`keywords`, so nothing but this list ever detects them.
 
-**Fallback for experts with no `paths`/`keywords` frontmatter** (older generations only):
-read the anchor tables in
-[`skill-detection-fallbacks.md`](skill-detection-fallbacks.md). Skip that file entirely
-when every present skill declares its own triggers — the common case.
+**An expert with no `paths`/`keywords` frontmatter** (an old generation) is matched by
+its slug alone — `expert-backend` against `server/`/`api/` paths or "API"/"endpoint" in the
+title, `expert-frontend` against UI paths, and so on — never by a guessed roster. Tell the
+user once that `/ck-code:team --refresh` regenerates it with its own triggers.
 
 Detection means the skill enters the required set; whether it is actually loaded
 depends on the filesystem check in Step 4 (a missing file is reported, not
@@ -79,9 +79,9 @@ in its frontmatter (the source files it covers). Load a guide when any of its
 **`guide-conventions` is always required** (loaded if present, no trigger needed) —
 it holds the project's house rules and overrides generic guides on conflict.
 
-**Fallback for guides with no `paths` frontmatter** — the extension anchors live in
-[`skill-detection-fallbacks.md`](skill-detection-fallbacks.md) (same file as the expert
-anchors; open it once, only for legacy generations).
+**A guide with no `paths` frontmatter** (an old generation) is matched by its slug against
+the touched files' extension or framework (`guide-rust` ↔ `.rs`, `guide-typescript` ↔
+`.ts`/`.tsx`), with the same `--refresh` hint.
 
 ## Step 4 — Load skills (filesystem-only, ck-code namespaces)
 
@@ -97,8 +97,8 @@ is loaded here — not plugin-namespaced skills (`superpowers:*`, `frontend-desi
 etc.), not skills in other project subdirectories, not skills inferred from training data.
 
 The pre-v5 nested form (`.claude/skills/experts/<role>/`, `guides/<tech>/`) is **not** a
-skill location and is never read here — the [version gate](version-gate.md) sends any
-project still carrying it to `/ck-code:migrate` before this procedure runs.
+skill location and is never read here. It is a LEGACY layout: `ck-doctor` reports it as an
+ERROR and `/ck-code:migrate` flattens it.
 
 **4a. Build the existing-skill set (mandatory, runs FIRST):**
 
@@ -120,25 +120,35 @@ command in this flow.
 
 An empty 4a result means `/ck-code:team` has never run for this project: there are no
 experts and no guides, so the phases that say "follow the loaded skills" have nothing to
-follow and the build falls back to generic, un-tailored code. **Never proceed silently.**
-Warn, then ask (`AskUserQuestion`, single-select):
+follow and the build falls back to generic, un-tailored code.
+
+First check the project's standing answer:
+
+```bash
+awk '/^---$/{n++; next} n==1 && /^experts:[[:space:]]*none[[:space:]]*$/{f=1} END{exit !f}' tasks/SETTINGS.md 2>/dev/null && echo "experts: none"
+```
+
+- **`experts: none`** → the gate never fires. Proceed to Step 5 and report the empty set
+  as a choice, not a gap.
+- Otherwise **never proceed silently.** Warn, then ask (`AskUserQuestion`, single-select):
 
 ```
 ⚠️  No project skills found — /ck-code:team has not run for this project.
     team generates the expert + guide skills (architecture, stack conventions,
     QA rules) that shape TDD, SOLID review, and QA for THIS codebase.
     Building without them produces generic, lower-quality results.
-
-  → RUN TEAM FIRST (recommended)
-    CONTINUE WITHOUT SKILLS
 ```
 
-- **RUN TEAM FIRST** → `Skill({ skill: "ck-code:team" })`, per the hand-off prompt in
-  [`skill-invocation.md`](skill-invocation.md). When it returns, re-run 4a from the top and
-  continue this procedure with the generated skills. Never hand-write a skill file here as a
-  substitute.
-- **CONTINUE WITHOUT SKILLS** → proceed to Step 5 and report the empty set. The user
-  accepted the trade-off; do not re-ask later in the same run.
+- **Run /ck-code:team first** (Recommended) → `Skill({ skill: "ck-code:team" })`, per the
+  hand-off prompt in [`skill-invocation.md`](skill-invocation.md). When it returns, re-run 4a
+  from the top and continue this procedure with the generated skills. Never hand-write a
+  skill file here as a substitute.
+- **Continue without experts this time** → proceed to Step 5 and report the empty set. The
+  user accepted the trade-off; do not re-ask later in the same run.
+- **Never ask in this project** → add `experts: none` to the `tasks/SETTINGS.md`
+  frontmatter with a normal `Edit` (create the file with a `---`/`---` frontmatter block when
+  it does not exist), then continue as above. The caller commits it with its own work.
+  Removing the line re-enables the gate.
 
 **Non-interactive callers** (a dispatched sub-agent — no user to ask): skip the question,
 state the warning in the returned report, and continue. The orchestrator gates instead —
@@ -150,13 +160,14 @@ Because slugs are dynamic, extract each present skill's load triggers before
 deciding. One cheap, non-loading pass over the frontmatter:
 
 ```bash
-for f in $(ls .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md 2>/dev/null); do
-  echo "== $f"; sed -n '/^---$/,/^---$/p' "$f" | grep -E '^(name|paths|keywords|-)' ;
+find .claude/skills -mindepth 2 -maxdepth 2 -name SKILL.md \( -path '*/expert-*' -o -path '*/guide-*' \) 2>/dev/null | sort |
+while IFS= read -r f; do
+  echo "== $f"; sed -n '/^---$/,/^---$/p' "$f" | grep -E '^(name|paths|keywords|-)'
 done
 ```
 
-Match each skill against the story per Steps 2–3 (frontmatter first, anchor table
-as fallback). This `sed`/`grep` reads only frontmatter — it does **not** load the
+Match each skill against the story per Steps 2–3 (frontmatter first, slug match only
+for an old generation with no triggers). This `sed`/`grep` reads only frontmatter — it does **not** load the
 skill body into context; only Step 4b's `Read` does that, and only for matches.
 
 **4b. Load each detected skill via `Read` only:**
@@ -218,15 +229,17 @@ Skills loaded for this implementation:
 - If 4c found missing skills the user chose to skip, append a
   `Missing (skipped)` line; omit the line when nothing was skipped.
 - If no project skills exist (4a empty), state:
-  `No project skills loaded — run /ck-code:team to generate them.`
+  `No project skills loaded — run /ck-code:team to generate them.` — or, under
+  `experts: none`, `No project skills loaded (experts: none in tasks/SETTINGS.md).`
 
 ## Rules
 
 - **Never** skip the 4a `ls` before loading or warning.
 - **Never** proceed past an empty 4a without the 4a.1 team gate — an interactive caller
-  always warns and asks; a sub-agent always warns in its report.
+  always warns and asks; a sub-agent always warns in its report. The only exception is
+  `experts: none` in `tasks/SETTINGS.md`, which the user chose.
 - **Never** treat a CLAUDE.md or doc note as evidence that skills are absent — only 4a decides.
-- **Never** infer skill names from training data, or assume the anchor list is the real set.
+- **Never** infer skill names from training data, or assume any example slug is the real set.
 - **Never** use the `Skill` tool here — project-local `Read` only.
 - **Never** load outside `.claude/skills/expert-*/` and `guide-*/` (no plugin-namespaced skills, no nested pre-v5 folders).
 - **Never** read the whole architecture, another feature's doc, or the retired layer docs.

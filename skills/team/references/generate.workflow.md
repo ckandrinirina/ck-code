@@ -8,7 +8,7 @@ never paste the source into the `script` parameter.
 Workflow({
   name: "team-generate",
   args: {
-    projectContext: "<resolved Phase 1.5 block>",
+    digest: "<output of ck-team digest>",
     skills: [{ slug, path, kind, template, research, triggers }, …]
   }
 })
@@ -21,11 +21,15 @@ cleared to write. Returns `{ written: [manifest], missing: [slug] }`.
 
 **`skills` carries net-new paths only.** The script hands each agent a template, not the file
 it is replacing, so it cannot honour the MANUAL re-insert rule. A target that already exists on
-disk — a team-owned GENERATED file being refreshed under `--regenerate` — is therefore excluded
+disk — a team-owned GENERATED file being refreshed under `--refresh` or `--regenerate` — is therefore excluded
 from `args.skills` and regenerated **inline** by the orchestrator, which reads the current file
 and re-inserts every `<!-- ck-code:team MANUAL START/END -->` fence verbatim. A `--regenerate`
 run over an existing team can legitimately pass an empty or short `skills` array; that is not a
-gate failure.
+gate failure. `--refresh` never calls this workflow: every path it rewrites already exists.
+
+Each `template` already carries the resolved **Project context** links (Phase 1.5); the script
+adds no context block of its own. `digest` is stamped into the SOURCES marker line of every
+file, so run `ck-team digest` once before the call and never let an agent compute it.
 
 **The manifest is a claim, not proof.** Phase 4.1 must `ls` the real paths: a resumed run
 replays cached results without re-writing, so a manifest entry can outlive its file.

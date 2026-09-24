@@ -1,13 +1,13 @@
 ---
 name: explain
-description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works, or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how does this work", "what is epic NN about".
+description: Use when the user wants an explanation of what was just implemented, the technologies involved, or how to manually verify it works, or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how does this work", "what is epic NN about".
 argument-hint: "[file-or-concept] | --epic NN"
 effort: low
 model: haiku
 context: fork
 agent: Explore
 background: false
-allowed-tools: Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git status*) Bash(git branch*)
+allowed-tools: Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git status*) Bash(git branch*) Bash(git merge-base*) Bash(git symbolic-ref*)
 disallowed-tools: Write, Edit, NotebookEdit
 ---
 
@@ -23,9 +23,14 @@ Two modes, chosen by `$ARGUMENTS`:
 STORY MODE is everything below down to *Reading Context (STORY MODE)*; EPIC MODE is its own
 section further down. The two share only the Tone and RULES blocks.
 
-Read `tasks/VERSION.md`. If `layout: v6` → proceed silently. Otherwise emit one line —
-`ℹ pre-v6 layout — run /ck-code:migrate` — and **continue read-only**. Never block. See
-[`../../references/version-gate.md`](../../references/version-gate.md).
+Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+
+Version check is **Tier 1 only**, from the stamp injected above — never spend a `Read` on
+`tasks/VERSION.md` and never run Tier 2. `layout: v7` → proceed silently. A layout newer than
+v7 → emit `ℹ newer ck-code layout — update the plugin`; anything else (older, or `ABSENT`
+with a `tasks/` folder present) → emit `ℹ older ck-code layout — run /ck-code:migrate`. Either
+way **continue read-only**. Never block, never stamp. See
+[`../../references/version-gate.md`](../../references/version-gate.md#scope).
 
 ---
 
@@ -83,11 +88,17 @@ Before generating output, read:
    nor `direct`, say so in one line, because the work explained here is not on the trunk
    branch yet and the reader may be looking for it there.
 2. **The files themselves** (use Read on each created/modified file).
-3. **The diff for that story's work** — prefer the story branch's diff against its merge
-   base (`git diff $(git merge-base HEAD main)...HEAD` when on a story branch); fall back
-   to `git diff HEAD~1` only when the change is known to be the last commit. `HEAD~1` is a
-   fragile "last change" heuristic — do not rely on it if `sync`/index or other commits
-   may sit between now and the story work.
+3. **The diff for that story's work** — prefer the story branch's diff against the
+   trunk (`git diff <trunk>...HEAD` when on a story branch); fall back to `git diff HEAD~1`
+   only when the change is known to be the last commit. `HEAD~1` is a fragile "last change"
+   heuristic — do not rely on it when other commits may sit between now and the story work.
+
+   **Resolve `<trunk>`** in this order, and never assume `main` first: `trunk_branch:` in
+   `tasks/SETTINGS.md` frontmatter → the remote default (`git symbolic-ref --short
+   refs/remotes/origin/HEAD`, minus the `origin/` prefix) → `main`. The first non-empty
+   value wins. Pre-resolved at load time:
+
+   Trunk: !`t=$(awk -F': *' '/^trunk_branch:/{print $2; exit}' "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/SETTINGS.md" 2>/dev/null); [ -n "$t" ] || t=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||'); echo "${t:-main}"`
 
 If the user specifies a path or concept, focus on that instead.
 
@@ -118,13 +129,16 @@ so exactly one match is expected:
 
 ### E.2 Read
 
-1. `EPIC.md` — frontmatter `title`, `description`, `slug`, `integration`, plus the body.
+1. `EPIC.md` — frontmatter `title`, `description`, `slug`, plus the body (its
+   `## Dependencies` section says why this epic waits on others).
+   The plan's integration level is not on the epic: read `integration:` from the plan record
+   `tasks/<Plan>/OVERVIEW.md` frontmatter (`story` | `epic` | `plan`).
 2. Every `stories/*.md` in that folder, in filename order — frontmatter `id`, `title`,
    `status`, `size`, `blocked_by`, and the body's **Description** and **Acceptance Criteria**.
 3. `docs/architecture/features/<slug>/index.md` (from the epic's `slug`) **only if it
    exists** — one read, for the product context behind the epic. Skip silently if absent.
 
-Never read the story indexes (they carry no goal text) and never run git — EPIC MODE
+Never read the generated views (they carry no goal text) and never run git — EPIC MODE
 explains the plan, which is true whether or not any code exists yet.
 
 ### E.3 Output Format
@@ -142,7 +156,14 @@ explains the plan, which is true whether or not any code exists yet.
 3. **How they fit together** — 2–5 bullets on the order the stories unlock each other
    (from `blocked_by`) and what the epic looks like once all are `done`.
 4. **Where it stands** — one line — `X of Y done, Z in progress, W blocked` — plus the
-   next story that is actionable, if any.
+   next **ready** story, if any. A story is **ready** when `status: todo` and every
+   `blocked_by` story is `done` or `skip`, or when `status: bug`; an `in-progress` story is
+   not ready.
+5. **How it lands** — one line from the plan's `integration:` level: `story` → each story
+   ships as its own PR into the trunk; `epic` → stories merge into the `epic/NN-<slug>`
+   branch and the epic ships as one PR; `plan` → the epic merges into the plan branch
+   (OVERVIEW.md `branch:`) and the whole plan ships as one PR. An empty `integration:` means
+   `story`.
 
 A story whose body has no Description yet is explained from its title and acceptance
 criteria alone, marked `(not yet detailed)`. Never invent a goal for an empty story.

@@ -3,7 +3,7 @@ name: fix
 description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Runs only on an explicit bug report or a hand-off from another ck-code skill, never speculatively. Argument is an optional story-file path.
 argument-hint: "[path-to-story.md]"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git add*) Bash(git commit*) Bash(ls*) Bash(find*) Bash(grep*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git add*) Bash(git commit*) Bash(git ls-files*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -14,9 +14,9 @@ hooks:
 
 # Fix — Bug Triage & Routing Orchestrator
 
-Diagnoses a story-linked bug, records the diagnosis + a FAILING reproduction test + a Fix Plan into the story, flips the story's frontmatter to `status: bug` (recording `prior_status`), and routes the fix. `fix` does NOT implement the fix — `build` does (Bug-Fix Mode). An easy single-story fix auto-invokes `build`; a complex one stops for a manual `build` run. Always confirms scope before writing.
+Diagnoses a story-linked bug, records the diagnosis + a FAILING reproduction test + a Fix Plan into the story, flips the story's frontmatter to `status: bug` (recording `prior_status`), and routes the fix. `fix` does NOT implement the fix — `build` does (Bug-Fix Mode). An easy single-story fix auto-invokes `build`; a complex one stops for a manual `build` run. Always confirms scope (Phase 2.5) before writing.
 
-References: [examples.md](references/examples.md) (worked triage walkthroughs) · [qa-dialogue.md](references/qa-dialogue.md) (user-facing prompt scripts) · [bug-section-template.md](references/bug-section-template.md) (story-file bug sections — the fix→build contract) · [`data-model.md`](../../references/data-model.md) (frontmatter source of truth) · [`stories-index.md`](../../references/stories-index.md), [`feature-index.md`](../../references/feature-index.md) (generated read-only views).
+References: [examples.md](references/examples.md) (worked triage walkthroughs) · [qa-dialogue.md](references/qa-dialogue.md) (user-facing prompt scripts) · [bug-section-template.md](references/bug-section-template.md) (story-file bug sections — the fix→build contract) · [`data-model.md`](../../references/data-model.md) (frontmatter source of truth) · [`stories-index.md`](../../references/stories-index.md), [`epics-index.md`](../../references/epics-index.md) (generated views — gitignored, never committed).
 
 ## ROUTING CHECK (do first)
 
@@ -31,7 +31,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## INPUT
 
-`$ARGUMENTS` is an optional path to the story file. If provided, read it as a starting candidate (Phase 2.5 may still expand scope). If empty, enter interactive story selection (Phase 1.2) with `AUTO` as a supported answer.
+`$ARGUMENTS` is an optional path to the story file. If provided, it is the starting candidate — no confirmation (Phase 2.5 may still expand scope). If empty, enter interactive story selection (Phase 1.2) with `AUTO` as a supported answer.
 
 ## PROGRESS TRACKING
 
@@ -47,9 +47,10 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
+or newer layout, offers `/ck-code:migrate` for an older one, or a plugin update for a newer
+one (never migrate a newer layout), and stamps. Never read or write project state before
 this PASSes.
 
 ## PHASE 1: CANDIDATE STORY SELECTION
@@ -58,7 +59,7 @@ this PASSes.
 
 ### 1.1 If Story Path Provided
 
-Read `$ARGUMENTS`, validate it exists and has the expected frontmatter (`id`, `status`, …), then confirm via `AskUserQuestion`: "Starting candidate is story [EE-SS]: [Title]. Scope analysis after the bug description may expand this — proceed?" Options: `Proceed` / `Pick another`.
+Read `$ARGUMENTS` and validate it exists and has the expected frontmatter (`id`, `status`, …). It is the candidate — **ask no confirmation**; the user just named it. Say in one line `Candidate: [EE-SS] [Title] — scope analysis may add stories.` and go to 1.3. Only a missing file or unparseable frontmatter stops here: say which, and fall back to 1.2.
 
 ### 1.2 If No Story Path (Interactive)
 
@@ -74,7 +75,7 @@ Once a candidate is selected (or `AUTO`):
 
 **Batch 1 (parallel tool-call message):** read the candidate story file. From its frontmatter extract `status`, `epic`, `files`; from its body extract acceptance criteria, technical notes, and the Implementation Summary (from `/ck-code:build`).
 
-**Batch 2 (parallel tool-call message, after parsing Batch 1):** read this bug's **feature doc** — `docs/architecture/features/<slug>/index.md`, the path in the affected feature's `Docs` column of `tasks/FEATURE_INDEX.md`. If the `Docs` cell is `—`/missing, note it and suggest `/ck-code:design` to author the feature doc, then continue on the story context alone.
+**Batch 2 (parallel tool-call message, after parsing Batch 1):** read this bug's **feature doc** — `docs/architecture/features/<slug>/index.md`, the path in the affected epic's `Docs` column of `tasks/EPICS_INDEX.md`. If the `Docs` cell is `—`/missing, note it and suggest `/ck-code:design` to author the feature doc, then continue on the story context alone.
 
 For `AUTO`, defer both batches until Phase 2.5 narrows the candidate set.
 
@@ -140,7 +141,7 @@ Present the story-set confirmation from `references/qa-dialogue.md` (Phase 2.5c)
 
 **Goal:** Scaffold the missing-functionality stories through the purpose-built skill, not inline.
 
-For each missing-functionality slot identified in 2.5.1, invoke `/ck-code:plan --quick "<one-line brief distilled from the bug>" --epic NN` (target epic from the scope analysis). `plan --quick` (its single-story mode) writes the story file's frontmatter and regenerates the indexes — `fix` never writes stub story files or index rows itself. The created story stays `todo` (real feature work planned later); it is NOT part of this bug's `bug`-status set. If `plan --quick` fails, tell the user the scaffold failed and continue triaging the real bug on the existing story only.
+For each missing-functionality slot identified in 2.5.1, invoke `/ck-code:plan --quick "<one-line brief distilled from the bug>" --epic NN` (target epic from the scope analysis). `plan --quick` (its single-story mode) writes the story file's frontmatter and regenerates the views — `fix` never writes stub story files or index rows itself. The created story stays `todo` (real feature work planned later); it is NOT part of this bug's `bug`-status set. If `plan --quick` fails, tell the user the scaffold failed and continue triaging the real bug on the existing story only.
 
 ## PHASE 3: SKILL DETECTION & CONTEXT LOADING
 
@@ -148,7 +149,7 @@ For each missing-functionality slot identified in 2.5.1, invoke `/ck-code:plan -
 
 ### 3.1 Detect & Load Skills
 
-Follow the shared procedure in [`skill-detection.md`](../../references/skill-detection.md). Experts/guides are matched by each present skill's `paths`/`keywords` frontmatter (anchor tables as fallback) — the slug set is project-derived, not fixed. For bug-fix flows, **`expert-qa`, `expert-qa-project`, AND `expert-analyst` are always loaded** (analyst drives root-cause analysis), and `guide-conventions` always loads when present. Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
+Follow the shared procedure in [`skill-detection.md`](../../references/skill-detection.md). Experts/guides are matched by each present skill's `paths`/`keywords` frontmatter (anchor tables as fallback) — the slug set is project-derived, not fixed. For bug-fix flows, **`expert-qa`, `expert-qa-project`, AND `expert-analyst` are always loaded** (analyst drives root-cause analysis), and `guide-conventions` always loads when present. When no project skill exists, the shared **team gate** (4a.1) offers `Run /ck-code:team first` / `Continue without experts this time` / `Never ask in this project`; the last writes `experts: none` to `tasks/SETTINGS.md`, after which the gate never fires. Architecture-doc reads (Step 1) and skill loads (Step 4b) must each be issued as a single parallel tool-call message — see the batching notes in `skill-detection.md`.
 
 ### 3.2 Prepare Systematic Debugging Approach
 
@@ -199,7 +200,7 @@ Grep for similar patterns that might share the bug; check whether the root cause
 
 ### 4.5 Record Bug Details into Story Files
 
-Immediately after diagnosis, append the Bug Report section to **every story file in scope** (single story for verdict A; all stories in the confirmed set for B / D). Use the same `Bug ID` (`BUG-YYYYMMDD-NN`) across all of them. The story's pre-bug status becomes `prior_status` at the Phase 6.1 flip; the Bug Report may note it in prose for human readability, but the frontmatter `prior_status` is authoritative. Bug Report status: `DIAGNOSED`. Templates: `references/bug-section-template.md` (Phase 4.5 single-story / Phase 4.5b multi-story). This creates a permanent record of the bug and its diagnosis before any fix begins.
+Immediately after diagnosis, append the Bug Report section to **every story file in scope** (single story for verdict A; all stories in the confirmed set for B / D). Use the same `Bug ID` (`BUG-YYYYMMDD-NN`) across all of them. The story's pre-bug status becomes the frontmatter `prior_status` at the Phase 6.1 flip. **The frontmatter `prior_status` is authoritative** — it is the only value `build` restores from; the Bug Report's `Prior status:` line is an informational copy for human readers and is never read back. Bug Report status: `DIAGNOSED`. Templates: `references/bug-section-template.md` (Phase 4.5 single-story / Phase 4.5b multi-story). This creates a permanent record of the bug and its diagnosis before any fix begins.
 
 ### 4.6 Present Diagnosis to User
 
@@ -225,7 +226,7 @@ Present the proposed-fix prompt in `references/qa-dialogue.md` (Phase 5.3) and c
 
 ## PHASE 6: FLIP TO BUG & ROUTE
 
-**Goal:** Flip the story frontmatter to `bug`, regenerate the views, then route the fix — auto-build when easy, hand off when complex.
+**Goal:** Flip the story frontmatter to `bug` (the views regenerate themselves), then route the fix — auto-build when easy, hand off when complex.
 
 ### 6.1 Flip status to bug (frontmatter + regenerate)
 
@@ -234,7 +235,7 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
 1. Flip the frontmatter and regenerate in one call (every story in scope may be listed at once):
 
    ```bash
-   ck-story set status=bug prior_status=<the status before this bug> <story-path> [<story-path>…]
+   ck-story set <story-path> [<story-path>…] status=bug prior_status=<the status before this bug>
    ```
 
    `prior_status` is `done` or `in-progress` — the status the story held **before this bug**.
@@ -246,10 +247,10 @@ For **every existing story in scope** (verdict A: one; B / D: all matched existi
    **empty** `prior_status`, do not guess: ask (`AskUserQuestion`, `done` / `in-progress`)
    which status the fix should restore, and write the answer.
 
-   The story frontmatter is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `FEATURE_INDEX.md`, or any epic file. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent; `ck-story` refuses any field outside the state set, so a stray `delivery=` is caught rather than written.
+   The story frontmatter is the single source of truth for the flip — do NOT hand-edit `STORIES_INDEX.md`, `EPICS_INDEX.md`, or any epic file, and never stage or commit a view — they are gitignored. **Leave `pr:` and `delivery:` exactly as they are** — a bug does not un-merge anything, and a defect found in shipped code is `status: bug` + `delivery: merged`. There is no `prior_delivery`, because the axes are independent; `ck-story` refuses any field outside the state set, so a stray `delivery=` is caught rather than written.
 2. `ck-story` runs `ck-index` and `ck-project sync` for the plan itself — there is no separate regenerate step to remember.
 
-   The generator rolls both indexes forward from the frontmatter — a `bug` story counts as not-done, so its feature rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views cannot disagree with the frontmatter because they are a pure function of it. The board is one more such view: the sync moves the card to the **Bugs** column — its own column, because a diagnosed bug is actionable work, not something waiting on a dependency — and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
+   The generator rolls both views forward from the frontmatter — a `bug` story counts as not-done, so its epic rolls to `IN PROGRESS` automatically (see [`data-model.md`](../../references/data-model.md)). The views are disposable: a pure function of the frontmatter, regenerated on the next read if stale. The story files are the state; `fix` leaves them in the working tree with the test and the Bug Report for `build` to commit with the fix. The board is one more such view: the sync moves the card to the **Bugs** column — its own column, because a diagnosed bug is actionable work, not something waiting on a dependency — and a board failure is reported without blocking the triage ([`github-projects.md`](../../references/github-projects.md)).
 
 ### 6.2 Auto-Build Eligibility Gate
 
@@ -279,7 +280,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Phase 2.5.2 / 2.5.5 / 4.6 / 5.3** — `AskUserQuestion` confirmation gates; never write without an explicit confirm.
 - **Phase 2.6** — missing stories are created by `/ck-code:plan --quick`, never inline.
 - **Phase 4.2** — a failing reproduction test is mandatory before Phase 5; it is the RED target `build` inherits.
-- **Phase 6.1** — the flip is one `ck-story set status=bug prior_status=<prev>` call, which writes the frontmatter and regenerates; never hand-edit a generated view.
+- **Phase 6.1** — the flip is one `ck-story set <story…> status=bug prior_status=<prev>` call, which writes the frontmatter and regenerates; never hand-edit, stage or commit a generated view.
 - **Phase 6.2 / 6.3** — the Auto-Build Eligibility Gate is deterministic; a single unchecked box forces MANUAL hand-off.
 
 ### Scope discipline (cross-cutting)
@@ -296,7 +297,8 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Always record `prior_status`** in the story frontmatter so `build` can restore it — never
   as `bug`, and never overwritten on a story that is already `bug` (§ 6.1).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Always regenerate the views in the same phase** you change any frontmatter — `ck-story set` does it (`ck-index` + `ck-project sync`) in the one call ([`github-projects.md`](../../references/github-projects.md)).
+- **Always change frontmatter through `ck-story set`** — it regenerates the local views (`ck-index`) and syncs the board (`ck-project sync`) in the one call ([`github-projects.md`](../../references/github-projects.md)). Never commit a view.
+- **Always treat the frontmatter `prior_status` as authoritative** — the Bug Report's `Prior status:` line is informational only.
 - **Always output in English.**
 
 ---

@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Skill
-input_match: 'ck-code:(sync)(?![a-z-])'
+input_match: '--fix'
 min: 1
 ---

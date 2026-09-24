@@ -4,7 +4,7 @@
 # Checks that a realistic free-text prompt, inside an adopted ck-code project where
 # scripts/prompt-router.sh injects references/prompt-routing.md, reaches the right
 # /ck-code:* skill. Local only: it runs on your logged-in Claude account (a Max plan
-# works — no API key) and costs roughly $0.07 per run (19 cases × 3 runs by default).
+# works — no API key) and costs roughly $0.07 per run (22 cases × 3 runs by default).
 #
 #   bash tests/evals.sh                        # whole suite, 3 runs per case
 #   bash tests/evals.sh --runs 1               # quick pass

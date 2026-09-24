@@ -56,7 +56,7 @@ for this project."
 
 ## Feature Documents
 
-Each owns a self-contained slice; `FEATURE_INDEX.Docs` routes a story to one.
+Each owns a self-contained slice; `EPICS_INDEX.Docs` routes a story to one.
 
 | Feature          | Document                                                             |
 | ---------------- | -------------------------------------------------------------------- |
@@ -198,7 +198,7 @@ best practices (research via context7/WebSearch if needed).
 Self-contained: holds everything a `build`/`fix` story for this feature needs, so the
 story never opens another feature's doc. `index.md` is the canonical current truth — `design`
 writes no dated delta/journal siblings. `<slug>` matches the epic folder slug so
-`FEATURE_INDEX.Docs` can route to it.
+`EPICS_INDEX.Docs` can route to it.
 
 The **YAML frontmatter is mandatory** (see [`data-model.md`](../../../references/data-model.md)):
 `slug:` is the feature key; `design:` is `pending` when `design` has written/updated the doc
@@ -388,15 +388,11 @@ git clone [repo-url] && cd [project-name]
 Written only by `design ds`. See
 [`design-system.md`](../../../references/design-system.md) for how the values are obtained.
 
-```markdown
----
-project_id: [uuid from list_projects]
-project_name: [project name]
-project_updated_at: [updatedAt from list_projects, verbatim]
-synced_at: [YYYY-MM-DD of this run]
-tokens_path: pending
----
+`index.md` is the human-readable body only — **no frontmatter**. Every machine value lives
+in the sibling `manifest.json`, its one metadata home. Never copy an id or timestamp into
+`index.md`.
 
+```markdown
 # Design System — [project name]
 
 Cached from Claude Design (`claude.ai/design`). `build` reads this cache, not the network.
@@ -440,3 +436,26 @@ else in the project references the design system.
 
 **Important:** the `## Foundations` and `## Components` rows above are shape examples.
 Never ship them as content — every row is replaced with real extracted values.
+
+## design-system/manifest.json
+
+Written by `design ds` beside `index.md`; rewritten whole (never text-patched) on every
+sync. Key order is fixed:
+
+```json
+{
+  "projectId": "[uuid from list_projects]",
+  "projectName": "[project name]",
+  "projectUpdatedAt": "[updatedAt from list_projects, verbatim]",
+  "syncedAt": "[YYYY-MM-DD of this run]",
+  "tokensPath": "pending",
+  "cards": [
+    { "path": "components/button/index.html", "group": "Actions",
+      "name": "Primary buttons", "sha256": "[digest]", "cached": true }
+  ]
+}
+```
+
+`tokensPath` stays `"pending"` until the first UI story writes the stack's token file and
+records its repo-relative path here. A card with `cached: false` carries a `reason`
+(`binary` or `too-large`) and no `sha256`.

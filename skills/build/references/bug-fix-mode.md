@@ -60,12 +60,13 @@ smallest change that resolves the root cause; flag any unrelated edit.
    ```
 
    `<prior_status>` is the frontmatter `prior_status:` value (normally `done`); the empty
-   `prior_status=` clears it in the same call. The rollup recomputes automatically — a feature
+   `prior_status=` clears it in the same call. The rollup recomputes automatically — an epic
    with no remaining `bug`/`in-progress`/`todo` story rolls back to `DONE`, and the sync moves
    the card out of Bugs into the column the restored status calls for. There is no index cell
    to edit and no `EPIC.md` to touch. In DELEGATED MODE add `--no-sync` — the agent writes
    only its own frontmatter and the orchestrator regenerates once on the target branch after
-   merge.
+   merge. Then record the touched files with `ck-story files` exactly as SKILL.md 8.6 does —
+   a fix's diff counts as much as a story's for conflict detection.
 3. Do NOT append an Implementation Summary — the Bug Report Resolution is the record for a bug
    fix.
 4. Ship as usual (Phase 8.7) — the commit body lists the `Bug ID` and the story ID; `fix/`
