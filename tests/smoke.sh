@@ -618,6 +618,20 @@ SET_FILES_OUT=$(ck-story set "$STORY_0203" files=x 2>&1)
 assert_contains "ck-story set: refuses files= and points at ck-story files" "$SET_FILES_OUT" "ck-story files"
 
 echo
+echo "=== ck-plan: the plan record ==="
+PLAN_OV="tasks/2026-01-01_demo/OVERVIEW.md"
+ck-plan set tasks/2026-01-01_demo integration=plan >/dev/null
+assert_eq "ck-plan set: integration=plan" "plan" "$(ck_fm "$PLAN_OV" integration)"
+assert_eq "ck-plan set: plan level records branch plan/<slug>" "plan/demo" "$(ck_fm "$PLAN_OV" branch)"
+BAD_PLAN=$(ck-plan set tasks/2026-01-01_demo integration=feature 2>&1); BAD_PLAN_RC=$?
+assert_exit "ck-plan set: refuses integration=feature" 1 "$BAD_PLAN_RC"
+assert_contains "ck-plan set: names the allowed levels" "$BAD_PLAN" "story|epic|plan"
+PLAN_CLOSES=$(ck-project closes tasks/2026-01-01_demo 2>/dev/null)
+assert_contains "closes: a plan-level plan closes its stories" "$PLAN_CLOSES" "Closes #58"
+git checkout -q -- "$PLAN_OV"
+assert_contains "closes: a story-level plan closes nothing" "$(ck-project closes tasks/2026-01-01_demo 2>&1)" "not at integration: plan"
+
+echo
 echo "=== ck-project against a fake gh ==="
 if [ "$HAVE_JQ" -eq 1 ]; then
   FAKE_BIN="$PLUGIN_ROOT/tests/fake-gh"

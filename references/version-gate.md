@@ -175,7 +175,7 @@ template above, with `layout:` = `LAYOUT` and `requires: ck-code >= <MIN_PLUGIN>
 |---|---|
 | `spec`, `design`, `team`, `plan` (incl. `--publish`), `build`, `fix`, `ship`, `config`, `doctor --fix` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
 | `ship` STANDALONE (no `tasks/` in the repo at all) | **Exempt** — a standalone commit on a never-planned repo touches no ck-code state. Skip the gate; never stamp. The moment `tasks/` exists, the hard-block row applies. |
-| `explain`, `guide`, `track`, `doctor` (no `--fix`) | **Hint only** — run Tier 1 and Tier 2. On a marker, emit one line (`ℹ older ck-code layout — run /ck-code:migrate`, or `ℹ newer ck-code layout — update the plugin`) and continue read-only. Never block, never stamp. |
+| `explain`, `guide`, `track`, `doctor` (no `--fix`) | **Hint only** — Tier 1 alone, from the injected stamp. On anything but `layout: v7`, emit one line (`ℹ older ck-code layout — run /ck-code:migrate`, or `ℹ newer ck-code layout — update the plugin`) and continue read-only. Never run Tier 2, never block, never stamp. |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. It refuses a `NEWER` project. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here. It
