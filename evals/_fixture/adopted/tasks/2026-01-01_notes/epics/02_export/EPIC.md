@@ -6,7 +6,6 @@ description: CSV export of notes
 issue:
 pr:
 delivery:
-integration:
 ---
 
 # Epic 02: Export

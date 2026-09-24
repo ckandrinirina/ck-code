@@ -6,7 +6,6 @@ description: Email login and sessions
 issue:
 pr:
 delivery:
-integration:
 ---
 
 # Epic 01: Authentication

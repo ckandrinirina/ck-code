@@ -488,7 +488,7 @@ check_specs() {
   bad=$(python3 - "${files[@]}" <<'EOF'
 import json, sys
 KEYS = ["slug","title","language","audience","createdAt","updatedAt","status",
-        "stage","tags","github","linkedDesign","designSystem"]
+        "tags","github","linkedDesign","designSystem"]
 STATUS = {"draft","ready-for-design","design-in-progress"}
 AUDIENCE = {"Mixed","Product","Technical"}
 DS = {"none","awaiting-link","linked"}
@@ -507,8 +507,6 @@ for f in sys.argv[1:]:
         print("%s: keys are out of canonical order" % f)
     if d.get("status") not in STATUS:
         print("%s: status %r is outside the enum" % (f, d.get("status")))
-    if d.get("stage") not in (None, "spec"):
-        print("%s: stage %r is not \"spec\"" % (f, d.get("stage")))
     if d.get("audience") not in AUDIENCE:
         print("%s: audience %r is not one of Mixed|Product|Technical" % (f, d.get("audience")))
     ds = d.get("designSystem")
