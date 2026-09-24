@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.1.0] — 2026-09-24
+
+The build → QA handoff no longer runs the same suite twice on the same code, and QA
+reports every failing check in one pass. Every guarantee is unchanged: P7 still runs
+fresh against the committed branch, and the validator still reviews every criterion.
+
+### Added
+- **`ck-qa`** (`bin/ck-qa`, `scripts/ck-qa.sh`) runs QA commands once each into the usual
+  `$TMPDIR` logs. It stamps every pass with its code state (the git tree of the working
+  copy, untracked files included), the directory and the exact command. `--reuse` reports a
+  command already passed on that exact triple as `REUSED`. `--parallel` runs independent
+  checks concurrently and reports every failure. A command that edits the tree is flagged
+  and never stamped. Twelve new smoke assertions.
+
+### Changed
+- **build (single story)**: 6.3 runs the suite through `ck-qa`, and the Phase 7 validator
+  runs with `--reuse`, so the suite 6.3 just passed is not run a second time on the same
+  tree. Lint, typecheck, build and the criteria and architecture review still run.
+- **build PARALLEL MODE**: P8 post-wave QA runs with `--reuse`. A solo wave whose target did
+  not move since P7 no longer runs a third identical suite. A fan-out merge is a new state
+  and runs in full. P7 never reuses.
+- **qa-validator, qa-validation, rtk.md**: independent test, lint and typecheck commands
+  (`package.json`, `pyproject.toml`) run with `--parallel`. Wall time drops to the slowest
+  command, and a lint failure and a type error no longer cost two QA iterations. `&&`-chained
+  rows (cargo, go, CMake) stay sequential, because they share one build lock.
+
 ## [7.0.0] — 2026-09-24
 
 A major built from an audit of 6.17.1 and of a real 12-epic project, where 113 of 277
