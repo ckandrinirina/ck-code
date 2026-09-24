@@ -224,6 +224,35 @@ ck_plugin_version() {
   [ -f "$pj" ] && awk -F'"' '/"version"[[:space:]]*:/{print $4; exit}' "$pj"
 }
 
+# ck_team_digest — 12 hex chars identifying the architecture a generated team skill was
+# written against: tech-stack.md and folder-structure.md, the two docs whose change makes
+# an expert or a guide wrong. Empty when neither exists. `/ck-code:team` stamps it into
+# every skill it owns as `<!-- ck-code:team SOURCES <digest> -->`.
+ck_team_digest() {
+  local f files=""
+  for f in docs/architecture/tech-stack.md docs/architecture/folder-structure.md; do
+    [ -f "$f" ] && files="$files $f"
+  done
+  [ -n "$files" ] || return 0
+  # shellcheck disable=SC2086  # fixed paths without spaces
+  if command -v shasum >/dev/null 2>&1; then cat $files | shasum -a 256 | cut -c1-12
+  else cat $files | sha256sum | cut -c1-12; fi
+}
+
+# ck_team_stale — print every team-owned skill (GENERATED marker present) whose SOURCES
+# stamp differs from the current digest, or that carries none. One path per line.
+ck_team_stale() {
+  local want f have
+  want="$(ck_team_digest)"
+  [ -n "$want" ] || return 0
+  for f in .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md; do
+    [ -f "$f" ] || continue
+    grep -q 'ck-code:team GENERATED' "$f" 2>/dev/null || continue
+    have="$(sed -n 's/.*ck-code:team SOURCES \([0-9a-f]*\).*/\1/p' "$f" | head -1)"
+    [ "$have" = "$want" ] || printf '%s\n' "$f"
+  done
+}
+
 # ck_run NAME ARGS… — run a sibling ck-code script. The sibling beside the library wins
 # over PATH, so a Workflow subagent with an empty $CLAUDE_PLUGIN_ROOT still finds it.
 # Returns 127 when neither exists.

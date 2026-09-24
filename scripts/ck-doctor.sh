@@ -366,18 +366,22 @@ check_docs() {
 
 # ---- 6. team skills ----------------------------------------------------------
 check_team() {
-  local n bad=""
+  local n bad="" stale
   n=$(ls -d .claude/skills/expert-*/ .claude/skills/guide-*/ 2>/dev/null | wc -l | tr -d ' ')
   if [ "${n:-0}" -eq 0 ]; then
-    row "team skills" "none generated" WARN
-    note "run /ck-code:team — build and fix rely on the expert and guide skills"
+    if [ "$(fmv tasks/SETTINGS.md experts)" = "none" ]; then
+      row "team skills" "none, by choice (experts: none)" OK
+    else
+      row "team skills" "none generated" WARN
+      note "run /ck-code:team — build and fix rely on the expert and guide skills"
+    fi
     return
   fi
   for f in .claude/skills/expert-*/SKILL.md .claude/skills/guide-*/SKILL.md; do
     [ -f "$f" ] || continue
     local dir fmname
     dir=$(basename "$(dirname "$f")")
-    fmname=$(awk 'NR==1&&$0!="---"{exit} NR==1{next} $0=="---"{exit} /^name:/{sub(/^name:[ \t]*/,"");gsub(/["'"'"']/,"");print;exit}' "$f")
+    fmname=$(ck_fm "$f" name)
     [ "$dir" = "$fmname" ] || bad="$bad$f: folder '$dir' != name '$fmname'"$'\n'
     grep -q '^description:.*:[[:space:]]' "$f" 2>/dev/null \
       && bad="$bad$f: description contains \": \" — frontmatter will not parse"$'\n'
@@ -385,9 +389,16 @@ check_team() {
   if [ -n "$bad" ]; then
     row "team skills" "$n present, some invalid" ERROR
     printf '%s' "$bad" | sed '/^$/d;s/^/                   ✗ /'
-    note "run /ck-code:team --regenerate, or fix the frontmatter by hand"
+    note "run /ck-code:team --refresh, or fix the frontmatter by hand"
+    return
+  fi
+  stale=$(ck_team_stale)
+  if [ -n "$stale" ]; then
+    row "team skills" "$(printf '%s\n' "$stale" | grep -c .) of $n written against an older tech stack" WARN
+    printf '%s\n' "$stale" | head -6 | sed 's|^|                   ✗ |'
+    note "run /ck-code:team --refresh — it regenerates only these, keeping MANUAL blocks"
   else
-    row "team skills" "$n present and valid" OK
+    row "team skills" "$n present, valid and current" OK
   fi
 }
 

@@ -128,6 +128,13 @@ if [ -n "$has_plan" ] && [ "$layout" != "$LAYOUT" ]; then
   exit 0
 fi
 
+# Team skills written against an older tech stack. Named once per session, never fixed
+# here: a refresh re-runs research and costs tokens, which is the user's call.
+stale_n=$(ck_team_stale | grep -c . || true)
+if [ "${stale_n:-0}" -gt 0 ]; then
+  CK_NOTE="${CK_NOTE:+$CK_NOTE }$stale_n expert/guide skill(s) predate the current tech-stack.md or folder-structure.md — /ck-code:team --refresh regenerates just those."
+fi
+
 # Views: regenerated here, from frontmatter, whenever any is missing or stale. The
 # stamp-less, plan-less project (only a design so far) has nothing to project.
 if [ -n "$has_plan" ] && ! ck_views_fresh; then

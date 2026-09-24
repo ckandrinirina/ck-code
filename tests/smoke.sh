@@ -766,6 +766,28 @@ assert_contains "ck-migrate: says to update the plugin" "$NEWER_MIG" "update the
 rm -rf "$V6"
 
 echo
+echo "=== team refresh contract: SOURCES stamp vs the tech stack ==="
+TEAM="$(mktemp -d)"
+(
+  cd "$TEAM" || exit 1
+  mkdir -p docs/architecture .claude/skills/guide-react .claude/skills/expert-qa .claude/skills/guide-conventions tasks
+  printf '# Tech stack\n\n- React 18\n' > docs/architecture/tech-stack.md
+  printf '# Folders\n' > docs/architecture/folder-structure.md
+)
+DIG=$(cd "$TEAM" && ck_team_digest)
+assert_eq "ck_team_digest: 12 hex characters" "12" "${#DIG}"
+printf -- '---\nname: guide-react\ndescription: Use when writing React.\n---\n<!-- ck-code:team GENERATED — x -->\n<!-- ck-code:team SOURCES %s -->\n' "$DIG" > "$TEAM/.claude/skills/guide-react/SKILL.md"
+printf -- '---\nname: expert-qa\ndescription: Use when testing.\n---\n<!-- ck-code:team GENERATED — x -->\n' > "$TEAM/.claude/skills/expert-qa/SKILL.md"
+printf -- '---\nname: guide-conventions\ndescription: Use always.\n---\n# House rules\n' > "$TEAM/.claude/skills/guide-conventions/SKILL.md"
+assert_eq "ck_team_stale: only the unstamped owned skill" ".claude/skills/expert-qa/SKILL.md" "$(cd "$TEAM" && ck_team_stale)"
+printf -- '- React 19\n' >> "$TEAM/docs/architecture/tech-stack.md"
+assert_eq "ck_team_stale: a tech-stack change stales the stamped one too" "2" "$(cd "$TEAM" && ck_team_stale | grep -c .)"
+TEAM_DOC=$(cd "$TEAM" && ck-doctor 2>&1)
+assert_contains "ck-doctor: reports stale team skills" "$TEAM_DOC" "written against an older tech stack"
+assert_not_contains "ck-doctor: a protected skill is never stale" "$TEAM_DOC" "guide-conventions/SKILL.md"
+rm -rf "$TEAM"
+
+echo
 echo "=== breaking a second plan (tasks/2026-02-02_other, story missing id) ==="
 add_broken_plan
 
