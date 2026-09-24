@@ -4,6 +4,12 @@ description: Use when breaking a project spec, feature doc or feature descriptio
 argument-hint: "[path-to-spec] | --quick [brief] [--epic NN] | --publish [--mode plan|epics|stories] [tasks/<plan>]"
 effort: high
 allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-plan*) Bash(ck-issues*) Bash(ck-project*) Bash(git status*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh issue list*) Bash(mkdir*) Bash(awk*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(ls*) Skill
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/no-ai-guard.sh"
 ---
 
 # Project Architect — Spec to Epics/Stories (+ Quick Single-Story, Publish)

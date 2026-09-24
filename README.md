@@ -12,15 +12,23 @@
 
 Whether you're building a new project from scratch or adding a feature to an existing codebase, ck-code keeps the architecture, plan, and implementation in lock-step — so AI-generated code stays grounded in your real design.
 
-## One source of truth (v6)
+## One source of truth, and nothing to commit but the work (v7)
 
 A story's state lives in **one** place: the YAML frontmatter of its story file
 (`id, title, epic, status, size, blocked_by, files, issue, pr, delivery, prior_status`).
-The `STORIES_INDEX.md` and `FEATURE_INDEX.md` you see are **generated read-only views**,
-regenerated from that frontmatter by `scripts/ck-index.sh`. Because a view is a pure
-function of the frontmatter, it can never drift — so there is no reconciler skill and no
-hand-edited index tables. To change a story's status, a skill edits the frontmatter and
-regenerates; that's it.
+A plan's own state (its integration level, branch, PR and issue) lives in the frontmatter
+of its `OVERVIEW.md`. Everything else is derived.
+
+`STORIES_INDEX.md` and `EPICS_INDEX.md` are **generated views**, and in v7 they are never
+committed. `tasks/.gitignore` keeps them out of git. The session-start hook regenerates
+them from frontmatter, and so does every reader that finds one missing or older than the
+stories it projects. Your history holds the work and its state changes, not a
+"regenerate indexes" commit after every story: on a real 12-epic project those made up
+113 of 277 commits.
+
+The version stamp is stable too. `tasks/VERSION.md` says `layout: v7` and
+`requires: ck-code >= 7.0.0`, and nothing rewrites it except a migration, so updating the
+plugin never leaves your tree dirty.
 
 ## Done is not shipped
 
@@ -34,27 +42,30 @@ So a story can be `done` with no PR (**Ready to Ship**), `done` with an open PR
 (**In Review**), or `done` and merged (**Done**). `ship` records the PR number in `pr:`;
 `ck-project sync` asks GitHub what became of it and updates `delivery` — which is why a
 PR merged in the browser, with nothing running locally, still lands correctly on the next
-sync. Set `trunk_branch:` in `tasks/SETTINGS.md` when your integration branch is not the
+sync. It works with or without a GitHub Projects board, and it makes no network call at
+all when no recorded PR can still change. Set `trunk_branch:` in `tasks/SETTINGS.md` when your integration branch is not the
 repo default.
 
 **Skipped the PR entirely?** Merge a finished story into `main` yourself and push, and
 there is no PR for any of that to hang on — before, the card sat in *Ready to Ship* with
 the code already shipped. That story is now `delivery: direct` and goes straight to
 **Done**, skipping *In Review* and *Ready to Ship*, because both are states a PR passes
-through and there was no PR. Every `sync` finds it: the proof is that `main`'s own copy of
+through and there was no PR. Every sync finds it: the proof is that `main`'s own copy of
 the story file already reads `status: done`, having arrived alongside code — so it still
 works after you delete the branch. Work with no such proof (committed straight onto `main`,
 no branch left) is reported as a candidate and applied only when you confirm it.
 
-You rarely run that sync yourself. `ship` runs it **before** it stages, so a merge that
+You rarely run it yourself. `ship` reconciles **before** it stages, so a merge that
 happened while you were away rides the next commit instead of needing a chore PR of its
-own; the session summary counts anything still awaiting confirmation; and a story that
-ships through an epic PR has that PR's number written onto it, not just inherited.
+own. The session summary counts anything still awaiting confirmation, and
+`/ck-code:doctor --fix` runs the whole reconciliation on demand. A story that ships
+through an epic or plan PR has that PR's number written onto it, not just inherited.
 
-Dependencies still resolve against `status: done` alone: work you can build on is finished
-work, not merged work.
+Dependencies resolve against `status` alone: a blocker is released when it is `done`, or
+`skip` (work the plan decided not to do). Work you can build on is finished work, not
+merged work.
 
-## One id, one story (v6)
+## One id, one story
 
 **Epic numbers are unique across every plan in your project**, so a story id (`EE-SS`)
 names exactly one story anywhere in `tasks/`. Point at work directly and nothing has to
@@ -68,8 +79,8 @@ ask you which plan you meant:
 Through v5, numbering restarted at `01` in each new plan folder, so a second plan could
 own the same `01-01` as the first — and `--epic NN`, `blocked_by`, and the
 `epic/<NN>-*` branch lookup would quietly pick whichever they found first. Each new epic
-is now allocated from the project-wide maximum, so a feature plan added later starts at
-`05` rather than restarting at `01`. A dependency may also point at a story in another
+is now allocated from the project-wide maximum, so a plan added later starts at `05`
+rather than restarting at `01`. A dependency may also point at a story in another
 plan, because its id is unambiguous.
 
 If your project already has two plans with colliding numbers, `/ck-code:migrate`
@@ -79,16 +90,16 @@ issues stay valid.
 ## Features
 
 - **Spec-driven development workflow** — single source of truth from specification to merged PR
-- **Frontmatter-driven story state** — one writable location per story; indexes are generated, never hand-maintained
-- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the indexes *and* syncs the board in one call. None of it costs model tokens, none of it can drift, and a graph or percentage cannot come out silently wrong
+- **Frontmatter-driven story state** — one writable location per story and one record per plan; the views are generated, never hand-maintained, and never committed
+- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the views *and* syncs the board in one call; a plan's record goes through `ck-plan`; the v6 → v7 conversion is `ck-migrate`. None of it costs model tokens, one shared library holds every rule the scripts share, and `tests/smoke.sh` drives all of it, the GitHub side included, through a fake `gh`
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
-- **GitHub Issues integration** — `ship --to-issues` pushes epics/stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice. Starting a story assigns its linked issue to whoever runs `build` (an `--epic NN` run claims the epic issue too), so GitHub shows who owns the work in flight — additive, so an existing assignee is never removed
-- **GitHub Projects board sync** — the board is a *generated view* of story frontmatter, like the indexes: `ck-project sync` computes the column each card belongs in from `status` **and** `delivery`, and pushes only the differences, so it can't drift and is safe to re-run. Each sync re-asks GitHub what happened to every recorded PR, so a merge you clicked in the browser lands on the board with nothing running locally — and a story you merged straight to the trunk with no PR at all is detected from git and moved to Done, instead of sitting in Ready to Ship forever. ck-code adapts to whatever columns your board already has (an unmapped role is skipped, never an error) or provisions a seven-column board — Blocked · Todo · In Progress · Ready to Ship · In Review · Bugs · Done — for a new project. `/ck-code:config` sets it up; `build` and `ship` keep it current
+- **GitHub Issues integration** — `plan --publish` pushes the plan, its epics or its stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice. Starting a story assigns its linked issue to whoever runs `build` (an `--epic NN` run claims the epic issue too), so GitHub shows who owns the work in flight — additive, so an existing assignee is never removed
+- **GitHub Projects board sync** — the board is a *generated view* of story frontmatter, like the indexes: `ck-project sync` computes the column each card belongs in from `status` **and** `delivery`, and pushes only the differences, so it can't drift and is safe to re-run. Each sync re-asks GitHub what happened to every recorded PR, so a merge you clicked in the browser lands on the board with nothing running locally — and a story you merged straight to the trunk with no PR at all is detected from git and moved to Done, instead of sitting in Ready to Ship forever. ck-code adapts to whatever columns your board already has (an unmapped role is skipped, never an error) or provisions a seven-column board — Blocked · Todo · In Progress · Ready to Ship · In Review · Bugs · Done — for a new project. `/ck-code:config board` sets it up; `build` and `ship` keep it current, and `/ck-code:doctor --fix` repairs any drift
 - **Test-Driven Development (TDD) enforcement** — red/green/refactor cycle, no production code without a failing test first
 - **SOLID + redundancy checks** — every implementation is reviewed against the five principles, then its diff is scanned for code the repo already has: reimplementations, copy-paste, dead code, single-caller wrappers, and options no acceptance criterion asked for
 - **Clean-code and comment standard** — `build` writes to one shared bar (`references/code-craft.md`): self-explaining names, small functions, idiomatic error handling, and comments only where they say *why*. The refactor phase scans the diff for restating comments, missing rationale, missing doc comments and readability, and QA verifies the scan ran; generated tech guides refine the standard per project, never lower it
-- **Project-tailored expert skills** — auto-generated per-project experts and language guides, refreshed via [context7](https://context7.com); regeneration is non-destructive (your hand-authored and convention skills are preserved)
+- **Project-tailored expert skills** — auto-generated per-project experts and language guides, researched via [context7](https://context7.com). Each one records which version of your tech stack it was written against, so `/ck-code:doctor` and the session start name the ones a stack change made stale, and `/ck-code:team --refresh` regenerates just those. Regeneration is non-destructive: hand-authored and convention skills, and every `MANUAL` block, are preserved
 - **Claude Design system fidelity (optional)** — `/ck-code:spec` offers to write a **design brief** you paste into [claude.ai/design](https://claude.ai/design); when the system is ready, hand its URL back with `/ck-code:design ds <url>` — from any session, days later, since the pending link lives on disk and is surfaced at session start. ck-code then caches its tokens and component sources into the repo, generates a `guide-design-system` skill that auto-loads on UI stories, and builds components exactly against it. Fully offline after one sync, and entirely absent from projects that never opt in
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge. A wave that narrows to a single story drops the worktree and runs one agent straight on the target branch — same delegation, none of the isolation overhead
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
@@ -165,27 +176,40 @@ committed.
 > `/plugin install ck-code@ck-marketplace`. `doctor` and the session-start hook both
 > flag it until you do.
 
-## Upgrading an older project to v6
+## Upgrading to v7
 
-ck-code stores story state in story-file frontmatter, generates its index views, writes
-each generated skill to its own top-level folder, and keeps epic numbers unique across
-plans. Projects created by an older ck-code upgrade in one step:
+A project created by ck-code 6.x upgrades in one step:
 
 ```bash
 /ck-code:migrate
 ```
 
-`migrate` is one-shot, idempotent, and safe: it refuses a dirty tree and lands every
-conversion in a single revertable commit. Every change-producing skill blocks a pre-v6
-project until you run it, and the session-start hook reminds you. Pre-v3 projects are
-handled too — the converter chains the older layout migrations first.
+`migrate` shows you exactly what will change (`ck-migrate v7 --dry-run`), asks once, and
+lands the whole conversion in a single revertable commit. The conversion is a tested
+script, not prose the model re-derives, and on a real 12-epic project it came to 16 lines
+added and 104 removed:
 
-**Most v5 projects need nothing.** The upgrade only has work to do when two plan folders
-actually share an epic number, so a single-plan project re-stamps silently the next time
-you run any skill. When there is a collision, migration stays local: it renumbers the
-later plans, rewrites their frontmatter and dependencies, asks before touching any id
-mentioned in prose, refuses to rename a branch that has an open PR, and never edits
-anything on GitHub.
+- each plan's `PROJECT_OVERVIEW.md` or `FEATURE_OVERVIEW.md` becomes `OVERVIEW.md`, with a
+  frontmatter record of the plan's integration level (the widest its epics used), its
+  branch and its PR. An existing `feat/…` branch is kept, not renamed;
+- every `EPIC.md` loses `integration:`, which is a plan property now, and keeps its
+  `## Dependencies` prose;
+- the views leave git, and `FEATURE_INDEX.md` is regenerated as `EPICS_INDEX.md`;
+- `pre-spec.md` becomes `spec.md`, and the design-system metadata moves into
+  `manifest.json`;
+- `tasks/VERSION.md` becomes `layout: v7` and `requires: ck-code >= 7.0.0`.
+
+It refuses a dirty tree, keeps each file's own formatting, and a second run does nothing.
+Every change-producing skill blocks a v6 project until it is migrated, and the session
+start says so.
+
+**Older layouts (v3, v4, v5) upgrade with the same command.** `migrate` first brings them
+to v6 (frontmatter state, flat team-skill folders, unique epic numbers), then to v7, and
+folds both into one commit.
+
+**A teammate still on 6.x** opening your migrated project is told to update the plugin,
+never to migrate: the stamp's `requires:` line is what a 6.x session sees first. A layout
+newer than the plugin can never be converted down.
 
 ## Moving up from ck-code-lite
 
@@ -199,7 +223,7 @@ run it inside that project:
 
 It converts the flat `tasks/PLAN.md` into epics and stories (proposing a grouping you
 confirm before anything is written), splits `docs/ARCHITECTURE.md` into `docs/architecture/`,
-and marks the lite artifacts superseded rather than deleting them. Status, acceptance
+writes the v7 plan record, and marks the lite artifacts superseded rather than deleting them. Status, acceptance
 criteria and ticked checkboxes are carried over, so finished work stays finished; task IDs
 change from `T-NN` to `EE-SS` and the report prints the full map. Feature docs are written
 as stubs — run `/ck-code:design` afterwards to fill them in.
@@ -245,18 +269,22 @@ Every skill declares `allowed-tools`, so the `git`, `gh`, and `ck-index` calls i
 a run are pre-approved for that turn instead of prompting one command at a time. The grant is
 narrow (a `build` run cannot `git push`; only `ship` can) and it expires with your next message.
 
-`ship`, `build`, `fix`, `migrate`, `spec`, and `sync` additionally register a skill-scoped
+`ship`, `build`, `fix`, `plan`, `migrate`, `spec`, and `doctor` additionally register a skill-scoped
 `PreToolUse` hook that blocks any commit, PR, or issue command carrying an AI-authorship
 trailer or footer. It matches the trailer *forms* only, so a commit that legitimately
 discusses Claude Code is untouched. The rule is
 [documented here](references/no-ai-references.md) and enforced by `scripts/no-ai-guard.sh`
 — the hook is active only while one of those skills is running.
 
-**SessionStart hook** (`scripts/session-start.sh`) reloads generated skills, injects the
-one-line workflow summary, and — only in a project already stamped `tasks/VERSION.md` —
+**SessionStart hook** (`scripts/session-start.sh`) reloads generated skills, regenerates
+the views, checks the layout stamp in both directions (an older project is sent to
+`migrate`, a newer one or an unmet `requires:` asks you to update the plugin), names
+expert or guide skills a stack change made stale, injects the one-line workflow summary,
+and — only in a project already stamped `tasks/VERSION.md` —
 may run `ck-bootstrap install` when the committed guard is missing or stale. That writes
 `.claude/ck-code-required.sh` and adds its `SessionStart` entry to `.claude/settings.json`;
-it never touches an unstamped project, so cloning ck-code itself does not trigger it. See
+it never touches an unstamped project, so cloning ck-code itself does not trigger it. It
+never rewrites a tracked file. See
 [ck-code is required in a ck-code project](#ck-code-is-required-in-a-ck-code-project).
 
 **Prompt router** (`scripts/prompt-router.sh`, `UserPromptSubmit`) makes the workflow the
@@ -302,14 +330,20 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 - **Keep getting a permission prompt for a command a skill runs.** The skill's own
   `allowed-tools` should have pre-approved it — update the plugin (`/plugin update
   ck-code@ck-marketplace`); an older version may be missing that command form.
-- **`ck-view` output is empty, or the status line shows nothing.** Run `ck-index` to
-  (re)generate the views, then `/ck-code:doctor` to see what is still wrong.
+- **The status line shows nothing on a fresh clone.** The views are not committed; the
+  next session start regenerates them, or run `ck-index` now.
 - **A story sits at `blocked` and never becomes ready.** Its `blocked_by` ids must
-  resolve to `status: done` stories — `/ck-code:doctor` reports one that does not.
-- **`gh` is unauthenticated.** GitHub Issues/Projects calls are skipped; the local,
-  commit-only half of `build`, `ship`, and `sync` still completes.
-- **The project is on a pre-v6 layout.** Run `/ck-code:migrate` — every
-  change-producing skill blocks until it stamps `tasks/VERSION.md`.
+  resolve to `done` or `skip` stories — `/ck-code:doctor` reports one that does not.
+- **A PR was merged but the story still shows it in review.** Run `/ck-code:doctor --fix`.
+  It asks GitHub about every recorded PR, records work merged with no PR, moves the board
+  cards and closes delivered issues, with or without a Projects board.
+- **`gh` is unauthenticated.** GitHub calls are skipped with a warning; the local,
+  commit-only half of `build`, `ship` and `doctor --fix` still completes.
+- **The project is on an older layout.** Run `/ck-code:migrate` — every change-producing
+  skill blocks until the project is v7.
+- **"This project requires ck-code >= …" or "uses a newer ck-code layout".** A teammate
+  migrated it with a newer plugin. Run `/plugin update ck-code@ck-marketplace` and
+  restart; never migrate it.
 - **Every `/ck-code:*` command is listed twice.** Two enabled copies of the plugin —
   usually `ck-code-lite` left enabled alongside `ck-code`, or a leftover vendored copy
   (see [ck-code is required in a ck-code project](#ck-code-is-required-in-a-ck-code-project))
@@ -320,7 +354,7 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 
 ## Status bar (opt-in, zero tokens)
 
-`scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the feature
+`scripts/statusline.sh` renders ck-code state in the Claude Code status bar — the plan
 you're in, the story you're on (derived from the git branch), and how far each has got:
 
 ```
@@ -328,28 +362,28 @@ ck-code password-reset 2/5 60% 2⚡ 1✗ · epic 01 auth 2/5 40% · ⚡ 01-03 Pa
 ```
 
 The line reads **top-down, one level of the plan per segment**, each counted in the unit
-below it and each narrower than the last — feature in epics, epic in stories, story in
-criteria. Scanning left to right answers *which feature, which epic, which story, how far*
+below it and each narrower than the last — plan in epics, epic in stories, story in
+criteria. Scanning left to right answers *which plan, which epic, which story, how far*
 in that order, and no segment repeats what a wider one already said. **Percentages belong to
-the feature and the epic only** — the two levels whose ratios summarise many rows; below
+the plan and the epic only** — the two levels whose ratios summarise many rows; below
 them the ratio's own numbers are small enough to read directly.
 
-- **Feature** `password-reset 2/5 60% 2⚡ 1✗` — the feature the branch belongs to, its
+- **Plan** `password-reset 2/5 60% 2⚡ 1✗` — the plan the branch belongs to, its
   **epics** done / total, and its open (`⚡`) and bug (`✗`) stories. The plan folder's date
-  stamp and `feature-` prefix are dropped; an epic counts as done when every story in it is.
+  stamp (and the `feature-` prefix older plan folders carry) are dropped; an epic counts as done when every story in it is.
   The percentage is story-weighted, so it moves between epics instead of jumping in fifths.
 - **Epic** `epic 01 auth 2/5 40%` — the epic in context, by number and name, counted in
   **stories**.
 - **Story** `⚡ 01-03 Password reset flow 5/8` — the story you're on, read from the branch
   name (`story/<EE>-<SS>-…` or `fix/…`), counted in **acceptance criteria**. On an
-  `epic/<NN>-…` branch — where an `integration: epic|feature` session sits while its stories
+  `epic/<NN>-…` branch — where an `integration: epic|plan` session sits while its stories
   are built — the epic's own open story is resolved from the index instead (in progress
   before bug). With no story in play the segment is simply absent: this line says where you
   *are*, and `/ck-code:track next` is what recommends where to go. Glyphs: `⚡` in progress ·
   `✓` done · `○` todo · `✗` bug.
-- **Target** `→ epic/01` — where a finished story merges, shown only when the epic's
-  `integration` is `epic` or `feature` (the `story` default merges to the default branch,
-  which everyone already assumes). `→ feat` is appended at `feature` level, and on the epic
+- **Target** `→ epic/01` — where a finished story merges, shown only when the plan's
+  `integration` is `epic` or `plan` (the `story` default merges to the default branch,
+  which everyone already assumes). `→ plan` is appended at `plan` level, and on the epic
   branch itself only that promotion target is shown — naming the branch you are on is noise.
 - **Live work** `⚙ 01-04, 02-01` — every story a worktree is building right now, sorted by
   id. Named rather than counted: `2 wt` says work is happening somewhere, the ids say which
@@ -361,22 +395,21 @@ them the ratio's own numbers are small enough to read directly.
 
 **One colour per role, identical at every level** — dim for structure (the `ck-code` mark,
 the `epic` / `⚙` labels, separators) and for every percentage, cyan for identity
-(feature, epic, story id and title, merge target, worktree ids), green for every done /
+(plan, epic, story id and title, merge target, worktree ids), green for every done /
 total ratio, and yellow or red for status alone (`⚡` open, `✗` bug, and the story glyph).
 Colour says what *kind* of value you are looking at, never which level it came from — the
 level is already carried by position — so the eye learns the line once instead of once per
 segment, and the only thing that interrupts a scan is a real status.
 
-**The branch picks the feature, never the directory alone.** Story ids and epic numbers are
-unique per plan, not across plans, so a `tasks/` holding several features can offer more
-than one answer for one branch — and a multi-repo project, whose code repo sits under the
-repo that owns `tasks/`, may check out a code repo carrying a stale plan of its own. Every
+**The branch picks the plan, never the directory alone.** A multi-repo project, whose
+code repo sits under the repo that owns `tasks/`, may check out a code repo carrying a
+stale plan of its own. Every
 ancestor holding a plan is a candidate; the one the branch confirms (matching epic slug, or
 a story id backed by the branch slug) wins, and all counts are then scoped to it. A branch
 naming work no visible plan owns renders **nothing** — a confident wrong number is worse
 than an empty status bar.
 
-With no ck-code branch to go on (`main`, a detached HEAD) there is no one feature to
+With no ck-code branch to go on (`main`, a detached HEAD) there is no one plan to
 report, so an idle session falls back to project-wide story counts: `ck-code 12/20 60% 2⚡`.
 Only `awk` and `git` are required; the whole line costs ~50ms to draw, and a fan-out now adds
 nothing beyond one `git worktree list` — the per-worktree story-file reads are gone.
@@ -390,14 +423,15 @@ and renders one row per dispatched agent:
 ⚡ story-02-01 · Implement 02-01 filter service · 5/8 63% · +214/-18 · 159.5k tok
 ```
 
-`5/8 63%` is that story's criteria, counted in that agent's own worktree; `+214/-18` is its
+`5/8 63%` is that story's acceptance criteria, counted in the agent's own worktree copy of
+the story (found by its `id:`, since a worktree carries no view); `+214/-18` is its
 diff against the branch the fan-out was cut from. **A row with no diff field has written no
 code** — the failure `build` P5 otherwise only catches after the agent claims success.
 
 The row resolves its story the same way the status bar does: the agent's own branch slug
 decides which plan's `02-01` is meant, and plans above the worktree are searched too, so a
-multi-repo layout (or a stale `tasks/` beside the code) cannot substitute another feature's
-story — and with it, another feature's progress.
+multi-repo layout (or a stale `tasks/` beside the code) cannot substitute another plan's
+story — and with it, another plan's progress.
 
 A percentage can only ever mean "boxes ticked": criteria are the sole progress signal with
 a denominator, and the implementing agent ticks them as it goes, so read it as direction,
@@ -432,24 +466,25 @@ silent. `jq` is optional and only `--install` requires it.
 
 ```bash
 /ck-code:spec     docs/notes.md            # 1. (Optional) stakeholder-ready feature spec
-/ck-code:design   docs/specifications.md   # 2. Generate architecture docs
+/ck-code:design                            # 2. Architecture docs (finds the spec spec just wrote)
 /ck-code:team                              # 3. Create project-tailored experts + guides
-/ck-code:plan     docs/specifications.md   # 4. Generate epics and stories
-/ck-code:ship --to-issues                  # 5. (Optional) push the plan to GitHub Issues
+/ck-code:plan                              # 4. Epics and stories; asks the integration level once
+/ck-code:plan --publish                    # 5. (Optional) push the plan to GitHub Issues
 /ck-code:track    next                     # 6. Find the first story to implement
 /ck-code:build                             # 7. Start building (TDD + QA)
 /ck-code:ship                              # 8. Commit, PR, close Issue
 ```
 
-Not sure what to run? `/ck-code:guide` recommends the next step from project state,
+Each step offers the next one as a single question, so after `spec` you normally answer
+"Run it" four times rather than typing these commands. Not sure what to run? `/ck-code:guide` recommends the next step from project state,
 `/ck-code:guide "add a login screen"` routes a plain-language task to the right skill, and
 `/ck-code:guide --command build` prints a command's syntax.
 
 ## The full workflow
 
 ```
-/ck-code:spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:ship --to-issues  →  /ck-code:track
-  (optional)                                                                                  ↓
+/ck-code:spec  →  /ck-code:design  →  /ck-code:team  →  /ck-code:plan  →  /ck-code:plan --publish  →  /ck-code:track
+  (optional)                                                                                 ↓
                                                                               /ck-code:build  →  /ck-code:ship
                                                                                          ↑
                               /ck-code:fix  (diagnose bug → bug status)  ─────────────────┘
@@ -458,20 +493,19 @@ Not sure what to run? `/ck-code:guide` recommends the next step from project sta
 
 | Skill | Purpose | Input | Output |
 | --- | --- | --- | --- |
-| `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes; offers a Claude Design brief on a UI project | feature description or notes file | `docs/specs/` and/or GitHub issue |
-| `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); also `sync`/`optimize` maintenance modes and `ds [url]` to link a Claude Design system | spec file | `docs/architecture/` |
-| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline at the plan prompt (`--conventions` re-runs it alone); `--workflow` runs the big research/generation fan-outs as resumable scripted workflows; regeneration is non-destructive | `docs/architecture/` | `.claude/skills/expert-*/`, `.claude/skills/guide-*/` |
-| `/ck-code:plan` | Create epics ordered demo-first (the first epic built makes the app runnable over fixture seams, every later epic is demoable on merge, backend epics replace the seams behind an unchanged click path), single-dispatch S/M stories every one of which a human verifies through the surface rather than an API client, a mandatory final Integration & E2E epic, and a roadmap; `--quick [brief] [--epic NN]` adds one small story to an existing epic | spec file | `tasks/YYYY-MM-DD_<slug>/` (stories carry frontmatter) |
-| `/ck-code:build` | Implement stories (TDD + QA): one inline, several at once in parallel worktrees (story IDs), or a whole epic in dependency-ordered waves (`--epic NN`); a `bug`-status story runs in **Bug-Fix Mode** (implements the recorded Fix Plan, restores the story to `done`). Resolves the **base branch** from the epic's integration level and shows it with its reason before cutting, rather than inheriting whatever branch the run was launched on | story file / story IDs / `--epic NN` | source code + tests; regenerated index views; in PARALLEL MODE a branch per story plus a conflict report for waves of ≥ 2, or commits straight on the target branch for a single-story wave |
+| `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes; offers a Claude Design brief on a UI project | feature description or notes file | `docs/specs/<date>_<slug>/spec.md` and/or GitHub issue |
+| `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); with no argument it picks up the spec marked ready for design; also `sync`/`optimize` maintenance modes and `ds [url]` to link a Claude Design system. A tech-stack change hands off to `team --refresh` | spec file (optional) | `docs/architecture/` |
+| `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline (`--conventions` re-runs it alone); `--refresh` regenerates only the skills a stack change made stale, `--regenerate` all of them; `--workflow` runs the big fan-outs as resumable scripted workflows; never overwrites protected skills or `MANUAL` blocks | `docs/architecture/` | `.claude/skills/expert-*/`, `.claude/skills/guide-*/` |
+| `/ck-code:plan` | Create epics ordered demo-first (the first epic makes the app runnable over fixture seams, every later epic is demoable on merge), single-dispatch S/M stories a human verifies through the surface, a mandatory final Integration & E2E epic, and a roadmap. Asks the plan's **integration level** once — a PR per story, per epic, or one for the plan. `--quick [brief] [--epic NN]` adds one small story and hands it to `build`; `--publish [--mode plan\|epics\|stories]` pushes the plan to GitHub Issues and stores every issue number in frontmatter | spec or feature doc (optional) | `tasks/YYYY-MM-DD_<slug>/` with an `OVERVIEW.md` record |
+| `/ck-code:build` | Implement stories (TDD + QA): one inline, several at once in parallel worktrees (story IDs), or a whole epic in dependency-ordered waves (`--epic NN`); a `bug`-status story runs in **Bug-Fix Mode**. Derives the base branch from the plan's integration level and shows it before cutting, records every file a story touched in its `files:`, and hands a finished parallel epic to `ship --promote` | story file / story IDs / `--epic NN` | source code + tests; story frontmatter; in PARALLEL MODE a branch per story plus a conflict report for waves of ≥ 2 |
 | `/ck-code:fix` | Diagnose a bug tied to a story, write a failing test + Fix Plan, flip it to `bug` — then auto-run `build` for an easy fix or hand off when complex. Never writes the source fix itself | story file (optional) | failing test + Bug Report + `bug` status → `build` |
-| `/ck-code:ship` | Commit, PR, update GitHub Issues. Honours the epic's **integration level** — a PR per story, per epic, or one per feature — merging story branches up the hierarchy and offering promotion when a rollup completes (`--promote` runs that gate later, `--integration` sets the level). `--to-issues [--mode feature\|epics\|stories]` publishes the plan to Issues and stores each issue number in story frontmatter. Reconciles merged PRs before staging, generates the `Closes` footer from frontmatter so a PR always closes every issue it delivers, and commits plan bookkeeping on the current branch instead of opening a chore PR for it | story file (optional) | commit + PR + issue updates; merged/promoted branches |
+| `/ck-code:ship` | Commit, PR, update GitHub Issues, after one confirmation that shows the files, the message and the PR target together (likely secrets are never staged). Honours the plan's integration level — a PR per story, per epic, or one for the plan — and `--promote` opens the epic or plan PR when a rollup completes. Reconciles merged PRs before staging and generates the `Closes` footer from frontmatter | story file (optional) | commit + PR + issue updates |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
-| `/ck-code:migrate` | One-shot, idempotent upgrade of a pre-v6 **or ck-code-lite** project to the v6 layout (frontmatter + generated indexes + flat team-skill folders + unique epic numbers); stamps `tasks/VERSION.md` | — | converted project (one commit) |
+| `/ck-code:migrate` | Upgrade a v6, older (v3–v5) **or ck-code-lite** project to the v7 layout: previews the tested `ck-migrate` conversion, asks once, lands one revertable commit | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps; `--epic NN` instead explains that epic's goal and the goal of every story in it | `[file-or-concept]` / `--epic NN` | walkthrough + verification steps, or epic + story goals |
-| `/ck-code:doctor` | Health report for the project — layout stamp, story frontmatter that will not parse, generated indexes drifted from the stories, unresolvable `blocked_by` ids, feature-doc slug drift, unregistered team skills, orphan epic branches, stale board mapping, a missing or uncommitted ck-code-required guard. Names the command that fixes each finding (read-only) | `[tasks/<slug>] [--quiet]` | findings + fixes; exit 1 on any error |
-| `/ck-code:sync` | Reconcile everything with GitHub in one pass — recover missing `pr:` anchors, refresh `delivery:` from merged PRs, record stories merged straight to the trunk with no PR, place board cards, close issues a merged PR failed to close, tick epic checklists, and add a missing `Closes` footer to an open PR; commits the `tasks/` diff. Previews and asks once | `[tasks/<slug>] [--apply] [--dry-run] [--local]` | `tasks/` + views, board, Issues/PRs, one commit |
-| `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — turn GitHub issue tracking on or off, set the trunk branch every PR targets, pick or create the GitHub Project whose board mirrors story status, re-map or reorder board columns, or show what is configured | `show` / `board` / `trunk <branch>` / `on` / `off` | `tasks/SETTINGS.md` + board mapping |
+| `/ck-code:doctor` | Health report — layout stamp (older, newer, or an unmet `requires:`), story frontmatter that will not parse, committed or stale views, unresolvable `blocked_by` ids, feature-doc slug drift, stale or invalid team skills, orphan epic branches, board mapping, the ck-code-required guard. `--fix` reconciles delivery, the board and GitHub Issues in one pass (with or without a board), confirms any unproven direct merge, and commits the story files | `[tasks/<slug>] [--quiet] [--fix]` | findings + fixes; with `--fix`, one bookkeeping commit |
+| `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — GitHub issue tracking on or off, the trunk branch every PR targets, the GitHub Projects board (create, adopt, re-map, reorder), a plan's integration level, and whether build asks about expert skills | `show` / `board` / `trunk <branch>` / `integration <plan> <level>` / `experts ask\|none` / `on` / `off` | `tasks/SETTINGS.md`, the plan record, board mapping |
 
 ## Hand-offs — one click, never a retype
 
@@ -495,13 +529,14 @@ Three things this guarantees:
 
 - **Skip is always safe.** A skill reaches a valid, resumable state *before* it offers a
   hand-off, so declining never leaves the project half-done.
-- **Chains cannot run away.** Maximum depth 3, and a skill may never invoke one already on
+- **Chains cannot run away.** Maximum depth 5 (enough for spec → design → team → plan →
+  publish), and a skill may never invoke one already on
   the chain — so `fix → build → fix` is structurally impossible, not merely discouraged.
-- **Read-only stays read-only.** `guide`, `track` and `doctor` run in a cheap forked
-  context with no write tools. They never launch anything themselves; they end with a
+- **Read-only stays read-only.** `guide`, `track`, `explain` and `doctor` run with no
+  write tools (`doctor --fix` writes only through the ck-code scripts and `git`). They never launch anything themselves; they end with a
   `NEXT:` line the session offers you as the same one-click run.
 
-The biggest win is the version gate. A pre-v6 project used to cost *two* retypes — type
+The biggest win is the version gate. An older project used to cost *two* retypes — type
 `/ck-code:migrate`, then retype your original command from memory once it finished. It now
 offers migration once and resumes what you were doing, with the arguments you already gave.
 
@@ -513,7 +548,7 @@ which hand-offs exist is the invocation matrix in
 
 If you've used Claude Code on a real project, you've felt the friction: the AI works at file-level but humans plan at architecture-level, and the two drift apart. Specs go stale. Stories get re-implemented. Tests are skipped under deadline pressure.
 
-ck-code closes that gap. The architecture docs, the story plan, the expert skills, and the implementation are all generated from the same spec — and the build loop refuses to ship code without a failing test, a SOLID check, and an explicit story status update. In v4, that status lives in exactly one place, so the plan you read is always the plan that's true.
+ck-code closes that gap. The architecture docs, the story plan, the expert skills, and the implementation are all generated from the same spec — and the build loop refuses to ship code without a failing test, a SOLID check, and an explicit story status update. That status lives in exactly one place, so the plan you read is always the plan that's true.
 
 ## Layout
 
@@ -538,18 +573,27 @@ ck-code/
 │   ├── ck-story                   # → scripts/ck-story.sh
 │   ├── ck-doctor                  # → scripts/ck-doctor.sh
 │   ├── ck-issues                  # → scripts/ck-issues.sh
-│   └── ck-project                 # → scripts/ck-project.sh
+│   ├── ck-project                 # → scripts/ck-project.sh
+│   ├── ck-plan                    # → scripts/ck-plan.sh
+│   ├── ck-team                    # → scripts/ck-team.sh
+│   ├── ck-migrate                 # → scripts/ck-migrate.sh
+│   └── ck-bootstrap               # → scripts/ck-bootstrap.sh
 ├── workflows/                     # registered Workflow scripts, invoked by name (resumable)
 │   ├── team-research.js           # /ck-code:team --workflow, Phase 1.6a
 │   └── team-generate.js           # /ck-code:team --workflow, Phase 3.1
 ├── scripts/
-│   ├── ck-index.sh                # regenerate the index views from story frontmatter
+│   ├── lib/ck-common.sh           # the one implementation of every shared rule (sourced)
+│   ├── ck-index.sh                # regenerate the views from story frontmatter
 │   ├── ck-view.sh                 # render the dashboards / state / wave plan (zero model tokens)
 │   ├── ck-story.sh                # set story state + regenerate + sync, in one call
 │   ├── ck-doctor.sh               # read-only project health check (/ck-code:doctor)
-│   ├── ck-issues.sh               # publish a plan to GitHub Issues (ship --to-issues)
-│   ├── ck-project.sh              # reconcile the GitHub Projects board from frontmatter
-│   ├── session-start.sh           # SessionStart hook (reload skills, status, migrate notice)
+│   ├── ck-issues.sh               # publish a plan to GitHub Issues (plan --publish)
+│   ├── ck-project.sh              # reconcile delivery, the board and GitHub Issues
+│   ├── ck-plan.sh                 # read and set a plan's OVERVIEW.md record
+│   ├── ck-team.sh                 # the team-skill refresh contract (SOURCES digest)
+│   ├── ck-migrate.sh              # deterministic v6 → v7 conversion
+│   ├── ck-bootstrap.sh            # the committed ck-code-required guard
+│   ├── session-start.sh           # SessionStart hook (reload skills, views, layout check, status)
 │   ├── prompt-router.sh           # UserPromptSubmit hook: inject references/prompt-routing.md
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
 │   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
@@ -559,16 +603,17 @@ ck-code/
 │   ├── spec/                      # stakeholder-ready feature spec (create + adjust)
 │   ├── design/                    # spec → feature-scoped architecture docs (+ optimize/sync)
 │   ├── team/                      # derive per-project experts + guides (+ conventions)
-│   ├── plan/                      # architecture → epics/stories (+ --quick single story)
+│   ├── plan/                      # architecture → epics/stories (+ --quick, --publish)
 │   ├── build/                     # TDD story implementation (inline, parallel, waves)
 │   ├── fix/                       # bug triage → hands off to build
-│   ├── ship/                      # commit + PR + Issue updates (+ --to-issues)
+│   ├── ship/                      # commit + PR + Issue updates (+ --promote)
 │   ├── track/                     # progress dashboard
 │   ├── guide/                     # state/intent/command router
-│   ├── migrate/                   # pre-v6 → v6 and ck-code-lite → v6 converter
-│   ├── doctor/                    # read-only project health report
-│   ├── config/                    # tasks/SETTINGS.md — issue tracking + board mapping
+│   ├── migrate/                   # v6, older and ck-code-lite projects → v7
+│   ├── doctor/                    # project health report (+ --fix reconciliation)
+│   ├── config/                    # tasks/SETTINGS.md, board, integration level
 │   └── explain/                   # post-implementation walkthrough
+├── tests/                         # smoke.sh (scripts, CI) + evals.sh (skill routing, local)
 └── README.md
 ```
 
@@ -578,9 +623,9 @@ Each skill folder is self-contained: the main `SKILL.md` is the entry point, and
 
 ```
 docs/specs/YYYY-MM-DD_<slug>/
-├── pre-spec.md            # Stakeholder-friendly version (from /ck-code:spec)
+├── spec.md                # Stakeholder-friendly spec (from /ck-code:spec)
 ├── design-brief.md        # Optional — paste into claude.ai/design to build the design system
-└── .metadata.json         # Canonical: twelve keys, fixed order, closed set
+└── .metadata.json         # Canonical: eleven keys, fixed order, closed set
                            # (linkedDesign points at docs/architecture/features/<slug>/ after a design pass;
                            #  designSystem tracks the Claude Design link across sessions)
 ```
@@ -592,36 +637,22 @@ file that has drifted from it.
 
 ## Compatibility
 
-> **v6 — breaking (epic numbering only).** Epic numbers are now unique across every plan,
-> so a story id names exactly one story project-wide and `--epic NN` / `EE-SS` resolve
-> without a plan qualifier. `/ck-code:plan` allocates each new epic from the project-wide
-> maximum instead of restarting at `01` per folder. Nothing else changes — the id format,
-> stories, epics, and architecture docs are all untouched. **A project whose plans do not
-> already share an epic number needs no migration**: the version gate re-stamps it to
-> `layout: v6` silently. Where numbers do collide, `/ck-code:migrate` renumbers the later
-> plans (the oldest keeps its numbers) and rewrites their frontmatter and dependencies.
+> **v7 — breaking (layout).** The generated views leave git and regenerate from
+> frontmatter; `FEATURE_INDEX.md` is now `EPICS_INDEX.md`. Each plan carries an
+> `OVERVIEW.md` record holding its integration level (`story`, `epic` or `plan`, which
+> replaces `feature`), branch, PR and issue. `tasks/VERSION.md` is stable
+> (`layout: v7`, `requires: ck-code >= 7.0.0`). `/ck-code:sync` became
+> `/ck-code:doctor --fix`, `ship --to-issues` became `plan --publish`, and
+> `ship --integration` became `config integration`. `/ck-code:migrate` converts a v6
+> project in one commit (see [Upgrading to v7](#upgrading-to-v7)).
 >
-> **v5 — breaking (team skills only).** `/ck-code:team` now writes each generated skill to
-> its own top-level folder — `.claude/skills/expert-<role>/` and `guide-<tech>/` — instead of
-> nesting them under `experts/` and `guides/`. Claude Code discovers project skills at
-> `.claude/skills/<skill-name>/SKILL.md` and takes the command name from that directory, so
-> the nested files were never registered as skills: `/expert-<role>` did not exist and no
-> guide ever auto-loaded outside a ck-code `build`/`fix`. `/ck-code:migrate` moves the folders
-> with `git mv` (history preserved) and re-stamps `tasks/VERSION.md` to `layout: v5`. Stories,
-> epics, and architecture docs are untouched — a v4 project needs only this one step. Restart
-> Claude Code afterwards so it picks up the new top-level directories.
->
-> **v4 — breaking.** ck-code v4 stores story state in story-file frontmatter and generates
-> its `STORIES_INDEX.md` / `FEATURE_INDEX.md` views. It no longer reads the v3 layout
-> (prose `Status:` headers, hand-maintained `Schema: v1/v2` index tables, `EPIC.md` story
-> tables, `DESIGN_LEDGER.md`, `L`/`XL` sizes). Every change-producing skill runs a **version
-> gate** first: on a pre-v5 project it blocks and offers `/ck-code:migrate`, a one-shot,
-> idempotent converter that rewrites the layout and stamps `tasks/VERSION.md`. Run it once
-> and your project is v5. The same gate catches a **ck-code-lite** project (`tasks/PLAN.md`)
-> and routes it to the same command.
+> Earlier breaking releases, all still converted by the same `/ck-code:migrate`: **v6**
+> made epic numbers unique across plans; **v5** moved team skills to top-level
+> `.claude/skills/expert-*/` and `guide-*/` folders; **v4** moved story state into
+> frontmatter. The details are in `CHANGELOG.md`.
 
-- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 6.17.0 is built
-  and tested against Claude Code 2.1.280** (checked 2026-09-23). Its newest version-gated
+- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.0.0 is built
+  and tested against Claude Code 2.1.280** (checked 2026-09-24). Its newest version-gated
   features, and the release each first appeared in:
 
   | Feature | Used by | Claude Code |
@@ -636,7 +667,7 @@ file that has drifted from it.
 
   On an older release, update with `claude update`. The Claude Code version each release was
   checked against is recorded here and in the `CHANGELOG.md` entry that raised it.
-- **gh CLI** — required for `ship --to-issues` and `ship` GitHub Issue features
+- **gh CLI** — required for `plan --publish`, the GitHub side of `ship` and `doctor --fix`, and the board
 - **git** — required for `build` PARALLEL MODE (uses worktrees)
 - **[context7](https://context7.com)** — recommended for `team`, `design`, `plan`, and `build` to fetch up-to-date framework documentation. Either the MCP server or the `ctx7` CLI (`npx -y @upstash/context7 setup`) works.
 
