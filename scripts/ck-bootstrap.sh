@@ -18,7 +18,10 @@
 # Subcommands: install (idempotent) · check (read-only) · remove
 set -u
 
-GUARD_VERSION=1
+CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+# shellcheck source=scripts/lib/ck-common.sh
+. "$CK_HERE/lib/ck-common.sh"
+GUARD_VERSION="$CK_GUARD_VERSION"
 GUARD_REL=".claude/ck-code-required.sh"
 SETTINGS_REL=".claude/settings.json"
 GUARD_CMD='"$CLAUDE_PROJECT_DIR"/.claude/ck-code-required.sh'

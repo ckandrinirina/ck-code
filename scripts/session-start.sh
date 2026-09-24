@@ -56,7 +56,7 @@ guard_notice() {
   # Only a stamped project gets the guard -- the guard's own trigger is tasks/VERSION.md,
   # so installing it anywhere else would commit a permanent no-op.
   if [ -f tasks/VERSION.md ]; then
-    want=$(awk -F= '/^GUARD_VERSION=/{print $2; exit}' "$sh" 2>/dev/null)
+    want="$CK_GUARD_VERSION"
     have=$(awk '/^# ck-code-guard:/{print $3; exit}' .claude/ck-code-required.sh 2>/dev/null)
     if [ -n "$want" ] && [ "$have" != "$want" ]; then
       if "$sh" install >/dev/null 2>&1; then

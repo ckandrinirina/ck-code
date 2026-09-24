@@ -640,7 +640,7 @@ check_bootstrap() {
   local guard=".claude/ck-code-required.sh" want have rule
   [ -f tasks/VERSION.md ] || return 0
 
-  want=$(awk -F= '/^GUARD_VERSION=/{print $2; exit}' "$SCRIPT_DIR/ck-bootstrap.sh" 2>/dev/null)
+  want="$CK_GUARD_VERSION"
   have=$(awk '/^# ck-code-guard:/{print $3; exit}' "$guard" 2>/dev/null)
 
   if [ -z "$have" ]; then
