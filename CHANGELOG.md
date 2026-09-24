@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.1.1] — 2026-09-24
+
+### Fixed
+- **ck-qa**: a QA run longer than one Bash call's 600 s cap, such as a serial e2e suite,
+  now keeps running detached. `ck-qa run` prints `ck-qa: RUNNING` after `CK_QA_WAIT` seconds
+  (default 540), and `ck-qa wait <id>` waits on the same run. A repeated identical `run`
+  attaches to the run already going instead of starting it again. On epic 28 of a measured
+  project, the QA agent started a second full e2e suite on the same test database and spent
+  8 minutes polling an empty output file. `qa-validator`, the build dispatch prompts and
+  `rtk.md` now say: continue with `ck-qa wait` and never re-run or poll.
+
 ## [7.1.0] — 2026-09-24
 
 The build → QA handoff no longer runs the same suite twice on the same code, and QA
