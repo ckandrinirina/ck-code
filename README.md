@@ -91,7 +91,7 @@ issues stay valid.
 
 - **Spec-driven development workflow** — single source of truth from specification to merged PR
 - **Frontmatter-driven story state** — one writable location per story and one record per plan; the views are generated, never hand-maintained, and never committed
-- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the views *and* syncs the board in one call; a plan's record goes through `ck-plan`; the v6 → v7 conversion is `ck-migrate`. None of it costs model tokens, one shared library holds every rule the scripts share, and `tests/smoke.sh` drives all of it, the GitHub side included, through a fake `gh`
+- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the views *and* syncs the board in one call; a plan's record goes through `ck-plan`; QA commands go through `ck-qa`, which runs each one once per code state, runs independent checks concurrently, and lets a later QA step skip a suite that already passed on the identical tree; the v6 → v7 conversion is `ck-migrate`. None of it costs model tokens, one shared library holds every rule the scripts share, and `tests/smoke.sh` drives all of it, the GitHub side included, through a fake `gh`
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
 - **GitHub Issues integration** — `plan --publish` pushes the plan, its epics or its stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice. Starting a story assigns its linked issue to whoever runs `build` (an `--epic NN` run claims the epic issue too), so GitHub shows who owns the work in flight — additive, so an existing assignee is never removed
@@ -105,7 +105,7 @@ issues stay valid.
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
 - **ck-code is required, and the repo says so** — a ck-code project keeps its plan, stories and architecture in a layout only the `/ck-code:*` commands maintain, so a clone on a machine that never installed the plugin has nothing that can read or write that state — and nothing able to *say* so, because the plugin is what is missing. `ck-bootstrap install` commits a ~1 KB guard (`.claude/ck-code-required.sh`, wired as the project's own `SessionStart` hook) that is silent wherever ck-code is present and stops the session with the install command wherever it is not. It is written automatically the first time a session starts in a stamped project
 - **Native Claude Code integration** — `SessionStart`/`UserPromptSubmit`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, route every free-text prompt to the best-fit skill, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
-- **RTK-aware command forms (optional)** — [RTK](https://github.com/ckandrinirina/rtk) is a third-party `PreToolUse` hook that filters command output before it reaches context, returning a full test suite as its failures alone. ck-code writes the command forms its hook recognizes (`npm run test`, never the unfilterable `npm test` alias) so the savings need no setup, never hardcodes an `rtk` prefix, and never requires the tool. `/ck-code:doctor` reports whether it is installed and wired. Slow commands (suite, lint, typecheck, e2e) run once per code state into a `$TMPDIR` log that is read instead of re-run, and RTK still filters that form. See `references/rtk.md`
+- **RTK-aware command forms (optional)** — [RTK](https://github.com/ckandrinirina/rtk) is a third-party `PreToolUse` hook that filters command output before it reaches context, returning a full test suite as its failures alone. ck-code writes the command forms its hook recognizes (`npm run test`, never the unfilterable `npm test` alias) so the savings need no setup, never hardcodes an `rtk` prefix, and never requires the tool. `/ck-code:doctor` reports whether it is installed and wired. Slow commands (suite, lint, typecheck, e2e) run once per code state into a `$TMPDIR` log that is read instead of re-run. RTK still filters that form, while QA runs through `ck-qa` are capped by its 40-line failure tail instead. See `references/rtk.md`
 
 ## Install
 
@@ -575,6 +575,7 @@ ck-code/
 │   ├── ck-issues                  # → scripts/ck-issues.sh
 │   ├── ck-project                 # → scripts/ck-project.sh
 │   ├── ck-plan                    # → scripts/ck-plan.sh
+│   ├── ck-qa                      # → scripts/ck-qa.sh
 │   ├── ck-team                    # → scripts/ck-team.sh
 │   ├── ck-migrate                 # → scripts/ck-migrate.sh
 │   └── ck-bootstrap               # → scripts/ck-bootstrap.sh
@@ -590,6 +591,7 @@ ck-code/
 │   ├── ck-issues.sh               # publish a plan to GitHub Issues (plan --publish)
 │   ├── ck-project.sh              # reconcile delivery, the board and GitHub Issues
 │   ├── ck-plan.sh                 # read and set a plan's OVERVIEW.md record
+│   ├── ck-qa.sh                   # run QA commands once per code state (reuse, parallel)
 │   ├── ck-team.sh                 # the team-skill refresh contract (SOURCES digest)
 │   ├── ck-migrate.sh              # deterministic v6 → v7 conversion
 │   ├── ck-bootstrap.sh            # the committed ck-code-required guard
