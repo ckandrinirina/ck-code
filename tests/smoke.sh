@@ -712,6 +712,60 @@ else
 fi
 
 echo
+echo "=== ck-migrate v7: a v6 project converts in one commit ==="
+V6="$(mktemp -d)"
+(
+  cd "$V6" || exit 1
+  mkdir -p tasks/2026-03-03_feature-billing/epics/01_invoices/stories tasks/2026-03-03_feature-billing/epics/02_refunds/stories
+  printf 'ck-code: 6.17.1\nlayout: v6\n' > tasks/VERSION.md
+  printf '# Feature Overview: Billing\n\n## Vision\n\nBill people.\n' > tasks/2026-03-03_feature-billing/FEATURE_OVERVIEW.md
+  for e in 01_invoices 02_refunds; do
+    n=${e%%_*}
+    printf -- '---\nepic: %s\nslug: %s\ntitle: T\ndescription: D\nissue:\npr: 42\ndelivery: pr\nintegration: feature\n---\n\n# Epic\n\n## Dependencies\n\n- **Depends on:** None\n\n## Acceptance Criteria\n\n- [ ] ok\n' "$n" "${e#*_}" > "tasks/2026-03-03_feature-billing/epics/$e/EPIC.md"
+    printf -- '---\nid: %s-01\ntitle: S\nepic: %s\nstatus: todo\nsize: S\nblocked_by: []\nfiles: []\nissue:\npr:\ndelivery:\nprior_status:\n---\n\n# S\n' "$n" "$n" > "tasks/2026-03-03_feature-billing/epics/$e/stories/01_s.md"
+  done
+  printf '# Stories Index\n' > tasks/2026-03-03_feature-billing/STORIES_INDEX.md
+  printf '# Feature Index\n' > tasks/FEATURE_INDEX.md
+  mkdir -p docs/specs/2026-03-01_billing docs/architecture/design-system
+  printf '# Spec\n' > docs/specs/2026-03-01_billing/pre-spec.md
+  printf '{\n  "slug": "billing",\n  "status": "draft",\n  "stage": "spec",\n  "tags": []\n}\n' > docs/specs/2026-03-01_billing/.metadata.json
+  printf -- '---\nproject_id: p1\nproject_name: DS\nproject_updated_at: 2026-03-01T00:00:00Z\nsynced_at: 2026-03-01\ntokens_path: pending\n---\n\n# Design System\n' > docs/architecture/design-system/index.md
+  printf '{\n  "projectId": "p1",\n  "cards": []\n}\n' > docs/architecture/design-system/manifest.json
+  git init -q . && git symbolic-ref HEAD refs/heads/main
+  git config user.email smoke@ck-code.test && git config user.name smoke
+  git add -A && git commit -qm "v6 project"
+  git branch -q feat/2026-03-03_feature-billing
+)
+MIG_OUT=$(cd "$V6" && ck-migrate v7 --commit 2>&1); MIG_RC=$?
+assert_exit "ck-migrate: exits 0" 0 "$MIG_RC"
+OV="$V6/tasks/2026-03-03_feature-billing/OVERVIEW.md"
+assert_true "ck-migrate: FEATURE_OVERVIEW.md became OVERVIEW.md" "$([ -f "$OV" ] && [ ! -f "$V6/tasks/2026-03-03_feature-billing/FEATURE_OVERVIEW.md" ]; echo $?)"
+assert_eq "ck-migrate: feature level became plan" "plan" "$(ck_fm "$OV" integration)"
+assert_eq "ck-migrate: the existing feat/ branch is kept" "feat/2026-03-03_feature-billing" "$(ck_fm "$OV" branch)"
+assert_eq "ck-migrate: the plan PR moved to the record" "42" "$(ck_fm "$OV" pr)"
+assert_eq "ck-migrate: the title lost the template prefix" "Billing" "$(ck_fm "$OV" title)"
+assert_eq "ck-migrate: slug drops the date and feature- prefix" "billing" "$(ck_fm "$OV" slug)"
+EP1="$V6/tasks/2026-03-03_feature-billing/epics/01_invoices/EPIC.md"
+assert_eq "ck-migrate: EPIC.md loses integration:" "" "$(grep '^integration:' "$EP1")"
+assert_eq "ck-migrate: EPIC.md loses the copied plan PR" "" "$(ck_fm "$EP1" pr)"
+assert_contains "ck-migrate: EPIC.md keeps its Dependencies prose" "$(cat "$EP1")" "## Dependencies"
+assert_eq "ck-migrate: views untracked" "" "$(git -C "$V6" ls-files 'tasks/*INDEX.md')"
+assert_true "ck-migrate: EPICS_INDEX.md regenerated" "$([ -f "$V6/tasks/EPICS_INDEX.md" ]; echo $?)"
+assert_true "ck-migrate: pre-spec.md became spec.md" "$([ -f "$V6/docs/specs/2026-03-01_billing/spec.md" ]; echo $?)"
+assert_not_contains "ck-migrate: spec metadata drops stage" "$(cat "$V6/docs/specs/2026-03-01_billing/.metadata.json")" '"stage"'
+assert_true "ck-migrate: spec metadata is still valid JSON" "$(python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$V6/docs/specs/2026-03-01_billing/.metadata.json"; echo $?)"
+assert_contains "ck-migrate: tokensPath moved into manifest.json" "$(cat "$V6/docs/architecture/design-system/manifest.json")" '"tokensPath": "pending"'
+assert_eq "ck-migrate: index.md frontmatter removed" "# Design System" "$(head -1 "$V6/docs/architecture/design-system/index.md")"
+assert_eq "ck-migrate: stamp is v7" "v7" "$(cd "$V6" && ck_stamp layout)"
+assert_eq "ck-migrate: tree clean after the commit" "" "$(git -C "$V6" status --porcelain)"
+assert_contains "ck-migrate: a second run is a no-op" "$(cd "$V6" && ck-migrate v7 2>&1)" "already v7"
+printf 'layout: v9\n' > "$V6/tasks/VERSION.md"
+NEWER_MIG=$(cd "$V6" && ck-migrate v7 2>&1); NEWER_MIG_RC=$?
+assert_exit "ck-migrate: refuses a newer layout" 1 "$NEWER_MIG_RC"
+assert_contains "ck-migrate: says to update the plugin" "$NEWER_MIG" "update the plugin"
+rm -rf "$V6"
+
+echo
 echo "=== breaking a second plan (tasks/2026-02-02_other, story missing id) ==="
 add_broken_plan
 

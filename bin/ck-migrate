@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-migrate — convert a v6 ck-code project to the v7 layout (scripts/ck-migrate.sh).
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-migrate.sh" "$@"
