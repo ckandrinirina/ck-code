@@ -469,7 +469,7 @@ $AWK_COMMON
   elif [ "$unshipped" -gt 0 ]; then
     cmd='/ck-code:ship <story-path>'; why="$unshipped finished stor$([ "$unshipped" -eq 1 ] && echo y || echo ies) with no PR — nothing is on the trunk until they ship"
   elif [ "$done" -gt 0 ]; then
-    cmd='/ck-code:track progress'; why="all work is done ($review still awaiting merge) — review the milestones or plan the next feature"
+    cmd='/ck-code:track progress'; why="all work is done ($review still awaiting merge) — review the milestones or plan the next increment"
   else
     # n_tasks is already known > 0 here (the `-eq 0` branch above would have
     # matched otherwise), so this is the only remaining case: indexes and

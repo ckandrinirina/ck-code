@@ -5,41 +5,32 @@ these for the exact phrasing of its plan and post-generation summary.
 
 ---
 
-## Project Context Block (built in Phase 1.5)
+## Project Context Section (resolved in Phase 1.5)
+
+What an expert carries in place of a copied context block — links only, resolved for
+`expert-backend` in a Rust + React Native project:
 
 ```markdown
-## Project Context (auto-generated — do not edit manually)
+<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --refresh or --regenerate. Delete this line to protect manual edits. -->
+<!-- ck-code:team SOURCES 3f9a1c07be42 -->
 
-**Project:** [name]
-**Description:** [one-liner]
-**Architecture:** [type, e.g., client-server with 3 components]
+# Expert: Senior Backend Developer
 
-**Components:**
+You are a senior backend developer working on **cklavier**.
 
-- [Component 1]: [tech] — [purpose]
-- [Component 2]: [tech] — [purpose]
-- ...
+## Project context
 
-**Tech Stack:**
+Read these on demand; they are the source of truth and this skill never copies them.
 
-- [Layer]: [technology] [version]
-- ...
-
-**Key Patterns:**
-
-- Communication: [protocols used]
-- Serialization: [formats used]
-- Database: [engine + ORM]
-- Testing: [framework(s)]
-- Build: [tools]
-
-**Folder Structure:**
-[Condensed tree of key directories, max 20 lines]
-
-**Architecture Docs:** docs/architecture/
-**Specification:** [path]
-**Task Plans:** [tasks/ folders if any]
+- [`docs/architecture/overview.md`](../../../docs/architecture/overview.md) — what cklavier is and who uses it
+- [`docs/architecture/tech-stack.md`](../../../docs/architecture/tech-stack.md) — languages, frameworks, versions
+- [`docs/architecture/folder-structure.md`](../../../docs/architecture/folder-structure.md) — where code lives; this role owns `server/` (the Axum API)
+- Feature docs — `docs/architecture/features/<slug>/index.md`, found through the `Docs`
+  column of `tasks/EPICS_INDEX.md` or the feature-doc index in `docs/architecture/README.md`
 ```
+
+Never paste the stack table, component list or folder tree here: `design` edits those docs,
+and a frozen copy would keep advising against the old architecture until the next refresh.
 
 ---
 
@@ -165,13 +156,13 @@ because its tables are verbatim data.
 <!-- other outcomes, one line, pick the one that happened:
      refreshed — tables re-copied from the current cache
      REMOVED — docs/architecture/design-system/ was deleted, so the guide went with it
-     preserved unchanged — marker removed by you, so --regenerate left it alone
+     preserved unchanged — marker removed by you, so the refresh left it alone
        (its cache is gone; delete the skill when you are done with it)  -->
 
 ### House Conventions
 
 **guide-conventions:** captured — naming, file/folder structure, code style,
-architectural rules. PROTECTED: `--regenerate` never touches it.
+architectural rules. PROTECTED: `--refresh` and `--regenerate` never touch it.
 
 <!-- other outcomes, one line, pick the one that happened:
      refreshed — merged with your existing rules; untouched sections kept
@@ -195,12 +186,13 @@ architectural rules. PROTECTED: `--regenerate` never touches it.
 
 ### Regeneration
 
-Run `/ck-code:team --regenerate` after:
-- Updating docs/architecture/ (new components, tech changes)
-- Upgrading framework versions (to refresh best practices)
-- Adding new technologies to the project
+- `/ck-code:team --refresh` after `tech-stack.md` or `folder-structure.md` changes —
+  refreshes only the skills `ck-team stale` lists (`/ck-code:design` offers it)
+- `/ck-code:team --regenerate` after a framework upgrade the docs do not show — refreshes
+  every owned skill with fresh research
+- `/ck-code:team` after adding a technology — generates the missing guides
 
-Regeneration is **merge-safe**: it refreshes only team-owned skills, preserves every
+Both refreshes are **merge-safe**: they touch only team-owned skills, preserve every
 PROTECTED file (`guide-conventions`, custom `--new` skills) and every `MANUAL` fence.
 ```
 
@@ -208,7 +200,7 @@ PROTECTED file (`guide-conventions`, custom `--new` skills) and every `MANUAL` f
 
 ## Phase 0.5 State Table
 
-Shown when existing skills are found and `--regenerate` is not set.
+Shown when existing skills are found and neither `--refresh` nor `--regenerate` is set.
 
 ```
 ## Skill State Audit
@@ -229,13 +221,13 @@ Based on tech-stack.md, expected skills vs. current state:
 | Guide              | Path                                         | Status                    |
 |--------------------|----------------------------------------------|---------------------------|
 | guide-typescript   | .claude/skills/guide-typescript/SKILL.md    | ✓ exists (owned)          |
-| guide-rust         | .claude/skills/guide-rust/SKILL.md          | ✓ exists (owned)          |
+| guide-rust         | .claude/skills/guide-rust/SKILL.md          | ✓ exists (owned, stale)   |
 | guide-react-native | .claude/skills/guide-react-native/SKILL.md  | ✗ missing                 |
 | guide-grpc         | .claude/skills/guide-grpc/SKILL.md          | ? extra (tech not detected) |
 | guide-conventions  | .claude/skills/guide-conventions/SKILL.md   | ● protected (house rules)   |
-| guide-design-system | .claude/skills/guide-design-system/SKILL.md | ⊘ stale (cache deleted → will be REMOVED) |
+| guide-design-system | .claude/skills/guide-design-system/SKILL.md | ⊘ cache deleted → will be REMOVED |
 
-**Summary:** 2 missing, 1 extra, 6 owned, 1 protected, 1 stale.
+**Summary:** 2 missing, 1 extra, 6 owned (1 stale sources), 1 protected, 1 cache-deleted.
 
 The `guide-design-system` row appears only when that skill or its cache exists; omit it
 entirely on a project with no design system.
@@ -244,10 +236,13 @@ Then ask via **AskUserQuestion** (see Existing-Skills Gate above):
 A) Generate missing only  B) Regenerate all (merge-safe)  C) Abort
 ```
 
-Legend: **owned** = carries the team GENERATED marker (refreshable on `--regenerate`).
+Legend: **owned** = carries the team GENERATED marker (refreshable on `--refresh`/`--regenerate`).
+**owned, stale** = `ck-team stale` lists it — written against an older `tech-stack.md` or
+`folder-structure.md`; `--refresh` rewrites it.
 **protected** = no marker (`--conventions`, `--new`, or user-unmarked) — never overwritten,
 never counted as EXTRA. **? extra** = an owned skill for a technology no longer in
-tech-stack.md; never deleted automatically — the user decides. **⊘ stale** = the one
+tech-stack.md; never deleted automatically — `--refresh` offers it for deletion (multi-select,
+nothing pre-selected) and the user decides. **⊘ cache deleted** = the one
 auto-removal in the whole skill: an *owned* `guide-design-system` whose
 `docs/architecture/design-system/` cache has been deleted (THE MERGE RULE step 4). No other
-slug is ever deleted, and a *protected* `guide-design-system` is `● protected`, not stale.
+slug is ever deleted without asking, and a *protected* `guide-design-system` is `● protected`.

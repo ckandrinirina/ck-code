@@ -1,9 +1,9 @@
 ---
 name: design
-description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing from FEATURE_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing for epics in EPICS_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync | ds [design-url]]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) DesignSync Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -25,7 +25,7 @@ whole design→plan bridge, and every layer's content lives in the feature doc t
 - **New Project** (spec path, or empty) — generate global docs + one feature doc per feature.
 - **Feature** (spec path, docs already exist) — add or extend one feature doc, globals kept consistent.
 - **optimize** (maintenance) — measure per-doc tokens, dedup repeated content into `_shared.md`.
-- **sync** (maintenance) — scaffold feature docs for features in `FEATURE_INDEX` that lack one.
+- **sync** (maintenance) — scaffold feature docs for epics in `EPICS_INDEX` that lack one.
 - **ds** (optional) — link a Claude Design system, from a pasted `claude.ai/design` URL or
   by picking one, and refresh its git-tracked cache.
 
@@ -36,7 +36,7 @@ If the request is actually something else, STOP and recommend the better skill:
 
 - No stakeholder spec yet and you want one → `/ck-code:spec` (first)
 - Breaking work into epics/stories → `/ck-code:plan` (design comes first)
-- Project is on a pre-v6 layout (nested team skills, layer/flat docs, no frontmatter) → `/ck-code:migrate`
+- Project is on an older layout (v6 or earlier: committed views, `PROJECT_OVERVIEW.md`, nested team skills, layer/flat docs) → `/ck-code:migrate`
 
 Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirects--am-i-the-right-skill).
 **Next step after this skill:** `/ck-code:team`.
@@ -60,8 +60,8 @@ The stamp is injected at skill-load time — **do not spend a `Read` on it**:
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
-Reads `layout: v6` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
-shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects a pre-v6
+Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
+shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
 layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
 this PASSes.
 
@@ -87,9 +87,23 @@ vice versa.
 
 Spec file path comes from `$ARGUMENTS`.
 
-**If empty:** look for `docs/specifications.md`, `docs/spec.md`, `SPEC.md`,
-`docs/requirements.md`. If found, confirm with the user. If not, ask whether to (A) give a
-path or (B) be guided through creating one from scratch.
+**If empty:** discover the spec instead of asking for a path — never make the user retype
+a path `/ck-code:spec` just wrote. One probe:
+
+```bash
+find docs/specs -mindepth 2 -maxdepth 2 -name .metadata.json 2>/dev/null | sort -r \
+  | xargs grep -l '"status": *"ready-for-design"' 2>/dev/null
+```
+
+1. **`docs/specs/*/spec.md` whose `.metadata.json` `status` is `ready-for-design`**, newest
+   folder first (the `YYYY-MM-DD_` prefix sorts by date). Exactly one → use it and say so in
+   one line. Several → one `AskUserQuestion` listing them (newest first, the newest marked
+   Recommended).
+2. **None ready** → the legacy paths `docs/specifications.md`, `docs/spec.md`, `SPEC.md`,
+   `docs/requirements.md`. Found → confirm with the user.
+3. **Nothing** → ask whether to (A) give a path, (B) write a stakeholder spec first with
+   `/ck-code:spec`, or (C) be guided through creating one from scratch. A `draft` spec is
+   named in that question as still under review, never picked silently.
 
 **If the file does not exist:** tell the user and ask for the correct path.
 
@@ -269,7 +283,7 @@ mkdir -p docs/architecture
    Write the file with frontmatter `slug: <slug>` + `design: pending`; existing feature →
    Read it, Edit the relevant section, and set its frontmatter `design: pending` (design
    changed, so it is unplanned again until `plan` re-flips it). The `<slug>` matches the
-   planned epic slug so the generated `FEATURE_INDEX.Docs` routes to it.
+   planned epic slug so the generated `EPICS_INDEX.Docs` routes to it.
 3. **Cross-cutting only** goes in `_shared.md`: infra 2+ features reuse — add it there and
    link it from the feature doc's `## Shared dependencies`; never duplicate it into the doc.
 4. **README.md index:** add the new feature doc to the Feature Documents table.
@@ -297,7 +311,7 @@ Then generate:
 
 **Feature list note:** derive features from the spec's capability breakdown. Pick a short
 `<slug>` per feature (e.g. `roles`, `customer`, `billing`) and reuse it as the epic slug so
-`FEATURE_INDEX.Docs` lines up. Put a component/table/endpoint in `_shared.md` (not a feature
+`EPICS_INDEX.Docs` lines up. Put a component/table/endpoint in `_shared.md` (not a feature
 doc) only when **two or more** features rely on it.
 
 **folder-structure.md note:** see the **Important** note under its template — spec-defined
@@ -321,10 +335,10 @@ doc** (`Fan-out: 5 features ≥ 3 → dispatching 5 agents.`):
 The orchestrator writes the shared `README.md` index rows once post-merge (never in a
 subagent). Feature Mode extends one doc, so it always stays sequential.
 
-### 3.11 Regenerate the feature index
+### 3.11 Regenerate the epics index
 
-After feature docs are written, regenerate the read-only views so `FEATURE_INDEX.Docs`
-picks up any doc that matches an existing epic slug:
+After feature docs are written, regenerate the local views so `EPICS_INDEX.Docs` picks up
+any doc that matches an existing epic slug:
 
 ```bash
 ck-index
@@ -333,10 +347,11 @@ ck-index
 At greenfield time there are no epics yet, so the script exits cleanly with nothing to
 route; `plan` fills the `Docs` column when it creates the epics. In Feature Mode (epics
 already exist) it resolves the new doc's `Docs` cell immediately. Never hand-edit an index.
+The views are gitignored and disposable — never stage or commit them.
 
 ### 3.12 Close the spec loop (spec-folder input only)
 
-When the spec argument was a `docs/specs/*_<slug>/pre-spec.md` (a `/ck-code:spec` folder —
+When the spec argument was a `docs/specs/*_<slug>/spec.md` (a `/ck-code:spec` folder —
 a sibling `.metadata.json` exists), record the pass back into that metadata: set `status`
 to `design-in-progress` and `linkedDesign` to the array of feature-doc folders this run
 wrote (e.g. `["docs/architecture/features/<slug>/"]`). Change no other field, rewrite the
@@ -353,10 +368,15 @@ Feature: UPDATED/CREATED/UNCHANGED files, impact, next steps). Exact blocks:
 [references/qna-examples.md](references/qna-examples.md).
 
 The final next step is `/ck-code:team`, which generates the expert and guide skills from
-these docs. Hand off to it per
-[`skill-invocation.md`](../../references/skill-invocation.md) — one question, no arguments.
-Ask **only** when no `.claude/skills/expert-*/` exists yet; when experts are already present
-this run is a refresh, so name `/ck-code:team --regenerate` in prose and ask nothing.
+these docs. Hand off per [`skill-invocation.md`](../../references/skill-invocation.md)
+(DIRECT, one question), choosing the argument from what is on disk:
+
+- **No `.claude/skills/expert-*/` yet** → `/ck-code:team`, no arguments.
+- **Experts exist and this run wrote or edited `tech-stack.md` or `folder-structure.md`**
+  → `/ck-code:team --refresh`. Those two docs are the team's sources; a change to either
+  makes the generated skills stale, and `--refresh` regenerates only the stale ones.
+- **Experts exist and neither doc changed** → no hand-off; the team is still current. Say
+  nothing about it.
 
 Then `/ck-code:plan` reads each feature doc's `design: pending` flag to pick up the unplanned
 work this run added and flips it to `planned`.
@@ -402,20 +422,20 @@ content, only restructures and reports. Dedup rules and the token report format 
 
 ## PHASE S: SYNC (maintenance)
 
-Bring the doc set into lockstep with `FEATURE_INDEX` — the "as the project grows" pass. This
+Bring the doc set into lockstep with `EPICS_INDEX` — the "as the project grows" pass. This
 does **not** do layout migration (flat→subfolder, legacy layer docs) — that is `/ck-code:migrate`.
 
-1. **Detect state:** read `tasks/FEATURE_INDEX.md`. If missing or lacking the generated
-   header, regenerate it (`ck-index`) then read it. If
+1. **Detect state:** read `tasks/EPICS_INDEX.md`. If missing or lacking the generated
+   header, regenerate it (`ck-index`, local only) then read it. If
    `docs/architecture/` does not exist, tell the user to run `/ck-code:design` and stop.
-2. For each feature (epic) in `FEATURE_INDEX`, check whether
+2. For each epic in `EPICS_INDEX`, check whether
    `docs/architecture/features/<slug>/index.md` exists.
 3. **Missing** → `mkdir -p features/<slug>/` and scaffold `features/<slug>/index.md` from the
    Feature Doc template (frontmatter `slug` + `design: pending`, header + section stubs + a
    `[TO BE DEFINED]` note), using the epic's description for `## Summary`. Do NOT invent
    component/API/data detail — leave stubs for a real `design`/`build` pass to fill.
 4. **Slug drift** → a feature doc under a different slug than its epic (design used `roles`,
-   plan's epic is `role-management`) leaves `FEATURE_INDEX.Docs` unresolved. Fix it in three
+   plan's epic is `role-management`) leaves `EPICS_INDEX.Docs` unresolved. Fix it in three
    steps, confirming with `AskUserQuestion` before renaming whenever the pairing is
    ambiguous (two candidate docs, or two epics claiming one doc):
 
@@ -439,7 +459,7 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
 
    Any surviving hit is an inbound link the rename missed; fix it and re-run the grep.
 5. **Reindex** — run `ck-index` so each generated
-   `FEATURE_INDEX.Docs` cell resolves to the doc, and update the `README.md` Feature
+   `EPICS_INDEX.Docs` cell resolves to the doc, and update the `README.md` Feature
    Documents table.
 6. Report: docs scaffolded, renamed, and any features still lacking real design content (the
    stubs) so the user knows what needs a `/ck-code:design` pass.
@@ -515,12 +535,13 @@ instead). Every line here is re-read by every story that touches the feature.
   replaced with real content, or with the literal `[TO BE DEFINED]`, which is the **only**
   bracketed string allowed to survive. A shipped `[Component Name]` or `[type]` is a defect,
   not a stub.
-- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — v6 has
-  none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
+- **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — the
+  layout has none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
   writes or updates is left `design: pending`; `plan` flips it to `planned`.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
-- **Never hand-edit a generated view** (`FEATURE_INDEX.md`, `STORIES_INDEX.md`) — change the
-  feature docs / story frontmatter and regenerate with `ck-index`.
+- **Never hand-edit or commit a generated view** (`EPICS_INDEX.md`, `STORIES_INDEX.md`) —
+  change the feature docs / story frontmatter and regenerate with `ck-index`; the views are
+  gitignored and rebuilt on the next read.
 - **Never delete non-empty content in a maintenance run** without confirming first; `optimize`
   restructures and measures, it does not silently drop content.
 - **Never hardcode** — derive everything from the spec and the user's answers.

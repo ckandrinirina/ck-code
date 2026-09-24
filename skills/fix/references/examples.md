@@ -9,7 +9,7 @@ decision points but the rules in `SKILL.md` are authoritative.
 ## Example 1: Off-by-one in WebSocket handler (easy → AUTO-BUILD)
 
 ### Phase 1 — Story Selection
-- User runs `/ck-code:fix tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md`
+- User runs `/ck-code:fix tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md` — the path is the candidate, no confirmation asked.
 - Story frontmatter `status: done`, `files: [src/server/ws/handler.rs]`.
 
 ### Phase 2 — Bug Description
@@ -21,7 +21,7 @@ decision points but the rules in `SKILL.md` are authoritative.
 ### Phase 3–4 — Diagnosis
 - Locate `for i in 0..msgs.len() - 1` — off-by-one.
 - **4.2 Reproduce:** write `test_logs_all_messages_when_batch_sent` (sends 10, asserts 10). Runs → FAILS (count 9). This failing test stays in the tree — it's the RED target build inherits.
-- **4.5 Story update:** append Bug Report (`Status: DIAGNOSED`); the pre-bug status `done` is recorded as `prior_status` at the Phase 6.1 flip.
+- **4.5 Story update:** append Bug Report (`Status: DIAGNOSED`); the pre-bug status `done` is recorded as the frontmatter `prior_status` at the Phase 6.1 flip (the Bug Report's `Prior status:` line is an informational copy).
 - **4.6** User confirms diagnosis → `Confirm & continue`.
 
 ### Phase 5 — Fix Plan
@@ -29,10 +29,10 @@ decision points but the rules in `SKILL.md` are authoritative.
 - **5.2** Fix Plan recorded (status stays `DIAGNOSED`). **5.3** User confirms → `Record & route`.
 
 ### Phase 6 — Flip to bug & Route
-- **6.1** one call flips it and regenerates: `ck-story set tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md status=bug prior_status=done`. The views regenerate — `STORIES_INDEX.md` shows `bug`, `FEATURE_INDEX.md` rolls Foundation to `IN PROGRESS` automatically. No cell is hand-edited.
+- **6.1** one call flips it and regenerates: `ck-story set tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md status=bug prior_status=done`. The local views regenerate — `STORIES_INDEX.md` shows `bug`, `EPICS_INDEX.md` rolls epic 01 to `IN PROGRESS` automatically. No cell is hand-edited and no view is committed.
 - **6.2 Auto-Build Eligibility Gate:** verdict A ✓, single cause ✓, 1 file ✓, LOW risk ✓, no new story ✓ → **AUTO-BUILD.**
 - **6.3** Announce, then invoke `/ck-code:build tasks/foundation/epics/01_foundation/stories/03_websocket-gateway.md`.
-  - `build` sees `status: bug`, enters Bug-Fix Mode, runs the repro test RED → applies the 1-line fix → GREEN → SOLID + QA + manual-test → ships (`fix/` branch, Bug ID in commit) → restores `01-03` frontmatter from `prior_status` (`done`) and regenerates the views (Foundation back to `DONE`).
+  - `build` sees `status: bug`, enters Bug-Fix Mode, runs the repro test RED → applies the 1-line fix → GREEN → SOLID + QA + manual-test → ships (`fix/` branch, Bug ID in commit) → restores `01-03` frontmatter from `prior_status` (`done`) and regenerates the views (epic 01 back to `DONE`).
 
 ### Key takeaway
 `fix` never touched `handler.rs`. It proved the bug with a failing test and handed `build` an exact plan; the user experienced one continuous run.
@@ -76,7 +76,7 @@ Deferring keeps the planned story authoritative and the bug log clean — no dup
 
 - Bug: settings screen shows a stale device IP. Diagnosis pins a real bug in `[03-01] Settings screen` (`done`) AND surfaces that "persist IP to config" was never built (no story in epic 04).
 - **Verdict D.** Phase 2.5c confirmation: UPDATE `[03-01]` (→ `bug`); CREATE one story via `/ck-code:plan --quick "persist device IP to config" --epic 04` (stays `todo`).
-- **Phase 2.6** `plan --quick` scaffolds the new story's frontmatter + regenerates the indexes. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01]` with one `ck-story set <story-path> status=bug prior_status=done` call (frontmatter + views + board).
+- **Phase 2.6** `plan --quick` scaffolds the new story's frontmatter + regenerates the views. `fix` diagnoses the real bug on `[03-01]`, records Bug Report + Fix Plan, flips `[03-01]` with one `ck-story set <story-path> status=bug prior_status=done` call (frontmatter + views + board).
 - **6.2 Gate:** verdict D → **MANUAL hand-off.** Recommend `/ck-code:build tasks/.../stories/01_settings-screen.md` for the bug; the new epic-04 story is normal `build` work later.
 
 ### Key takeaway

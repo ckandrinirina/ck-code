@@ -23,7 +23,6 @@ the object from memory.
   "createdAt": "2026-04-29",
   "updatedAt": "2026-04-29",
   "status": "draft",
-  "stage": "spec",
   "tags": [],
   "github": null,
   "linkedDesign": null,
@@ -39,7 +38,7 @@ the object from memory.
 
 ### Key contract
 
-Twelve keys, in exactly this order. **The set is closed** — never add a key that is not
+Eleven keys, in exactly this order. **The set is closed** — never add a key that is not
 listed here, however useful it seems, and never omit one. An unknown value is written as
 its empty form (`null`, `[]`), never left out.
 
@@ -52,7 +51,6 @@ its empty form (`null`, `[]`), never left out.
 | `createdAt` | string | `YYYY-MM-DD`, written once at CREATE and never touched again |
 | `updatedAt` | string | `YYYY-MM-DD`, rewritten on every persist |
 | `status` | string | `draft` \| `ready-for-design` \| `design-in-progress` (table below) |
-| `stage` | string | always the literal `"spec"` |
 | `tags` | array of string | issue labels; `[]` when none, never `null` |
 | `github` | object or null | `null` until published; then **all four** sub-keys present |
 | `linkedDesign` | array of string or null | feature-doc folders, written by `design` Phase 3.12; `null` until then |
@@ -104,12 +102,13 @@ key is present on the first write, including `designSystem` when the offer was d
 1. **Backfill** any key the file is missing with its empty form from the template above
    (a file written by an older ck-code has no `audience` and no `designSystem`). This is
    the self-heal path — do it silently, it is not a finding to report.
-2. **Drop** any key not in the twelve — it was invented by a stale run.
+2. **Drop** any key not in the eleven — it was invented by a stale run, or is the
+   `stage` key an older ck-code wrote.
 3. Mutate only the fields this run actually changed, plus `updatedAt`.
 4. Re-emit the whole object in the canonical key order. Never patch the file in place
    with a text edit — rewrite it.
 
-`createdAt` is immutable after CREATE. `stage` is immutable, always `"spec"`.
+`createdAt` is immutable after CREATE.
 
 ---
 
@@ -152,7 +151,7 @@ generated body as a text preview, then confirms via `AskUserQuestion` before cre
 gh issue create \
   --repo <owner>/<repo> \
   --title "<title>" \
-  --body-file docs/specs/YYYY-MM-DD_<slug>/pre-spec.md \
+  --body-file docs/specs/YYYY-MM-DD_<slug>/spec.md \
   --label "<l1>" --label "<l2>"
 ```
 
@@ -170,10 +169,10 @@ skill on a diff/fetch error. Use a temp file from `mktemp` — never a hardcoded
 ```bash
 remote=$(mktemp)
 gh issue view <num> --repo <repo> --json body --jq .body > "$remote" 2>/dev/null || true
-diff "$remote" docs/specs/YYYY-MM-DD_<slug>/pre-spec.md || true   # non-zero diff is informational
+diff "$remote" docs/specs/YYYY-MM-DD_<slug>/spec.md || true   # non-zero diff is informational
 rm -f "$remote"
 # If the diff showed remote-only edits, resolve with the user before overwriting.
-gh issue edit <num> --repo <repo> --body-file docs/specs/YYYY-MM-DD_<slug>/pre-spec.md
+gh issue edit <num> --repo <repo> --body-file docs/specs/YYYY-MM-DD_<slug>/spec.md
 ```
 
 Sync labels / project membership with `gh issue edit --add-label` /

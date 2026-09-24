@@ -7,8 +7,9 @@ story file is the durable hand-off between the two skills.
 
 Bug Report status flow: `DIAGNOSED` (set by `fix`) → `FIXED` (set by `build`).
 Story frontmatter status flow: `done → bug` (set by `fix`, with `prior_status` recorded)
-→ `done` (restored by `build` from `prior_status`). The indexes are generated views — both
-skills change frontmatter with `ck-story set`, which regenerates them; neither edits a cell.
+→ `done` (restored by `build` from the frontmatter `prior_status`, which is authoritative).
+The views are generated and gitignored — both skills change frontmatter with `ck-story set`,
+which regenerates them; neither edits a cell nor commits a view.
 
 ---
 
@@ -22,7 +23,7 @@ skills change frontmatter with `ck-story set`, which regenerates them; neither e
 
 **Bug ID:** BUG-YYYYMMDD-NN
 **Reported:** [date]
-**Prior status:** [done | in-progress]   <!-- human-readable note; the authoritative value is the frontmatter `prior_status`, which build restores -->
+**Prior status:** [done | in-progress]   <!-- informational copy only; the frontmatter `prior_status` is authoritative and is the only value build restores from -->
 **Status:** DIAGNOSED
 
 ### Description

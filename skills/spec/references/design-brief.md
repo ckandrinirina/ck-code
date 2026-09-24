@@ -14,7 +14,7 @@ and costs the user a manual token-confirmation pass on every sync.
 
 ## Authoring rules
 
-- **Derive every word from the spec.** The brief restates what `pre-spec.md` established —
+- **Derive every word from the spec.** The brief restates what `spec.md` established —
   product, users, surfaces, tone. It never introduces a product decision the spec has not
   made. A dimension the spec left open is written as an open question in § 7, not filled in.
 - **Plain language, same as the spec.** No file paths, no framework names, no ck-code

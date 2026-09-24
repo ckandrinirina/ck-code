@@ -25,7 +25,8 @@ paths:
   - "[optional extra globs, e.g. **/Cargo.toml or **/package.json]"
 ---
 
-<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --regenerate. Delete this line to protect manual edits. -->
+<!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --refresh or --regenerate. Delete this line to protect manual edits. -->
+<!-- ck-code:team SOURCES [output of `ck-team digest`] -->
 
 # [Language/Framework] Best Practices Guide
 
@@ -33,7 +34,12 @@ paths:
 > Last researched: [date]
 > Version in project: [version from tech-stack.md]
 
-[PROJECT CONTEXT BLOCK — injected from Phase 1.5]
+## Project context
+
+Read on demand; this guide never copies them:
+[`tech-stack.md`](../../../docs/architecture/tech-stack.md) (versions),
+[`folder-structure.md`](../../../docs/architecture/folder-structure.md) (where [technology]
+code lives: [dirs, one line]), [`overview.md`](../../../docs/architecture/overview.md).
 
 ## Coding Conventions
 
@@ -43,7 +49,7 @@ paths:
 
 ### File Organization
 - [How to organize files/modules in this language]
-- [Project-specific file layout from folder-structure.md]
+- [Where this technology's files live — name the dirs, link folder-structure.md, never copy its tree]
 - [Import/module ordering conventions]
 
 ### Code Style
@@ -152,17 +158,19 @@ paths:
 7. **Cross-reference experts.** Each guide should note: "This guide is used by
    /expert-[role] for [language]-specific guidance."
 
-8. **GENERATED marker.** Emit the `<!-- ck-code:team GENERATED … -->` line as the first
-   body line so `--regenerate` may refresh it (see THE MERGE RULE in `SKILL.md`). The
-   conventions guide below is the one exception — it never carries the marker.
+8. **Marker lines.** Emit the `<!-- ck-code:team GENERATED … -->` and
+   `<!-- ck-code:team SOURCES <digest> -->` lines as the first body lines, the digest being
+   the run's `ck-team digest` output, so `--refresh`/`--regenerate` may refresh it (see THE
+   MERGE RULE in `SKILL.md`). The conventions guide below is the one exception — it never
+   carries either marker.
 
 ---
 
 ## guide-conventions-template
 
 For `--conventions` (CAPTURE) mode only. `.claude/skills/guide-conventions/SKILL.md` is a
-**PROTECTED** file: it never carries the GENERATED marker, so `--regenerate` never touches
-it. Every rule must come from the user or from demonstrable code patterns — never generic
+**PROTECTED** file: it never carries the GENERATED marker, so `--refresh` and
+`--regenerate` never touch it. Every rule must come from the user or from demonstrable code patterns — never generic
 advice. Leave a section out entirely if the project has no rule for it; never pad it.
 
 ````markdown
@@ -237,5 +245,5 @@ paths:
 3. **Omit empty sections** rather than inventing a rule to fill them.
 4. **`user-invocable: false` + `paths: ["**/*"]`** so it loads on every file.
 5. **Merge, don't clobber.** On re-run, preserve unchanged sections; update only what the
-   user revised. **No GENERATED marker** — this file is protected from `--regenerate`.
+   user revised. **No GENERATED or SOURCES marker** — this file is protected from `--refresh` and `--regenerate`.
 6. **Authoritative.** State explicitly that it overrides generic guide/expert defaults on conflict.

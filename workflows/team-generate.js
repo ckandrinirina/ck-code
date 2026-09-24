@@ -24,18 +24,18 @@ const results = await parallel(args.skills.map(s => () => agent(
 TEMPLATE + PER-ROLE DELTA (fill this, do not restructure it):
 ${s.template}
 
-PROJECT CONTEXT BLOCK (already resolved — inject verbatim where the template calls for it):
-${args.projectContext}
-
 RESEARCH SLICE for this skill (the only source for best-practice content):
 ${s.research}
 
 Requirements:
 - Resolve EVERY [bracketed placeholder] from the data above. Leave none.
+- Keep the template's "Project context" section as links to docs/architecture/. Never copy the
+  stack table, component list or folder tree into the file.
 - Emit detection frontmatter: ${s.triggers}
 - Reference /guide-conventions in the standards section so house rules override defaults.
-- Emit this as the FIRST body line:
-  <!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --regenerate. Delete this line to protect manual edits. -->
+- Emit these two lines, verbatim, as the FIRST body lines:
+  <!-- ck-code:team GENERATED — /ck-code:team may overwrite this file on --refresh or --regenerate. Delete this line to protect manual edits. -->
+  <!-- ck-code:team SOURCES ${args.digest} -->
 
 Then run: wc -l < ${s.path} and return the schema with the real line count.
 

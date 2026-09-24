@@ -1,7 +1,8 @@
 # Track — Output Contract (rendered by `ck-view`)
 
 These are **not templates for the model to fill** — `scripts/ck-view.sh` renders every one
-of them from `STORIES_INDEX.md` / `FEATURE_INDEX.md`, and `/ck-code:track` (and, for
+of them from the generated `STORIES_INDEX.md` views (regenerating any missing or stale
+view first), and `/ck-code:track` (and, for
 `waves`, `/ck-code:build`) relays its stdout verbatim. This file is the documented shape of
 that output: read it when a field needs explaining or when the renderer is being changed,
 never to render a dashboard by hand. Bracketed values mark what the script substitutes.
@@ -17,9 +18,9 @@ is the implementation, this file is its contract.
 ## `status`
 
 ```
-## Project Progress: [project name from PROJECT_OVERVIEW.md]
+## Project Progress: [plan name — OVERVIEW.md `title:`, else its first `# ` heading, else the folder]
 
-**Plan:** [tasks folder name]
+**Plan:** [plan dir, e.g. tasks/2026-01-10_billing]
 **Total:** [X] epics, [Y] stories
 **Progress:** [done]/[total] stories ([percentage]%)
 
@@ -57,8 +58,12 @@ is the implementation, this file is its contract.
 `SKIPPED` stories are excluded from every count above (`Total`, `Progress`, the epic
 `(done/total)` pairs) — they are listed in their epic with the `[-]` icon but never counted
 as done or outstanding work. `merged (direct)` marks a story that reached the trunk with
-`delivery: direct` (no PR); `merged` marks `delivery: merged`; `not shipped` is a `DONE`
-story with no `delivery:` set yet.
+`delivery: direct` (no PR); `merged` marks `delivery: merged`; `PR #<n>` marks
+`delivery: pr` (counted as `in review`); `not shipped` is a `DONE` story with no
+`delivery:` set yet. A `BUG` row carries its delivery suffix too, but never `not shipped`.
+A `TODO (blocked by …)` row names only the unmet blockers, suffixed ` (unknown)` for an id
+that matches no story. A plan with no story rows prints only
+`No stories in <plan dir> yet. Run /ck-code:plan to generate them.`
 
 ## `next`
 
@@ -68,7 +73,8 @@ story with no `delivery:` set yet.
 **Recommended:** [Story ID] — [Title]
 **Epic:** [Epic title]
 **Size:** [S/M]
-**Why this one:** [reason — e.g., "First ready story in 01; unblocks 3 other stories", or
+**Why this one:** [one of: "First ready story in [Epic title]",
+                    "First ready story in [Epic title]; unblocks [N] other stories", or
                     "Open bug in built code — a diagnosed bug outranks new work (Bug-Fix Mode)"]
 
 ### Acceptance Criteria Preview
@@ -78,7 +84,7 @@ story with no `delivery:` set yet.
      "- (no Acceptance Criteria section in the story file)" when the section is absent]
 
 ### Files to Touch
-- [one line per path in the story's `files:` frontmatter list]
+- [one line per path in the story's `files:` frontmatter list — nothing when empty]
 
 **Implement now?**
 Run: /ck-code:build [full path to story file]
@@ -89,8 +95,10 @@ Run: /ck-code:build [full path to story file]
 NEXT: /ck-code:build [full path to story file]
 ```
 
-`### Also Ready` and the trailing blank line before it are omitted entirely when no other
-story is ready. The final `NEXT: /ck-code:build <path>` line is always printed, even when
+The pick is the lowest `(rank, story id)` among ready stories across every plan (or only
+the plan passed as `tasks/<plan>`): every `BUG` outranks every `TODO`, then the story id
+orders by epic and story number. `### Also Ready` and the blank line before it are omitted
+entirely when no other story is ready. The final `NEXT: /ck-code:build <path>` line is always printed, even when
 `Also Ready` is empty — it is the machine-readable handoff `/ck-code:build` (and wave mode)
 parses, so it must stay the last line.
 
@@ -102,20 +110,24 @@ When nothing is ready:
 All remaining TODO stories are blocked by incomplete dependencies.
 
 ### Blocking Chain
-- [Story X] (IN PROGRESS) blocks: [Story Y], [Story Z]
+- [Story X] ([STATUS]) blocks: [Story Y], [Story Z]
 
 Complete the IN PROGRESS stories first, then more will unblock.
 ```
 
+When no unfinished story holds another back, the chain is the single line
+`- No unfinished story blocks another — nothing is scheduled at all.`
+
 ## `progress`
 
-Emit one **By Size** row per size actually present in the index (`S` and `M`).
+One **By Size** row per size present in the index, in first-seen order (`?` for a story
+with no size).
 
 ```
 ## Project Progress Report
 
-**Project:** [name]
-**Plan:** [tasks folder name]
+**Project:** [plan name, as in `status`]
+**Plan:** [plan dir, e.g. tasks/2026-01-10_billing]
 **As of:** [today]
 
 ### Overall
@@ -135,7 +147,7 @@ Emit one **By Size** row per size actually present in the index (`S` and `M`).
 | 02 | [Title] | [X] | [Y] | [----------] 0% |
 
 ### Bottlenecks
-- [Blocked story count] stories waiting on dependencies
+- [N] stories waiting on dependencies            # "1 story" when N is 1
 - Biggest blocker: [Story X] — blocks [N] other stories
   # or "- No unfinished story blocks another" when nothing is blocked
 
@@ -146,8 +158,9 @@ Emit one **By Size** row per size actually present in the index (`S` and `M`).
 ```
 
 `SKIPPED` stories are excluded here too (same rule as `status`). The Milestone Tracker
-section is printed only when the plan's `ROADMAP.md` has a `## Milestones` table listing
-epic numbers per row — it is omitted entirely otherwise. There is no Velocity section:
+section is printed only when the plan's `ROADMAP.md` has a `## Milestones` table whose
+second column lists epic numbers present in the plan — it is omitted entirely otherwise. A
+milestone's epic counts as done when every non-skipped story in it is `DONE`. There is no Velocity section:
 `ck-view.sh` computes no completion-rate estimate.
 
 ## `waves`
@@ -178,6 +191,12 @@ whose blockers are already `done`); `🐛 Bug-Fix Mode` appears only on `BUG` ro
 story, or more than 3 waves). The final `PLAN: <plan dir>` line is always printed — it is the
 machine-readable trailer, always the last line, mirroring `next`'s `NEXT:` trailer.
 
+When every story of the epic is `DONE` or `SKIP`:
+
+```
+Epic [NN] — nothing to build: every story is DONE or SKIP.
+```
+
 When no story in the epic can start at all:
 
 ```
@@ -186,16 +205,17 @@ Epic [NN] — un-startable: no story has all its blockers DONE.
   [ID]  [Title]   ← waiting on [blocker ID, …]
 ```
 
-## Multiple task plans
+## Multiple plans
 
-Printed only when more than one plan exists under `tasks/` and no single plan was
-requested; feature plans render as `[Feature] YYYY-MM-DD_feature-xxx`.
+Printed for `status` and `progress` only when more than one plan exists under `tasks/` and
+no single plan was requested. Every plan renders the same way, named by its `OVERVIEW.md`
+`title:`.
 
 ```
 ## Project Plans Found
 
-1. tasks/YYYY-MM-DD_<your-project>/ — [project name]
-2. tasks/YYYY-MM-DD_feature-<feature-name>/ — [feature name]
+1. tasks/YYYY-MM-DD_<plan-slug>/ — [plan name]
+2. tasks/YYYY-MM-DD_<other-plan-slug>/ — [plan name]
 
 Showing: ALL plans
 
@@ -205,4 +225,5 @@ Showing: ALL plans
 ```
 
 Each plan's full `status` or `progress` output follows the listing in turn, separated by a
-single blank line.
+single blank line. With no plan at all under `tasks/`, `status` and `progress` print
+`No task plans found in tasks/.` then `Run /ck-code:plan to generate epics and stories first.`

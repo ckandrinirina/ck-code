@@ -146,7 +146,7 @@ Default to defer. On proceed anyway: fall through to the A/B/D verdict from `act
 - epic 03 · Mobile   — "show device IP on settings screen"   (size: S)
 - epic 04 · Desktop  — "persist device IP to config"          (size: S)
 
-These new stories are real feature work (todo), NOT part of this bug's bug set. `plan --quick` writes each story's frontmatter and regenerates the indexes.
+These new stories are real feature work (todo), NOT part of this bug's bug set. `plan --quick` writes each story's frontmatter and regenerates the views.
 
 ### Routing
 Multi-story / mixed bug → **manual build hand-off** after recording (Auto-Build Eligibility Gate fails). You'll run `/ck-code:build` once per story — several story IDs in one run only when they all sit in the same epic.
