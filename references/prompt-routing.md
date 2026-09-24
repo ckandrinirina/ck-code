@@ -10,8 +10,8 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | publish the plan to GitHub Issues | `plan --publish` |
 | commit, PR, "ship it", deliver finished work; the PR for a finished epic or plan | `ship` / `ship --promote` |
 | implement or continue an existing story; several ready stories; a whole epic | `build` / `build <ids>` / `build --epic NN` |
-| add one small story to an existing plan | `plan --quick <brief>` |
-| new work to break into epics, stories, a roadmap | `plan` |
+| new functionality no story covers — small (one story) | `plan --quick <brief>` |
+| new functionality no story covers — large, or new work to break into epics, stories, a roadmap | `plan` |
 | expert or guide skills are stale after a stack or folder change | `team --refresh` |
 | stakeholder-facing feature spec | `spec` |
 | link a Claude Design URL, or refresh the linked design system | `design ds [url]` |
@@ -20,5 +20,5 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | progress, status, which story is next | `track` |
 | explain what was built, how to verify it, or what an epic is for | `explain` |
 | unsure which skill fits, or no task yet | `guide` |
-Do not route when: a ck-code skill is already running and this prompt answers its question — continue it; the prompt is a question, a read-only or non-code request — answer directly; the prompt is a one-off edit no story covers — do it, but first read the matching expert or guide skill under `.claude/skills/` and follow its conventions, test first.
+Do not route when: a ck-code skill is already running and this prompt answers its question — continue it; the prompt is a question, a read-only or non-code request — answer directly; the prompt is a one-off edit that adds no behaviour (a typo, a rename, a config value) — do it, but first read the matching expert or guide skill under `.claude/skills/` and follow its conventions, test first.
 Never route to a skill whose prerequisite is missing — name the prerequisite instead (`build` and `plan --quick` need a plan in `tasks/`; `plan` and `team` need `docs/architecture/`; `ship` needs implemented work).
