@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# tests/fake-gh/gh — a stand-in for the GitHub CLI, so tests/smoke.sh can drive
+# ck-project.sh and ck-issues.sh with no network and no account.
+#
+# Reads canned JSON from $FAKE_GH and logs every call, one argv per line, to
+# $FAKE_GH/calls.log. `--jq EXPR` / `-q EXPR` is applied with jq, raw output, exactly as
+# gh's embedded engine does. Mutations succeed and print what gh would.
+#
+# Canned files (all optional; a missing read answers "[]" or "{}"):
+#   repo-view.json      gh repo view
+#   pr-list.json        gh pr list          pr-<N>.json     gh pr view N
+#   issue-list.json     gh issue list       issue-<N>.json  gh issue view N
+#   project-view.json   gh project view     field-list.json gh project field-list
+#   item-list.json      gh project item-list
+#   auth-fail           present → `gh auth status` exits 1
+
+set -uo pipefail
+D="${FAKE_GH:?FAKE_GH must name the canned-response directory}"
+printf '%s\n' "$*" >> "$D/calls.log"
+
+JQ=""
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --jq|-q) JQ="${2:-}"; shift 2 ;;
+    *) ARGS+=("$1"); shift ;;
+  esac
+done
+set -- "${ARGS[@]}"
+
+canned() { if [ -f "$D/$1" ]; then cat "$D/$1"; else printf '%s\n' "${2:-[]}"; fi; }
+out() { if [ -n "$JQ" ]; then jq -r "$JQ"; else cat; fi; }
+
+case "${1:-} ${2:-}" in
+  "auth status") [ -f "$D/auth-fail" ] && exit 1; exit 0 ;;
+  "repo view")   canned repo-view.json '{}' | out ;;
+  "pr list")     canned pr-list.json | out ;;
+  "pr view")     [ -f "$D/pr-$3.json" ] || exit 1; canned "pr-$3.json" | out ;;
+  "pr edit")     exit 0 ;;
+  "issue list")  canned issue-list.json | out ;;
+  "issue view")  [ -f "$D/issue-$3.json" ] || exit 1; canned "issue-$3.json" | out ;;
+  "issue close"|"issue edit") exit 0 ;;
+  "issue create")
+    n=$(cat "$D/next-issue" 2>/dev/null || echo 100)
+    echo $((n + 1)) > "$D/next-issue"
+    echo "https://github.com/fake/repo/issues/$n" ;;
+  "label create") exit 0 ;;
+  "project view")       canned project-view.json '{}' | out ;;
+  "project field-list") canned field-list.json '{"fields":[]}' | out ;;
+  "project item-list")  canned item-list.json '{"items":[]}' | out ;;
+  "project item-add")
+    n=$(cat "$D/next-item" 2>/dev/null || echo 1)
+    echo $((n + 1)) > "$D/next-item"
+    printf '{"id":"ITEM_NEW_%s"}\n' "$n" | out ;;
+  "project item-edit"|"project item-archive"|"project link"|"project create") exit 0 ;;
+  api*)
+    case " $* " in *" --method POST "*|*" -X POST "*) exit 0 ;; esac
+    echo '[]' | out ;;
+  *) echo "fake gh: unhandled: $*" >&2; exit 1 ;;
+esac

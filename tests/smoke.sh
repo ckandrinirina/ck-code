@@ -249,8 +249,13 @@ EOF
   # put both in the same wave even though both are otherwise wave-1 ready.
   write_story "tasks/2026-01-01_demo/epics/02_payments/stories/07_export.md" \
     02-07 "Export refunds report" 02 todo S "[]" "[src/payments/refund.ts, src/payments/export.ts]" "" "" "" ""
+  # blocked ONLY by 02-05, which is `skip` — a skipped blocker releases its dependants,
+  # so this story is ready in ck-view, Todo on the board, and clean in ck-doctor.
+  write_story "tasks/2026-01-01_demo/epics/02_payments/stories/08_audit.md" \
+    02-08 "Audit log" 02 todo S "[02-05]" "[src/payments/audit.ts]" 58 "" "" ""
 
   git init -q .
+  git symbolic-ref HEAD refs/heads/main
   git config user.email "smoke@ck-code.test"
   git config user.name "ck-code smoke"
   git add -A
@@ -314,7 +319,7 @@ assert_exit "ck-index: exits 0 on the clean fixture" 0 "$IDX_RC"
 assert_not_contains "ck-index: no WARN on the clean fixture" "$IDX_OUT" "ck-index: WARN"
 
 SI_DEMO="tasks/2026-01-01_demo/STORIES_INDEX.md"
-FI="tasks/FEATURE_INDEX.md"
+FI="tasks/EPICS_INDEX.md"
 assert_true "ck-index: wrote $SI_DEMO" "$([ -f "$SI_DEMO" ]; echo $?)"
 assert_true "ck-index: wrote $FI" "$([ -f "$FI" ]; echo $?)"
 
@@ -329,9 +334,9 @@ else
   log_fail "ck-index: STORIES_INDEX.md byte-identical across two runs" "$(diff "$SI_DEMO" "$FIXTURE/.snap_si" | head -10)"
 fi
 if diff -q "$FI" "$FIXTURE/.snap_fi" >/dev/null 2>&1; then
-  log_ok "ck-index: FEATURE_INDEX.md byte-identical across two runs"
+  log_ok "ck-index: EPICS_INDEX.md byte-identical across two runs"
 else
-  log_fail "ck-index: FEATURE_INDEX.md byte-identical across two runs" "$(diff "$FI" "$FIXTURE/.snap_fi" | head -10)"
+  log_fail "ck-index: EPICS_INDEX.md byte-identical across two runs" "$(diff "$FI" "$FIXTURE/.snap_fi" | head -10)"
 fi
 rm -f "$FIXTURE/.snap_si" "$FIXTURE/.snap_fi"
 
@@ -353,7 +358,7 @@ ROW_0103=$(row_for_id "$SI_DEMO" "01-03")
 assert_contains "STORIES_INDEX: title with | and \" — pipe escaped" "$ROW_0103" 'Fix "login" bug \| urgent case'
 
 echo
-echo "=== FEATURE_INDEX rollup ==="
+echo "=== EPICS_INDEX rollup ==="
 # Feature column reads "NN · Name" — match the epic NUMBER token, not a raw
 # substring grep (which could also hit "01" inside some other cell).
 FEAT_01=$(awk -F'|' '{f=$2; gsub(/^[ \t]+|[ \t]+$/,"",f); sub(/ .*/,"",f); if (f=="01") { print; exit }}' "$FI")
@@ -362,7 +367,7 @@ FEAT_01=$(awk -F'|' '{f=$2; gsub(/^[ \t]+|[ \t]+$/,"",f); sub(/ .*/,"",f); if (f
 # IN PROGRESS for epic 01, not MERGED — a story still in flight cannot roll up to a
 # finished state. This checks the documented-correct value; see tests/README.md and the
 # smoke-test report for the fixture/assertion-brief discrepancy this surfaces.
-assert_contains "FEATURE_INDEX: epic 01 rollup is IN PROGRESS (01-03 still in-progress)" "$FEAT_01" "IN PROGRESS"
+assert_contains "EPICS_INDEX: epic 01 rollup is IN PROGRESS (01-03 still in-progress)" "$FEAT_01" "IN PROGRESS"
 
 echo
 echo "=== ck-view next ==="
@@ -501,6 +506,142 @@ ROUTER_ELSEWHERE=$(cd "$(mktemp -d)" && printf '{"prompt":"fix the login bug ple
 assert_eq "prompt-router.sh: silent outside an adopted project" "" "$ROUTER_ELSEWHERE"
 
 echo
+echo "=== one Ready rule: a skipped blocker releases its dependant ==="
+assert_contains "ck-view next: 02-08 (blocked only by skipped 02-05) is ready" "$NEXT_OUT" "02-08"
+W_0208=$(printf '%s\n' "$WAVES_OUT" | wave_of "02-08")
+assert_true "ck-view waves: 02-08 is scheduled, not UNSCHEDULABLE" "$([ -n "$W_0208" ]; echo $?)"
+assert_not_contains "ck-doctor: no dependency complaint about 02-08" "$DOCTOR_CLEAN_OUT" "02-08"
+
+echo
+echo "=== shared library: atomic, loud frontmatter writes ==="
+# shellcheck source=scripts/lib/ck-common.sh
+. "$PLUGIN_ROOT/scripts/lib/ck-common.sh"
+LIBDIR="$(mktemp -d)"
+printf -- '---\r\nid: 09-01\r\nstatus: todo\r\n---\r\n\r\n# Body\r\n' > "$LIBDIR/crlf.md"
+ck_fm_set "$LIBDIR/crlf.md" status done
+assert_eq "ck_fm_set: CRLF story value written" "done" "$(ck_fm "$LIBDIR/crlf.md" status)"
+assert_eq "ck_fm_set: CRLF line endings preserved" "6" "$(grep -c $'\r$' "$LIBDIR/crlf.md")"
+printf '# no frontmatter\n' > "$LIBDIR/nofence.md"
+ck_fm_set "$LIBDIR/nofence.md" status done 2>/dev/null; NOFENCE_RC=$?
+assert_exit "ck_fm_set: refuses a file with no fence" 1 "$NOFENCE_RC"
+printf -- '---\nid: 09-02\nstatus: todo\n' > "$LIBDIR/open.md"
+ck_fm_set "$LIBDIR/open.md" status done 2>/dev/null; OPEN_RC=$?
+assert_exit "ck_fm_set: refuses an unterminated fence" 1 "$OPEN_RC"
+assert_eq "ck_fm_set: unterminated file left untouched" "todo" "$(awk -F': ' '/^status/{print $2}' "$LIBDIR/open.md")"
+chmod 640 "$LIBDIR/crlf.md"; ck_fm_set "$LIBDIR/crlf.md" pr 12
+assert_eq "ck_fm_set: file mode survives the rename" "640" "$(ls -l "$LIBDIR/crlf.md" | awk '{m=$1; o=0; for(i=2;i<=10;i++){c=substr(m,i,1); if(c!="-") o+= (i%3==2?4:(i%3==0?2:1)) * (i<=4?100:(i<=7?10:1))} print o}')"
+assert_eq "ck_flow_list: unquotes and splits" "02-01|02-03" "$(ck_flow_list '["02-01", 02-03]' | paste -sd'|' -)"
+rm -rf "$LIBDIR"
+
+echo
+echo "=== ck-story: loud failure, files merge ==="
+NOFENCE_STORY="tasks/2026-01-01_demo/epics/02_payments/stories/99_nofence.md"
+printf '# not a story\n' > "$NOFENCE_STORY"
+NF_OUT=$(ck-story set "$NOFENCE_STORY" status=done --no-sync 2>&1); NF_RC=$?
+assert_exit "ck-story set: exits 1 when the write failed" 1 "$NF_RC"
+assert_contains "ck-story set: says why" "$NF_OUT" "no frontmatter fence"
+rm -f "$NOFENCE_STORY"
+FILES_OUT=$(ck-story files "$STORY_0203" src/payments/invoice.ts src/payments/pdf.ts ./src/payments/pdf.ts 2>&1)
+assert_eq "ck-story files: merged, sorted, de-duplicated" "[src/payments/invoice.ts, src/payments/pdf.ts]" "$(ck-story get "$STORY_0203" files | sed 's/^files: //')"
+git checkout -q -- "$STORY_0203"
+SET_FILES_OUT=$(ck-story set "$STORY_0203" files=x 2>&1)
+assert_contains "ck-story set: refuses files= and points at ck-story files" "$SET_FILES_OUT" "ck-story files"
+
+echo
+echo "=== ck-project against a fake gh ==="
+if [ "$HAVE_JQ" -eq 1 ]; then
+  FAKE_BIN="$PLUGIN_ROOT/tests/fake-gh"
+  export CK_PROJECT_PACE=0
+  # fresh_copy — a throwaway clone of the clean fixture plus an empty canned-gh dir.
+  fresh_copy() {
+    PJ="$(mktemp -d)"; export FAKE_GH="$PJ/.gh"; mkdir -p "$FAKE_GH"
+    git -C "$FIXTURE" stash -q -u >/dev/null 2>&1 || true
+    cp -R "$FIXTURE/." "$PJ/"
+    git -C "$FIXTURE" stash pop -q >/dev/null 2>&1 || true
+    ( cd "$PJ" && git checkout -q main && git clean -qfd -e .gh )
+    printf '{"nameWithOwner":"fake/repo","defaultBranchRef":{"name":"main"}}\n' > "$FAKE_GH/repo-view.json"
+    : > "$FAKE_GH/calls.log"
+  }
+  S0201="tasks/2026-01-01_demo/epics/02_payments/stories/01_charge.md"
+
+  # A: no board, nothing to ask GitHub → no gh call at all.
+  fresh_copy
+  A_OUT=$(cd "$PJ" && PATH="$FAKE_BIN:$PATH" ck-project sync 2>&1); A_RC=$?
+  assert_exit "sync, no board, no open PR: exits 0" 0 "$A_RC"
+  assert_contains "sync, no board: says cards were skipped" "$A_OUT" "no board configured"
+  assert_eq "sync, no board, no open PR: made no gh call" "" "$(cat "$FAKE_GH/calls.log")"
+  rm -rf "$PJ"
+
+  # B: no board, a recorded PR merged into the trunk → delivery: merged.
+  fresh_copy
+  ( cd "$PJ" && ck-story set "$S0201" pr=5 --no-sync >/dev/null )
+  printf '[{"number":5,"state":"MERGED","baseRefName":"main"}]\n' > "$FAKE_GH/pr-list.json"
+  B_OUT=$(cd "$PJ" && PATH="$FAKE_BIN:$PATH" ck-project sync 2>&1); B_RC=$?
+  assert_exit "sync, no board, merged PR: exits 0" 0 "$B_RC"
+  assert_eq "sync, no board: delivery reaches merged" "merged" "$(ck_fm "$PJ/$S0201" delivery)"
+  assert_contains "sync, no board: reports the delivery change" "$B_OUT" "1 delivery updated"
+  B_ROW=$(awk -F'|' '{id=$3; gsub(/ /,"",id); if (id=="02-01") print}' "$PJ/tasks/2026-01-01_demo/STORIES_INDEX.md")
+  assert_contains "sync, no board: the view shows MERGED" "$B_ROW" "MERGED"
+  rm -rf "$PJ"
+
+  # C: a board — cards placed from status and delivery; a skipped blocker lands in Todo.
+  fresh_copy
+  cat > "$PJ/tasks/SETTINGS.md" <<'EOF'
+---
+github_issues: true
+github_repo: fake/repo
+github_project_owner: fake
+github_project_number: 1
+github_project_id: PVT_1
+board_field: Status
+board_todo: Todo
+board_in_progress: In Progress
+board_blocked: Blocked
+board_done: Done
+---
+EOF
+  cat > "$FAKE_GH/field-list.json" <<'EOF'
+{"fields":[{"id":"F1","name":"Status","type":"ProjectV2SingleSelectField","options":[
+ {"id":"o_todo","name":"Todo"},{"id":"o_ip","name":"In Progress"},
+ {"id":"o_blk","name":"Blocked"},{"id":"o_done","name":"Done"}]}]}
+EOF
+  printf '{"items":[{"id":"I58","status":"Blocked","repository":"https://github.com/fake/repo","content":{"number":58}}]}\n' > "$FAKE_GH/item-list.json"
+  C_DRY=$(cd "$PJ" && PATH="$FAKE_BIN:$PATH" ck-project sync --dry-run 2>&1)
+  assert_contains "sync, board, dry run: moves 02-08 to Todo" "$C_DRY" "#58  Blocked → Todo"
+  assert_not_contains "sync, board, dry run: edits nothing" "$(cat "$FAKE_GH/calls.log")" "item-edit"
+  C_OUT=$(cd "$PJ" && PATH="$FAKE_BIN:$PATH" ck-project sync 2>&1); C_RC=$?
+  assert_exit "sync, board: exits 0" 0 "$C_RC"
+  assert_contains "sync, board: the move reached gh" "$(cat "$FAKE_GH/calls.log")" "project item-edit --id I58"
+  rm -rf "$PJ"
+
+  # D: issues — a delivered story's open issue is closed.
+  fresh_copy
+  ( cd "$PJ" && ck-story set "$S0201" issue=11 delivery=direct --no-sync >/dev/null )
+  printf -- '---\ngithub_issues: true\ngithub_repo: fake/repo\n---\n' > "$PJ/tasks/SETTINGS.md"
+  printf '[{"number":11,"state":"OPEN"}]\n' > "$FAKE_GH/issue-list.json"
+  D_OUT=$(cd "$PJ" && PATH="$FAKE_BIN:$PATH" ck-project issues 2>&1); D_RC=$?
+  assert_exit "issues: exits 0" 0 "$D_RC"
+  assert_contains "issues: closes the delivered story's issue" "$(cat "$FAKE_GH/calls.log")" "issue close 11"
+  rm -rf "$PJ"
+
+  # E: closes — the footer comes from frontmatter alone.
+  E_OUT=$(ck-project closes "tasks/2026-01-01_demo/epics/02_payments/stories/08_audit.md" 2>&1)
+  assert_eq "closes: a story's footer" "Closes #58" "$E_OUT"
+
+  # F: landed — a finished story whose code is on the trunk becomes direct.
+  fresh_copy
+  ( cd "$PJ" && mkdir -p src/payments && echo x > src/payments/charge.ts \
+      && git add -A && git commit -qm "feat: charge" )
+  F_OUT=$(cd "$PJ" && ck-project landed 2>&1)
+  assert_contains "landed: 02-01 is marked direct" "$F_OUT" "02-01  (none) → direct"
+  assert_eq "landed: frontmatter says direct" "direct" "$(ck_fm "$PJ/$S0201" delivery)"
+  rm -rf "$PJ"
+  unset FAKE_GH
+else
+  log_skip "ck-project fake-gh tests: jq not on PATH"
+fi
+
+echo
 echo "=== breaking a second plan (tasks/2026-02-02_other, story missing id) ==="
 add_broken_plan
 
@@ -509,9 +650,6 @@ assert_exit "ck-doctor (no arg): reports the broken plan (exit 1)" 1 "$DOCTOR_AL
 assert_contains "ck-doctor (no arg): mentions the broken plan" "$DOCTOR_ALL_OUT" "2026-02-02_other"
 
 DOCTOR_SCOPED_OUT=$(ck-doctor tasks/2026-01-01_demo 2>&1); DOCTOR_SCOPED_RC=$?
-# EXPECTED-FAILING pending fix: "ck-doctor plan scoping" — ONLY_PLAN is parsed
-# (scripts/ck-doctor.sh line ~18-24) but never threaded into check_stories/
-# check_indexes/check_ids/check_deps, so a scoped run still walks every plan.
 assert_exit "ck-doctor tasks/2026-01-01_demo: still exits 0 (scoped to the clean plan)" 0 "$DOCTOR_SCOPED_RC"
 assert_not_contains "ck-doctor tasks/2026-01-01_demo: does not mention the other plan" "$DOCTOR_SCOPED_OUT" "2026-02-02_other"
 
@@ -519,17 +657,13 @@ echo
 echo "=== ck-story WARN passthrough on the broken plan ==="
 BROKEN_STORY="tasks/2026-02-02_other/epics/03_other/stories/01_broken.md"
 STORY_WARN_OUT=$(ck-story set "$BROKEN_STORY" size=M 2>&1); STORY_WARN_RC=$?
-# EXPECTED-FAILING pending fix: "ck-story WARN passthrough" — scripts/ck-story.sh's
-# `run_tool ck-index "$p" >/dev/null 2>&1` swallows ck-index's stderr WARN entirely,
-# so a skipped story is reported as a clean "regenerated" with no WARN relayed
-# (references/stories-index.md: "every skill that runs ck-index must relay any
-# ck-index: WARN line it emits").
+# references/stories-index.md: every caller of ck-index relays its WARN lines.
 assert_contains "ck-story set: relays ck-index's WARN for the broken story" "$STORY_WARN_OUT" "ck-index: WARN"
 
 echo
 echo "=== shellcheck ==="
 if command -v shellcheck >/dev/null 2>&1; then
-  SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh bin/* 2>&1); SC_RC=$?
+  SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/* tests/fake-gh/gh 2>&1); SC_RC=$?
   if [ "$SC_RC" -eq 0 ]; then
     log_ok "shellcheck -S warning: scripts/*.sh bin/* clean"
   else
