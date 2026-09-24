@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -85,6 +85,9 @@ commands, never from skipping a check:
   commands are captured to a `$TMPDIR` log and read from there. Never re-run one on an
   unchanged tree to see a different slice of its output
   ([`rtk.md` § Slow commands](../../references/rtk.md#slow-commands--run-once-read-the-log)).
+  The 6.3 check and every QA pass run through `ck-qa`, which stamps each pass with its code
+  state so a later step that may reuse it (`--reuse`) skips an identical run
+  ([§ QA runs go through `ck-qa`](../../references/rtk.md#qa-runs-go-through-ck-qa)).
 - **Keep the inner loop targeted.** RED (4.4), GREEN iterations (5.2/5.3), and each
   refactoring (6.2) run the story's own test files. The full suite runs at 6.3 and in QA
   (7), where regressions are caught.
@@ -436,10 +439,13 @@ introduce interface/trait for dependency inversion, split large functions, move 
 correct module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
 also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
 
-**6.3 Final green check.** Run the full suite once more; report REFACTOR as **one line**
-(output-blocks). This is where a regression the targeted runs could not see surfaces. On
-red, fix it and re-run 6.3 before QA. **DELEGATED MODE folds 6.3 into Phase 7** (see the
-table there).
+**6.3 Final green check.** Run the full suite once more through `ck-qa`, using the **same
+`test=` command string** Phase 7 will hand the validator (the story's test row from the P7
+command table), for example `ck-qa run EE-SS test='npm run test'`. Report REFACTOR as **one
+line** (output-blocks). This is where a regression the targeted runs could not see surfaces.
+On red, fix it and re-run 6.3 before QA. A green 6.3 is stamped with the code state, so
+Phase 7 reads it instead of running the suite again on the same tree. **DELEGATED MODE folds
+6.3 into Phase 7** (see the table there).
 
 ---
 
@@ -460,6 +466,13 @@ Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../reference
 code-quality checks (commands per stack in [tdd-walkthrough.md](references/tdd-walkthrough.md)),
 and checks architecture compliance against the feature doc. Present the QA Report
 (output-blocks).
+
+**Nothing may change the tree between 6.3 and this dispatch.** The validator runs with
+`--reuse`, so the suite that 6.3 just passed on this exact code state reports `REUSED`, and
+lint, typecheck and build still run (concurrently where the stack allows). Any edit in
+between is a new state, and the suite simply runs again. The validator still reviews every
+acceptance criterion, the architecture and the code quality itself. Only the repeated
+command is skipped, never the judgement.
 
 **A delegated `QA: FAIL` is a `NEEDS FIXES` verdict** — the agent's verdict line replaces the
 inline report's verdict and enters the same loop; never treat it as a separate outcome, and
@@ -632,7 +645,7 @@ is no user to ask.
 | 1.6 / 8.6 | `ck-story set … --no-sync` and `ck-story files` against the prompt's `Base SHA` — **this story's frontmatter only**; never regenerate an index or commit a view, the orchestrator regenerates once on the target after the wave. |
 | 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
 | 4–6.2 | Unchanged. RED still gates GREEN. |
-| 6.3 + 7 | **One run.** Phase 7's inline command set (full suite, lint, typecheck) is the final green check. Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
+| 6.3 + 7 | **One run.** Phase 7's inline command set (full suite, lint, typecheck) is the final green check, run with `ck-qa run <id> --parallel …` (no `--reuse`, and no `--parallel` for a shared build lock). Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
 | 8.5 | Skipped — manual sign-off happens once on the target, after the wave lands. |
 | 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
 
@@ -704,7 +717,8 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never edit a test to force GREEN.**
 - **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
   wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner
-  loop is targeted, and the full suite still runs at 6.3 and 7.
+  loop is targeted. The full suite runs at 6.3, and Phase 7 reuses that pass through
+  `ck-qa --reuse` when the tree has not changed since.
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 

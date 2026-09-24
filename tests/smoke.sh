@@ -632,6 +632,31 @@ git checkout -q -- "$PLAN_OV"
 assert_contains "closes: a story-level plan closes nothing" "$(ck-project closes tasks/2026-01-01_demo 2>&1)" "not at integration: plan"
 
 echo
+echo "=== ck-qa: once per code state ==="
+# Its own repo and TMPDIR, so stamps from the fixture or a real run can never leak in.
+QA_REPO="$(mktemp -d)"; QA_TMP="$(mktemp -d)"
+( cd "$QA_REPO" && git init -q && echo a >a.txt && git add a.txt \
+  && git -c user.email=s@s -c user.name=s commit -qm init )
+QA() { ( cd "$QA_REPO" && TMPDIR="$QA_TMP" ck-qa "$@" 2>&1 ); }
+assert_eq "ck-qa state: a clean tree is HEAD's tree" "$(git -C "$QA_REPO" rev-parse 'HEAD^{tree}')" "$(QA state)"
+QA run 01-01 test='true' >/dev/null
+assert_contains "ck-qa run --reuse: a passed command on the same state is REUSED" "$(QA run 01-01 --reuse test='true')" "test: REUSED"
+assert_contains "ck-qa run: without --reuse it always runs" "$(QA run 01-01 test='true')" "test: PASS"
+assert_contains "ck-qa run --reuse: a different command runs" "$(QA run 01-01 --reuse test='true ')" "test: PASS"
+echo b >"$QA_REPO/new.txt"
+assert_contains "ck-qa run --reuse: an untracked file is a new state" "$(QA run 01-01 --reuse test='true')" "test: PASS"
+assert_eq "ck-qa state: the real index is never touched" "" "$(git -C "$QA_REPO" diff --cached --name-only)"
+QA_SEQ=$(QA run 01-01 a='exit 3' b='true'); QA_SEQ_RC=$?
+assert_exit "ck-qa run: a failure exits 1" 1 "$QA_SEQ_RC"
+assert_contains "ck-qa run: in order, stops at the first failure" "$QA_SEQ" "b: SKIPPED"
+QA_PAR=$(QA run 01-01 --parallel a='exit 3' b='echo lint-broke; exit 1' c='true')
+assert_contains "ck-qa run --parallel: reports every failure" "$QA_PAR" "ck-qa: FAIL — a b"
+assert_contains "ck-qa run --parallel: shows each failing log's tail" "$QA_PAR" "lint-broke"
+assert_contains "ck-qa run: a command that edits the tree is flagged" "$(QA run 01-01 fmt='echo x >>a.txt')" "changed the working tree"
+assert_contains "ck-qa run --reuse: a tree-editing command is never stamped" "$(QA run 01-01 --reuse fmt='true; echo x >>a.txt')" "fmt: PASS"
+rm -rf "$QA_REPO" "$QA_TMP"
+
+echo
 echo "=== ck-project against a fake gh ==="
 if [ "$HAVE_JQ" -eq 1 ]; then
   FAKE_BIN="$PLUGIN_ROOT/tests/fake-gh"

@@ -108,12 +108,35 @@ This is RTK-compatible, checked with `rtk hook check`: a redirect is not a pipe,
 while `tail -n 60 <log>` becomes `rtk read <log> --tail-lines 60`. A fast targeted run of the
 story's own test files may run bare. The rule is for the commands that cost minutes.
 
+### QA runs go through `ck-qa`
+
+The full-suite check (`build` 6.3) and every QA pass (Phase 7, P7, P8) run their commands
+through `ck-qa`, which applies this rule mechanically and extends it **across** agents:
+
+```bash
+ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx tsc --noEmit'
+```
+
+- It writes the same `ck-<id>-<label>.log` files, prints one line per command plus the last
+  40 lines of each failure, and ends with `ck-qa: PASS` or `ck-qa: FAIL — <labels>`. Read
+  more of a failure from its log. Those logs are not RTK-filtered, because the commands run
+  inside the script, and the 40-line tail is the cap instead.
+- Each pass is stamped with its **code state**, meaning the git tree of the working copy
+  (untracked files included), plus the directory and the exact command. With `--reuse`, a
+  command that already passed on that exact triple reports `REUSED` and does not run. Only
+  the QA steps named in `build` pass `--reuse`, and P7 never does.
+- `--parallel` runs independent commands concurrently and reports every failure in one
+  pass. Never pass it for commands that share a build lock or output directory (cargo's
+  `target/`, one CMake build tree). Those stay one chained `label='a && b'` command.
+- A command that edits the tree (a formatter, a snapshot update) prints a `WARN` and is never
+  stamped. Fix the command rather than trusting that pass.
+
 ## Where ck-code gains the most
 
 | Phase | Command | Why it matters |
 |---|---|---|
 | `build` Phase 4/6 — the TDD loop | the project's `test` command | run on every RED and GREEN cycle; `rtk test` returns failures only |
-| `build` Phase 7 / `ck-code:qa-validator` | full suite + lint + typecheck | the biggest single output in the workflow, and it repeats per QA iteration (cap 3) |
+| `build` Phase 7 / `ck-code:qa-validator` | full suite + lint + typecheck | the biggest single output in the workflow, and it repeats per QA iteration (cap 3). `ck-qa` keeps it out of RTK's reach, so its tail cap is what bounds it |
 | `build` PARALLEL MODE | per-worktree suites | multiplied by the number of stories in the wave |
 | `ship`, `doctor --fix` | `git`, `gh` | many small calls whose boilerplate dominates their signal |
 | `fix` Phase 4 | reproduction test runs | tight loop, repeated until the bug reproduces |
@@ -145,6 +168,7 @@ for, doing nothing), or when a different tool named `rtk` shadows it on `PATH`.
 - **Never pipe a stack command** (`cargo test | head`, `npm run test | tail`) — the piped
   command is left unfiltered, and RTK already returns failures only. `&&` chains are fine.
 - **Never re-run a slow command on an unchanged tree** — capture it once to a `$TMPDIR` log
-  and read slices of the log ([§ Slow commands](#slow-commands--run-once-read-the-log)).
+  and read slices of the log ([§ Slow commands](#slow-commands--run-once-read-the-log)). QA
+  commands go through `ck-qa`, which enforces this across agents too.
 - **Never make RTK a prerequisite** — no skill may block, warn inline, or change behaviour
   because RTK is absent. `doctor` is the only place its absence is mentioned.

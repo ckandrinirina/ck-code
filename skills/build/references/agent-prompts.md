@@ -149,11 +149,11 @@ description: "QA story EE-SS: <title>"
 isolation: worktree                    # fan-out only — per-branch QA gets that branch's worktree
 prompt: |
   Run QA for story EE-SS, read-only — never edit any file. Check out / operate on branch
-  <branch>. Run these stack commands exactly, in order, each ONCE, redirected to
-  ${TMPDIR:-/tmp}/ck-EE-SS-<command>.log in the same Bash call. Take the first failure's
-  short excerpt (failing test names / lint / type errors) from that log, and never re-run a
-  command to see more of its output:
+  <branch>. Run these stack commands exactly, in one call, WITHOUT --reuse:
+    ck-qa run EE-SS [--parallel] <label>='<command>' …
     <concrete commands from parallel-mode.md § P7>
+  Take the first failure's short excerpt (failing test names / lint / type errors) from the
+  tail it prints or from its log, and never re-run a command to see more of its output.
   End with exactly one line:
     QA: PASS
   or  QA: FAIL — <which command failed> — <one-line excerpt>
@@ -163,7 +163,9 @@ prompt: |
 **Post-wave QA (P8)** dispatches ONE qa-validator on `$TARGET` in the main checkout (no
 worktree — the wave's stories must sit together to surface integration failures). It guards
 on `git rev-parse --abbrev-ref HEAD == $TARGET`, runs the de-duplicated union of the wave's
-stories' commands, and returns the same verdict line. After a fan-out merge a `QA: FAIL` there
+stories' commands **with `--reuse`** (`ck-qa run wave-N --reuse …`), and returns the same
+verdict line. On a solo wave where nothing moved since P7, every command reports `REUSED`,
+which is a `QA: PASS` for exactly the state P7 checked. After a fan-out merge a `QA: FAIL` there
 is a cross-branch integration failure by construction — each branch already passed in
 isolation. After a solo wave it means the target's own moving state broke what P7 had
 green.
@@ -185,11 +187,12 @@ prompt: |
 
   Story file: <repo-relative story path>   # acceptance criteria are in its body
 
-  Run these commands exactly, in order, each ONCE, redirected to
-  ${TMPDIR:-/tmp}/ck-EE-SS-<command>.log in the same Bash call. Stop at the first failure and
-  take a short excerpt (failing test names, lint or type errors) from its log, never by
-  re-running the command:
+  Run these commands exactly, in one call, WITH --reuse (the suite 6.3 just passed on this
+  exact tree reports REUSED; everything else runs):
+    ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, verbatim>' <label>='<command>' …
     <this story's stack commands from parallel-mode.md § P7>
+  Take a short excerpt of each failure (failing test names, lint or type errors) from the
+  tail it prints or from its log, never by re-running the command.
 
   Follow qa-validation.md Steps 0–7: load the QA expert skills yourself, verify every
   acceptance criterion with file:line evidence, then the suite, the quality checks, the

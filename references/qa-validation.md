@@ -36,9 +36,12 @@ ones — the fix may have side effects on previously-passing criteria.
 ## Step 2 — Run the full test suite
 
 Run **all** tests (not just new ones) for the affected stack. Watch for
-regressions in previously-green tests. Each command runs once, captured to a `$TMPDIR` log
-([`rtk.md` § Slow commands](rtk.md#slow-commands--run-once-read-the-log)). Read failures from
-the log, and never re-run the suite to see them.
+regressions in previously-green tests. The suite and the Step 3 checks run together in one
+`ck-qa run <id> --reuse [--parallel] …` call
+([`rtk.md` § QA runs go through `ck-qa`](rtk.md#qa-runs-go-through-ck-qa)). A suite that
+`build` 6.3 already passed on this exact tree reports `REUSED`, and that counts as its
+evidence. Read failures from the printed tail or the log, and never re-run the suite to see
+them.
 
 ## Step 3 — Code-quality checks
 

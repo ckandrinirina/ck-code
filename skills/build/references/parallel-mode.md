@@ -484,7 +484,17 @@ inline Phase 7 uses it too, via [tdd-walkthrough.md](tdd-walkthrough.md) § Phas
 | `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)) |
 
 A project's `guide-conventions` skill overrides this table when it names canonical commands.
-No manifest match → ask once and reuse. Mark any QA-failing story **BLOCKED** — from merge in
+No manifest match → ask once and reuse.
+
+**How the commands run.** Every QA pass hands them to `ck-qa run <id> …`, one
+`<label>='<command>'` per independent command
+([`rtk.md` § QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)).
+Add `--parallel` when there are two or more labels, as with the `package.json` and
+`pyproject.toml` rows: test, lint and typecheck then run concurrently, and one pass reports
+every failing command instead of costing one QA iteration per failure. A row written as an
+`&&` chain (`Cargo.toml`, `go.mod`, `CMakeLists.txt`) shares one build lock or tree, so it
+stays **one label** and runs in order. **P7 never passes `--reuse`**, so its run is always
+fresh against the committed branch. That fresh run is the whole point of P7. Mark any QA-failing story **BLOCKED** — from merge in
 a fan-out wave — and keep its branch. Acceptable = ✓ complete + `QA: PASS`, plus conflict-free
 in a fan-out wave.
 
@@ -531,11 +541,18 @@ merge does not make integration failures cheap to find. `QA: FAIL` here is a cro
 integration failure by construction; keep the branches and offer `git revert -m 1 <merge-sha>`
 or a fix agent on `$TARGET`.
 
-**Solo wave:** run this post-wave QA too, even though P7 just passed on the same branch — P7
-judged the story mid-run, and the target may have moved since (a manual fix, an earlier
-wave). Its failure is not a
-cross-branch integration failure (there was no merge); recover with a fix agent on
-`$WORKBRANCH`, or `git revert <sha>` of this wave's commits when the story must come back out.
+**Post-wave QA runs with `--reuse`.** A command that already passed on this exact code
+state, in this checkout, reports `REUSED` instead of running again. After a fan-out merge the
+state is new, so everything runs. The P7 runs happened in other worktrees, so they never
+count here.
+
+**Solo wave:** dispatch this post-wave QA too, even though P7 just passed on the same branch.
+If the target moved since P7 (a manual fix, an earlier wave), the state differs and the
+commands run. If nothing moved, they report `REUSED`, because P7 already checked exactly this
+tree in this checkout, and the dispatch costs one cheap call instead of a second full suite.
+Its failure is not a cross-branch integration failure (there was no merge); recover with a
+fix agent on `$WORKBRANCH`, or `git revert <sha>` of this wave's commits when the story must
+come back out.
 
 **Manual gate (SKILL.md 8.5, once per wave — solo waves included).** Ask the operator to
 exercise the wave's work on `$TARGET` in the main checkout (`AskUserQuestion` `PASS / ISSUES`)

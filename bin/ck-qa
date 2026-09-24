@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-qa — see scripts/ck-qa.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-qa.sh" "$@"
