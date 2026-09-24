@@ -206,7 +206,7 @@ trunk_branch:
 
 # Project Settings
 
-Written by `/ck-code:ship --to-issues` and `/ck-code:config`; safe to edit by hand.
+Written by `/ck-code:config` and `/ck-code:plan --publish`; safe to edit by hand.
 
 `github_issues` is the master switch: when it is `false` or absent, every board
 call in `build` and `ship` becomes a no-op and no GitHub Project is touched.
@@ -559,7 +559,7 @@ resolve_one() {
 #            on main — and equally consistent with a later story having created those
 #            files. Reported always, written only under --include-likely.
 #
-# The tasks/-only exclusion is what stops `/ck-code:sync`'s own bookkeeping commit from
+# The tasks/-only exclusion is what stops the `/ck-code:doctor --fix` bookkeeping commit from
 # reading as a delivery: that commit carries the story file to the trunk and nothing else.
 
 TRUNK_REF=""

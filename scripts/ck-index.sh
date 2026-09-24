@@ -118,7 +118,7 @@ emit_plan() {
       for (e in edispOf) {
         t=total[e]+0; d=done[e]+0; m=merged[e]+0; st="TODO"
         # MERGED is DONE plus "all of it reached the trunk". Both are finished states —
-        # every unfinished set excludes both (references/feature-index.md). NOTE: no
+        # every unfinished set excludes both (references/epics-index.md). NOTE: no
         # apostrophes in this awk body; it is a single-quoted shell string.
         if (started[e]) {
           if (d==t && !inprog[e] && !bug[e]) st=(m==t) ? "MERGED" : "DONE"

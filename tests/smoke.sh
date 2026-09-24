@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # tests/smoke.sh — end-to-end smoke test for ck-code's scripts/bin against a
-# synthetic, throwaway v6 project fixture.
+# synthetic, throwaway v7 project fixture.
 #
-# Builds a temp git repo with a v6 tasks/ layout (see references/data-model.md),
+# Builds a temp git repo with a v7 tasks/ layout (see references/data-model.md),
 # puts this plugin's bin/ on PATH, and drives the real scripts against it: ck-index,
 # ck-view, ck-doctor, ck-story, ck-bootstrap, and the four hook scripts. Assertions
 # encode the CORRECT behaviour per references/data-model.md, references/stories-index.md,
-# references/feature-index.md and skills/build/references/wave-mode.md — a FAIL here is
+# references/epics-index.md and skills/build/references/wave-mode.md — a FAIL here is
 # not necessarily this harness being wrong; see tests/README.md.
 #
 # bash 3.2 compatible: no mapfile, no associative arrays, no ${var,,}. No external
