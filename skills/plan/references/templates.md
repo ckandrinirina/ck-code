@@ -15,7 +15,8 @@ mode; Continue leaves the existing one untouched). The frontmatter is the **plan
 fill `slug` and `title`, leave the other five keys empty, then set the level with
 `ck-plan set tasks/<plan> integration=<level>` (SKILL.md 5.2) — it also records
 `branch: plan/<slug>` at level `plan`. `plan --publish --mode plan` writes `issue`,
-`ship --promote` writes `pr`, and `ck-project sync` owns `delivery`. Keep the keys in
+`ship --promote` writes `pr` and `delivery: pr`, and `ck-project` reconciles `delivery`
+from GitHub. Keep the keys in
 exactly this order. The body is prose; `ck-issues --mode plan` reads its `## Vision` and
 `## Acceptance Criteria` for the plan issue.
 
@@ -94,8 +95,8 @@ e.g. epics `03_keyboard-split-engine` and `04_keyboard-split-desktop` both get
 architecture doc. `title`/`description` must not contain `|` (table cells).
 There is **no `integration:` key** — the level is the plan's, in `OVERVIEW.md`
 ([`branch-topology.md`](../../../references/branch-topology.md)). Leave `issue:`, `pr:` and
-`delivery:` empty: `plan --publish` writes `issue`, `ship --promote` writes `pr` when it
-opens the epic PR, and `ck-project sync` owns `delivery`. Keep `## Dependencies`: it
+`delivery:` empty: `plan --publish` writes `issue`, `ship --promote` writes `pr` and `delivery: pr`
+when it opens the epic PR, and `ck-project` reconciles `delivery` from GitHub. Keep `## Dependencies`: it
 records *why* this epic waits on another, which `blocked_by` cannot.
 
 ```markdown

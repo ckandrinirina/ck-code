@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Use to explain what was just implemented, the technologies involved, or how to manually verify it works, or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how does this work", "what is epic NN about".
+description: Use when the user wants an explanation of what was just implemented, the technologies involved, or how to manually verify it works, or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how does this work", "what is epic NN about".
 argument-hint: "[file-or-concept] | --epic NN"
 effort: low
 model: haiku

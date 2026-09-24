@@ -67,8 +67,9 @@ Paste those lines verbatim as the body's last block. Points to watch:
 - **Relay every `WARN`** — it names an entry that will not close on merge.
 - **A squash or rebase merge rewrites commit messages**, so a `Closes` that lives only
   in a commit footer can be lost. The body is the reliable channel; keep it there.
-- **Closing keywords only fire when the PR merges into the default branch.** A story PR
-  into `epic/NN-*`, or an epic PR into the plan branch, closes nothing on its own — its
+- **Closing keywords only fire when the PR merges into the default branch.** Nothing below
+  the trunk gets a PR of its own: at level `epic` stories merge into `epic/NN-*`, and at level
+  `plan` an epic gets no PR — `--promote` merges it `--no-ff` into the plan branch. Their
   issues close when the PR that reaches the trunk lands, which is why the epic and plan
   footers enumerate everything beneath them.
 

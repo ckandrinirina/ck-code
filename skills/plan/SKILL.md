@@ -3,7 +3,7 @@ name: plan
 description: Use when breaking a project spec, feature doc or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle. With `--publish [--mode plan|epics|stories] [tasks/<plan>]`, publishes an existing plan to GitHub Issues. Argument is the spec path, or the `--quick` or `--publish` flags.
 argument-hint: "[path-to-spec] | --quick [brief] [--epic NN] | --publish [--mode plan|epics|stories] [tasks/<plan>]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-plan*) Bash(ck-issues*) Bash(ck-project*) Bash(git status*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh issue list*) Bash(mkdir*) Bash(awk*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(ls*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-plan*) Bash(ck-issues*) Bash(ck-project*) Bash(git status*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh issue list*) Bash(mkdir*) Bash(awk*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(tail*) Bash(npx*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -34,8 +34,9 @@ Story state lives in **story-file frontmatter**; each plan's record lives in
 **Hand-off:** requires `/ck-code:design` (architecture docs in `docs/architecture/`),
 then `/ck-code:team` (expert + guide skills). If no `.claude/skills/expert-*/` exists and
 `tasks/SETTINGS.md` does not read `experts: none`, say so and recommend `/ck-code:team`
-before continuing — `build` relies on it. Hands off to `/ck-code:build` (one story,
-several, or a whole epic), after its own `--publish` mode when issue tracking is on.
+before continuing — `build` relies on it. Only `--quick` hands off to `/ck-code:build`
+(its new story); a full planning run ends by naming `/ck-code:build`, after its own
+`--publish` mode when issue tracking is on.
 
 ## HARD GATES
 

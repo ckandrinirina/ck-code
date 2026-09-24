@@ -173,7 +173,8 @@ template above, with `layout:` = `LAYOUT` and `requires: ck-code >= <MIN_PLUGIN>
 
 | Skills | Gate behavior |
 |---|---|
-| `spec`, `design`, `team`, `plan` (incl. `--publish`), `build`, `fix`, `ship`, `config`, `doctor --fix` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
+| `spec`, `design`, `team`, `plan` (incl. `--publish`), `build`, `fix`, `ship`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
+| `doctor --fix` | **Hard-block, DIRECTIVE** — doctor never calls `Skill` and never stamps. On anything but `layout: v7` (Tier 1, from the injected stamp) it prints the BLOCK message, then `NEXT: /ck-code:migrate` for an older or missing stamp (for `NEWER`, the update message alone — never migrate), and stops before any write. The read-only report (Phases 1–2) still runs first. |
 | `ship` STANDALONE (no `tasks/` in the repo at all) | **Exempt** — a standalone commit on a never-planned repo touches no ck-code state. Skip the gate; never stamp. The moment `tasks/` exists, the hard-block row applies. |
 | `explain`, `guide`, `track`, `doctor` (no `--fix`) | **Hint only** — Tier 1 alone, from the injected stamp. On anything but `layout: v7`, emit one line (`ℹ older ck-code layout — run /ck-code:migrate`, or `ℹ newer ck-code layout — update the plugin`) and continue read-only. Never run Tier 2, never block, never stamp. |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. It refuses a `NEWER` project. |

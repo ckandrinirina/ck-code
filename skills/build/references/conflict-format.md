@@ -19,7 +19,7 @@ Ready stories (N available):
  3  03-01  03 · Rust Server            S     01-01 ✓             ✓
 
 Recommended parallel-safe set: 02-05  03-01
-Pick: "recommended", "all", "1 3", or IDs like "02-05 03-01"
+Pick: "recommended", "all", "1 3", or IDs like "02-05 02-07"
 (or build whole epic NN in dependency-ordered waves)
 ```
 

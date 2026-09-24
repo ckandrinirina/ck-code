@@ -3,7 +3,7 @@ name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing for epics in EPICS_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync | ds [design-url]]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) DesignSync Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -62,7 +62,8 @@ Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/V
 
 Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
 shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+or newer layout, offers `/ck-code:migrate` for an older one, or a plugin update for a newer
+one (never migrate a newer layout), and stamps. Never read or write project state before
 this PASSes.
 
 Applies in ALL modes, and runs **once, in the orchestrator** — never inside a fan-out subagent.
@@ -431,8 +432,12 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
 2. For each epic in `EPICS_INDEX`, check whether
    `docs/architecture/features/<slug>/index.md` exists.
 3. **Missing** → `mkdir -p features/<slug>/` and scaffold `features/<slug>/index.md` from the
-   Feature Doc template (frontmatter `slug` + `design: pending`, header + section stubs + a
-   `[TO BE DEFINED]` note), using the epic's description for `## Summary`. Do NOT invent
+   Feature Doc template (frontmatter `slug`, header + section stubs + a `[TO BE DEFINED]`
+   note), using the epic's description for `## Summary`. Set `design:` from whether an epic
+   already routes to the slug
+   (`find tasks -path '*/epics/*' -name EPIC.md -exec grep -lx 'slug: <slug>' {} +`):
+   a match → `design: planned` (the work is already planned; a `pending` stub would make
+   `plan` plan it twice); none → `design: pending`. Do NOT invent
    component/API/data detail — leave stubs for a real `design`/`build` pass to fill.
 4. **Slug drift** → a feature doc under a different slug than its epic (design used `roles`,
    plan's epic is `role-management`) leaves `EPICS_INDEX.Docs` unresolved. Fix it in three
@@ -537,7 +542,8 @@ instead). Every line here is re-read by every story that touches the feature.
   not a stub.
 - **Never write a `DESIGN_LEDGER.md`, design-record, or dated delta/journal doc** — the
   layout has none; the feature-doc `design:` flag and git are the history. Every feature doc `design`
-  writes or updates is left `design: pending`; `plan` flips it to `planned`.
+  writes or updates is left `design: pending`; `plan` flips it to `planned`. The one
+  exception is a `sync` stub for a slug an epic already routes to — it starts `planned` (PHASE S step 3).
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never hand-edit or commit a generated view** (`EPICS_INDEX.md`, `STORIES_INDEX.md`) —
   change the feature docs / story frontmatter and regenerate with `ck-index`; the views are

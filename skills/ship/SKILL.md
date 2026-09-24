@@ -1,9 +1,9 @@
 ---
 name: ship
-description: Use to commit finished work, open or update a PR and the linked GitHub Issue after a story or fix — or for any standalone commit. `--promote` promotes a completed epic (its PR, or its merge into the plan branch) or opens the PR for a whole plan. Argument is an optional story path, or `--promote` with `--epic NN` or a `tasks/<plan>` path. Issue work needs `gh` authenticated.
+description: Use when finished work needs committing and its PR and linked GitHub Issue opened or updated after a story or fix — or for any standalone commit. `--promote` promotes a completed epic (its PR, or its merge into the plan branch) or opens the PR for a whole plan. Argument is an optional story path, or `--promote` with `--epic NN` or a `tasks/<plan>` path. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN | tasks/<plan>]"
 effort: medium
-allowed-tools: Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -106,9 +106,11 @@ Store as `existing_pr`:
 
 If `gh` is missing or unauthenticated, treat as "no existing PR" and continue.
 
-### 1.3 Resolve branch topology
+### 1.3 Resolve branch topology (runs after 2.2)
 
-Read the plan record — the integration level is a **plan** property, never an epic's:
+It needs the story's plan, so run it once 2.2 has resolved the story and `tasks/<plan>/` —
+never before. Read the plan record — the integration level is a **plan** property, never an
+epic's:
 
 ```bash
 ck-plan get tasks/<plan> integration branch
@@ -146,6 +148,9 @@ Find the linked story in this order:
 If found, extract from frontmatter: `id` (EE-SS), `title`, `epic`, `status`, `issue`,
 and the plan root `tasks/<plan>/`. From the body: acceptance criteria and the
 Implementation Summary / Bug Resolution for the plain-language commit copy.
+
+With the story and its plan resolved, run 1.3 now. No story found → STANDALONE MODE, and
+1.3 never runs.
 
 ### 2.3 Resolve linked GitHub issues (by number — never by title)
 
@@ -216,17 +221,10 @@ Full templates: [examples.md](references/examples.md).
 
 ### 3.3 The one confirmation (files + message + PR)
 
-**Resolve the PR base first — never ask for it.** The project answers first, the repo
-second ([`branch-topology.md`](../../references/branch-topology.md#resolution)):
-
-```bash
-ck-project show | grep trunk_branch          # tasks/SETTINGS.md trunk_branch:
-gh repo view --json defaultBranchRef -q .defaultBranchRef.name
-```
-
-A non-empty `trunk_branch` **is** the trunk. Otherwise use the repo default, falling back
-to `main` when `gh` fails. At level `epic`/`plan` the story's target is `parent` (1.3),
-not the trunk.
+**Resolve the PR base first — never ask for it.** `<trunk>` is resolved exactly as
+[`branch-topology.md`](../../references/branch-topology.md#resolution) orders it
+(`trunk_branch` → `origin/HEAD` → the `gh` repo default → `main`); do not restate it. At
+level `epic`/`plan` the story's target is `parent` (1.3), not the trunk.
 
 Show a preview — Branch / Files grouped per 3.1 (Excluded with reasons) / full Message /
 Linked issues — then ask **one** `AskUserQuestion`, "Ship this?":

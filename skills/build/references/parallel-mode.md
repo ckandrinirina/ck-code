@@ -117,7 +117,7 @@ Resolving the scope set, by argument shape:
 
 | `$ARGUMENTS` | Scope |
 |---|---|
-| Story IDs (`02-05 03-01`) | exactly those stories; skip the epic gate — explicit scope is always respected |
+| Story IDs (`02-05 02-07`) | exactly those stories; skip the epic gate — explicit scope is always respected. Every ID must share one epic (`EE`): a set spanning more than one epic is **refused** — list the epics it touches, say to run one `build` per epic, and stop. A run merges into one epic branch, so a cross-epic set has no single target |
 | `--epic NN` | every story of epic `NN` that is neither `DONE` nor `SKIP`; skip the epic gate |
 | Empty (menu route) | the set the SKILL.md 1.2 menu already resolved — do not re-derive it |
 
@@ -565,10 +565,14 @@ dispatch. When no scheduled story remains, print the batch report naming every h
 
 Then hand off — **DIRECT, one ask** per
 [`skill-invocation.md`](../../../references/skill-invocation.md). The merged stories sit on
-`$TARGET`, an epic branch, and land through one epic PR, never story by story:
+`$TARGET`, an epic branch, and land through `ship --promote`, never story by story. The first
+option follows the level:
 
-- **Open the epic PR now** → `Skill({ skill: "ck-code:ship", args: "--promote --epic NN" })`.
-  `ship --promote` opens it into `<trunk>`, or into the plan branch at level `plan`.
+- level `epic` — **Open the epic PR now** → `Skill({ skill: "ck-code:ship", args: "--promote --epic NN" })`,
+  which opens the epic PR into `<trunk>`.
+- level `plan` — **Merge epic NN into `<planbr>`** → the same `Skill` call; at plan level
+  `ship --promote` opens no epic PR, it merges the epic `--no-ff` into the plan branch and
+  pushes — the plan PR is the one review.
 - **Not yet** → print `/ck-code:ship --promote --epic NN` and `/ck-code:track next` for later.
 
 Never tell the user to ship each story. When stories remain held or blocked, say so in the

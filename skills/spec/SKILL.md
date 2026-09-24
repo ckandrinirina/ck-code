@@ -94,7 +94,8 @@ Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/V
 
 Reads `layout: v7` → **PASS**, proceed. Anything else (including `ABSENT`) → run the
 shared [version gate](../../references/version-gate.md) (HARD GATE) — it detects an older
-layout, offers `/ck-code:migrate`, and stamps. Never read or write project state before
+or newer layout, offers `/ck-code:migrate` for an older one, or a plugin update for a newer
+one (never migrate a newer layout), and stamps. Never read or write project state before
 this PASSes.
 
 ---

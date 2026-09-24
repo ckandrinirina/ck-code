@@ -87,10 +87,12 @@ delivery:               # empty | pr | merged | direct
 | `branch` | branch name or empty | the plan-level branch at level `plan`. `ck-plan set … integration=plan` records `plan/<slug>` when it is empty; a migrated plan may carry `feat/<slug>`, and the field wins | `ck-plan set` |
 | `issue` | number or empty | the plan issue | `ck-issues --mode plan` |
 | `pr` | number or empty | the plan PR (plan branch → trunk) | `ship --promote` |
-| `delivery` | empty \| `pr` \| `merged` \| `direct` | the plan PR's state | `ship`, `ck-project sync` |
+| `delivery` | empty \| `pr` \| `merged` \| `direct` | the plan PR's state | `ship --promote` (`pr`), reconciled by `ck-project` |
 
-Keys appear in exactly this order. The one writer is `ck-plan set tasks/<plan> key=value…`,
-which validates each enum; `ck-plan get tasks/<plan> [key…]` reads it. A plan's
+Keys appear in exactly this order. `ck-plan set tasks/<plan> key=value…` is the writer for
+`integration`, `branch`, `pr` and `delivery` and validates each enum; `ck-issues` writes
+`issue` when the plan is published (`--mode plan`). `ck-plan get tasks/<plan> [key…]` reads
+it. A plan's
 integration level is chosen **once**, when `plan` creates it; changing it later is an
 explicit `/ck-code:config integration <tasks/plan> <level>`, never a side effect.
 
@@ -223,7 +225,7 @@ files exist on `main`" is also true of files a later story created.
 | `title` | text | epic display title |
 | `description` | text | one line, the `EPICS_INDEX` Description cell |
 | `issue` | number or empty | linked GitHub issue, written by `plan --publish` |
-| `pr` | number or empty | the epic's own PR (levels `epic`/`plan`), written by `ship --promote`; the stories of this epic inherit it |
+| `pr` | number or empty | the epic's own PR (level `epic` only), written by `ship --promote`; the stories of this epic inherit it. At level `plan` an epic has no PR — it merges `--no-ff` into the plan branch and inherits the plan PR |
 | `delivery` | empty \| `pr` \| `merged` \| `direct` | the epic PR's state, same enum and same writers as a story's |
 
 There is **no `integration:` key** on an epic: the level is a plan property, stored once

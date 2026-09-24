@@ -351,7 +351,7 @@ one.
   skills: `/expert-<role>` is invocable and guides auto-load after a restart. S5 triggers
   added, hand-written skills listed, and the `/ck-code:team --regenerate` advice.
 - The Phase R items from R7, or "epic numbers were already unique".
-- For a v3 conversion, `ck-project backfill` recovers `pr:` from the linked issues.
+- For a v3 conversion, `/ck-code:doctor --fix` recovers `pr:` from the linked issues.
 
 ## Rules
 

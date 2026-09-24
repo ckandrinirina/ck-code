@@ -1,6 +1,6 @@
 ---
 name: track
-description: Use to view project progress, list ready stories, or pick the next one to implement. Reads the generated story and epic views; read-only. Argument is `status` (default), `next`, or `progress`.
+description: Use when the user wants to see project progress, list ready stories, or pick the next one to implement. Reads the generated story and epic views; read-only. Argument is `status` (default), `next`, or `progress`.
 argument-hint: "[status|next|progress]"
 effort: low
 model: haiku

@@ -3,7 +3,7 @@ name: config
 description: Use when setting up or changing ck-code project settings — turning GitHub issue tracking on or off, setting the trunk branch every PR targets, creating or adopting the GitHub Project board that mirrors story status, re-mapping board columns, changing how a plan's work merges (story, epic or plan level), turning the team-skills question back on, or showing what is configured. Argument is `show`, `board`, `trunk <branch>`, `integration <tasks/plan> <level>`, `experts ask|none`, `on`, or `off`.
 argument-hint: "[show | board | trunk <branch> | integration <tasks/plan> <story|epic|plan> | experts ask|none | on | off]"
 effort: low
-allowed-tools: Bash(ck-project*) Bash(ck-plan*) Bash(ck-doctor*) Bash(ck-bootstrap*) Bash(gh auth status*) Bash(gh project list*) Bash(git rev-parse*) Bash(git ls-files*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Read Edit Write Skill
+allowed-tools: Bash(ck-project*) Bash(ck-plan*) Bash(ck-doctor*) Bash(ck-bootstrap*) Bash(gh auth status*) Bash(git rev-parse*) Bash(git ls-files*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Read Edit Write Skill
 ---
 
 # Config — Project Settings, Board & Integration Level

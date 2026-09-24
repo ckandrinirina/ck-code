@@ -46,9 +46,11 @@ Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/V
 - **No `--fix` — hint only.** Never block. The layout stamp is itself check 1 of the
   report, so an older or newer project is diagnosed rather than refused. On anything but
   `layout: v7`, print one hint line and continue read-only; never run Tier 2, never stamp.
-- **`--fix` — hard gate.** Reads `layout: v7` → PASS. Anything else → run the shared
-  [version gate](../../references/version-gate.md) (HARD GATE) before any write. The
-  report (Phases 1–2) still runs first, since it writes nothing.
+- **`--fix` — hard gate, DIRECTIVE.** Reads `layout: v7` → PASS. Anything else → the report
+  (Phases 1–2) still runs, since it writes nothing; then print the matching BLOCK message
+  from the [version gate](../../references/version-gate.md#block) and, for an older or
+  missing stamp, `NEXT: /ck-code:migrate` — for a newer one, the update message alone, never
+  migrate. Stop before Phase 3. Never stamp, never run Tier 2, never call `Skill`.
 
 See [`version-gate.md`](../../references/version-gate.md#scope).
 

@@ -21,10 +21,10 @@ Take the epic's rows in `STORIES_INDEX.md`, restricted to this epic and `Status 
 skip}` (what `ck-view waves` does — a done or skipped story needs no wave and blocks
 nothing). Order them into dependency phases by `Blocked by`:
 
-- **Wave 1** = stories whose every blocker is `done` (or empty). A `BUG` story always
+- **Wave 1** = stories whose every blocker is `done` or `skip` (or that have none). A `BUG` story always
   qualifies for wave 1 regardless of its `blocked_by` — Bug-Fix Mode outranks dependency
   ordering, same as the Ready rule elsewhere.
-- **Wave k+1** = stories whose every blocker is `done` or scheduled in a wave < k (one
+- **Wave k+1** = stories whose every blocker is `done`, `skip`, or scheduled in a wave < k (one
   scheduled in the wave being filled right now does not count — it has not landed yet).
 
 Within one dependency level, stories are further split into **sub-waves** so no two

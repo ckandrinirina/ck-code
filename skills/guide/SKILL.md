@@ -149,9 +149,12 @@ If nothing matches, say so plainly and point to Mode A (state routing) or
 A recommendation is wrong if its prerequisite is missing. Probe read-only, then adjust:
 
 ```bash
-echo "== architecture =="; find docs/architecture -name '*.md' 2>/dev/null | head -1
-echo "== tasks =="; find tasks -mindepth 2 -maxdepth 2 -name OVERVIEW.md 2>/dev/null | head -1
+find docs/architecture -name '*.md' -print -quit 2>/dev/null
+find tasks -mindepth 2 -maxdepth 2 -name OVERVIEW.md -print -quit 2>/dev/null
 ```
+
+Read the output by path: a `docs/architecture/…` line means the architecture exists, a
+`…/OVERVIEW.md` line means a plan exists; a missing one means that prerequisite is missing.
 
 First matching rule:
 

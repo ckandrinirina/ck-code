@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -52,7 +52,7 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 - **A story path** (`tasks/<slug>/epics/02_<epic>/stories/05_<story>.md`) — build that one story
   inline through Phases 1–8. Validate it before anything else (Phase 1.1).
-- **Two or more story IDs** (`02-05 03-01`) — PARALLEL MODE, one wave.
+- **Two or more story IDs** (`02-05 02-07`) — PARALLEL MODE, one wave.
 - **`--epic NN`** — PARALLEL MODE over every non-`done` story of that epic, in
   dependency-ordered waves.
 - **Empty** — interactive selection (Phase 1.2), which also offers the parallel set and
@@ -348,18 +348,15 @@ this project, and always keep **Adjust plan** last (the user can type any other 
 | **New branch from `<base>`** | always (recommended) | `git checkout -b story/<EE>-<SS>-<slug> <base>` — `fix/…` for a bug story, slug = kebab-case of the title; creates the parent chain first if absent ([Creation](../../references/branch-topology.md#creation)). Verify with `git branch --show-current` |
 | **Resume `story/<EE>-<SS>-*`** | that branch already exists | `git checkout` it — never re-cut a branch that has commits |
 | **Sync base from `origin/<base>` first** | the base is behind its remote | `git merge origin/<base>` on the base, then cut |
-| **Cut from `<trunk>` instead** | level is `epic`/`plan` | this story gets its own PR into `<trunk>` rather than joining the epic's |
-| **Cut from `epic/<NN>-*`** or **the plan branch** (record `branch:`) | that branch exists or the level reaches it | say which PR the story then joins |
 | **Current branch `<name>`** | `<name>` is a legal base (`resolve_base` step 3) | ship commits here. **Never** offered for `main`/`develop`/`<trunk>`, nor for another story's branch |
 | **Adjust plan** | always | revise the plan, then re-ask |
 
-**When the user's real objection is `<trunk>`, change the level, not the base.** A request to
-keep this work off the trunk — stated in the answer, or implied by picking an epic or plan base
-under a `story`-level plan — is an escalation: offer, in the same gate, to switch the plan with
-`ck-plan set tasks/<Plan> integration=epic` (or `=plan`, which also records `branch: plan/<slug>`)
-and re-resolve. A hand-picked base with a stale level leaves `ship` opening the PR against
-`<trunk>` anyway. The change is plan-wide and applies from this story onward, never
-retroactively; `OVERVIEW.md` is real state, so `ship` commits it with the story.
+**The base follows the level; build never changes the level.** An objection to the derived base
+— wanting this work off `<trunk>` under a `story`-level plan, or straight onto `<trunk>` under an
+`epic`/`plan`-level plan — is a level change, not a base pick: name
+`/ck-code:config integration tasks/<Plan> <epic|plan>` (or `story`), and stop. When build is
+re-run, 3.5 re-resolves the base from the new level. A hand-picked base with a stale level leaves
+`ship` opening the PR against the wrong target.
 
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
 touched in Phase 4 until this gate returns a branch. **DELEGATED MODE skips the whole base
@@ -684,8 +681,8 @@ dirty for the orchestrator. Commit messages are conventional
   gitignored and disposable; a stale one is regenerated on the next read. Commits carry story
   files (and `OVERVIEW.md` when the level changed), never views.
 - **Never edit `EPIC.md` or `OVERVIEW.md` by hand** — the plan's level changes only through
-  `ck-plan set tasks/<Plan> integration=<level>` (3.5 escalation or the PARALLEL MODE P3
-  switch), followed by `ck-project sync tasks/<Plan>` in the **same phase**; `pr:`/`delivery:`
+  `ck-plan set tasks/<Plan> integration=<level>` (build writes it only at the PARALLEL MODE P3
+  switch; 3.5 names `/ck-code:config integration` instead), followed by `ck-project sync tasks/<Plan>` in the **same phase**; `pr:`/`delivery:`
   belong to `ship`.
 - **Always relay `ck-index: WARN` lines** printed by `ck-index` — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
@@ -701,9 +698,9 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never treat the checked-out branch as the base** — resolve it (3.5), show it with its
   reason, and offer the alternatives; the launch branch is a legal base only when it is the one
   that resolved ([`branch-topology.md`](../../references/branch-topology.md#start-point--the-base-a-new-story-branch-is-cut-from)).
-- **Never keep work off `<trunk>` by picking a different base** — switch the plan's
-  `integration:` level instead (`ck-plan set`), or `ship` targets `<trunk>` from the stored
-  level regardless.
+- **Never keep work off `<trunk>` by picking a different base** — name
+  `/ck-code:config integration tasks/<Plan> <level>` and stop, or `ship` targets `<trunk>` from
+  the stored level regardless.
 - **Never edit a test to force GREEN.**
 - **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
   wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner

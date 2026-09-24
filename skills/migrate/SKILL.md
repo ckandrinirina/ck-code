@@ -3,7 +3,7 @@ name: migrate
 description: Use when a change-producing skill's version gate has blocked an older ck-code project (layout v6 or earlier), when the user asks to upgrade a project to layout v7, when the same epic number is used by more than one plan folder, when team-generated skills sit in nested .claude/skills/experts/ or guides/ folders, or when a ck-code-lite project (tasks/PLAN.md) should move to the full ck-code workflow.
 argument-hint: "[--dry-run]"
 effort: medium
-allowed-tools: Bash(ck-migrate*) Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-doctor*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git mv*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh pr list*) Bash(gh issue list*) Bash(find*) Bash(grep*) Bash(ls*) Bash(awk*) Bash(date*) Bash(mkdir*) Bash(mv*) Bash(rm*) Bash(rmdir*) Skill
+allowed-tools: Bash(ck-migrate*) Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-doctor*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git mv*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh pr list*) Bash(gh issue list*) Bash(find*) Bash(grep*) Bash(ls*) Bash(awk*) Bash(sed*) Bash(sort*) Bash(wc*) Bash(date*) Bash(mkdir*) Bash(mv*) Bash(rm*) Bash(rmdir*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -70,7 +70,7 @@ refuses a pre-v6 stamp, so the stamp routes it to LEGACY.
 **Preview and confirm.** For the V6 path, run `ck-migrate v7 --dry-run` and show its
 output whole: every plan record it writes, every epic that loses `integration:`, the
 views it untracks, the spec and design-system moves, and the new stamp. For LEGACY and
-LITE, name the source generation and the phases that will run. `ck-migrate --dry-run`
+LITE, name the source generation and the phases that will run. `ck-migrate v7 --dry-run`
 cannot preview a pre-v6 tree, so list its six steps from the script header instead.
 
 With `--dry-run`, skip the question and continue in dry-run mode. Otherwise ask once with

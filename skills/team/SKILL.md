@@ -674,19 +674,8 @@ Hand off to `/ck-code:plan` per
 architecture into epics, stories, and a roadmap. Ask **only** when no `tasks/*/` plan folder
 exists yet; on a refresh run, name the command in prose and ask nothing.
 
-**Resolve the argument, never describe it.** `skill-invocation.md` § Argument discipline
-forbids a referential phrase, and this skill read architecture docs, not a spec, so it
-usually has no spec path to pass:
-
-```bash
-find docs/specs -maxdepth 2 -name spec.md 2>/dev/null | sort | tail -1
-```
-
-- One path comes back and the user confirms it is the spec behind these docs → hand off
-  `/ck-code:plan <that exact path>`.
-- Nothing comes back, several do, or the user is unsure → hand off **`/ck-code:plan` with no
-  argument**. `plan`'s own INPUT step then locates or asks for the spec. Never pass a
-  placeholder or a phrase like "the spec these docs were built from".
+Hand off **`/ck-code:plan` with no argument** — `plan` finds the pending feature docs
+itself. Never pass a placeholder or a phrase like "the spec these docs were built from".
 
 - `/ck-code:team --conventions` — **only if 2.4 skipped it** — capture your project's own code
   structure, naming, style, and architectural rules into `guide-conventions`. Recommend in
