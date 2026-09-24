@@ -3,63 +3,52 @@
 #
 # Story frontmatter is the single writable source of truth; every index and every board
 # card is a generated view of it (references/data-model.md). That makes ONE invariant
-# load-bearing across `build`, `fix`, `ship`, `sync` and `config`:
+# load-bearing across `build`, `fix`, `ship`, `doctor --fix` and `config`:
 #
 #   change frontmatter  →  run ck-index  →  run ck-project sync,  in the same phase.
 #
-# Left to prose, that invariant is three steps a skill has to remember every time, and
-# `ck-doctor`'s index-drift and board checks exist because it was sometimes forgotten.
 # Here it is one call that cannot be half-done.
 #
 # Usage:
-#   ck-story.sh set <story.md> [<story.md>…] key=value [key=value…] [--no-sync|--no-board]
-#   ck-story.sh get <story.md> [key…]
-#   ck-story.sh path <EE-SS>
+#   ck-story.sh set   <story.md> [<story.md>…] key=value [key=value…] [--no-sync|--no-board]
+#   ck-story.sh files <story.md> <path> [<path>…]
+#   ck-story.sh get   <story.md> [key…]
 #
-# Paths and key=value pairs may be interleaved in any order, so a whole wave flips in one
-# call: `ck-story set status=in-progress a.md b.md c.md`.
+# set    Paths and key=value pairs may be interleaved, so a whole wave flips in one call:
+#        `ck-story set status=in-progress a.md b.md c.md`. Mutable keys are ONLY the state
+#        fields skills flip — status, prior_status, delivery, pr, issue, size. Structural
+#        fields (id, epic, title, blocked_by) belong to `plan`/`migrate` and are refused:
+#        a typo in `id` or `blocked_by` is not a state change, it is a corrupted plan.
+# files  Merge paths into the story's `files:` list (sorted, de-duplicated, never
+#        shrunk). `build` records every file a story actually touched, which is what
+#        parallel conflict detection and expert-skill matching read.
+# get    Print frontmatter keys (all of them when none is named).
 #
-# Mutable keys are ONLY the state fields skills flip — status, prior_status, delivery,
-# pr, issue, size. Structural fields (id, epic, title, blocked_by, files) belong to
-# `plan`/`migrate` and are refused here on purpose: a typo in `id` or `blocked_by` is
-# not a state change, it is a corrupted plan.
-#
-# --no-sync   edit frontmatter only (build PARALLEL MODE: a worktree agent touches its
-#             own story and never regenerates — the orchestrator does that after merge)
+# --no-sync   edit frontmatter only; indexes and board are left alone
 # --no-board  regenerate the indexes but skip `ck-project sync`
+#
+# Inside a linked worktree on a story/ or fix/ branch (a build PARALLEL MODE implementer)
+# the board sync is always skipped: that checkout sees only its own story, and the
+# orchestrator syncs every card once the wave is merged.
 
 set -uo pipefail
 
-if [ ! -d tasks ]; then
-  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  [ -n "$ROOT" ] && [ -d "$ROOT/tasks" ] && { cd "$ROOT" || exit 1; }
-fi
+CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+# shellcheck source=scripts/lib/ck-common.sh
+. "$CK_HERE/lib/ck-common.sh"
 
-usage() { sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'; }
+ck_root || true
+
+usage() { sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//'; }
 
 MUTABLE="status prior_status delivery pr issue size"
 
 die() { echo "ck-story: ERROR — $*" >&2; exit 1; }
 
-# CKSTORY_TMP tracks the one rewrite temp file live at a time (the set loop below
-# processes files sequentially) so a mid-loop failure or signal never leaves a
-# `*.ckstory.XXXXXX` scratch file sitting next to a story.
-CKSTORY_TMP=""
-trap '[ -n "$CKSTORY_TMP" ] && rm -f "$CKSTORY_TMP"' EXIT
-trap 'exit 130' INT TERM
-
-here="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
-run_tool() { # run_tool ck-index ARGS…
-  local name="$1"; shift
-  if [ -x "$here/$name.sh" ]; then "$here/$name.sh" "$@"
-  elif command -v "$name" >/dev/null 2>&1; then "$name" "$@"
-  else return 127; fi
-}
-
 # validate KEY VALUE — enums come straight from references/data-model.md.
 validate() {
   local k="$1" v="$2"
-  case " $MUTABLE " in *" $k "*) ;; *) die "\`$k\` is not a mutable field. Allowed: $MUTABLE" ;; esac
+  case " $MUTABLE " in *" $k "*) ;; *) die "\`$k\` is not a mutable field. Allowed: $MUTABLE (files: use \`ck-story files\`)" ;; esac
   case "$k" in
     status)
       case "$v" in todo|in-progress|done|skip|bug) ;; *) die "status must be todo|in-progress|done|skip|bug (got: $v)" ;; esac ;;
@@ -74,64 +63,73 @@ validate() {
   esac
 }
 
-# plan_root STORYFILE — tasks/<slug> for a story at tasks/<slug>/epics/NN_*/stories/*.md
-plan_root() {
-  local d; d="$(dirname "$1")"          # …/stories
-  d="$(dirname "$d")"                    # …/epics/NN_slug
-  d="$(dirname "$d")"                    # …/epics
-  d="$(dirname "$d")"                    # tasks/<slug>
-  printf '%s' "$d"
-}
-
-# fm_get FILE KEY — one frontmatter scalar, quotes stripped.
-fm_get() {
-  awk -v key="$2" '
-    function unquote(s) { if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s=substr(s,2,length(s)-2); return s }
-    { sub(/\r$/,"") }
-    FNR==1 && $0!="---" { exit } FNR==1 { next }
-    $0=="---" { exit }
-    { i=index($0,":"); if(i>0){ k=substr($0,1,i-1); v=substr($0,i+1)
-        gsub(/^[ \t]+|[ \t]+$/,"",k); gsub(/^[ \t]+|[ \t]+$/,"",v)
-        if(k==key){ print unquote(v); exit } } }
-  ' "$1"
+# regenerate PLANS NO_BOARD — the views, then (unless told not to) the board.
+regenerate() {
+  local plans="$1" no_board="$2" p idx_err idx_rc out rc
+  while IFS= read -r p; do
+    [ -n "$p" ] && [ -d "$p" ] || continue
+    # Capture stderr only so a `ck-index: WARN —` line still reaches the caller.
+    idx_err="$(ck_run ck-index "$p" 2>&1 >/dev/null)"
+    idx_rc=$?
+    if [ "$idx_rc" -eq 0 ]; then
+      echo "ck-story: regenerated $p/STORIES_INDEX.md + tasks/EPICS_INDEX.md"
+    else
+      echo "ck-story: WARN — could not run ck-index for $p; the generated views are now stale." >&2
+    fi
+    [ -n "$idx_err" ] && printf '%s\n' "$idx_err" >&2
+    [ "$no_board" -eq 1 ] && continue
+    if ck_in_story_worktree; then
+      echo "ck-story: story worktree — board sync left to the orchestrator after the merge."
+      continue
+    fi
+    # Never fatal: a board that is down must not block a build. ck-project decides for
+    # itself whether there is a board; its last line says what it did.
+    out=$(ck_run ck-project sync "$p" 2>&1)
+    rc=$?
+    if [ "$rc" -eq 127 ]; then
+      echo "ck-story: WARN — ck-project not found; delivery and board not synced." >&2
+    elif [ "$rc" -ne 0 ]; then
+      echo "ck-story: WARN — ck-project sync reported a failure (board may lag):" >&2
+      printf '%s\n' "$out" | tail -3 >&2
+    else
+      printf '%s\n' "$out" | tail -1
+    fi
+  done <<<"$plans"
 }
 
 CMD="${1:-}"; [ -n "$CMD" ] && shift
 case "$CMD" in
   -h|--help|"") usage; exit 0 ;;
 
-  path)
-    ID="${1:-}"
-    case "$ID" in ''|*[!0-9-]*) die "path needs a story id (EE-SS), got: ${ID:-<empty>}" ;; esac
-    EE="${ID%%-*}"
-    match=""
-    while IFS= read -r f; do
-      [ -n "$f" ] || continue
-      [ "$(fm_get "$f" id)" = "$ID" ] && match="$match$f"$'\n'
-    done < <(find tasks -type f -path "*/epics/${EE}_*/stories/*.md" 2>/dev/null | sort)
-    n=$(printf '%s' "$match" | grep -c . || true)
-    [ "$n" -eq 0 ] && die "no story with id $ID under tasks/"
-    if [ "$n" -gt 1 ]; then
-      printf '%s' "$match" >&2
-      die "id $ID resolves to $n files (colliding epic numbers) — run /ck-code:migrate; never pick one"
-    fi
-    printf '%s' "$match"
-    exit 0
-    ;;
-
   get)
     F="${1:-}"; [ -f "$F" ] || die "no such story file: ${F:-<empty>}"
     shift
     if [ "$#" -eq 0 ]; then
-      awk '{ sub(/\r$/,"") } FNR==1 && $0!="---" { exit } FNR==1 { next } $0=="---" { exit } { print }' "$F"
+      ck_fm_dump "$F"
     else
-      for k in "$@"; do printf '%s: %s\n' "$k" "$(fm_get "$F" "$k")"; done
+      for k in "$@"; do printf '%s: %s\n' "$k" "$(ck_fm "$F" "$k")"; done
     fi
     exit 0
     ;;
 
+  files)
+    F="${1:-}"; [ -f "$F" ] || die "no such story file: ${F:-<empty>}"
+    shift
+    [ "$#" -gt 0 ] || die "files needs at least one path (usage: ck-story files <story.md> <path>…)"
+    old="$(ck_fm "$F" files)"
+    merged="$( { ck_flow_list "$old"; for p in "$@"; do printf '%s\n' "${p#./}"; done; } | grep -v '^$' | LC_ALL=C sort -u)"
+    new="[$(printf '%s\n' "$merged" | awk 'NR>1{printf ", "} {printf "%s", $0}')]"
+    if [ "$new" = "$old" ]; then
+      echo "ck-story: files already current — no change"
+      exit 0
+    fi
+    ck_fm_set "$F" files "$new" || die "could not write files: to $F"
+    echo "ck-story: $(ck_fm "$F" id): files $old → $new"
+    exit 0
+    ;;
+
   set) ;;
-  *) die "unknown command: $CMD (set|get|path)" ;;
+  *) die "unknown command: $CMD (set|files|get)" ;;
 esac
 
 # ---- set ---------------------------------------------------------------------
@@ -158,35 +156,22 @@ done
 
 PLANS=""
 SUMMARY=""
+FAILED=0
 while IFS= read -r f; do
   [ -n "$f" ] || continue
-  sid="$(fm_get "$f" id)"; [ -n "$sid" ] || sid="$(basename "$f")"
+  sid="$(ck_fm "$f" id)"; [ -n "$sid" ] || sid="$(basename "$f")"
   changes=""
   i=0
   while IFS= read -r k; do
     [ -n "$k" ] || continue
     i=$((i+1))
     v="$(printf '%s' "$VALS" | sed -n "${i}p")"
-    old="$(fm_get "$f" "$k")"
+    old="$(ck_fm "$f" "$k")"
     [ "$old" = "$v" ] && continue
-    tmp="$(mktemp "$f.ckstory.XXXXXX")" || die "could not create a temp file next to $f"
-    CKSTORY_TMP="$tmp"
-    # Rewrite in place, inside the FIRST frontmatter fence only. A key that is absent is
-    # appended just before the closing fence, so a plan scaffolded without `prior_status`
-    # still accepts one without hand-editing.
-    awk -v key="$k" -v val="$v" '
-      BEGIN { seen=0; done=0 }
-      NR==1 { print; if ($0!="---") { passthru=1 } ; next }
-      passthru { print; next }
-      !done && $0=="---" { if (!seen) print key ": " val ; done=1; print; next }
-      !done { i=index($0,":")
-              if (i>0) { kk=substr($0,1,i-1); gsub(/^[ \t]+|[ \t]+$/,"",kk)
-                         if (kk==key) { print key ": " val; seen=1; next } }
-              print; next }
-      { print }
-    ' "$f" > "$tmp" && cat "$tmp" > "$f"
-    rm -f "$tmp"
-    CKSTORY_TMP=""
+    if ! ck_fm_set "$f" "$k" "$v"; then
+      FAILED=$((FAILED+1))
+      continue
+    fi
     changes="$changes${changes:+, }$k ${old:-∅} → ${v:-∅}"
   done <<<"$KEYS"
   if [ -n "$changes" ]; then
@@ -194,44 +179,20 @@ while IFS= read -r f; do
   else
     SUMMARY="$SUMMARY  $sid: already current — no change"$'\n'
   fi
-  p="$(plan_root "$f")"
+  p="$(ck_plan_of "$f")"
   case "$PLANS" in *"$p"$'\n'*) ;; *) PLANS="$PLANS$p"$'\n' ;; esac
 done <<<"$FILES"
 
 printf 'ck-story: updated\n%s' "$SUMMARY"
 
 if [ "$NO_SYNC" -eq 1 ]; then
-  echo "ck-story: --no-sync — indexes and board NOT regenerated (orchestrator regenerates after merge)."
-  exit 0
+  echo "ck-story: --no-sync — indexes and board NOT regenerated."
+else
+  regenerate "$PLANS" "$NO_BOARD"
 fi
 
-while IFS= read -r p; do
-  [ -n "$p" ] || continue
-  [ -d "$p" ] || continue
-  # Capture stderr only (stdout discarded) so a `ck-index: WARN —` line (e.g. a
-  # story missing `id`) still reaches the caller instead of being swallowed here.
-  idx_err="$(run_tool ck-index "$p" 2>&1 >/dev/null)"
-  idx_rc=$?
-  if [ "$idx_rc" -eq 0 ]; then
-    echo "ck-story: regenerated $p/STORIES_INDEX.md + tasks/FEATURE_INDEX.md"
-  else
-    echo "ck-story: WARN — could not run ck-index for $p; the generated views are now stale." >&2
-  fi
-  [ -n "$idx_err" ] && printf '%s\n' "$idx_err" >&2
-  [ "$NO_BOARD" -eq 1 ] && continue
-  # The board is one more generated view: a no-op without tasks/SETTINGS.md or with
-  # github_issues off, and NEVER fatal — a board that is down must not block a build.
-  out=$(run_tool ck-project sync "$p" 2>&1)
-  rc=$?
-  if [ "$rc" -eq 127 ]; then
-    echo "ck-story: WARN — ck-project not found; board not synced." >&2
-  elif printf '%s' "$out" | grep -q 'no tasks/SETTINGS.md\|github_issues'; then
-    # Not a failure: a project that never opted into issue tracking has no board to sync.
-    echo "ck-story: no GitHub board configured — board sync skipped."
-  elif [ "$rc" -ne 0 ]; then
-    echo "ck-story: WARN — ck-project sync reported a failure (board may lag):" >&2
-    printf '%s\n' "$out" | tail -3 >&2
-  else
-    printf '%s\n' "$out" | tail -1
-  fi
-done <<<"$PLANS"
+if [ "$FAILED" -gt 0 ]; then
+  echo "ck-story: ERROR — $FAILED write(s) failed; see the messages above." >&2
+  exit 1
+fi
+exit 0
