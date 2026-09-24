@@ -1,7 +1,12 @@
 # GitHub Projects Board — Shared Contract
 
-One definition, six consumers (`config`, `ship`, `build`, `fix`, `sync`, `doctor`). Never
+One definition, six consumers (`config`, `plan`, `ship`, `build`, `fix`, `doctor`). Never
 restate these rules in a skill file — link here.
+
+**A board is optional.** Delivery reconciliation (`ck-project sync`, `reconcile`, `landed`)
+works in a project with no board, no `tasks/SETTINGS.md` and `github_issues` off: it
+reconciles `delivery:` from the recorded PRs and from git, regenerates the views, and skips
+only the card moves. A board is provisioned with `/ck-code:config board`.
 
 ## The board is a generated view
 
@@ -17,9 +22,10 @@ costs **two** `gh` calls and changes nothing.
 
 ## Configuration — `tasks/SETTINGS.md`
 
-Flat frontmatter, same format contract as story files (one key per line, no block
-scalars). `github_issues` is the master switch: `false` or absent makes every board
-call a no-op. `trunk_branch` (optional) names the branch a merged PR must land on for a
+Written by `/ck-code:config board` (and `config on|off|trunk`). Flat frontmatter, same
+format contract as story files (one key per line, no block scalars). `github_issues` is
+the master switch: `false` or absent makes every board and issue call a no-op, while
+delivery reconciliation still runs. `trunk_branch` (optional) names the branch a merged PR must land on for a
 story to count as delivered; absent, it is the repo's default branch
 ([`branch-topology.md`](branch-topology.md#resolution)).
 
@@ -68,18 +74,20 @@ An epic needs no `delivery` of its own for this: the rollup reads its stories.
 ## Reconciliation — how `delivery: merged` happens
 
 A PR is merged on github.com, with no ck-code skill running. So `sync` re-derives delivery
-before it places any card:
+before it places any card (and does exactly this, minus the cards, when there is no board):
 
-1. collect every `pr:` in the plan (story frontmatter, then `EPIC.md` for inherited ones);
-2. **one batched call** — `gh pr list --state all --limit 200 --json number,state,baseRefName`
-   — never one call per story;
+1. collect every `pr:` in the plan (story frontmatter, then `EPIC.md`, then the plan
+   record `OVERVIEW.md` for inherited ones);
+2. **one batched call** — `gh pr list --state all --limit 500 --json number,state,baseRefName`
+   — never one call per story, and none at all when no `pr:` in scope can still change;
 3. `MERGED` into `trunk_branch` → write `delivery: merged`; `OPEN` → `delivery: pr`;
    `CLOSED` unmerged → reset `delivery` to empty and warn; merged into some *other* base →
    leave as `pr` and warn;
 4. regenerate the views, then place the cards.
 
-**Inheritance is materialized, never re-derived.** A story that resolved its state through
-its epic's `pr:` gets **both** fields written onto itself — `delivery:` *and* the `pr:`
+**Inheritance is materialized, never re-derived.** Resolution walks story → epic → plan:
+the story's own `pr:`, else its epic's, else its plan's. A story that resolved its state
+through an epic or plan `pr:` gets **both** fields written onto itself — `delivery:` *and* the `pr:`
 number it resolved through. So `ck-index`, `track` and `ck-doctor` each read one field on
 one file and no consumer implements the walk-up a second time; the rule lives in `sync`
 alone. Writing only `delivery:` is what left epic-level stories rendering a bare `PR` in
@@ -87,7 +95,7 @@ alone. Writing only `delivery:` is what left epic-level stories rendering a bare
 had to be repaired by a hand-made "anchor delivered work" commit.
 
 A materialized anchor is dropped again if its PR is **closed without merging**: the story
-falls back to whatever `pr:` its epic carries now, so a replaced epic PR flows through
+falls back to whatever `pr:` its epic or plan carries now, so a replaced epic PR flows through
 instead of the story re-resolving a dead number on every sync.
 
 ### Work that never had a PR
@@ -106,8 +114,9 @@ is the answer for that case, and git supplies it:
 The certain test reads the **story file on the trunk**, not the branch graph, because
 `ship` stages the frontmatter flip with the code it describes — and because the branch is
 usually deleted the moment the merge lands, which leaves ancestry with nothing to test. The
-"arrived with code" clause is what stops `/ck-code:sync`'s own `chore(plan)` commit from
-reading as a delivery: that commit carries the story file to the trunk and nothing else.
+"arrived with code" clause is what stops `/ck-code:doctor --fix`'s own
+`chore(tasks): reconcile delivery with GitHub` commit from reading as a delivery: that
+commit carries the story file to the trunk and nothing else.
 
 The likely tier is never automatic. "Every `files:` path exists on `main`" is equally true
 of files a later story created, and a false positive marks unshipped work as delivered and
@@ -132,18 +141,28 @@ ck-project init --project 7              # adopt an existing board (never mutate
 ck-project init --project 7 --extend     # adopt it AND add any missing preset columns
 ck-project init --project 7 --reorder    # rewrite the existing option order to the preset
 ck-project init --create "My Roadmap"    # create, link to the repo, provision 7 columns
-ck-project sync [tasks/<slug>]           # reconcile delivery from GitHub, then every card
-ck-project landed [tasks/<slug>]         # find work merged to the trunk with no PR
+ck-project reconcile [tasks/<plan>]      # THE full pass: landed + PR delivery + views + board + issues
+ck-project sync [tasks/<plan>]           # delivery + views + board (no board: delivery + views)
+ck-project landed [tasks/<plan>]         # find work merged to the trunk with no PR
 ck-project landed --include-likely       # also apply the candidates git cannot prove
-ck-project backfill [tasks/<slug>]       # recover pr: for work shipped before 6.4
+ck-project backfill [tasks/<plan>]       # recover pr: for work shipped before 6.4
 ck-project closes <story|epic-dir|plan>  # print a PR body's Closes footer
-ck-project issues [tasks/<slug>]         # close delivered issues, tick epic checklists
-ck-project set <issue> <role>            # one-shot push (manual escape hatch)
+ck-project issues [tasks/<plan>]         # close delivered issues, tick epic and plan checklists
 ck-project show                          # print resolved settings
 ```
 
-`--dry-run` on `init`, `sync`, `landed`, `backfill` and `issues` prints every change and
-makes none. **`landed` needs neither `gh` nor a board** — it reads git and frontmatter, so
+**`reconcile` is the one pass every caller uses** (`ship` before staging, `config` after a
+board change, `/ck-code:doctor --fix`): `sync` (certain-tier landings, PR delivery, the
+views, the board when there is one), then `issues` when `github_issues: true`. Each step
+depends on the one before it: an issue is closed only once delivery says the work is on
+the trunk. There is no command that moves one card by hand; change the frontmatter
+(`ck-story set`) and the next sync places the card.
+
+`discover` and `init` are driven by `/ck-code:config board`, which creates or adopts the
+board and writes its mapping to `tasks/SETTINGS.md`.
+
+`--dry-run` on `init`, `reconcile`, `sync`, `landed`, `backfill` and `issues` prints every
+change and makes none. **`landed` needs neither `gh` nor a board** — it reads git and frontmatter, so
 it works in a project that never enabled `github_issues`, where `STORIES_INDEX.md` still
 renders the Delivery cell.
 
@@ -174,7 +193,7 @@ closed none. `ck-project closes` answers it from frontmatter instead:
 |---|---|
 | a story `.md` | `Closes #<story issue>` |
 | an epic directory (or its `EPIC.md`) | the epic issue, then every non-`skip` story issue under it |
-| a plan directory `tasks/<slug>` | every `integration: feature` epic of the plan, each with its stories |
+| a plan directory `tasks/<plan>` | the plan issue, then every epic of the plan with its stories, only when `OVERVIEW.md` says `integration: plan` (otherwise nothing, with a warning: no single PR carries the plan) |
 
 It reads frontmatter only — no `gh`, no network, no board — so `ship` can build a body on a
 machine that never authenticated. No output means no linked issues (a valid answer, printed
@@ -197,7 +216,8 @@ open issue, which nothing else repairs.
 |---|---|
 | close a story issue | story is `status: done` **and** `delivery: merged` or `direct`, issue still OPEN |
 | close an epic issue | every non-`skip` story of the epic rolls up to `done` |
-| tick an epic checklist | a delivered story's item is still `- [ ]` |
+| close the plan issue | every epic of the plan rolls up to `done` |
+| tick an epic or plan checklist | a delivered story's item is still `- [ ]` in the epic issue or the plan issue (`OVERVIEW.md` `issue:`) |
 | append a `Closes` line | an **OPEN** PR in the plan whose body names none of the issues it delivers |
 
 Frontmatter is authoritative in **one direction only**: it may close an issue, never
@@ -206,8 +226,10 @@ follower.
 
 Checklist items are matched by `#<story issue>`, else the padded `[EE-SS]` — the tokens
 `ship` writes. `#13` is anchored against a following digit so it cannot tick `#130`, and
-the brackets are why `[02-01]` never matches `[02-10]`. An epic body's own acceptance
-criteria carry no such token, which is what keeps them untouched.
+the brackets are why `[02-01]` never matches `[02-10]`. A plan issue body (from
+`/ck-code:plan --publish --mode plan`) lists stories by `[EE-SS]` even once they have
+issues, so both tokens are tried there. An issue body's own acceptance criteria carry no
+such token, which is what keeps them untouched.
 
 A PR body is **appended to, never rewritten**: a footer already present in any closing form
 (`closes #17`, `Fixes #17`) is left exactly as its author wrote it.
@@ -220,17 +242,19 @@ later. Three places look:
 | Trigger | Cost | What it does |
 |---|---|---|
 | `session-start.sh` | local read of `STORIES_INDEX.md`, no network | counts rows whose Delivery cell reads `PR #<n>` and names the count in the session summary — a nudge, never a write |
-| `ship` §2.5 | one `sync` before staging | applies the flip so it rides the commit already being made, instead of needing its own PR |
+| `ship` §2.5 | one `reconcile` before staging | applies the flip so it rides the commit already being made, instead of needing its own PR |
+| `/ck-code:config board` | one `reconcile` after a board change | places every card on the new or re-mapped board |
 | `ck-doctor` `board` row | one board read | reports a card sitting in a column the two axes do not call for |
-| `/ck-code:sync` | the full pass | `backfill` + `landed` + `sync` + `issues`, previewed and confirmed once, then commits the `tasks/` diff |
+| `/ck-code:doctor --fix` | the full pass | `reconcile`, then `landed` with one multi-select for the unproven candidates, then commits the changed story, epic and plan files (never the views) as `chore(tasks): reconcile delivery with GitHub` |
 
 The hook stays a nudge on purpose: a `SessionStart` hook that called the network would
 delay every session start and fail on an unauthenticated machine.
 
 `build`, `fix` and `ship` reconcile as a side effect of their own job, so a project used
-normally stays correct. `/ck-code:sync` is for when it has not been: work merged in the
-browser, issues closed by hand, a plan published after the fact, or a repo adopted from
-someone else.
+normally stays correct. `/ck-code:doctor --fix` is for when it has not been: work merged in
+the browser, issues closed by hand, a plan published after the fact, or a repo adopted from
+someone else. A likely landing the user confirms there is applied with
+`ck-story set <story> delivery=direct`.
 
 **`--reorder`** rewrites an existing board's option order to the preset, rearranging only
 the columns already there — it does **not** imply `--extend`, because `--extend` matches
@@ -278,6 +302,7 @@ the missing columns at the end, unless `--reorder` is passed.
 - **Never treat a missing column as an error** — an empty `board_<role>` is a supported configuration, not a misconfiguration. A board with no Ready to Ship or Bugs column is fully supported.
 - **Never write board state into story frontmatter** — the board is derived from it, never the reverse. `delivery` is not board state: it is GitHub's answer about a PR, cached where every fact lives.
 - **Never apply the likely tier of `landed` without a human confirming it** — `--include-likely` exists for a person to answer, not for a skill to pass by default. Marking unshipped work `direct` moves its card to Done and closes its issue.
-- **Never set `delivery: direct` by hand, and never on a story that has a `pr:`** — a story with a PR is `pr` or `merged`, and only `sync` decides which; `ck-doctor` reports the combination.
+- **Never set `delivery: direct` except from `ck-project landed` or a likely candidate the user confirmed in `/ck-code:doctor --fix` (`ck-story set <story> delivery=direct`), and never on a story that has a `pr:`** — a story with a PR is `pr` or `merged`, and only `sync` decides which; `ck-doctor` reports the combination.
 - **Never resolve PR state one story at a time** — one batched `gh pr list` per plan, never a `gh pr view` per card.
-- **Always run `ck-project sync` in the same phase** as the `ck-index` that follows a status change, so the view and the board move together. `ck-story set` does both for you and is the preferred path; reach for the pair directly only when the change is not a story-state field.
+- **Always change story state with `ck-story set`**, which regenerates the views and syncs the board in the same call. Reach for `ck-index` + `ck-project sync` directly only when the change is not a story-state field.
+- **Never commit a view or a board change**: the board is remote and the views are gitignored; only story, epic and plan files are committed.
