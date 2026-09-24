@@ -194,6 +194,31 @@ ck_views_fresh() {
   return 0
 }
 
+# ck_version_lt A B — 0 when dotted version A sorts before B (7.0.0 < 7.0.10 < 7.1.0).
+ck_version_lt() {
+  awk -v a="$1" -v b="$2" 'BEGIN {
+    na = split(a, x, "."); nb = split(b, y, "."); n = (na > nb) ? na : nb
+    for (i = 1; i <= n; i++) { p = x[i] + 0; q = y[i] + 0
+      if (p < q) exit 0
+      if (p > q) exit 1 }
+    exit 1 }'
+}
+
+# ck_stamp KEY — one line of tasks/VERSION.md (`layout`, `requires`), value only.
+# `requires: ck-code >= 7.0.0` yields `7.0.0`.
+ck_stamp() {
+  [ -f tasks/VERSION.md ] || return 0
+  awk -v k="$1" -F: '$1==k { v=$2; for (i=3;i<=NF;i++) v=v ":" $i
+      gsub(/^[ \t]+|[ \t]+$/,"",v); sub(/^ck-code[ \t]*>=[ \t]*/,"",v); print v; exit }' tasks/VERSION.md
+}
+
+# ck_plugin_version — the running plugin's version, from its manifest.
+ck_plugin_version() {
+  local pj
+  pj="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)/.claude-plugin/plugin.json"
+  [ -f "$pj" ] && awk -F'"' '/"version"[[:space:]]*:/{print $4; exit}' "$pj"
+}
+
 # ck_run NAME ARGS… — run a sibling ck-code script. The sibling beside the library wins
 # over PATH, so a Workflow subagent with an empty $CLAUDE_PLUGIN_ROOT still finds it.
 # Returns 127 when neither exists.

@@ -41,7 +41,7 @@ command -v python3 >/dev/null 2>&1 || HAVE_PY=0
 
 # Used only when version-gate.md is unreadable (a copied-out script); plugin-doctor's
 # layout-const check keeps this in lockstep with the gate.
-FALLBACK_LAYOUT="v6"
+FALLBACK_LAYOUT="v7"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -90,19 +90,27 @@ fmv() { ck_fm "$1" "$2"; }
 check_layout() {
   # The expected layout major is read from the plugin's own version-gate.md so this
   # script can never drift from it; the literal fallback only covers a copied-out
-  # script run away from the plugin tree. plugin-doctor cross-checks the fallback.
-  local want got=""
+  # script run away from the plugin tree. tests/smoke.sh keeps the three in lockstep.
+  local want got req run
   want=$(awk '/^LAYOUT[ \t]*=/{print $NF; exit}' "$SCRIPT_DIR/../references/version-gate.md" 2>/dev/null)
   [ -n "$want" ] || want="$FALLBACK_LAYOUT"
-  [ -f tasks/VERSION.md ] && got=$(awk -F: '/^layout:/{gsub(/[ \t]/,"",$2);print $2;exit}' tasks/VERSION.md)
+  got=$(ck_stamp layout)
+  req=$(ck_stamp requires)
+  run=$(ck_plugin_version)
   if [ -z "$got" ]; then
     row layout "tasks/VERSION.md missing" ERROR
     note "run /ck-code:migrate — every change-producing skill blocks until it is stamped"
+  elif [ "${got#v}" -gt "${want#v}" ] 2>/dev/null; then
+    row layout "stamped $got, newer than this ck-code ($want)" ERROR
+    note "update the plugin: /plugin update ck-code@ck-marketplace — never migrate a newer layout"
   elif [ "$got" != "$want" ]; then
     row layout "stamped $got, expected $want" ERROR
     note "run /ck-code:migrate to upgrade this project to $want"
+  elif [ -n "$req" ] && [ -n "$run" ] && ck_version_lt "$run" "$req"; then
+    row layout "$got, requires ck-code >= $req, running $run" ERROR
+    note "update the plugin: /plugin update ck-code@ck-marketplace"
   else
-    row layout "$got" OK
+    row layout "$got${req:+ (requires >= $req)}" OK
   fi
 
   if ls .claude/skills/experts/*/SKILL.md .claude/skills/guides/*/SKILL.md >/dev/null 2>&1; then

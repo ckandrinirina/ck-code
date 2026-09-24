@@ -73,12 +73,24 @@ fi
 while IFS="$US" read -r glyph label desc tok id cwd; do
   [ -n "$glyph" ] || continue
 
-  # Criteria progress: id → story file through the worktree's OWN index, counted in
-  # the worktree's OWN copy — the agent ticks boxes there, so the main checkout reads
-  # 0% until the merge lands. One awk does both: the index rows come from ARGV, the
-  # story file is pulled in with getline, so a row costs one process here, not two.
+  # Criteria progress, counted in the worktree's OWN copy of the story — the agent ticks
+  # boxes there, so the main checkout reads 0% until the merge lands. The views are not
+  # committed, so a worktree has none: the story is found by its `id:` among the
+  # worktree's own story files. Only `## Acceptance Criteria` boxes count.
   crit=""
-  if [ -n "$id" ] && [ -n "$cwd" ] && [ -d "$cwd" ]; then
+  own=""
+  if [ -n "$id" ] && [ -n "$cwd" ] && [ -d "$cwd/tasks" ]; then
+    own=$(find "$cwd/tasks" -path '*/epics/*/stories/*.md' -type f \
+            -exec grep -lE "^id:[[:space:]]*[\"']?${id}[\"']?[[:space:]]*\$" {} + 2>/dev/null | head -1)
+  fi
+  if [ -n "$own" ]; then
+    crit=$(awk '
+      /^## / { inac = ($0 ~ /^## +Acceptance Criteria/); next }
+      !inac { next }
+      /^[[:space:]]*-[[:space:]]*\[[xX]\]/ { d++ }
+      /^[[:space:]]*-[[:space:]]*\[ \]/    { o++ }
+      END { t = d + o; if (t > 0) printf "%d/%d %d%%", d, t, (d * 100) / t }' "$own" 2>/dev/null)
+  elif [ -n "$id" ] && [ -n "$cwd" ] && [ -d "$cwd" ]; then
     # Candidate indexes, nearest first: the worktree's own plan, then every ancestor
     # holding one. A multi-repo project keeps `tasks/` above the code repo, so the
     # worktree may hold no plan at all — or a stale one whose ids collide.
@@ -94,8 +106,8 @@ while IFS="$US" read -r glyph label desc tok id cwd; do
       d=${d%/*}; [ -n "$d" ] || d="/"
       depth=$((depth + 1))
     done
-    # `02-01` names a story in EVERY feature; the agent's own branch slug is the only
-    # thing that says which one, so it decides between plans that both claim the id.
+    # A multi-repo project keeps `tasks/` above the code repo, so an ancestor's view is
+    # the fallback; the agent's branch slug decides between plans claiming the id.
     bslug=$(git -C "$cwd" branch --show-current 2>/dev/null | awk -F/ '
       NF > 1 { s = $NF; sub(/^[0-9]+-[0-9]+-/, "", s); print s }')
     [ "$#" -gt 0 ] && crit=$(awk -F'|' -v want="$id" -v bslug="$bslug" '
@@ -117,6 +129,8 @@ while IFS="$US" read -r glyph label desc tok id cwd; do
       END {
         if (f == "") exit
         while ((getline line < f) > 0) {
+          if (line ~ /^## /) { inac = (line ~ /^## +Acceptance Criteria/); continue }
+          if (!inac) continue
           if      (line ~ /^[[:space:]]*-[[:space:]]*\[[xX]\]/) done_++
           else if (line ~ /^[[:space:]]*-[[:space:]]*\[ \]/)    open_++
         }
