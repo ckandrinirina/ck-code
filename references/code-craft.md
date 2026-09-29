@@ -52,8 +52,12 @@ something the code cannot.
 - leaves a bare `TODO`/`FIXME` — either do it now or write `TODO(<story-id>): <what>`
 - mentions AI, Claude, or the assistant ([`no-ai-references.md`](no-ai-references.md))
 
-**Form.** One line where one line suffices; a short paragraph only for an invariant or
-algorithm that needs it. Precise and present tense — *what is true*, not what you did.
+**Form.** Fewest words that stay precise — every comment is read, and paid for in tokens,
+on every future pass. One line where one line suffices; a short paragraph only for an
+invariant or algorithm that needs it. Fragments are fine (`// UTC; caller converts`); drop
+filler (`This function…`, `Note that…`, `Basically…`) and never restate a name, param or
+type the signature already shows. Precise and present tense — *what is true*, not what you did.
+Short never means vague: keep the unit, the limit, the issue link.
 Placed on the line above the code it explains, never trailing a long line. A comment is
 part of the code: change the code, update or delete the comment. A stale comment is a bug.
 
@@ -62,7 +66,8 @@ part of the code: change the code, update or delete the comment. A stale comment
 Run against the story's diff in `build` Phase 6.1, right after the redundancy scan — the
 added or changed lines only, never the whole repo. Four checks, in order:
 
-1. **Restating comments** — every comment the code already says. Delete it.
+1. **Restating or wordy comments** — every comment the code already says: delete it. Every
+   comment longer than its content needs: trim it to the **Form** above.
 2. **Missing why** — every place a reviewer would ask "why this?": a non-obvious branch,
    a magic-looking value, a workaround, an ordering dependency. Add one precise line, or
    rename/restructure so the question disappears.

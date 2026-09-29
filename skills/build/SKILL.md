@@ -416,7 +416,8 @@ files; (3) run the story's test files after each significant change; (4) stop as
 over-engineer. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
 existing code (check `docs/architecture/`, scan files); simplest code that passes; write to
 the clean-code and comment standard in [`code-craft.md`](../../references/code-craft.md) —
-names that explain themselves, comments only where they say *why*. **Log unplanned changes
+names that explain themselves, comments only where they say *why*, in the fewest precise
+words. **Log unplanned changes
 incrementally** — any file touched outside the
 story's `files:` set gets one line in a `## Unplanned Changes` body section in the same Edit
 pass: `- <path> — <what> — <why>`. Record at the moment of change; empty section = omit the
@@ -442,7 +443,7 @@ review that uncovers a structural problem escalates to the FULL template before 
 (reimplementation, copy-paste, dead code, needless indirection, unasked-for surface), at both
 routes, no template. **Then the comment & readability scan** — the four checks in
 [`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)
-(restating comments, missing *why*, doc comments, readability), same diff, same routes. Each
+(restating or wordy comments, missing *why*, doc comments, readability), same diff, same routes. Each
 hit from either scan is an ISSUE for 6.2 like any SOLID violation.
 
 **6.2 Apply refactorings.** For each issue: apply the refactoring, run the story's test files (must stay green),
@@ -718,7 +719,7 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
 - **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy scan runs in full at both routes.
 - **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)).
-- **Never ship a comment that restates the code, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)).
+- **Never ship a comment that restates the code or runs longer than it needs, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)).
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
   claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
   failure is one reported line, not a stop.
