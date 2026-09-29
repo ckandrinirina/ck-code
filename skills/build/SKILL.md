@@ -91,8 +91,17 @@ commands, never from skipping a check:
   past the 600 s Bash cap (a serial e2e suite) prints `ck-qa: RUNNING`. Continue it with
   `ck-qa wait <id>`, and never start it again or poll its output.
 - **Keep the inner loop targeted.** RED (4.4), GREEN iterations (5.2/5.3), and each
-  refactoring (6.2) run the story's own test files. The full suite runs at 6.3 and in QA
-  (7), where regressions are caught.
+  refactoring (6.2) run the story's own test files. Lint only the files the story touched,
+  by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,
+  `ruff check app/x.py`). Never run a package-wide lint and `grep` it for one file: measured
+  at 60–120 s a call, it ran up to seven times in one story. A package-wide typecheck runs at
+  most once per GREEN subtask, logged, and the build never runs in the inner loop. The full
+  suite, package-wide lint, typecheck and build run once through `ck-qa`, at 6.3 and in QA
+  (7), where regressions are caught. A linter that takes no file paths waits for 6.3/7 too.
+- **Stay inside the repo.** Never `find /` or search `$HOME`, because each such search hit the
+  120 s Bash timeout. A relative link in this skill (`references/story-template.md`)
+  resolves against the `Base directory for this skill` line printed when the skill loaded.
+  A dependency's types live in the repo's own `node_modules`: the package's, then the root's.
 
 ## PHASE 0: VERSION GATE (hard, before any project read/write)
 
@@ -719,8 +728,11 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never edit a test to force GREEN.**
 - **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
   wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner
-  loop is targeted. The full suite runs at 6.3, and Phase 7 reuses that pass through
-  `ck-qa --reuse` when the tree has not changed since.
+  loop is targeted: the story's test files, and lint on touched files only. Never run a
+  package-wide lint to check one file, and never build in the inner loop. The full suite
+  runs at 6.3, and Phase 7 reuses that pass through `ck-qa --reuse` when the tree has not
+  changed since.
+- **Never `find /` or search outside the repo** — resolve skill references against the skill's base directory and dependency types in the repo's `node_modules`.
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 
