@@ -486,6 +486,37 @@ inline Phase 7 uses it too, via [tdd-walkthrough.md](tdd-walkthrough.md) § Phas
 A project's `guide-conventions` skill overrides this table when it names canonical commands.
 No manifest match → ask once and reuse.
 
+### Affected tests — the story-level test command
+
+A story's own checks, the delegated 6.3 + 7 run and P7, run **only the tests its diff can
+affect**: those importing a changed file, plus the story's own new or changed test files,
+e2e specs included. The **full suite runs once per wave**, in the P8 post-wave QA, which
+is what catches a regression outside the story's import graph. Lint, typecheck and build are
+never scoped: they stay the full rows above, and a fresh typecheck/build of the committed
+branch is what still catches a file the agent forgot to `git add`. `<base>` is the
+dispatch's `Base SHA`.
+
+| Runner | Affected-tests command (the `test=` label) |
+| --- | --- |
+| vitest | `npx vitest run --changed <base> --passWithNoTests` |
+| jest | `npx jest --changedSince <base> --passWithNoTests` |
+| Playwright e2e | `npx playwright test --only-changed=<base> --pass-with-no-tests` |
+| go | `go test` on the touched packages (`go test ./internal/auth/... ./internal/api/...`) |
+| anything else (pytest, cargo, CMake, a custom runner) | the full test row above, unchanged |
+
+Run the command through the package's own runner when the suite needs its script's env
+(`pnpm --filter web exec vitest run --changed <base> --passWithNoTests`). A project whose
+test script adds setup, such as a test database or a `.env.test`, keeps that setup and only
+appends the flag. An e2e suite that runs through a wrapper script appends the flag to the
+script.
+
+**Fall back to the full test row** when the diff (`git diff --name-only <base>`) touches
+anything the import graph cannot trace. That covers test or runner config (`vitest.config.*`,
+`jest.config.*`, `playwright.config.*`, `tsconfig*.json`), `package.json` or a lockfile, env
+files, DB migrations or schema, global test setup, and shared fixtures or seed data. Never
+scope P8, and never scope inline Phase 7. Inline 6.3 already runs the full suite once, and
+Phase 7 reuses it.
+
 **How the commands run.** Every QA pass hands them to `ck-qa run <id> …`, one
 `<label>='<command>'` per independent command
 ([`rtk.md` § QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)).
@@ -546,10 +577,14 @@ state, in this checkout, reports `REUSED` instead of running again. After a fan-
 state is new, so everything runs. The P7 runs happened in other worktrees, so they never
 count here.
 
+**The post-wave QA runs the full test row**, never the affected-tests command
+([§ Affected tests](#affected-tests--the-story-level-test-command)). It is the wave's only
+full-suite run.
+
 **Solo wave:** dispatch this post-wave QA too, even though P7 just passed on the same branch.
-If the target moved since P7 (a manual fix, an earlier wave), the state differs and the
-commands run. If nothing moved, they report `REUSED`, because P7 already checked exactly this
-tree in this checkout, and the dispatch costs one cheap call instead of a second full suite.
+P7 ran only the affected tests, so the full suite always runs here. Lint, typecheck and build
+report `REUSED` when nothing moved since P7, because P7 already checked exactly this tree in
+this checkout.
 Its failure is not a cross-branch integration failure (there was no merge); recover with a
 fix agent on `$WORKBRANCH`, or `git revert <sha>` of this wave's commits when the story must
 come back out.

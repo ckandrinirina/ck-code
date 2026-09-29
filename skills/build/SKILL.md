@@ -98,6 +98,9 @@ commands, never from skipping a check:
   most once per GREEN subtask, logged, and the build never runs in the inner loop. The full
   suite, package-wide lint, typecheck and build run once through `ck-qa`, at 6.3 and in QA
   (7), where regressions are caught. A linter that takes no file paths waits for 6.3/7 too.
+  In PARALLEL MODE, the story-level suite (delegated 6.3 + 7, P7) runs only the **affected
+  tests**. The full suite runs once per wave at P8
+  ([parallel-mode.md § Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)).
 - **Stay inside the repo.** Never `find /` or search `$HOME`, because each such search hit the
   120 s Bash timeout. A relative link in this skill (`references/story-template.md`)
   resolves against the `Base directory for this skill` line printed when the skill loaded.
@@ -656,7 +659,7 @@ is no user to ask.
 | 1.6 / 8.6 | `ck-story set … --no-sync` and `ck-story files` against the prompt's `Base SHA` — **this story's frontmatter only**; never regenerate an index or commit a view, the orchestrator regenerates once on the target after the wave. |
 | 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
 | 4–6.2 | Unchanged. RED still gates GREEN. |
-| 6.3 + 7 | **One run.** Phase 7's inline command set (full suite, lint, typecheck) is the final green check, run with `ck-qa run <id> --parallel …` (no `--reuse`, and no `--parallel` for a shared build lock). Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
+| 6.3 + 7 | **One run.** Phase 7's inline command set is the final green check. Its `test=` label is the **affected-tests** command against the prompt's `Base SHA`, or the full test row when a fallback applies ([parallel-mode.md § Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)); lint and typecheck stay full. The orchestrator's P8 runs the full suite once per wave. The check is run with `ck-qa run <id> --parallel …` (no `--reuse`, and no `--parallel` for a shared build lock). Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
 | 8.5 | Skipped — manual sign-off happens once on the target, after the wave lands. |
 | 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
 
@@ -732,6 +735,7 @@ dirty for the orchestrator. Commit messages are conventional
   package-wide lint to check one file, and never build in the inner loop. The full suite
   runs at 6.3, and Phase 7 reuses that pass through `ck-qa --reuse` when the tree has not
   changed since.
+- **Never scope the P8 post-wave QA or inline 6.3/7 to affected tests** — P8 is PARALLEL MODE's one full-suite run per wave, and inline runs the full suite once already. Story-level runs fall back to the full suite when the diff touches config, migrations, fixtures or dependencies ([§ Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)).
 - **Never `find /` or search outside the repo** — resolve skill references against the skill's base directory and dependency types in the repo's `node_modules`.
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
 - Story frontmatter is the source of truth. All output is English regardless of story language.

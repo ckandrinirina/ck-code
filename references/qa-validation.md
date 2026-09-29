@@ -41,7 +41,10 @@ regressions in previously-green tests. The suite and the Step 3 checks run toget
 ([`rtk.md` § QA runs go through `ck-qa`](rtk.md#qa-runs-go-through-ck-qa)). A suite that
 `build` 6.3 already passed on this exact tree reports `REUSED`, and that counts as its
 evidence. Read failures from the printed tail or the log, and never re-run the suite to see
-them.
+them. In `build` PARALLEL MODE, a story's P7 runs only its **affected tests**, and the
+post-wave P8 run is the full suite
+([`parallel-mode.md` § Affected tests](../skills/build/references/parallel-mode.md#affected-tests--the-story-level-test-command)).
+Run exactly the `test=` command the caller gave.
 
 ## Step 3 — Code-quality checks
 
