@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.2.1] — 2026-09-29
+
+### Changed
+- **build**: the comment standard in `references/code-craft.md` now demands the fewest words that stay precise — fragments allowed, no filler, no restated names/params/types, still keeping units, limits and issue links — and scan check 1 trims wordy comments as well as deleting restating ones, so generated code costs fewer tokens on every later read.
+
 ## [7.2.0] — 2026-09-29
 
 ### Changed
