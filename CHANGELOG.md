@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.2.0] — 2026-09-29
+
+### Changed
+- **ship**: at integration level `plan`, the feature PR (plan branch → trunk) now opens as
+  a **draft** when the first epic merges into the plan branch. Later epic merges push to it
+  and append an Updates line. The plan gate marks it ready with `gh pr ready` only once
+  every non-`skip` epic is merged. A plan PR found open for review before then is returned
+  to draft. Reviewers see the feature grow, and nobody can merge half of it.
+- **ck-project sync**: a story inherits its plan's PR only when it reads `status: done`, so
+  unbuilt stories never show *In Review* while the draft is open.
+
 ## [7.1.3] — 2026-09-29
 
 ### Changed
