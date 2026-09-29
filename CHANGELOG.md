@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.1.3] — 2026-09-29
+
+### Changed
+- **build**: in PARALLEL MODE, a story's own checks (delegated 6.3 + 7, and P7) run only the
+  tests its diff can affect: `vitest run --changed`, `jest --changedSince` and
+  `playwright test --only-changed`, each against the dispatch's `Base SHA`, and `go test` on
+  touched packages. The P8 post-wave QA runs the full suite once per wave, where a solo epic
+  used to run it twice per story and a fan-out wave up to three times. A story falls back to
+  the full suite when its diff touches runner config, `package.json` or a lockfile, env
+  files, migrations or schema, test setup, or shared fixtures. It also falls back for
+  runners with no affected-tests mode (pytest, cargo, CMake). Lint, typecheck and build stay
+  full. Inline builds are unchanged, since they already run the full suite once.
+
 ## [7.1.2] — 2026-09-29
 
 ### Changed
