@@ -85,6 +85,10 @@ EOF
 )"
 ```
 
+A plan PR opened before every epic is merged into the plan branch adds `--draft`. The plan
+gate later runs `gh pr ready <n>`
+([`branch-topology.md`](../../../references/branch-topology.md#promotion)).
+
 ## Post-Create Output
 
 ```

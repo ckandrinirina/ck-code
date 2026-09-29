@@ -763,6 +763,19 @@ EOF
   assert_contains "landed: 02-01 is marked direct" "$F_OUT" "02-01  (none) → direct"
   assert_eq "landed: frontmatter says direct" "direct" "$(ck_fm "$PJ/$S0201" delivery)"
   rm -rf "$PJ"
+
+  # G: a draft plan PR — only a finished story inherits it; an unbuilt one stays out of review.
+  fresh_copy
+  ( cd "$PJ" && ck-plan set tasks/2026-01-01_demo integration=plan pr=7 delivery=pr >/dev/null )
+  printf '[{"number":7,"state":"OPEN","baseRefName":"main"},{"number":10,"state":"MERGED","baseRefName":"main"}]\n' > "$FAKE_GH/pr-list.json"
+  G_OUT=$(cd "$PJ" && PATH="$FAKE_BIN:$PATH" ck-project sync 2>&1); G_RC=$?
+  assert_exit "sync, draft plan PR: exits 0" 0 "$G_RC"
+  assert_eq "sync, draft plan PR: a done story inherits it" "7" "$(ck_fm "$PJ/$S0201" pr)"
+  assert_eq "sync, draft plan PR: a done story is in review" "pr" "$(ck_fm "$PJ/$S0201" delivery)"
+  S0202="tasks/2026-01-01_demo/epics/02_payments/stories/02_refund.md"
+  assert_eq "sync, draft plan PR: a todo story does not inherit it" "" "$(ck_fm "$PJ/$S0202" pr)"
+  assert_eq "sync, draft plan PR: a todo story has no delivery" "" "$(ck_fm "$PJ/$S0202" delivery)"
+  rm -rf "$PJ"
   unset FAKE_GH
 else
   log_skip "ck-project fake-gh tests: jq not on PATH"

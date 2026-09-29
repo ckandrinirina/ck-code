@@ -775,6 +775,10 @@ reconcile_delivery() {
               fi
               if [ -n "$spr" ]; then
                 resolve_one "$sf" "$spr"
+              elif [ -z "$epr" ] && [ -n "$ppr" ] && [ "$(fm "$sf" status)" != "done" ]; then
+                # The plan PR opens as a draft at the first epic merge, so it is not yet
+                # proof that every story's work is in it — only a finished story inherits it.
+                :
               elif [ -n "$upr" ]; then
                 resolve_one "$sf" "$upr" inherit
               fi

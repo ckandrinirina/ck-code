@@ -428,6 +428,10 @@ gate**, both defined with their staleness handling in
   the one review. An epic PR into the plan branch would strand every story at
   `delivery: pr` — stories inherit the epic's `pr:` before the plan's, and only a PR merged
   into the trunk counts as delivered.
+  **The plan PR is a draft until every epic is in.** The first epic merge opens it with
+  `--draft` when none is open, and later merges only push to it. The plan gate turns it
+  ready with `gh pr ready <n>`. The exact rule is in
+  [`branch-topology.md`](../../references/branch-topology.md#promotion).
 
 **A promotion PR records its number, on the record its stories inherit through:**
 
@@ -535,6 +539,7 @@ phase.
 - **Never write `delivery: merged` by hand** — only `ck-project sync` (inside `reconcile`) promotes it, from GitHub's answer about the PR.
 - **Never compose a `Closes #` footer by hand** — run `ck-project closes <story|epic-dir|plan-dir>` and paste its output. GitHub closes an issue on merge only when the PR body names it, and a hand-written footer silently omits the epic issue, or every issue.
 - **Never open an epic PR at level `plan`** — the epic merges into the plan branch and the plan PR is the one review (§6.5).
+- **Never open a plan PR ready for review, or mark one ready, while any non-`skip` epic is unmerged into the plan branch.** Open it with `--draft`, and only the plan gate runs `gh pr ready` (§6.5). A draft signals that the feature is still incomplete. A ready PR invites a merge that would ship half the feature.
 - **Never open a promotion PR without re-running `ck-project sync` after recording its `pr:`** (§6.5) — the sync is what materializes the anchor onto the stories; without it they carry a `delivery:` with no `pr:`, which `ck-doctor` reports as an ERROR.
 - **Always commit dirty story / `EPIC.md` / `OVERVIEW.md` files before finishing** (§6.6) — plan bookkeeping is derived from PR numbers already in the plan, so it belongs on the current branch with no PR and no prompt. Leaving it uncommitted is what forces a hand-made "record merged delivery" PR later.
 - **Never stage or commit a generated view** — `STORIES_INDEX.md` and `EPICS_INDEX.md` are gitignored and regenerated on every read.

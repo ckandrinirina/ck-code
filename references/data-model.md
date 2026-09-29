@@ -189,7 +189,8 @@ deadlock every epic-level plan.
 own PR, so `EPIC.md` and `OVERVIEW.md` carry the same `pr`/`delivery` pair and resolution
 walks up: the story's own `pr:`, else its epic's `pr:`, else its plan's `pr:`, else
 empty. A merged epic PR delivers every story of that epic; a merged plan PR delivers
-every story of the plan.
+every story of the plan. The plan PR opens as a draft at the first epic merge, so only a
+story that reads `status: done` inherits it. An unbuilt story keeps an empty delivery.
 
 The walk-up happens in `ck-project sync` and **nowhere else**: it writes both the
 resolved `delivery:` *and* the `pr:` it resolved through onto the story, so every other

@@ -217,6 +217,16 @@ Q: "Epic <NN> is complete (<done>/<total>). Merge it into <planbr>?"
      Not yet                              -> /ck-code:ship --promote --epic <NN>
 ```
 
+**The plan PR is a draft until the plan is complete.** At level `plan`, merging an epic
+into `<planbr>` pushes the plan branch and then, if epics remain unmerged:
+
+- **No open plan PR** → open `<planbr> -> <trunk>` with `gh pr create --draft` and record
+  it (below). This is part of the confirmed merge, so it needs no question of its own.
+- **An open plan PR** → the push already updated it; append a `## Updates` line naming the
+  merged epic.
+
+If that merge was the last one, the plan gate below fires instead.
+
 The epic gate never changes the level. A user who wants a different level at this point
 runs `/ck-code:config integration` first; it applies from the next promotion onward.
 
@@ -234,10 +244,18 @@ into `<planbr>`.
 
 ```
 Q: "All <N> epics of <plan> are merged into <planbr>. Open the PR?"
-   > Open PR <planbr> -> <trunk>
+   > Open PR <planbr> -> <trunk>          or, with a draft open: Mark PR #<n> ready for review
      Push only
      Not yet                              -> /ck-code:ship --promote tasks/<plan>
 ```
+
+Marking ready is `gh pr ready <n>`. It is the only way a plan PR leaves draft, and it
+never runs while any non-`skip` epic is unmerged into `<planbr>`. A plan PR opened in any
+other way before that point (a hand-opened one, or one `--promote tasks/<plan>` finds
+already open) goes back to draft with `gh pr ready <n> --undo`.
+
+While the draft is open, `ck-project sync` passes the plan PR only to stories that read
+`status: done`. Unbuilt stories never inherit it, so they never show *In Review*.
 
 ## Cleanup
 
