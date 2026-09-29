@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.1.2] — 2026-09-29
+
+### Changed
+- **build**: the TDD inner loop now lints only the files the story touched, by path, and
+  never builds. A package-wide typecheck runs at most once per GREEN subtask. The full
+  suite, package-wide lint, typecheck and build still run once through `ck-qa`, at 6.3 and
+  in QA. Agents also never `find /` or search outside the repo. On 30 measured stories,
+  package-wide lint piped to `grep` for one file cost 35 minutes (60–120 s a call, up to
+  seven times in one story), and each `find /` for a skill reference hit the 120 s Bash
+  timeout. No gate changed.
+
 ## [7.1.1] — 2026-09-24
 
 ### Fixed
