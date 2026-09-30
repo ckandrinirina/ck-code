@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.4.1] — 2026-09-30
+
+### Changed
+- **verify**: checklist items are grouped by epic like the stories, in
+  `checklist/NN_<epic-slug>/`, with journeys and cross-epic items in `checklist/journeys/`.
+  `ck-checklist list` and `summary` show a heading and counts per epic, and `next` walks the
+  session epic by epic. `ck-checklist import` moves 7.4.0's flat items into their folders.
+
 ## [7.4.0] — 2026-09-30
 
 ### Added
