@@ -56,7 +56,8 @@ and return the verdict line.
 ### When invoked from /ck-code:build (validation pass)
 1. Read the story file and extract acceptance criteria from its body
 2. Identify which test files cover the criteria
-3. Run the supplied `ck-qa run … --reuse` line once. The suite that `build` 6.3 already
+3. Run the supplied `ck-qa run … --reuse` line once. Its scope is the caller's (story scope:
+   the affected tests and changed-file lint), so never widen it to the full suite. The suite that `build` 6.3 already
    passed on this exact tree reports `REUSED`, and that counts as its evidence. The log path
    is `${TMPDIR:-/tmp}/ck-<id>-test.log` if you need the totals. Everything else runs
 4. For each criterion, mark PASS / FAIL / NOT-COVERED

@@ -110,7 +110,7 @@ story's own test files may run bare. The rule is for the commands that cost minu
 
 ### QA runs go through `ck-qa`
 
-The full-suite check (`build` 6.3) and every QA pass (Phase 7, P7, P8) run their commands
+The suite check (`build` 6.3) and every QA pass (Phase 7, P7, P8) run their commands
 through `ck-qa`, which applies this rule mechanically and extends it **across** agents:
 
 ```bash
@@ -130,6 +130,15 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   `target/`, one CMake build tree). Those stay one chained `label='a && b'` command.
 - A command that edits the tree (a formatter, a snapshot update) prints a `WARN` and is never
   stamped. Fix the command rather than trusting that pass.
+- **A re-run checks only what is left.** Every command that ran on an unchanged tree records
+  its last run for (id, label, directory): a snapshot commit of that code state and the full
+  command. `ck-qa since <id> <label>` prints the snapshot, which is the ref a runner's
+  `--changed` flag narrows against. `ck-qa run <id> --rerun <label>='<narrowed command>'`
+  marks the command as the failed tests plus those affected since the snapshot. When it
+  passes, it stamps the label's recorded full command on the new state, so a later `--reuse`
+  of that command reports `REUSED`. It is refused when the label has no recorded run in this
+  directory. The narrowed commands per runner are in
+  [`parallel-mode.md` § Re-runs after a failure](../skills/build/references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left).
 - **A run can outlast one Bash call.** One Bash call is capped at 600 s, after which Claude
   Code moves it to the background. A serial e2e suite passes that cap. An agent then polls an
   empty output file or starts a second copy of the suite against the same test database.
@@ -147,7 +156,7 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
 | Phase | Command | Why it matters |
 |---|---|---|
 | `build` Phase 4/6 — the TDD loop | the project's `test` command | run on every RED and GREEN of each one-behaviour cycle; `rtk test` returns failures only |
-| `build` Phase 7 / `ck-code:qa-validator` | full suite + lint + typecheck | the biggest single output in the workflow, and it repeats per QA iteration (cap 3). `ck-qa` keeps it out of RTK's reach, so its tail cap is what bounds it |
+| `build` Phase 7 / `ck-code:qa-validator` | suite + lint + typecheck at the story's scope | the biggest single output in the workflow, and it repeats per QA iteration (cap 3). `ck-qa` keeps it out of RTK's reach, so its tail cap is what bounds it |
 | `build` PARALLEL MODE | per-worktree suites | multiplied by the number of stories in the wave |
 | `ship`, `doctor --fix` | `git`, `gh` | many small calls whose boilerplate dominates their signal |
 | `fix` Phase 4 | reproduction test runs | tight loop, repeated until the bug reproduces |
@@ -178,6 +187,8 @@ for, doing nothing), or when a different tool named `rtk` shadows it on `PATH`.
   same behaviour, and only the long form is filtered.
 - **Never pipe a stack command** (`cargo test | head`, `npm run test | tail`) — the piped
   command is left unfiltered, and RTK already returns failures only. `&&` chains are fine.
+- **Never repeat a whole suite after a fix** — re-run only the failed tests plus those
+  affected since the last run, through `ck-qa run <id> --rerun`.
 - **Never re-run a slow command on an unchanged tree** — capture it once to a `$TMPDIR` log
   and read slices of the log ([§ Slow commands](#slow-commands--run-once-read-the-log)). QA
   commands go through `ck-qa`, which enforces this across agents too.

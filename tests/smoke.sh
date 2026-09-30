@@ -672,6 +672,17 @@ CK_QA_WAIT=0 QA run 01-03 slow='sleep 30' >/dev/null
 kill "$(cat "$QA_TMP/ck-qa-run/01-03/pid")"; kill_wait=0
 while kill -0 "$(cat "$QA_TMP/ck-qa-run/01-03/pid")" 2>/dev/null && [ "$kill_wait" -lt 20 ]; do sleep 0.1; kill_wait=$((kill_wait+1)); done
 assert_contains "ck-qa wait: a run that died without a result says so" "$(QA wait 01-03)" "stopped without a result"
+QA_NORR=$(QA run 01-04 --rerun test='true'); QA_NORR_RC=$?
+assert_exit "ck-qa run --rerun: refused with no recorded run" 2 "$QA_NORR_RC"
+QA run 01-04 test='echo full; false' >/dev/null
+QA_SNAP=$(QA since 01-04 test)
+assert_eq "ck-qa since: the snapshot holds the failed run's tree" "$(QA state)" "$(git -C "$QA_REPO" rev-parse "$QA_SNAP^{tree}")"
+assert_eq "ck-qa since: the snapshot is parented on HEAD" "$(git -C "$QA_REPO" rev-parse HEAD)" "$(git -C "$QA_REPO" rev-parse "$QA_SNAP^")"
+echo fix >>"$QA_REPO/a.txt"
+assert_contains "ck-qa run --rerun: a narrowed pass says it re-ran" "$(QA run 01-04 --rerun test='true')" "test: PASS (re-run)"
+assert_contains "ck-qa run --rerun: the full command is stamped on the new state" \
+  "$(QA run 01-04 --reuse test='echo full; false')" "test: REUSED"
+assert_eq "ck-qa since: the record moves to the latest run" "$(QA state)" "$(git -C "$QA_REPO" rev-parse "$(QA since 01-04 test)^{tree}")"
 rm -rf "$QA_REPO" "$QA_TMP"
 
 echo

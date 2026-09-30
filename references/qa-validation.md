@@ -33,23 +33,25 @@ For EACH acceptance criterion in the original story:
 For bug-fix flows: re-check ALL acceptance criteria, not just the broken
 ones — the fix may have side effects on previously-passing criteria.
 
-## Step 2 — Run the full test suite
+## Step 2 — Run the test suite at the caller's scope
 
-Run **all** tests (not just new ones) for the affected stack. Watch for
-regressions in previously-green tests. The suite and the Step 3 checks run together in one
+Run the tests the caller's scope names, not just the new ones, and watch for regressions in
+previously-green tests. **Story scope** is every test the diff can affect. **Full scope** is
+the whole suite. `build` resolves which one applies, and a full-scope run always follows a
+story-scope one
+([`parallel-mode.md` § Affected tests](../skills/build/references/parallel-mode.md#affected-tests--the-story-level-test-command)). The suite and the Step 3 checks run together in one
 `ck-qa run <id> --reuse [--parallel] …` call
 ([`rtk.md` § QA runs go through `ck-qa`](rtk.md#qa-runs-go-through-ck-qa)). A suite that
 `build` 6.3 already passed on this exact tree reports `REUSED`, and that counts as its
 evidence. Read failures from the printed tail or the log, and never re-run the suite to see
-them. In `build` PARALLEL MODE, a story's P7 runs only its **affected tests**, and the
-post-wave P8 run is the full suite
-([`parallel-mode.md` § Affected tests](../skills/build/references/parallel-mode.md#affected-tests--the-story-level-test-command)).
-Run exactly the `test=` command the caller gave.
+them. Run exactly the `test=` command the caller gave, and never widen it to the full suite
+on your own.
 
 ## Step 3 — Code-quality checks
 
-Run all applicable quality tools for the stack. Detect the component's
-manifest and run that row of the per-stack command table in
+Run all applicable quality tools for the stack, lint at the same scope as Step 2 (changed
+files at story scope). Detect the component's manifest and run that row of the per-stack
+command table in
 [`parallel-mode.md`](../skills/build/references/parallel-mode.md#p7--qa-one-validator-per-story)
 — the single source for both inline and PARALLEL MODE QA. Zero compiler
 warnings in project-owned files is the bar.
@@ -125,7 +127,9 @@ calling skill's completion phase.
 - **Iteration < 3:** announce `[N]/3`, fix each issue (for a behaviour
   defect, write its failing test first if none exists, then fix code; a quality, lint or
   architecture finding gets no new test), re-run any refactor pass, then
-  re-run QA from Step 1 with a fresh check.
+  re-run QA from Step 1 with a fresh check. The suite in that re-run checks only what is left,
+  meaning the failed tests plus those affected since the last run
+  ([§ Re-runs after a failure](../skills/build/references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left)).
 - **Iteration = 3:** **escalate to user** with three options:
   - **A) FIX MANUALLY** — apply specific fixes the user suggests.
   - **B) ACCEPT AS-IS** — proceed, recording each remaining issue under the story's

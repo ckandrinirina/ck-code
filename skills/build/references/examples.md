@@ -84,7 +84,7 @@ Claude: Captured. Recording bug #1.
   [TDD red]    tests/editor.test.ts → "shows validation error on empty title" → FAIL
   [TDD green]  src/editor/save.ts:42-48 — added required-title check → 47/47 pass
   [Refactor]   SOLID review on src/editor/save.ts → PASS
-  [QA]         full suite + lint + arch → PASS, 0 regressions
+  [QA]         affected tests + lint + arch → PASS, 0 regressions
 
   Bug #1 marked FIXED. Re-running manual test.
 

@@ -35,7 +35,8 @@ returning to 8.5.1:
 2. Append an `## Manual-Test Bugs` entry to the story file (template in
    `story-template.md`). Status: `OPEN`.
 3. Write a failing regression test that reproduces the bug (TDD red).
-4. Apply the minimum fix; full suite green (TDD green).
+4. Apply the minimum fix; the regression test and the story's tests go green (TDD green).
+   Step 5's 6.3 then re-runs what the fix affects (`--rerun`).
 5. **MANDATORY:** Re-run **Phase 6 (Refactor)** on touched code — SOLID review, tests
    stay green.
 6. **MANDATORY:** Re-run **Phase 7 (QA)** with the full procedure in

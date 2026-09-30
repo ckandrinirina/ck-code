@@ -3,8 +3,9 @@
 #
 # Usage:
 #   ck-qa.sh state
-#   ck-qa.sh run <id> [--parallel] [--reuse] <label>=<command> [<label>=<command>…]
+#   ck-qa.sh run <id> [--parallel] [--reuse] [--rerun] <label>=<command> [<label>=<command>…]
 #   ck-qa.sh wait <id>
+#   ck-qa.sh since <id> <label>
 #
 # state  prints the code-state id: the git tree of the working copy, untracked
 #        (non-ignored) files included, so an uncommitted change is a different state.
@@ -19,8 +20,16 @@
 #        under the 600 s cap of one agent Bash call). A longer run prints
 #        `ck-qa: RUNNING` (exit 3) and keeps going. The same run started again while it
 #        is going waits on it instead of starting a second copy.
+#        Every command that ran on an unchanged tree also records its last run for
+#        (id, label, directory): a snapshot commit of the code state, and the full command.
+# --rerun  marks each <command> as a narrowed re-run of that label's last run here: the
+#        tests that failed plus those affected since the snapshot. A pass stamps the
+#        recorded full command on the new state, so a later --reuse of it reports REUSED.
+#        It is refused when the label has no recorded run in this directory.
 # wait   waits up to CK_QA_WAIT seconds more on the run for <id> and prints its result,
 #        or RUNNING again. Once it has ended, wait prints that result again.
+# since  prints the snapshot commit of <label>'s last run for <id> in this directory, the
+#        ref a runner's --changed flag narrows a re-run against.
 
 set -uo pipefail
 
@@ -40,6 +49,27 @@ state() {
   if [ -f "$real" ]; then cp "$real" "$idx"; else rm -f "$idx"; fi
   ( cd "$top" && GIT_INDEX_FILE="$idx" git add -A >/dev/null 2>&1 && GIT_INDEX_FILE="$idx" git write-tree 2>/dev/null )
   rm -f "$idx"
+}
+
+# A commit object for tree $1, parented on HEAD so a runner's merge-base against it (jest
+# --changedSince) resolves. Nothing references it; git gc drops it after the prune window.
+snapshot() {
+  local e="GIT_AUTHOR_NAME=ck-qa GIT_AUTHOR_EMAIL=ck-qa@localhost GIT_COMMITTER_NAME=ck-qa GIT_COMMITTER_EMAIL=ck-qa@localhost"
+  if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
+    env $e git commit-tree -p HEAD -m "ck-qa snapshot" "$1" 2>/dev/null
+  else
+    env $e git commit-tree -m "ck-qa snapshot" "$1" 2>/dev/null
+  fi
+}
+
+last_of() { printf '%s/last-%s-%s' "$STAMPS" "$1" "$2"; }   # id label → last-run record
+
+# Prints line $3 (1 snapshot, 2 directory, 3 full command) of the last-run record for
+# id $1 label $2, only when that run was in this directory.
+last_field() {
+  local f; f="$(last_of "$1" "$2")"
+  [ -f "$f" ] && [ "$(sed -n 2p "$f")" = "$(pwd -P)" ] || return 1
+  sed -n "$3p" "$f"
 }
 
 stamp_of() { printf '%s\n%s\n%s\n' "$1" "$(pwd -P)" "$2" | git hash-object --stdin; }
@@ -68,20 +98,24 @@ CMD="${1:-}"
 case "$CMD" in
   state) state; exit 0 ;;
   wait) [ -n "${2:-}" ] || die "wait needs an id"; await_run "$2" ;;
+  since) [ -n "${3:-}" ] || die "since needs an id and a label"
+         last_field "$2" "$3" 1 || die "no recorded run of $3 for $2 in this directory — run the full command"
+         exit 0 ;;
   run|__worker) ;;
-  -h|--help|"") sed -n '3,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  *) die "unknown command: $CMD (state|run|wait)" ;;
+  -h|--help|"") sed -n '3,34p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) die "unknown command: $CMD (state|run|wait|since)" ;;
 esac
 shift
 ARGS=("$@")
 ID="${1:-}"; [ -n "$ID" ] || die "run needs an id (the story id, e.g. 02-05)"; shift
 case "$ID" in */*|.|..) die "id must not contain / (got: $ID)" ;; esac
 
-PARALLEL=0; REUSE=0; LABELS=""
+PARALLEL=0; REUSE=0; RERUN=0; LABELS=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --parallel) PARALLEL=1 ;;
     --reuse) REUSE=1 ;;
+    --rerun) RERUN=1 ;;
     *=*) l="${1%%=*}"
          case "$l" in ""|*[!A-Za-z0-9_-]*) die "label must be [A-Za-z0-9_-]+ (got: $l)" ;; esac
          LABELS="$LABELS $l"; eval "CMD_$l=\"\${1#*=}\"" ;;
@@ -94,11 +128,24 @@ mkdir -p "$STAMPS" "$RUNS" || die "cannot create $STAMPS"
 
 cmd_of() { eval "printf '%s' \"\$CMD_$1\""; }
 
+# The full command a label stands for: the recorded one on a --rerun, else its own. Read
+# once here, before this run overwrites the record.
+for l in $LABELS; do
+  if [ "$RERUN" = 1 ]; then
+    f="$(last_field "$ID" "$l" 3)" \
+      || die "--rerun: no recorded run of $l for $ID in this directory — run the full command"
+  else
+    f="$(cmd_of "$l")"
+  fi
+  eval "FULL_$l=\"\$f\""
+done
+full_of() { eval "printf '%s' \"\$FULL_$1\""; }
+
 # run: start the commands detached, so a run longer than one Bash call survives it, and
 # wait on it. An identical run already going is waited on, never started a second time.
 if [ "$CMD" = run ]; then
   D="$RUNS/$ID"
-  KEY="$( { pwd -P; echo "$PARALLEL $REUSE"; for l in $LABELS; do echo "$l=$(cmd_of "$l")"; done; } | git hash-object --stdin)"
+  KEY="$( { pwd -P; echo "$PARALLEL $REUSE $RERUN"; for l in $LABELS; do echo "$l=$(cmd_of "$l")"; done; } | git hash-object --stdin)"
   if [ -f "$D/pid" ] && [ ! -f "$D/rc" ] && kill -0 "$(cat "$D/pid")" 2>/dev/null; then
     [ "$(cat "$D/key" 2>/dev/null)" = "$KEY" ] \
       || die "a different ck-qa run for $ID is still going — ck-qa wait $ID first"
@@ -126,7 +173,7 @@ run_one() {  # label → writes the exit code to <log>.rc
 
 TORUN=""
 for l in $LABELS; do
-  if [ "$REUSE" = 1 ] && [ -n "$S0" ] && [ -f "$STAMPS/$(stamp_of "$S0" "$(cmd_of "$l")")" ]; then
+  if [ "$REUSE" = 1 ] && [ -n "$S0" ] && [ -f "$STAMPS/$(stamp_of "$S0" "$(full_of "$l")")" ]; then
     RESULT="$RESULT $l:REUSED"
   else
     TORUN="$TORUN $l"
@@ -148,14 +195,16 @@ fi
 S1="$(state)"
 [ "$S0" = "$S1" ] || echo "ck-qa: WARN — a command changed the working tree (formatter, snapshot update?); nothing stamped, fix that before trusting a PASS"
 
+SNAP=""; [ -n "$S0" ] && [ "$S0" = "$S1" ] && SNAP="$(snapshot "$S0")"
 FAILED=""
 for l in $TORUN; do
   rc_file="$(log_of "$l").rc"
   if [ ! -f "$rc_file" ]; then RESULT="$RESULT $l:SKIPPED"; continue; fi
   rc="$(cat "$rc_file")"; rm -f "$rc_file"
+  [ -n "$SNAP" ] && printf '%s\n%s\n%s\n' "$SNAP" "$(pwd -P)" "$(full_of "$l")" >"$(last_of "$ID" "$l")"
   if [ "$rc" = 0 ]; then
     RESULT="$RESULT $l:PASS"
-    [ -n "$S0" ] && [ "$S0" = "$S1" ] && : >"$STAMPS/$(stamp_of "$S0" "$(cmd_of "$l")")"
+    [ -n "$SNAP" ] && : >"$STAMPS/$(stamp_of "$S0" "$(full_of "$l")")"
   else
     RESULT="$RESULT $l:FAIL"; FAILED="$FAILED $l"
   fi
@@ -166,6 +215,11 @@ for r in $RESULT; do
   case "$v" in
     REUSED)  echo "$l: REUSED — already passed on this code state here" ;;
     SKIPPED) echo "$l: SKIPPED — an earlier command failed" ;;
+    PASS)    if [ "$RERUN" = 1 ]; then
+               echo "$l: PASS (re-run) — stamped as the full command; log $(log_of "$l")"
+             else
+               echo "$l: PASS — log $(log_of "$l")"
+             fi ;;
     *)       echo "$l: $v — log $(log_of "$l")" ;;
   esac
 done
