@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.0] — 2026-09-30
+
+### Added
+- **verify**: new skill for whole-feature manual testing. It builds `tasks/<plan>/CHECKLIST.md`
+  from every story's human-check criterion plus the feature doc's cross-story flows, walks the
+  tester through it a few items at a time (PASS / ISSUE / BLOCKED / SKIP), and commits each
+  result. A pass ticks the story's human-check box, replacing the hand-written "record manual
+  check" commits. An issue is recorded in the tester's words and handed to `fix` against the
+  matching story. Re-running resumes the open items and retests failures whose fix has landed.
+
+### Changed
+- **fix**: accepts `--report "<text>"` after the story path, so a hand-off from `verify` arrives
+  with the tester's description and Phase 2.1 asks only what the report leaves open.
+- **ship**: the promotion gate warns (Promote anyway / Not yet) when the plan's `CHECKLIST.md`
+  still has open items. It never blocks.
+- **explain**: FEATURE MODE ends by pointing at `/ck-code:verify` for a tracked run of the same tests.
+- **router / guide**: `prompt-routing.md`, the workflow map, the command reference and the
+  state-routing notes now route manual-test checklist requests to `verify`, backed by a new
+  `route-verify` eval.
+
 ## [7.2.2] — 2026-09-30
 
 ### Fixed
