@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.2] — 2026-09-30
+
+### Changed
+- **build**: inline QA at level `epic`/`plan` now runs at story scope (the affected tests
+  plus a lint of the changed files) instead of the full suite. The full scope still runs on
+  the story that completes its epic, on every inline story at level `story`, and at P8.
+  Delegated runs and P7 now lint only the changed files as well. Typecheck and build stay full.
+- **build / qa-validator**: a re-run after a red check or a NEEDS FIXES round checks only
+  what is left. That is the tests that failed plus those affected since the last run,
+  instead of the whole scope again.
+- **ck-qa**: new `--rerun` flag and `since` command. Every run records a snapshot commit of
+  its code state. `since` prints it for a runner's `--changed` flag, and a passing `--rerun`
+  stamps the label's full command, so a later `--reuse` reports `REUSED`.
+
 ## [7.3.1] — 2026-09-30
 
 ### Changed
