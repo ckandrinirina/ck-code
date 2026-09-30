@@ -1,7 +1,7 @@
 ---
 name: explain
-description: Use when the user wants an explanation of what was just implemented, the technologies involved, or how to manually verify it works, or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how does this work", "what is epic NN about".
-argument-hint: "[file-or-concept] | --epic NN"
+description: Use when the user wants an explanation of what was just implemented, the technologies involved, or how to manually verify it works; what a named feature does and a full guide to test it; or — with `--epic NN` — what a whole epic and each of its stories are for. Triggers on "explain", "what was implemented", "how do I check", "how do I test feature X", "how does this work", "what is epic NN about".
+argument-hint: "[file-or-concept] | <feature description> | --epic NN"
 effort: low
 model: haiku
 context: fork
@@ -13,15 +13,21 @@ disallowed-tools: Write, Edit, NotebookEdit
 
 # Explain — Implementation Details, Manual Verification & Epic Intent
 
-Two modes, chosen by `$ARGUMENTS`:
+**User request:** $ARGUMENTS
 
-| `$ARGUMENTS` | Mode | Produces |
+The line above is the user's request, verbatim and possibly in any language (French,
+English, …). Treat it as the task — never answer that no request was given. An empty
+request means the default STORY MODE. Pick the mode from it:
+
+| Request | Mode | Produces |
 |---|---|---|
-| empty, or a file/concept | **STORY MODE** (default) | manual-verification commands + a learner-friendly walkthrough of what was built |
+| empty, or a file path / single technical concept | **STORY MODE** (default) | manual-verification commands + a learner-friendly walkthrough of what was built |
+| free text naming a feature or asking how to test / what it does | **FEATURE MODE** | what the feature implements + a complete manual test guide |
 | `--epic NN` | **EPIC MODE** | the goal of epic `NN` and the goal of every story in it |
 
-STORY MODE is everything below down to *Reading Context (STORY MODE)*; EPIC MODE is its own
-section further down. The two share only the Tone and RULES blocks.
+STORY MODE is everything below down to *Reading Context (STORY MODE)*; FEATURE MODE and
+EPIC MODE are their own sections further down. The modes share only the Tone and RULES
+blocks.
 
 Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
 
@@ -44,6 +50,7 @@ explain an epic and its stories instead.
 - `/ck-code:explain` → explains the last implemented story
 - `/ck-code:explain CMakeLists.txt` → explains just that file
 - `/ck-code:explain FetchContent` → explains just that CMake concept
+- `/ck-code:explain how do I test the paid game feature` → FEATURE MODE — what it does + a full test guide
 - `/ck-code:explain --epic 03` → EPIC MODE — the goal of epic 03 and of each of its stories
 
 `--epic` with no number, or a number that is not `NN`, is an error — say so and stop; never
@@ -101,6 +108,57 @@ Before generating output, read:
    Trunk: !`t=$(awk -F': *' '/^trunk_branch:/{print $2; exit}' "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/SETTINGS.md" 2>/dev/null); [ -n "$t" ] || t=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||'); echo "${t:-main}"`
 
 If the user specifies a path or concept, focus on that instead.
+
+---
+
+## FEATURE MODE — free-text feature request
+
+Explains a whole feature — every story behind it — and gives the user a complete guide to
+test it by hand. The 3–6 check cap of STORY MODE does not apply.
+
+### F.1 Resolve the feature
+
+Extract the feature keywords from the request (drop filler like "guide", "test",
+"explain", "how"), then Grep them case-insensitively against:
+
+1. `docs/architecture/features/*/` folder names (feature slugs) and their `index.md` titles
+2. `tasks/*/epics/*/EPIC.md` `title:` / `slug:` lines
+3. `tasks/*/epics/*/stories/*.md` `title:` lines
+
+- **one feature matches** (one slug, or stories that all share one epic `slug`) → proceed
+- **several match** → list them (slug + epic title) and stop, asking which one; never pick
+- **nothing matches** → say so, list the existing feature slugs and epic titles, and stop
+
+### F.2 Read
+
+1. The feature doc `docs/architecture/features/<slug>/index.md` (and any sibling files it
+   links for flows or data), when it exists.
+2. Every `EPIC.md` whose `slug` is the feature, and every story in those epics — frontmatter
+   `id`, `title`, `status`, `files:`, `delivery:`, plus Description and Acceptance Criteria.
+3. The source files listed in the `done` stories' `files:` — enough to name the real
+   screens, routes, commands, endpoints, config keys and seed data the tester will touch.
+
+Stories not `done` are listed but not tested; a `delivery:` other than `merged`/`direct`
+gets one line saying that work is not on the trunk branch yet.
+
+### F.3 Output Format
+
+**`## <Feature name>`**, then:
+
+1. **What it does** — 3–5 sentences on the user-facing outcome, then one bullet per story
+   (`NN-SS — <title>` · status · one sentence on what it adds).
+2. **Before you test** — prerequisites as runnable steps: install, env vars / config keys,
+   migrations or seed data, accounts or roles needed, how to start the app.
+3. **Test scenarios** — one numbered `### T<n> — <scenario>` per acceptance criterion or
+   user flow, happy paths first, then edge cases and error paths (invalid input,
+   insufficient rights, payment/external failure, …). Each scenario has **Steps** (exact
+   clicks, commands or requests), **Expected** (what the user sees), and — when state
+   changes — **Verify** (the query, log line or API call proving it).
+4. **Automated checks** — the command(s) running the tests that cover this feature.
+5. **Not covered yet** — stories not `done`, or criteria with no way to check manually.
+
+Ground every step in files you read; never invent a screen, route or command. When a step
+cannot be pinned down from the code, say what to look for instead.
 
 ---
 
@@ -184,8 +242,11 @@ Supportive and encouraging (the user is learning); concrete and specific — nev
 - **Never** emit a `NEXT:` directive — explaining finished work implies no next step. This
   is the one read-only skill with no hand-off
   ([`../../references/skill-invocation.md`](../../references/skill-invocation.md)).
+- **Never** reply that no request was given when `User request:` is non-empty — free text
+  that is not a path or `--epic` is FEATURE MODE.
 - **Never** mix the modes — `--epic NN` produces no verification commands and no code
   walkthrough; a story/file/concept argument produces no epic rollup.
+- **Never** guess a feature in FEATURE MODE — several or zero matches means list and stop.
 - **Never** guess which plan an `--epic NN` belongs to when the Glob matches more than one
   folder — that is colliding epic numbers, and the fix is `/ck-code:migrate`.
 - **Always** output in English.
