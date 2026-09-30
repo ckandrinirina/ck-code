@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.3] — 2026-09-30
+
+### Changed
+- **verify**: new `--all` flag retests every checklist item in scope, `pass` and `skip`
+  included, instead of only the open ones. The new answer replaces the Result and the previous
+  one is kept inline as `(was …)`. Items waiting on a fix are still skipped.
+
 ## [7.3.2] — 2026-09-30
 
 ### Changed
