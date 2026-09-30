@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.5] — 2026-09-30
+
+### Fixed
+- **verify**: 7.3.4 grounded every item's full detail up front, which fanned out subagents
+  and made building the checklist slow. Phase 2 now writes outlines from the plan files alone,
+  as before. Each item gets its full detail just before it is printed, two at a time, from its
+  own stories' `files:` plus a targeted `grep`. Subagents are forbidden.
+
 ## [7.3.4] — 2026-09-30
 
 ### Changed
