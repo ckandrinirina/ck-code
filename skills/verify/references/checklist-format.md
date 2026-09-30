@@ -65,6 +65,9 @@ updated: YYYY-MM-DD
 
 ## Writing an item — the detail standard
 
+An item is written as an **outline** first (`- **Steps:** outline`, with a one-line Expected
+and no It-failed-if), and filled to this standard just before a session prints it.
+
 Write for a tester who has never seen the code, the stories or this feature. They must be able
 to run the item from the checklist alone, without asking what a step means. A step that says
 "check the dashboard works" or "test the payment flow" fails this standard.
@@ -92,9 +95,9 @@ grep -cE '^### C-[0-9]+ · (todo|fail|blocked) ·' tasks/2026-09-24_ariary-paid-
 
 A refresh (a re-run after more stories reach `done`) rewrites the file in place:
 
-1. An item keeps its `C-NN`, status and Result when its Source still exists. Its Steps and
-   the other fields are rewritten when they fall short of the detail standard or the code
-   they name has changed. The Result is never touched.
+1. An item keeps its `C-NN`, status, Result and Steps when its Source still exists. Steps
+   that fall short of the detail standard are rewritten when the item next comes up in a
+   session, never on refresh. The Result is never touched.
 2. A new source (a story newly `done`, a new flow) appends an item with the next free `C-NN`.
 3. An item whose Source is gone (the criterion was reworded or removed) stays and gets
    `(source removed)` appended to its Source line. It is never deleted, because its Result is history.

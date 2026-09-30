@@ -70,8 +70,8 @@ never how the checklist is built.
 - the feature doc `docs/architecture/features/<slug>/index.md` (slug from the epics), for its
   `## Flows` and setup facts. Skip it if absent
 
-Then read only the source files the steps need to name real screens, routes, commands and
-config keys. Never invent one.
+That batch is the whole of Phase 2's reading. Source files are read later, per item, in 3.2.
+Never dispatch a subagent and never explore the codebase here.
 
 ### 2.2 Derive items
 
@@ -84,11 +84,11 @@ config keys. Never invent one.
    becomes one item that walks the flow end to end, Source `journey · …`.
 4. **Not yet testable.** Stories not `done` are listed, never itemized.
 
-Write steps as the tester performs them: click-and-look through the running app. An automated
-test command is a valid step only for a headless surface, as `plan` 3.1 allows. Every item meets
-the **detail standard** in [checklist-format.md](references/checklist-format.md#writing-an-item--the-detail-standard):
-a tester who has never seen the code runs it from the checklist alone. Detail wins over brevity:
-a long, exact item beats a short one the tester has to guess at.
+Write each new item as an **outline**, from the 2.1 batch alone: heading, Source,
+What this checks, a one-line Expected from the criterion, and `- **Steps:** outline`.
+It is detailed later in 3.2, when it comes up. Steps are click-and-look through the running
+app. An automated test command is a valid step only for a headless surface, as `plan` 3.1
+allows.
 
 ### 2.3 Write
 
@@ -109,9 +109,16 @@ With `--all`, `pass` and `skip` items join too, still in `C-NN` order after the 
 items. This is a full retest, for example after a refactor or before a release. Items
 **Waiting on fix** are still skipped.
 
-### 3.2 Ask
+### 3.2 Detail, then ask
 
-Print up to two items **in full**, every field exactly as the checklist has it. Never
+Take the next two items. For each whose Steps read `outline`, or fall short of the
+**detail standard** in [checklist-format.md](references/checklist-format.md#writing-an-item--the-detail-standard),
+write it in full now, and write it into `CHECKLIST.md`. Ground it by reading that item's
+stories' `files:` directly, in one parallel batch, plus a targeted `grep` for a label or string
+they do not show. Read nothing else, and never dispatch a subagent. A tester who has never seen
+the code must be able to run the item alone. Detail wins over brevity.
+
+Print the two items **in full**, every field exactly as the checklist has it. Never
 shorten, merge or paraphrase steps when printing. Then **one** `AskUserQuestion` with one
 question per item: **PASS** · **ISSUE** (describe what you saw) · **BLOCKED** (say what is
 missing) · **SKIP**. An ISSUE or BLOCKED answer with no description gets one plain follow-up
@@ -181,8 +188,10 @@ the command to resume is `/ck-code:verify tasks/<plan>`, and `--all` retests eve
 - **Never** diagnose or fix an issue here. Record it in the tester's words and hand it to `fix`.
 - **Never** hand off before the checklist and ticked stories are committed.
 - **Never** invent a screen, route, command or flow. Every step is grounded in a file read.
-- **Never** write a vague step or outcome ("check it works", "displays correctly") — every item
-  meets the detail standard, and a refresh rewrites any that does not.
+- **Never** print a vague step or outcome ("check it works", "displays correctly"). Every item
+  meets the detail standard before it is printed.
+- **Never** dispatch a subagent, and never read source beyond the current batch's stories'
+  `files:` plus a targeted `grep`. Detail is written just in time, two items at a time.
 - **Never** stage a generated view (`STORIES_INDEX.md`, `EPICS_INDEX.md`).
 - **Never** reference AI, Claude, or generated-by notes in a commit —
   [full rule](../../references/no-ai-references.md).
