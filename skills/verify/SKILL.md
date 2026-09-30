@@ -1,7 +1,7 @@
 ---
 name: verify
-description: Use when the user wants to manually test a whole feature, plan or epic before promoting it — a checklist of every human check to run, resuming a test session, recording pass or fail results, or reporting an issue found while testing. Not for explaining code (use explain) or for a bug found outside a test session (use fix). Argument is an optional `tasks/<plan>` path, `--epic NN`, or a feature name.
-argument-hint: "[tasks/<plan> | --epic NN | <feature name>]"
+description: Use when the user wants to manually test a whole feature, plan or epic before promoting it — a checklist of every human check to run, resuming a test session, recording pass or fail results, or reporting an issue found while testing. Not for explaining code (use explain) or for a bug found outside a test session (use fix). Argument is an optional `tasks/<plan>` path, `--epic NN`, or a feature name, plus `--all` to retest every item including passed ones.
+argument-hint: "[tasks/<plan> | --epic NN | <feature name>] [--all]"
 effort: medium
 allowed-tools: Bash(ck-story get*) Bash(ck-plan get*) Bash(ck-view*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Skill
 hooks:
@@ -17,7 +17,8 @@ hooks:
 Builds one checklist of every manual test a feature needs, walks the tester through it, and
 records each result in `tasks/<plan>/CHECKLIST.md`. A pass ticks the story's human-check box.
 An issue is recorded, then handed to `/ck-code:fix`, which diagnoses it against the right story
-and writes the bug. A re-run resumes the checklist where the last session stopped.
+and writes the bug. A re-run resumes the checklist where the last session stopped. With `--all`,
+it retests every item, passed ones included.
 
 `build` 8.5 checks one story as it lands. `verify` checks the assembled feature: the human
 checks that had to wait (a deploy, a sandbox, a later epic), plus the cross-story journeys no
@@ -53,6 +54,9 @@ state before it passes.
 | `--epic NN` | the plan owning `tasks/*/epics/NN_*/` (zero-pad `NN`), with items filtered to epic `NN`. The checklist file is still the plan's |
 | free text | match its keywords against `docs/architecture/features/*/` slugs and `EPIC.md` `slug:`/`title:` lines, as `explain` FEATURE MODE F.1 does. One plan → that plan. Several, or none → list them and stop |
 | empty | the plans that have a `CHECKLIST.md` with open items, or `done` stories with an unticked human check. Exactly one → use it. Several → `AskUserQuestion`. None → say so and stop |
+
+`--all` combines with any row above. It changes only which items the session walks (3.1),
+never how the checklist is built.
 
 `--epic` without a two-digit number is an error. Say so and stop. Never guess a plan.
 
@@ -98,6 +102,10 @@ Start with the `## Before you test` steps, printed once. Then the **Retest** ite
 and `blocked`, in `C-NN` order. With `--epic NN`, only that epic's items and the journeys that
 touch it. Items **Waiting on fix** are skipped: their fix has not landed.
 
+With `--all`, `pass` and `skip` items join too, still in `C-NN` order after the Retest
+items. This is a full retest, for example after a refactor or before a release. Items
+**Waiting on fix** are still skipped.
+
 ### 3.2 Ask
 
 Print up to four items (heading, Steps, Expected), then **one** `AskUserQuestion` with one
@@ -111,6 +119,11 @@ asking for it. Never record an issue without the tester's own words.
   in the story file (`- [ ]` → `- [x]`, that line only).
 - **BLOCKED** / **SKIP** → the status, date and the tester's words. The story is left alone.
 - **ISSUE** → item `fail`, date, the tester's words verbatim. Then go to 3.4.
+
+When the item already had a result (a `--all` retest), the new status and Result replace it and
+the previous result is kept inline: `pass 2026-10-02 (was pass 2026-09-30)`. Only the latest
+`(was …)` is kept. A retest ISSUE on a ticked human check leaves the tick alone: the bug is
+`fix`'s to record.
 
 Update `updated:` in the frontmatter. Then commit the checklist and every story file it ticked,
 on the current branch:
@@ -148,13 +161,15 @@ Print the final summary (2.3 format) and the open items by `C-NN`. When nothing 
 the feature is verified and name its promotion as a plain next step:
 `/ck-code:ship --promote tasks/<plan>` at level `plan`, `--promote --epic NN` at level `epic`,
 nothing at level `story`. It is a recommendation, not a hand-off. When items remain open,
-the command to resume is `/ck-code:verify tasks/<plan>`.
+the command to resume is `/ck-code:verify tasks/<plan>`, and `--all` retests everything.
 
 ## RULES
 
 - **Never** write the checklist anywhere but `tasks/<plan>/CHECKLIST.md`, and never under any
   format but [checklist-format.md](references/checklist-format.md).
 - **Never** delete, renumber or reuse a `C-NN`, or overwrite a recorded Result on refresh.
+  Only a tester's answer in a session replaces a Result, and the previous one stays as `(was …)`.
+- **Never** walk `pass` or `skip` items without `--all`.
 - **Never** record a result the tester did not give, and never mark an item `pass` to close a
   session.
 - **Never** edit a story beyond ticking the one human-check line a PASS covers. Status, bug

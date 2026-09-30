@@ -54,7 +54,7 @@ updated: YYYY-MM-DD
 | Heading | `### C-NN · <status> · <story ids> — <name>`. IDs are allocated once, sequentially, and never reused or renumbered. The status sits in the heading so one `grep` counts the open items |
 | Status | `todo` · `pass` · `fail` · `blocked` · `skip`. **Open** = `todo`, `fail`, `blocked` |
 | Source | `NN-SS human check` (one story criterion), `NN-SS criterion` (derived from a non-human-check criterion, when the story has none), or `journey · features/<slug> § Flows › <name>` |
-| Result | `—` while `todo`. Otherwise the status, the date, and for `fail`/`blocked`/`skip` the tester's own words. A `fail` handed to `fix` ends `→ fix NN-SS` |
+| Result | `—` while `todo`. Otherwise the status, the date, and for `fail`/`blocked`/`skip` the tester's own words. A `fail` handed to `fix` ends `→ fix NN-SS`. A `--all` retest of an item that already had a result appends the previous one, keeping only the latest: `pass 2026-10-02 (was fail 2026-09-30 — <words>)` |
 
 ## Counting open items
 
