@@ -888,6 +888,63 @@ STORY_WARN_OUT=$(ck-story set "$BROKEN_STORY" size=M 2>&1); STORY_WARN_RC=$?
 assert_contains "ck-story set: relays ck-index's WARN for the broken story" "$STORY_WARN_OUT" "ck-index: WARN"
 
 echo
+echo "=== ck-checklist: items, answers, resumable session ==="
+# A separate throwaway project: the checklist is optional, so it must not leak into the
+# fixture every other section counts plans and files in.
+CL="$(mktemp -d)"
+(
+  cd "$CL" && git init -q . && export CK_TODAY=2026-09-30
+  P=tasks/2026-09-24_pay
+  mkdir -p "$P/epics/41_stake/stories" "$P/epics/42_ui/stories"
+  printf -- '---\nid: 41-02\nstatus: done\n---\n- [ ] counter shows\n- [ ] Human check — the "real" N/10 counter\n' > "$P/epics/41_stake/stories/02_real.md"
+  printf -- '---\nid: 42-01\nstatus: bug\n---\n- [ ] Human check — button shows\n' > "$P/epics/42_ui/stories/01_btn.md"
+  echo "count0=$(ck-checklist count "$P")"
+  ck-checklist init "$P" --feature pay >/dev/null
+  ck-checklist new "$P" --title "Counter" --stories 41-02 --source "41-02 human check" --criterion 'Human check — the "real" N/10 counter' >/dev/null
+  ck-checklist new "$P" --title "Button" --stories 42-01 --source "42-01 human check" >/dev/null
+  ck-checklist new "$P" --title "Journey" --stories "41-02 42-01" --source "journey · pay" >/dev/null
+  ck-checklist new "$P" --title "X" --stories 99-01 --source s >/dev/null 2>&1; echo "badstory=$?"
+  echo "next1=$(ck-checklist next "$P" | sed 1d | cut -f1 | tr '\n' ' ')"
+  ck-checklist record "$P" C-02 fail >/dev/null 2>&1; echo "nowords=$?"
+  ck-checklist record "$P" C-02 fail 'saw "x"' >/dev/null
+  ck-checklist record "$P" 1 pass >/dev/null
+  echo "tick=$(grep -c -- '- \[x\] Human check' "$P/epics/41_stake/stories/02_real.md")"
+  echo "result=$(grep '^result:' "$P"/checklist/C-02_*.md)"
+  echo "resume=$(ck-checklist next "$P" | sed 1d | cut -f1 | tr '\n' ' ')"
+  echo "summary=$(ck-checklist summary "$P" | tr '\n' '|')"
+  ck-checklist set "$P" 2 fix=42-01 >/dev/null
+  sed -i.bak 's/status: bug/status: done/' "$P/epics/42_ui/stories/01_btn.md"
+  ck-checklist start "$P" --epic 42 --all >/dev/null
+  echo "retest=$(ck-checklist next "$P" -n 5 | sed 1d | cut -f1,2 | tr '\t\n' ': ')"
+  ck-checklist record "$P" C-02 pass >/dev/null
+  ck-checklist start "$P" --all >/dev/null
+  echo "all=$(ck-checklist next "$P" -n 5 | sed 1d | cut -f1,2 | tr '\t\n' ': ')"
+  echo "was=$(grep '^was:' "$P"/checklist/C-02_*.md)"
+  echo "count=$(ck-checklist count "$P")"
+  ck-checklist set "$P" 2 status=pass >/dev/null 2>&1; echo "setstatus=$?"
+  printf -- '---\nplan: v1\nupdated: 2026-09-01\n---\n\n## Before you test\n\n1. run\n\n## Epic 41 — S\n\n### C-01 · fail · 41-02 — Old\n- **Source:** 41-02 human check\n- **Steps:** outline\n- **Result:** fail 2026-09-01 — no counter → fix 41-02\n' > tasks/v1.md
+  mkdir -p tasks/2026-01-01_v1/epics && mv tasks/v1.md tasks/2026-01-01_v1/CHECKLIST.md
+  ck-checklist next tasks/2026-01-01_v1 >/dev/null 2>&1; echo "v1guard=$?"
+  ck-checklist import tasks/2026-01-01_v1 >/dev/null 2>&1
+  echo "v1=$(grep -hE '^(format|fix|result):' tasks/2026-01-01_v1/CHECKLIST.md tasks/2026-01-01_v1/checklist/C-01_*.md | tr '\n' '|')"
+) > "$CL/out" 2>&1
+CLO="$(cat "$CL/out")"; rm -rf "$CL"
+assert_contains "ck-checklist count: 0 when the plan has no checklist (it is optional)" "$CLO" "count0=0"
+assert_contains "ck-checklist new: refuses a story the plan does not have" "$CLO" "badstory=1"
+assert_contains "ck-checklist next: C-NN order, two at a time" "$CLO" "next1=C-01 C-02 "
+assert_contains "ck-checklist record: fail needs the tester's words" "$CLO" "nowords=1"
+assert_contains "ck-checklist record pass: ticks the story's human-check line" "$CLO" "tick=1"
+assert_contains "ck-checklist record: quotes survive as an escaped YAML scalar" "$CLO" 'result: "fail 2026-09-30 — saw \"x\""'
+assert_contains "ck-checklist next: resumes after the answered items" "$CLO" "resume=C-03 "
+assert_contains "ck-checklist summary: a fail on a bug story is Waiting on fix" "$CLO" "Waiting on fix: C-02"
+assert_contains "ck-checklist next --epic --all: Retest first, other epics out" "$CLO" "retest=C-02:retest C-03:todo "
+assert_contains "ck-checklist record: the previous result and its fix move to was" "$CLO" 'was: "fail 2026-09-30 — saw \"x\" → fix 42-01"'
+assert_contains "ck-checklist next --all: pass items join, in C-NN order" "$CLO" "all=C-01:pass C-02:pass C-03:todo "
+assert_contains "ck-checklist set: refuses status (answers go through record)" "$CLO" "setstatus=1"
+assert_contains "ck-checklist: a format-1 checklist is refused until imported" "$CLO" "v1guard=1"
+assert_contains "ck-checklist import: format 2, result and fix split out" "$CLO" 'format: 2|result: "fail 2026-09-01 — no counter"|fix: 41-02|'
+
+echo
 echo "=== shellcheck ==="
 if command -v shellcheck >/dev/null 2>&1; then
   SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/* tests/fake-gh/gh 2>&1); SC_RC=$?

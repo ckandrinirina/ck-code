@@ -22,7 +22,7 @@ duplicating the workflow graph.
    /ck-code:fix          Diagnose a bug, record it to its story (→ bug), route the fix
 
    /ck-code:verify       Whole-feature manual test checklist (tasks/<plan>/CHECKLIST.md);
-                        a pass ticks the human check, an issue goes to fix
+                        resumable session; a pass ticks the human check, an issue goes to fix
 
 8. /ck-code:ship         Commit, open PR, update GitHub Issues; --promote opens the epic
                         PR (level epic), or at level plan merges the epic --no-ff into
@@ -169,7 +169,7 @@ command reference.
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`). Auto-invokes `build` for an easy fix; never writes the source fix itself |
 | `ship` | Git commit, PR, GitHub Issue updates; writes the PR number + `delivery: pr` back to story frontmatter (`pr:`), or to `EPIC.md` / `OVERVIEW.md` for a `--promote` PR; no local writes outside git + frontmatter |
 | `migrate` | Converts a v6 project with `ck-migrate v7` (one commit); a legacy (v3–v5) project through the legacy steps to v6, then `ck-migrate v7`, in the same commit — including flattening nested `experts/` + `guides/` skill folders; or a ck-code-lite project straight to v7 (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md` `layout: v7` |
-| `verify` | `tasks/<plan>/CHECKLIST.md` (committed) and the one human-check line a PASS ticks in a story; commits both as `chore(tasks): record manual verification for <plan>`; never `status:` |
+| `verify` | `tasks/<plan>/CHECKLIST.md` + `tasks/<plan>/checklist/` (committed, optional, only through `ck-checklist`) and the one human-check line a PASS ticks in a story; commits both as `chore(tasks): record manual verification for <plan>`; never `status:` |
 | `track`, `explain`, `guide`, `doctor` | Read-only |
 | `doctor --fix` | Reconciles derived state only (`ck-project backfill` to recover a missing `pr:` from the linked issue, then `ck-project reconcile`, then confirmed `ck-project landed` entries) — `delivery:`/`pr:` frontmatter, board columns, GitHub Issue/PR state; commits the changed story/`EPIC.md`/`OVERVIEW.md` files as `chore(tasks): reconcile delivery with GitHub`. Never writes `status:`, a story body, or source |
 | `config` | Writes `tasks/SETTINGS.md`, the GitHub Project board, and a plan's integration level (`ck-plan set`) — never story state |

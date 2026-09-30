@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-checklist — a plan's manual-verification checklist; see scripts/ck-checklist.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-checklist.sh" "$@"

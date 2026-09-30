@@ -26,7 +26,8 @@ tasks/
   <date>_<slug>/        one plan
     OVERVIEW.md         plan record (frontmatter) + prose body (Vision, Architecture, …)
     ROADMAP.md
-    CHECKLIST.md        manual-verification checklist (`verify` output; committed, optional)
+    CHECKLIST.md        manual-verification checklist index + session (`verify` via ck-checklist; committed, optional)
+    checklist/C-NN_<slug>.md  one checklist item, state in frontmatter (same owner)
     STORIES_INDEX.md    GENERATED, gitignored — one row per story of this plan
     epics/NN_<slug>/EPIC.md
     epics/NN_<slug>/stories/SS_<slug>.md

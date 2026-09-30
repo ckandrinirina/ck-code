@@ -3,7 +3,7 @@ name: ship
 description: Use when finished work needs committing and its PR and linked GitHub Issue opened or updated after a story or fix — or for any standalone commit. `--promote` promotes a completed epic (its PR, or its merge into the plan branch) or opens the PR for a whole plan. Argument is an optional story path, or `--promote` with `--epic NN` or a `tasks/<plan>` path. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN | tasks/<plan>]"
 effort: medium
-allowed-tools: Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
+allowed-tools: Bash(ck-checklist count*) Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -418,8 +418,8 @@ every non-`skip` story of epic `NN` reads `status: done`. Fire the gate only on 
 that completes the epic — if the epic was already DONE and already promoted, say nothing.
 
 **Manual-verification check.** Before opening an epic PR into the trunk or running the plan
-gate, count the open items in `tasks/<plan>/CHECKLIST.md` (format in
-[`checklist-format.md`](../verify/references/checklist-format.md#counting-open-items)).
+gate, count the open items with `ck-checklist count tasks/<plan>` (format in
+[`checklist-format.md`](../verify/references/checklist-format.md)).
 Neither a missing file nor zero open items adds a prompt. Otherwise ask once, **Promote anyway** /
 **Not yet**. **Not yet** stops here and prints `/ck-code:verify tasks/<plan>`. It warns, never
 blocks, and makes no `Skill` call.
