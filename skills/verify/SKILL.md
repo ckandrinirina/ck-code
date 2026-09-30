@@ -85,7 +85,10 @@ config keys. Never invent one.
 4. **Not yet testable.** Stories not `done` are listed, never itemized.
 
 Write steps as the tester performs them: click-and-look through the running app. An automated
-test command is a valid step only for a headless surface, as `plan` 3.1 allows.
+test command is a valid step only for a headless surface, as `plan` 3.1 allows. Every item meets
+the **detail standard** in [checklist-format.md](references/checklist-format.md#writing-an-item--the-detail-standard):
+a tester who has never seen the code runs it from the checklist alone. Detail wins over brevity:
+a long, exact item beats a short one the tester has to guess at.
 
 ### 2.3 Write
 
@@ -108,7 +111,8 @@ items. This is a full retest, for example after a refactor or before a release. 
 
 ### 3.2 Ask
 
-Print up to four items (heading, Steps, Expected), then **one** `AskUserQuestion` with one
+Print up to two items **in full**, every field exactly as the checklist has it. Never
+shorten, merge or paraphrase steps when printing. Then **one** `AskUserQuestion` with one
 question per item: **PASS** · **ISSUE** (describe what you saw) · **BLOCKED** (say what is
 missing) · **SKIP**. An ISSUE or BLOCKED answer with no description gets one plain follow-up
 asking for it. Never record an issue without the tester's own words.
@@ -177,6 +181,8 @@ the command to resume is `/ck-code:verify tasks/<plan>`, and `--all` retests eve
 - **Never** diagnose or fix an issue here. Record it in the tester's words and hand it to `fix`.
 - **Never** hand off before the checklist and ticked stories are committed.
 - **Never** invent a screen, route, command or flow. Every step is grounded in a file read.
+- **Never** write a vague step or outcome ("check it works", "displays correctly") — every item
+  meets the detail standard, and a refresh rewrites any that does not.
 - **Never** stage a generated view (`STORIES_INDEX.md`, `EPICS_INDEX.md`).
 - **Never** reference AI, Claude, or generated-by notes in a commit —
   [full rule](../../references/no-ai-references.md).
