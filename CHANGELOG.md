@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.4] — 2026-09-30
+
+### Changed
+- **verify**: every checklist item now meets a detail standard, so a tester who has never
+  seen the code can run it alone. It has a plain goal, a starting state, one action per step
+  with the exact screen, label and value, what appears after each step, a concrete expected
+  outcome and the wrong outcomes that count as a failure. A refresh rewrites terse steps in
+  existing checklists and keeps their results. The session prints two items at a time, in full.
+
 ## [7.3.3] — 2026-09-30
 
 ### Changed
