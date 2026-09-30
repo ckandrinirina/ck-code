@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.4.0] — 2026-09-30
+
+### Added
+- **ck-checklist**: new script, the only writer of a plan's manual-verification checklist.
+  It allocates `C-NN` ids, records answers (dated result, previous one kept as `was`, the
+  story's human check ticked on a pass), and tracks the test session (`start`, `next`,
+  `close`). `count` returns 0 for a plan with no checklist, so the checklist stays optional.
+
+### Changed
+- **verify**: the checklist is laid out like the stories. `tasks/<plan>/CHECKLIST.md` is an
+  index holding the session state and setup steps, and each item is its own
+  `checklist/C-NN_<slug>.md` with its state in YAML frontmatter. The session is saved, so a
+  re-run, even in a new chat, resumes at the next item with the same scope. Items are no
+  longer re-parsed or reordered by the model. A format-1 `CHECKLIST.md` is converted in place
+  by `ck-checklist import` on the next run.
+- **ship**: the promotion gate counts open items with `ck-checklist count`.
+
 ## [7.3.6] — 2026-09-30
 
 ### Changed
