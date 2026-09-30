@@ -27,7 +27,7 @@ ticks story human checks and tracks the session. `verify` edits only the Markdow
 | `ck-checklist summary <plan>` | counts overall and per epic, **Retest**, **Waiting on fix**, the open session |
 | `ck-checklist list <plan> [--open]` | one line per item, under an `## Epic NN — <title>` heading per epic, `## Journeys` last |
 | `ck-checklist count <plan>` | open items (`0` without a checklist) |
-| `ck-checklist start <plan> [--epic NN] [--all]` | open a new session |
+| `ck-checklist start <plan> [--epic NN] [--all \| --recheck]` | open a new session. `--recheck` first resets every item in scope to `todo` (see below) |
 | `ck-checklist next <plan> [-n 2]` | the next items of the open session, with their paths |
 | `ck-checklist record <plan> C-NN pass\|fail\|blocked\|skip ["words"]` | write an answer; prints the files to stage |
 | `ck-checklist set <plan> C-NN key=value…` | `detail`, `after`, `source`, `title`, `criterion`, `fix` |
@@ -117,6 +117,11 @@ updated: 2026-09-30
 other `fail` item. `next` orders the open session as Retest, then `todo` and `blocked` (plus
 `pass` and `skip` when `session_all`), each **epic by epic** (by epic number, `journeys/` last)
 and by `C-NN` within an epic, and never offers a Waiting item.
+
+**Recheck** (`start --recheck`) is a clean retest from step 1. Every item in scope goes back to
+`todo`, a `pass (recorded in story)` included: `result` moves to `was` (with `→ fix NN-SS`),
+and `fix` and `tested_in` are cleared. An item already `todo` with no result is untouched, and a
+Waiting-on-fix item is kept as it is. Story human-check ticks are never undone.
 
 ## Writing an item — the detail standard
 

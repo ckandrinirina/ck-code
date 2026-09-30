@@ -15,7 +15,7 @@
 #   ck-checklist.sh list    <plan> [--open]
 #   ck-checklist.sh summary <plan>
 #   ck-checklist.sh count   <plan>
-#   ck-checklist.sh start   <plan> [--epic NN] [--all]
+#   ck-checklist.sh start   <plan> [--epic NN] [--all | --recheck]
 #   ck-checklist.sh next    <plan> [-n N]
 #   ck-checklist.sh record  <plan> C-NN pass|fail|blocked|skip ["tester's words"]
 #   ck-checklist.sh set     <plan> C-NN key=value…
@@ -29,7 +29,9 @@
 # summary  Counts overall and per epic, the Retest and Waiting-on-fix lists, the open session.
 # count    The number of open items (0 when the plan has no checklist). `ship` reads it.
 # start    Open a new session (number, scope, --all). Items answered in it are not
-#          offered again by `next`, so a --all retest never loops.
+#          offered again by `next`, so a --all retest never loops. --recheck first resets every
+#          item in scope to todo (recorded passes too, previous result kept as `was`), for a
+#          clean retest from step 1; a fail still waiting on its fix is left as it is.
 # next     The next N items of the open session (default 2), epic by epic, resumable from any chat.
 # record   Write a tester's answer: status, dated Result, the previous Result as `was`,
 #          and on a pass the tick of the story's human-check line. Prints the files to stage.
@@ -53,7 +55,7 @@ TODAY="${CK_TODAY:-$(date +%F)}"
 CMD="${1:-}"
 case "$CMD" in
   init|new|list|summary|count|start|next|record|set|path|close|import) ;;
-  -h|--help|"") sed -n '3,39p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help|"") sed -n '3,41p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) die "unknown command: $CMD (init|new|list|summary|count|start|next|record|set|path|close|import)" ;;
 esac
 PLAN="${2:-}"; PLAN="${PLAN%/}"
@@ -249,19 +251,49 @@ EOF
 }
 
 cmd_start() {
-  local scope=all retest_all=false n
+  local scope=all retest_all=false recheck=0 n
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --epic) printf '%s' "${2:-}" | grep -qE '^[0-9]{2}$' || die "--epic needs a two-digit number"; scope="epic $2"; shift 2 ;;
       --all) retest_all=true; shift ;;
+      --recheck) recheck=1; retest_all=true; shift ;;
       *) die "start: unknown option $1" ;;
     esac
   done
   need_index
+  [ "$recheck" = 1 ] && recheck "$scope"
   n="$(ck_fm "$IDX" session)"; n=$(( ${n:-0} + 1 ))
   ck_fm_set "$IDX" session "$n" && ck_fm_set "$IDX" session_scope "$scope" && ck_fm_set "$IDX" session_all "$retest_all" \
     && ck_fm_set "$IDX" session_last "" && ck_fm_set "$IDX" session_at "$TODAY" || exit 1
-  echo "ck-checklist: session $n started · scope $scope$([ "$retest_all" = true ] && printf ' --all')"
+  local flag=""
+  [ "$retest_all" = true ] && flag=" --all"
+  [ "$recheck" = 1 ] && flag=" --recheck"
+  echo "ck-checklist: session $n started · scope $scope$flag"
+}
+
+# recheck SCOPE — every item in scope back to todo for a clean retest from step 1, recorded
+# passes (`new --recorded`) included. The result moves to `was`, so no history is lost. A fail
+# still waiting on its fix is kept: there is nothing new to test until the fix lands.
+recheck() {
+  local num id st stories ep file res fix was reset=0 kept=""
+  while IFS="$US" read -r num id st stories ep _ file _; do
+    [ -n "$id" ] || continue
+    case "$1" in "epic "*) case " $ep " in *" ${1#epic } "*) ;; *) continue ;; esac ;; esac
+    [ "$st" = fail ] && [ "$(fail_kind "$stories")" = wait ] && { kept="$kept $id"; continue; }
+    res="$(fm "$file" result)"; fix="$(fm "$file" fix)"
+    [ "$st" = todo ] && [ -z "$res" ] && continue
+    was="$(fm "$file" was)"
+    [ -n "$res" ] && was="$res${fix:+ → fix $fix}"
+    ck_fm_set "$file" status todo && ck_fm_set "$file" result "" && fset "$file" was "$([ -n "$was" ] && q "$was")" \
+      && ck_fm_set "$file" fix "" && ck_fm_set "$file" tested_in "" && ck_fm_set "$file" updated "$TODAY" || exit 1
+    reset=$((reset + 1))
+  done <<EOF
+$(rows)
+EOF
+  ck_fm_set "$IDX" updated "$TODAY"
+  echo "ck-checklist: recheck — $reset item(s) back to todo, previous results kept as was"
+  [ -z "$kept" ] || echo "ck-checklist: kept, waiting on a fix:$kept"
+  echo "stage: $IDX $DIR"
 }
 
 # queue — "phase<TAB>gorder<TAB>num<TAB>id<TAB>kind<TAB>file": Retest first, then todo/blocked

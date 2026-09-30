@@ -1,7 +1,7 @@
 ---
 name: verify
-description: Use when the user wants to manually test a whole feature, plan or epic before promoting it — a checklist of every human check to run, resuming a test session, recording pass or fail results, or reporting an issue found while testing. Not for explaining code (use explain) or for a bug found outside a test session (use fix). Argument is an optional `tasks/<plan>` path, `--epic NN`, or a feature name, plus `--all` to retest every item including passed ones.
-argument-hint: "[tasks/<plan> | --epic NN | <feature name>] [--all]"
+description: Use when the user wants to manually test a whole feature, plan or epic before promoting it — a checklist of every human check to run, resuming a test session, recording pass or fail results, or reporting an issue found while testing. Not for explaining code (use explain) or for a bug found outside a test session (use fix). Argument is an optional `tasks/<plan>` path, `--epic NN`, or a feature name, plus `--all` (retest passed items too) or `--recheck` (reset, retest from scratch).
+argument-hint: "[tasks/<plan> | --epic NN | <feature name>] [--all | --recheck]"
 effort: medium
 allowed-tools: Bash(ck-checklist*) Bash(ck-story get*) Bash(ck-plan get*) Bash(ck-view*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Skill
 hooks:
@@ -20,7 +20,9 @@ like the stories (`checklist/NN_<epic-slug>/C-NN_<slug>.md`, cross-epic journeys
 `checklist/journeys/`), state in YAML frontmatter. A pass ticks the story's human-check box.
 An issue is recorded, then handed to `/ck-code:fix`, which diagnoses it against the right story
 and writes the bug. The session is stored too, so a re-run — in this chat or a new one —
-resumes at the next item. With `--all`, it retests every item, passed ones included.
+resumes at the next item. With `--all`, it retests every item, passed ones included. With
+`--recheck`, it first resets every item to `todo`, passes inherited from ticked story checks
+included, so the tester reruns the whole checklist from step 1.
 
 The checklist is optional: only this skill creates it, never another skill or a plan step.
 
@@ -62,8 +64,8 @@ state before it passes.
 | free text | match its keywords against `docs/architecture/features/*/` slugs and `EPIC.md` `slug:`/`title:` lines, as `explain` FEATURE MODE F.1 does. One plan → that plan. Several, or none → list them and stop |
 | empty | the plans with an open session (`session_scope:` set in `CHECKLIST.md`), else those with open items (`ck-checklist count` > 0), else those with `done` stories holding an unticked human check. Exactly one → use it. Several → `AskUserQuestion`. None → say so and stop |
 
-`--all` combines with any row above. It changes only which items the session walks (3.1),
-never how the checklist is built.
+`--all` or `--recheck` combines with any row above. Each changes only which items the session
+walks (3.1), never how the checklist is built. Both together mean `--recheck`.
 
 **Older layouts.** When `CHECKLIST.md` holds `### C-NN` headings and no `format: 2`, or any
 `ck-checklist` command says the items are ungrouped, run `ck-checklist import tasks/<plan>` first, relay its WARN lines, and commit the conversion
@@ -116,6 +118,12 @@ Then print `ck-checklist summary` as it outputs it: counts, **Retest**, **Waitin
 
 - **An open session, and the arguments did not change its scope** (no `--epic`/`--all`, or
   the same ones) → **resume**. Say `Resuming session N at <next C-NN> (last answered C-NN)`.
+  `--recheck` never resumes.
+- **`--recheck`** → `ck-checklist start tasks/<plan> [--epic NN] --recheck`. It resets every
+  item in scope to `todo` (each previous result kept as `was`) and leaves a fail still waiting
+  on its fix as it is. Relay its lines, then commit the paths on its `stage:` line as
+  `chore(tasks): reset the checklist of <plan> for a full recheck`. Story ticks stay: the next
+  pass finds them already ticked, and a fail goes to `fix` as usual.
 - **Otherwise** → `ck-checklist start tasks/<plan> [--epic NN] [--all]`.
 
 Print the index's `## Before you test` steps once. Then `ck-checklist next tasks/<plan>`
@@ -191,7 +199,8 @@ Print `ck-checklist summary` and the open items by `C-NN`. When nothing is open,
 the feature is verified and name its promotion as a plain next step:
 `/ck-code:ship --promote tasks/<plan>` at level `plan`, `--promote --epic NN` at level `epic`,
 nothing at level `story`. It is a recommendation, not a hand-off. When items remain open,
-the command to resume is `/ck-code:verify tasks/<plan>`, and `--all` retests everything.
+the command to resume is `/ck-code:verify tasks/<plan>`, `--all` retests everything, and
+`--recheck` resets the checklist for a clean retest from the start.
 
 ## RULES
 
@@ -201,7 +210,8 @@ the command to resume is `/ck-code:verify tasks/<plan>`, and `--all` retests eve
   go through `ck-checklist`; this skill writes only Markdown bodies.
 - **Never** create a checklist outside a `/ck-code:verify` run. It is optional.
 - **Never** delete, renumber or reuse a `C-NN`, or overwrite a recorded result on refresh.
-  Only a tester's answer in a session replaces a result, and the previous one stays as `was`.
+  Only a tester's answer in a session, or a `--recheck` the tester asked for, replaces a
+  result, and the previous one stays as `was`.
 - **Never** pick or reorder items by hand. The order is `ck-checklist next`'s.
 - **Never** record a result the tester did not give, and never mark an item `pass` to close a
   session.

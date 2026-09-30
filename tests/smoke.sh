@@ -924,6 +924,12 @@ CL="$(mktemp -d)"
   echo "all=$(ck-checklist next "$P" -n 5 | sed 1d | cut -f1,2 | tr '\t\n' ': ')"
   echo "was=$(grep '^was:' "$P"/checklist/*/C-02_*.md)"
   echo "count=$(ck-checklist count "$P")"
+  ck-checklist new "$P" --title "Recorded" --stories 41-02 --source "41-02 human check" --recorded >/dev/null
+  sed -i.bak 's/status: done/status: bug/' "$P/epics/42_ui/stories/01_btn.md"
+  ck-checklist record "$P" C-02 fail 'broke again' >/dev/null
+  echo "recheck=$(ck-checklist start "$P" --recheck | tr '\n' '|')"
+  echo "rnext=$(ck-checklist next "$P" -n 5 | sed 1d | cut -f1,2 | tr '\t\n' ': ')"
+  echo "rwas=$(grep -h '^was:' "$P"/checklist/*/C-04_*.md)"
   ck-checklist set "$P" 2 status=pass >/dev/null 2>&1; echo "setstatus=$?"
   mv "$P"/checklist/*/C-*.md "$P/checklist/"
   ck-checklist list "$P" >/dev/null 2>&1; echo "flatguard=$?"
@@ -943,7 +949,7 @@ assert_contains "ck-checklist new: items grouped in epic folders, journeys apart
 assert_contains "ck-checklist list: a heading per epic, journeys last" "$CLO" "heads=## Epic 41 — stake|## Epic 42 — ui|## Journeys|"
 assert_contains "ck-checklist next: epic by epic, journeys last" "$CLO" "order=C-01 C-02 C-03 "
 assert_contains "ck-checklist: flat 7.4.0 items are refused until imported" "$CLO" "flatguard=1"
-assert_contains "ck-checklist import: flat items move into their epic folders" "$CLO" "regrouped=./41_stake/C-01_counter.md ./42_ui/C-02_button.md ./journeys/C-03_journey.md "
+assert_contains "ck-checklist import: flat items move into their epic folders" "$CLO" "regrouped=./41_stake/C-01_counter.md ./41_stake/C-04_recorded.md ./42_ui/C-02_button.md ./journeys/C-03_journey.md "
 assert_contains "ck-checklist record: fail needs the tester's words" "$CLO" "nowords=1"
 assert_contains "ck-checklist record pass: ticks the story's human-check line" "$CLO" "tick=1"
 assert_contains "ck-checklist record: quotes survive as an escaped YAML scalar" "$CLO" 'result: "fail 2026-09-30 — saw \"x\""'
@@ -952,6 +958,9 @@ assert_contains "ck-checklist summary: a fail on a bug story is Waiting on fix" 
 assert_contains "ck-checklist next --epic --all: Retest first, other epics out" "$CLO" "retest=C-02:retest C-03:todo "
 assert_contains "ck-checklist record: the previous result and its fix move to was" "$CLO" 'was: "fail 2026-09-30 — saw \"x\" → fix 42-01"'
 assert_contains "ck-checklist next --all: pass items join, in C-NN order" "$CLO" "all=C-01:pass C-02:pass C-03:todo "
+assert_contains "ck-checklist start --recheck: recorded and passed items back to todo, a waiting fail kept" "$CLO" "recheck=ck-checklist: recheck — 2 item(s) back to todo, previous results kept as was|ck-checklist: kept, waiting on a fix: C-02|"
+assert_contains "ck-checklist start --recheck: every reset item walks again from step 1" "$CLO" "rnext=C-01:todo C-04:todo C-03:todo "
+assert_contains "ck-checklist start --recheck: the inherited pass is kept as was" "$CLO" 'rwas=was: "pass (recorded in story)"'
 assert_contains "ck-checklist set: refuses status (answers go through record)" "$CLO" "setstatus=1"
 assert_contains "ck-checklist: a format-1 checklist is refused until imported" "$CLO" "v1guard=1"
 assert_contains "ck-checklist import: format 2, result and fix split out" "$CLO" 'format: 2|result: "fail 2026-09-01 — no counter"|fix: 41-02|'
