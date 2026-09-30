@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.2.2] — 2026-09-30
+
+### Fixed
+- **explain**: the request now arrives on an explicit `User request:` line, so a free-text
+  argument (in any language) is no longer answered with "no request received"; a new
+  FEATURE MODE resolves a named feature from its slug, epic and story titles, explains what
+  it implements, and writes a complete manual test guide (prerequisites, happy-path and
+  error scenarios with expected results and state checks, automated checks).
+
 ## [7.2.1] — 2026-09-29
 
 ### Changed
