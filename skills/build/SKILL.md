@@ -15,7 +15,7 @@ hooks:
 # Build — TDD Story Implementation
 
 Implements stories from `tasks/` using Test-Driven Development, SOLID principles, and
-automated QA. Cycle: plan → test (RED) → implement (GREEN) → refactor → QA → complete.
+automated QA. Cycle: plan → test-drive one behaviour at a time (RED → GREEN, repeated) → refactor + prune tests → QA → complete.
 
 **One story** runs inline through Phases 0–8; **more than one** runs through
 [PARALLEL MODE](#parallel-mode) (one worktree agent per story, dependency-ordered waves —
@@ -27,7 +27,7 @@ views are **generated, gitignored and never committed** — this skill changes f
 through `ck-story`, which regenerates them, and commits only story files. The plan record
 (`tasks/<plan>/OVERVIEW.md`) is read with `ck-plan get`. See [`data-model.md`](../../references/data-model.md).
 
-References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [`code-craft.md`](../../references/code-craft.md) (clean-code + comment standard, 6.1 scan) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [`code-craft.md`](../../references/code-craft.md) (clean-code + comment standard, 6.1 scan) · [`test-craft.md`](../../references/test-craft.md) (minimal-test standard, 6.1 prune scan) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
 
 Parallel-mode references, read **only** when two or more stories are in scope: [parallel-mode.md](references/parallel-mode.md) (orchestration detail for P1–P9) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [wave-mode.md](references/wave-mode.md) (wave planning) · [conflict-format.md](references/conflict-format.md) (table/integrity/conflict/QA/summary formats).
 
@@ -90,7 +90,7 @@ commands, never from skipping a check:
   ([§ QA runs go through `ck-qa`](../../references/rtk.md#qa-runs-go-through-ck-qa)). A run
   past the 600 s Bash cap (a serial e2e suite) prints `ck-qa: RUNNING`. Continue it with
   `ck-qa wait <id>`, and never start it again or poll its output.
-- **Keep the inner loop targeted.** RED (4.4), GREEN iterations (5.2/5.3), and each
+- **Keep the inner loop targeted.** Every RED (4.4) and GREEN (5.2/5.3) of each cycle, and each
   refactoring (6.2) run the story's own test files. Lint only the files the story touched,
   by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,
   `ruff check app/x.py`). Never run a package-wide lint and `grep` it for one file: measured
@@ -382,38 +382,47 @@ still presents the plan.
 
 ---
 
-## PHASE 4: TDD — WRITE TESTS FIRST (RED PHASE)
+## PHASE 4: TDD — ONE BEHAVIOUR AT A TIME (RED PHASE)
 
-Write failing tests that define expected behavior **before any implementation.**
+Phases 4 and 5 form **one loop over behaviours**, not two batches. Each cycle writes a
+failing test for the next behaviour, then the minimum code to pass it. Never write the whole
+suite up front: tests written before the design exists pin guesses, and those guesses become
+the over-testing that 6.1 then has to prune. Every test meets
+[`test-craft.md`](../../references/test-craft.md): behaviour through the public surface, and
+only the tests a real regression would need.
 
-**4.1 Start test task.** Mark the test-writing task `in_progress` (TaskUpdate).
+**4.1 Start the cycle.** Mark the current test-drive task `in_progress` (TaskUpdate).
 
-**4.2 Determine test structure.** Read existing test files to learn conventions: naming
-(`.test.ts`, `_test.rs`, `test_*.py`), location (co-located, `__tests__/`, `tests/`),
-framework, assertion style, mock/stub patterns. Follow loaded guide skills.
+**4.2 Determine test structure** (first cycle only). Read existing test files to learn
+conventions: naming (`.test.ts`, `_test.rs`, `test_*.py`), location (co-located,
+`__tests__/`, `tests/`), framework, assertion style, mock/stub patterns. Follow loaded guide
+skills.
 
-**4.3 Write tests from acceptance criteria.** At least one test per criterion (worked mapping
-in [tdd-walkthrough.md](references/tdd-walkthrough.md)), plus **edge cases** (empty input,
-boundaries, max limits), **error scenarios** (invalid input, connection failures, timeouts),
-and **integration points** when the story connects two components.
+**4.3 Write the next test.** Pick the next acceptance criterion (worked mapping in
+[tdd-walkthrough.md](references/tdd-walkthrough.md)) and write **one** test for its
+behaviour. Add a test for an edge case, an error or an integration point only when the code
+of this cycle will actually branch on it, or when a criterion names it
+([`test-craft.md` § What to write](../../references/test-craft.md#what-to-write)). A small
+test that drives a tricky internal step is allowed as scaffolding and gets reviewed at 6.1.
 
-**4.4 Run tests — confirm RED.** **Expected: ALL new tests FAIL.** A new test that passes
-without implementation is likely wrong (it tests something that already exists or is trivially
-true) — fix it. Report RED as **one line** (output-blocks); mark the test task `completed`.
+**4.4 Run it — confirm RED.** **Expected: the new test FAILS.** A new test that passes
+without implementation is testing something that already exists or is trivially true. Delete
+or fix it; never keep it. A red run needs no report of its own; the loop reports once, at
+5.3.
 
 ---
 
 ## PHASE 5: IMPLEMENTATION (GREEN PHASE)
 
-Write the **minimum** code to make ALL tests pass.
+Write the **minimum** code to make the cycle's test pass, then loop back to 4.3.
 
-**5.1 Start implementation tasks.** Mark the first implementation task `in_progress`.
-**Guard:** confirm the Phase 2 "Skills loaded" block was shown this run. If not, stop and run
-Phase 2 now — implementation must apply the loaded experts/guides.
+**5.1 Guard.** On the first cycle, confirm the Phase 2 "Skills loaded" block was shown this
+run. If not, stop and run Phase 2 now, because implementation must apply the loaded
+experts/guides.
 
-**5.2 Implement.** Order: (1) create new files from the story's `files:`; (2) modify existing
-files; (3) run the story's test files after each significant change; (4) stop as soon as all tests pass — don't
-over-engineer. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
+**5.2 Implement.** Write only what the current test needs: create or modify the files from
+the story's `files:` as it requires, run the story's test files, and stop as soon as they
+pass. Don't over-engineer and don't build ahead of the next test. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
 existing code (check `docs/architecture/`, scan files); simplest code that passes; write to
 the clean-code and comment standard in [`code-craft.md`](../../references/code-craft.md) —
 names that explain themselves, comments only where they say *why*, in the fewest precise
@@ -423,9 +432,11 @@ story's `files:` set gets one line in a `## Unplanned Changes` body section in t
 pass: `- <path> — <what> — <why>`. Record at the moment of change; empty section = omit the
 heading.
 
-**5.3 Run tests — confirm GREEN.** **Expected: ALL tests PASS.** On failure read the output
-and fix the implementation (NOT the tests, unless a test itself has a bug); re-run until
-green. Report GREEN as **one line** (output-blocks); mark implementation task(s) `completed`.
+**5.3 Run tests — confirm GREEN, then loop.** **Expected: ALL of the story's tests PASS.**
+On failure read the output and fix the implementation (NOT the tests, unless a test itself
+has a bug); re-run until green, then **return to 4.3** for the next behaviour. When every acceptance
+criterion has a passing test, report the loop as **one line** (output-blocks) and mark the
+test-drive task(s) `completed`.
 
 ---
 
@@ -443,12 +454,16 @@ review that uncovers a structural problem escalates to the FULL template before 
 (reimplementation, copy-paste, dead code, needless indirection, unasked-for surface), at both
 routes, no template. **Then the comment & readability scan** — the four checks in
 [`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)
-(restating or wordy comments, missing *why*, doc comments, readability), same diff, same routes. Each
-hit from either scan is an ISSUE for 6.2 like any SOLID violation.
+(restating or wordy comments, missing *why*, doc comments, readability), same diff, same routes.
+**Then the test-prune scan** — the five checks in
+[`test-craft.md`](../../references/test-craft.md#test-prune-scan-implementation)
+(duplicate, scaffolding, implementation-coupled, trivial or speculative, oversized), run on the
+tests this story added or changed, same routes, with its deletion guards. Each hit from any
+of the three scans is an ISSUE for 6.2 like any SOLID violation.
 
 **6.2 Apply refactorings.** For each issue: apply the refactoring, run the story's test files (must stay green),
 revert and reconsider if they break. Common refactorings: collapse a reimplementation into
-the existing code, delete dead code, inline a single-caller wrapper, delete a restating
+the existing code, delete dead code, delete or merge a pruned test, inline a single-caller wrapper, delete a restating
 comment, add the missing *why* line, extract function, rename,
 introduce interface/trait for dependency inversion, split large functions, move code to the
 correct module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
@@ -683,7 +698,7 @@ dirty for the orchestrator. Commit messages are conventional
   guarantee, and escalates LEAN → FULL when the work outgrows its size.
 - **3.5** — plan and base branch confirmed in one gate before any code; the base is **derived from the plan's `integration:` (`ck-plan get`), resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`. The level is never asked here.
 - **3.3 + 6.1** — SOLID applied at design, verified after refactor (lean or full per 1.7).
-- **4** — failing tests before implementation (trivial boilerplate exempt).
+- **4** — each behaviour's test fails before its implementation, one behaviour per cycle, never the whole suite up front (trivial boilerplate exempt).
 - **5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
 - **7** — QA delegated to `qa-validator`; iteration cap = 3, then escalate.
 - **8.5** — manual-test gate; bug-fix loop cap = 3.
@@ -717,7 +732,7 @@ dirty for the orchestrator. Commit messages are conventional
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
-- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy scan runs in full at both routes.
+- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy, comment and test-prune scans run in full at both routes.
 - **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)).
 - **Never ship a comment that restates the code or runs longer than it needs, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)).
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
@@ -729,7 +744,8 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never keep work off `<trunk>` by picking a different base** — name
   `/ck-code:config integration tasks/<Plan> <level>` and stop, or `ship` targets `<trunk>` from
   the stored level regardless.
-- **Never edit a test to force GREEN.**
+- **Never edit a test to force GREEN.** Pruning at 6.1/6.2 is not that: it runs on a green suite, only on tests this story added, and never removes the sole test of an acceptance criterion or a bug's reproduction/regression test ([`test-craft.md`](../../references/test-craft.md#test-prune-scan-implementation)).
+- **Never keep a test that would catch no bug another test misses** — duplicates, scaffolding a behaviour test now covers, tests of internals or the framework, and speculative edge cases are pruned at 6.2.
 - **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
   wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner
   loop is targeted: the story's test files, and lint on touched files only. Never run a

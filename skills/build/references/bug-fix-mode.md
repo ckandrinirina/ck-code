@@ -34,8 +34,9 @@ scope. Present the Fix Plan as the plan (the Phase 3.5 confirm + branch gate sti
 **Phase 3.5 — Branch.** Always the `fix/<EE>-<SS>-<slug>` prefix (bug story).
 
 **Phase 4 — RED.** The failing reproduction test already exists in the tree (written by
-`fix`). Run it and confirm it is RED — do not rewrite it. Add any related regression tests the
-Fix Plan or diagnosis called out. If the repro test is unexpectedly GREEN, STOP: the tree
+`fix`). Run it and confirm it is RED — do not rewrite it. Add only the related regression tests the
+Fix Plan or diagnosis called out, never a broader sweep
+([`test-craft.md`](../../../references/test-craft.md)). If the repro test is unexpectedly GREEN, STOP: the tree
 changed since diagnosis — re-run `/ck-code:fix`.
 
 **Phase 5 — GREEN.** Apply the Fix Plan's change — the **smallest** edit that turns the

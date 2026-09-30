@@ -203,7 +203,7 @@ prompt: |
 
   Follow qa-validation.md Steps 0–7: load the QA expert skills yourself, verify every
   acceptance criterion with file:line evidence, then the suite, the quality checks, the
-  redundancy/code-craft spot-check and architecture compliance.
+  redundancy/code-craft/test-prune spot-check and architecture compliance.
 
   Return, in this order:
     - one line per acceptance criterion: PASS | FAIL | NOT-COVERED, with file:line

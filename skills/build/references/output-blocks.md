@@ -73,21 +73,20 @@ conditional set is the table in SKILL.md 3.5:
 
 ---
 
-## Phase 4.4 / 5.3 / 6.3 — Phase Complete (ONE LINE each)
+## Phase 5.3 / 6.3 — Phase Complete (ONE LINE each)
 
-These three are **progress notes, not gates** — the user takes no action on them. Keep each
+These two are **progress notes, not gates** — the user takes no action on them. Keep each
 to a single line; a heading block per TDD phase spends output tokens and wall-clock on
 information already implied by the next phase starting.
 
 ```
-RED: 7/7 new tests failing ✓ → implementing
-GREEN: 7/7 passing ✓ · 3 files created, 1 modified → refactoring
-REFACTOR: 7/7 still passing ✓ · 2 refactorings applied → QA
+TDD: 5 cycles · 6/6 passing ✓ · 3 files created, 1 modified → refactoring
+REFACTOR: 5/5 still passing ✓ · 2 refactorings applied, 1 test pruned → QA
 ```
 
 Expand to a full block **only when something is off-nominal** — a new test passed during
-RED, a refactor broke green, the suite count changed unexpectedly. Then say what and why,
-because that *is* actionable.
+RED, a refactor broke green, a prune was blocked by a deletion guard, the suite count
+changed unexpectedly. Then say what and why, because that *is* actionable.
 
 ---
 
@@ -106,12 +105,13 @@ because that *is* actionable.
 ### Code Quality
 - Type checking / Linting / Formatting: PASS / FAIL
 - Redundancy scan (6.1): ran — [N] collapsed / CLEAN
+- Test-prune scan (6.1): ran — [N] pruned / CLEAN
 
 ### Architecture Compliance: PASS / FAIL
 [Notes on deviations]
 
 ### Edge Cases
-- [Edge case]: COVERED / MISSING
+- [Edge case the code branches on]: COVERED / MISSING
 
 ### Issues Found
 | # | Severity | Description | Location |

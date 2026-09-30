@@ -1,7 +1,7 @@
 # Worked TDD Walkthrough
 
-End-to-end example of the red-green-refactor cycle plus SOLID review applied
-to a single story. The rules in SKILL.md are authoritative.
+End-to-end example of the red-green loop (one behaviour per cycle), the refactor and
+test-prune pass, and the SOLID review, applied to a single story. The rules in SKILL.md are authoritative.
 
 ---
 
@@ -50,54 +50,69 @@ O/L/I: not in play — no new abstraction, subtype, or interface in this story.
 
 ## Phase 3.4 — Subtasks Breakdown (TaskCreate)
 
-**LEAN route (size `S`, Bug-Fix Mode)** — three tasks, each blocked by the previous;
-refactor and completion fold into their phases rather than getting their own rows:
+**LEAN route (size `S`, Bug-Fix Mode)** — two tasks, the second blocked by the first;
+refactor, prune and completion fold into their phases rather than getting their own rows:
 
 ```
-1. "Write tests for [story title]"      activeForm: "Writing tests for [story title]"
-2. "Implement [story title]"            activeForm: "Implementing [story title]"
-3. "QA validation for [story title]"    activeForm: "Running QA for [story title]"
+1. "Test-drive [story title]"           activeForm: "Test-driving [story title]"
+2. "QA validation for [story title]"    activeForm: "Running QA for [story title]"
 ```
 
 **FULL route (size `M`)** — typical task breakdown for a story:
 
 ```
-1. "Write tests for [story title]"
-   - activeForm: "Writing tests for [story title]"
+1. "Test-drive [component/module A]"
+   - activeForm: "Test-driving [component A]"
 
-2. "Implement [component/module A]"
-   - activeForm: "Implementing [component A]"
+2. "Test-drive [component/module B]" (if applicable)
+   - activeForm: "Test-driving [component B]"
 
-3. "Implement [component/module B]" (if applicable)
-   - activeForm: "Implementing [component B]"
-
-4. "Refactor [story title] implementation"
+3. "Refactor and prune tests for [story title]"
    - activeForm: "Refactoring [story title]"
 
-5. "QA validation for [story title]"
+4. "QA validation for [story title]"
    - activeForm: "Running QA for [story title]"
 
-6. "Complete [story title] — summary, status and files:"
+5. "Complete [story title] — summary, status and files:"
    - activeForm: "Completing [story title]"
 ```
 
-Set dependencies: implementation blocked by tests, refactor blocked by
-implementation, QA blocked by refactor, completion blocked by QA.
+Each test-drive task runs Phases 4–5 as a loop, one behaviour per cycle; never split
+"write tests" and "implement" into separate tasks. Set dependencies: each test-drive task
+blocked by the previous, refactor blocked by the last one, QA blocked by refactor,
+completion blocked by QA.
 
 ---
 
 ## Phase 4.3 — Worked Example: Acceptance Criterion → Tests
 
-```
-Acceptance Criterion: "WebSocket server accepts connections on port 8765"
-→ Test: test_server_accepts_websocket_connection_on_configured_port()
+One cycle per behaviour. A second test for a criterion needs its own branch in the code:
 
-Acceptance Criterion: "Messages are serialized in MessagePack format"
-→ Test: test_message_serialization_uses_messagepack()
-→ Test: test_message_deserialization_handles_invalid_msgpack()
+```
+Cycle 1  AC "WebSocket server accepts connections on port 8765"
+  RED    test_server_accepts_websocket_connection_on_configured_port() → FAIL
+  GREEN  bind + accept loop → PASS
+
+Cycle 2  AC "Messages are serialized in MessagePack format"
+  RED    test_message_round_trips_through_messagepack() → FAIL
+  GREEN  encode/decode → PASS
+
+Cycle 3  the decoder now branches on malformed bytes (it returns a protocol error)
+  RED    test_invalid_msgpack_returns_protocol_error() → FAIL
+  GREEN  error branch → PASS
 ```
 
-Edge cases, error scenarios, and integration points: rules in SKILL.md Phase 4.3.
+What 6.1 prunes from a loop like this one:
+
+```
+scaffolding   test_encoder_writes_map_header()   → covered by the round-trip test → delete
+duplicate     test_accepts_second_connection()   → same path as cycle 1          → delete
+coupled       test_handler_calls_encode_once()   → asserts mock calls, not output → delete
+not written   test_port_is_8765()                → tests a constant (never write)
+not written   test_empty_frame()                 → the decoder has no empty-frame branch
+```
+
+Rules: SKILL.md Phase 4.3 and [`test-craft.md`](../../../references/test-craft.md).
 
 ---
 

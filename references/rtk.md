@@ -146,7 +146,7 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
 
 | Phase | Command | Why it matters |
 |---|---|---|
-| `build` Phase 4/6 — the TDD loop | the project's `test` command | run on every RED and GREEN cycle; `rtk test` returns failures only |
+| `build` Phase 4/6 — the TDD loop | the project's `test` command | run on every RED and GREEN of each one-behaviour cycle; `rtk test` returns failures only |
 | `build` Phase 7 / `ck-code:qa-validator` | full suite + lint + typecheck | the biggest single output in the workflow, and it repeats per QA iteration (cap 3). `ck-qa` keeps it out of RTK's reach, so its tail cap is what bounds it |
 | `build` PARALLEL MODE | per-worktree suites | multiplied by the number of stories in the wave |
 | `ship`, `doctor --fix` | `git`, `gh` | many small calls whose boilerplate dominates their signal |

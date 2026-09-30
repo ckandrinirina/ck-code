@@ -54,18 +54,22 @@ manifest and run that row of the per-stack command table in
 — the single source for both inline and PARALLEL MODE QA. Zero compiler
 warnings in project-owned files is the bar.
 
-## Step 3.5 — Redundancy and code-craft check
+## Step 3.5 — Redundancy, code-craft and test-prune check
 
-Verify Phase 6.1's two scans actually ran, then spot-check the diff against the same
+Verify Phase 6.1's three scans actually ran, then spot-check the diff against the same
 checks — [`reuse-first.md`](reuse-first.md#redundancy-scan-implementation) owns the five
 redundancy checks, [`code-craft.md`](code-craft.md#comment--readability-scan-implementation)
-the four comment & readability checks; never restate either list here. QA re-runs a scan
-only when Phase 6 shows no evidence of it (no scan line, no collapse/delete/comment fix in
-6.2) or when the diff grew after it.
+the four comment & readability checks,
+[`test-craft.md`](test-craft.md#test-prune-scan-implementation) the five test-prune checks and
+their deletion guards; never restate any list here. QA re-runs a scan only when Phase 6
+shows no evidence of it (no scan line, no collapse/delete/comment/prune fix in 6.2) or when
+the diff grew after it. A prune that removed the sole test of a criterion, or a bug's
+reproduction/regression test, is a HIGH finding: restore the test.
 
 Anything found is an ordinary QA finding in the Issues Found table under the existing
 iteration cap — never a new gate. Cite `file:line` and, for a redundancy hit, the existing
-code the diff should have used; for a comment hit, the line to delete or the *why* it lacks.
+code the diff should have used; for a comment hit, the line to delete or the *why* it lacks;
+for a test hit, the test to delete or merge and the test that already covers its path.
 
 ## Step 4 — Architecture compliance
 
@@ -80,9 +84,12 @@ Check the implementation against the story's **feature doc**
 
 ## Step 5 — Edge-case analysis
 
-Look for scenarios tests might not cover: null / undefined / empty inputs,
+Look for scenarios the code mishandles: null / undefined / empty inputs,
 concurrent access (if applicable), resource cleanup (file handles,
-connections), error propagation through the call chain.
+connections), error propagation through the call chain. A missing test is a finding only
+when the code has a branch for the scenario and no test drives it. A scenario the code has
+no branch for is a code finding when it is a real defect, never a request for a speculative
+test ([`test-craft.md`](test-craft.md#what-to-write)).
 
 ## Step 6 (bug-fix only) — Minimalism check
 
@@ -99,6 +106,7 @@ Emit a QA Report with:
 - Test totals + new regressions.
 - Code-quality results.
 - Redundancy check (scan ran; findings, if any).
+- Test-prune check (scan ran; tests pruned, if any).
 - Architecture compliance.
 - Edge-case coverage.
 - Issues Found table (severity).
@@ -114,8 +122,9 @@ calling skill's completion phase.
 
 **NEEDS FIXES** — track iteration count (max 3):
 
-- **Iteration < 3:** announce `[N]/3`, fix each issue (write a test for
-  it first if missing, then fix code), re-run any refactor pass, then
+- **Iteration < 3:** announce `[N]/3`, fix each issue (for a behaviour
+  defect, write its failing test first if none exists, then fix code; a quality, lint or
+  architecture finding gets no new test), re-run any refactor pass, then
   re-run QA from Step 1 with a fresh check.
 - **Iteration = 3:** **escalate to user** with three options:
   - **A) FIX MANUALLY** — apply specific fixes the user suggests.
