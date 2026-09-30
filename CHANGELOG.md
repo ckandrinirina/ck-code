@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.6] — 2026-09-30
+
+### Changed
+- **verify**: checklist items stay fully detailed but terse. They use short field names, one
+  line per step (where, action, visible change), a `Start` line only when setup differs,
+  no repeated outcomes, a one-line `Fail if`, and a worked example. The same test costs fewer
+  tokens to write, store and print.
+
 ## [7.3.5] — 2026-09-30
 
 ### Fixed
