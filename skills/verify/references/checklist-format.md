@@ -7,8 +7,14 @@ generated view, which is what makes a session resumable on another day, machine 
 
 ```
 tasks/<plan>/CHECKLIST.md               index — plan, session state, Before you test, Not yet testable
-tasks/<plan>/checklist/C-NN_<slug>.md   one item — its state and its test steps
+tasks/<plan>/checklist/NN_<epic-slug>/C-NN_<slug>.md   an item of one epic — its state and its test steps
+tasks/<plan>/checklist/journeys/C-NN_<slug>.md        a journey, or an item spanning several epics
 ```
+
+Items are **grouped by epic** the way stories are: an item whose `epics` is a single epic lives
+in that epic's folder, named exactly as `tasks/<plan>/epics/NN_<epic-slug>/`. A `journey · …`
+source, or more than one epic, goes to `journeys/`. `new` picks the folder, and `C-NN` stays
+one sequence across the whole plan, so an id never depends on its folder.
 
 **`ck-checklist` is the only writer of frontmatter.** It allocates IDs, records answers,
 ticks story human checks and tracks the session. `verify` edits only the Markdown bodies
@@ -18,15 +24,15 @@ ticks story human checks and tracks the session. `verify` edits only the Markdow
 |---|---|
 | `ck-checklist init <plan> --feature <slug> --title "<plan title>"` | write the index |
 | `ck-checklist new <plan> --title … --stories "NN-SS …" --source … [--criterion …] [--checks …] [--expected …] [--after C-NN] [--recorded]` | allocate the next `C-NN`, write an outline item. `--recorded` = the human check is already ticked, enters as `pass` |
-| `ck-checklist summary <plan>` | counts, **Retest**, **Waiting on fix**, the open session |
-| `ck-checklist list <plan> [--open]` | one line per item |
+| `ck-checklist summary <plan>` | counts overall and per epic, **Retest**, **Waiting on fix**, the open session |
+| `ck-checklist list <plan> [--open]` | one line per item, under an `## Epic NN — <title>` heading per epic, `## Journeys` last |
 | `ck-checklist count <plan>` | open items (`0` without a checklist) |
 | `ck-checklist start <plan> [--epic NN] [--all]` | open a new session |
 | `ck-checklist next <plan> [-n 2]` | the next items of the open session, with their paths |
 | `ck-checklist record <plan> C-NN pass\|fail\|blocked\|skip ["words"]` | write an answer; prints the files to stage |
 | `ck-checklist set <plan> C-NN key=value…` | `detail`, `after`, `source`, `title`, `criterion`, `fix` |
 | `ck-checklist close <plan>` | end the session |
-| `ck-checklist import <plan>` | convert a format-1 `CHECKLIST.md` in place |
+| `ck-checklist import <plan>` | convert a format-1 `CHECKLIST.md` in place, or group 7.4.0's flat `checklist/C-NN_*.md` items into epic folders |
 
 ## Index — `CHECKLIST.md`
 
@@ -64,7 +70,7 @@ session_at: 2026-09-30
 | `session_all` | `true` when the session retests `pass` and `skip` items too |
 | `session_last` | the last item answered — the resume point shown to the tester |
 
-## Item — `checklist/C-NN_<slug>.md`
+## Item — `checklist/<group>/C-NN_<slug>.md`
 
 ```markdown
 ---
@@ -109,7 +115,8 @@ updated: 2026-09-30
 
 **Retest** = a `fail` item whose stories are all back at `done`. **Waiting on fix** = any
 other `fail` item. `next` orders the open session as Retest, then `todo` and `blocked` (plus
-`pass` and `skip` when `session_all`), each by `C-NN`, and never offers a Waiting item.
+`pass` and `skip` when `session_all`), each **epic by epic** (by epic number, `journeys/` last)
+and by `C-NN` within an epic, and never offers a Waiting item.
 
 ## Writing an item — the detail standard
 
@@ -155,6 +162,9 @@ A refresh (a re-run after more stories reach `done`) changes the checklist in pl
 
 Before format 2, the whole checklist was one `CHECKLIST.md` with each item as a
 `### C-NN · <status> · <ids> — <name>` heading. `ck-checklist import` converts it in place:
-the index keeps Before you test and Not yet testable, each item becomes a file, `(was …)`
+the index keeps Before you test and Not yet testable, each item becomes a file in its epic folder, `(was …)`
 and `→ fix NN-SS` become `was` and `fix`, and a human-check source finds its `criterion` in
 the story (a WARN asks for `set criterion=…` when the story has several).
+
+7.4.0 wrote items flat, as `checklist/C-NN_*.md`. Every command but `import` refuses them, and
+`import` moves each into its epic folder, contents unchanged.

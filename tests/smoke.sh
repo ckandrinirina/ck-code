@@ -905,11 +905,14 @@ CL="$(mktemp -d)"
   ck-checklist new "$P" --title "Journey" --stories "41-02 42-01" --source "journey · pay" >/dev/null
   ck-checklist new "$P" --title "X" --stories 99-01 --source s >/dev/null 2>&1; echo "badstory=$?"
   echo "next1=$(ck-checklist next "$P" | sed 1d | cut -f1 | tr '\n' ' ')"
+  echo "files=$(cd "$P/checklist" && find . -name 'C-*.md' | sort | tr '\n' ' ')"
+  echo "heads=$(ck-checklist list "$P" | grep '^## ' | tr '\n' '|')"
+  echo "order=$(ck-checklist next "$P" -n 5 | sed 1d | cut -f1 | tr '\n' ' ')"
   ck-checklist record "$P" C-02 fail >/dev/null 2>&1; echo "nowords=$?"
   ck-checklist record "$P" C-02 fail 'saw "x"' >/dev/null
   ck-checklist record "$P" 1 pass >/dev/null
   echo "tick=$(grep -c -- '- \[x\] Human check' "$P/epics/41_stake/stories/02_real.md")"
-  echo "result=$(grep '^result:' "$P"/checklist/C-02_*.md)"
+  echo "result=$(grep '^result:' "$P"/checklist/*/C-02_*.md)"
   echo "resume=$(ck-checklist next "$P" | sed 1d | cut -f1 | tr '\n' ' ')"
   echo "summary=$(ck-checklist summary "$P" | tr '\n' '|')"
   ck-checklist set "$P" 2 fix=42-01 >/dev/null
@@ -919,19 +922,28 @@ CL="$(mktemp -d)"
   ck-checklist record "$P" C-02 pass >/dev/null
   ck-checklist start "$P" --all >/dev/null
   echo "all=$(ck-checklist next "$P" -n 5 | sed 1d | cut -f1,2 | tr '\t\n' ': ')"
-  echo "was=$(grep '^was:' "$P"/checklist/C-02_*.md)"
+  echo "was=$(grep '^was:' "$P"/checklist/*/C-02_*.md)"
   echo "count=$(ck-checklist count "$P")"
   ck-checklist set "$P" 2 status=pass >/dev/null 2>&1; echo "setstatus=$?"
+  mv "$P"/checklist/*/C-*.md "$P/checklist/"
+  ck-checklist list "$P" >/dev/null 2>&1; echo "flatguard=$?"
+  ck-checklist import "$P" >/dev/null 2>&1
+  echo "regrouped=$(cd "$P/checklist" && find . -name 'C-*.md' | sort | tr '\n' ' ')"
   printf -- '---\nplan: v1\nupdated: 2026-09-01\n---\n\n## Before you test\n\n1. run\n\n## Epic 41 — S\n\n### C-01 · fail · 41-02 — Old\n- **Source:** 41-02 human check\n- **Steps:** outline\n- **Result:** fail 2026-09-01 — no counter → fix 41-02\n' > tasks/v1.md
   mkdir -p tasks/2026-01-01_v1/epics && mv tasks/v1.md tasks/2026-01-01_v1/CHECKLIST.md
   ck-checklist next tasks/2026-01-01_v1 >/dev/null 2>&1; echo "v1guard=$?"
   ck-checklist import tasks/2026-01-01_v1 >/dev/null 2>&1
-  echo "v1=$(grep -hE '^(format|fix|result):' tasks/2026-01-01_v1/CHECKLIST.md tasks/2026-01-01_v1/checklist/C-01_*.md | tr '\n' '|')"
+  echo "v1=$(grep -hE '^(format|fix|result):' tasks/2026-01-01_v1/CHECKLIST.md tasks/2026-01-01_v1/checklist/*/C-01_*.md | tr '\n' '|')"
 ) > "$CL/out" 2>&1
 CLO="$(cat "$CL/out")"; rm -rf "$CL"
 assert_contains "ck-checklist count: 0 when the plan has no checklist (it is optional)" "$CLO" "count0=0"
 assert_contains "ck-checklist new: refuses a story the plan does not have" "$CLO" "badstory=1"
 assert_contains "ck-checklist next: C-NN order, two at a time" "$CLO" "next1=C-01 C-02 "
+assert_contains "ck-checklist new: items grouped in epic folders, journeys apart" "$CLO" "files=./41_stake/C-01_counter.md ./42_ui/C-02_button.md ./journeys/C-03_journey.md "
+assert_contains "ck-checklist list: a heading per epic, journeys last" "$CLO" "heads=## Epic 41 — stake|## Epic 42 — ui|## Journeys|"
+assert_contains "ck-checklist next: epic by epic, journeys last" "$CLO" "order=C-01 C-02 C-03 "
+assert_contains "ck-checklist: flat 7.4.0 items are refused until imported" "$CLO" "flatguard=1"
+assert_contains "ck-checklist import: flat items move into their epic folders" "$CLO" "regrouped=./41_stake/C-01_counter.md ./42_ui/C-02_button.md ./journeys/C-03_journey.md "
 assert_contains "ck-checklist record: fail needs the tester's words" "$CLO" "nowords=1"
 assert_contains "ck-checklist record pass: ticks the story's human-check line" "$CLO" "tick=1"
 assert_contains "ck-checklist record: quotes survive as an escaped YAML scalar" "$CLO" 'result: "fail 2026-09-30 — saw \"x\""'

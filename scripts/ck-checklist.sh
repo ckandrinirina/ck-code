@@ -5,7 +5,8 @@
 # Layout (skills/verify/references/checklist-format.md):
 #   tasks/<plan>/CHECKLIST.md               index: frontmatter (plan, feature, format, session_*)
 #                                           + Before you test + Not yet testable
-#   tasks/<plan>/checklist/C-NN_<slug>.md   one item: frontmatter state + its test steps
+#   tasks/<plan>/checklist/NN_<epic-slug>/C-NN_<slug>.md   an item of one epic: state + steps
+#   tasks/<plan>/checklist/journeys/C-NN_<slug>.md        a journey, or an item spanning epics
 #
 # Usage:
 #   ck-checklist.sh init    <plan> [--feature <slug>] [--title "<plan title>"]
@@ -24,17 +25,18 @@
 #
 # new      Allocate the next free C-NN (never reused) and write the item as an outline.
 #          --recorded: the human check is already ticked, so it enters as pass.
-# list     One line per item: id, status, stories, title · source (what a refresh matches on). --open keeps todo|fail|blocked.
-# summary  Counts, the Retest and Waiting-on-fix lists, and the open session.
+# list     Items grouped by epic, journeys last: id, status, stories, title · source. --open keeps todo|fail|blocked.
+# summary  Counts overall and per epic, the Retest and Waiting-on-fix lists, the open session.
 # count    The number of open items (0 when the plan has no checklist). `ship` reads it.
 # start    Open a new session (number, scope, --all). Items answered in it are not
 #          offered again by `next`, so a --all retest never loops.
-# next     The next N items of the open session (default 2), resumable from any chat.
+# next     The next N items of the open session (default 2), epic by epic, resumable from any chat.
 # record   Write a tester's answer: status, dated Result, the previous Result as `was`,
 #          and on a pass the tick of the story's human-check line. Prints the files to stage.
 # set      Mutable keys: detail (outline|full), after (C-NN), source, title, criterion, fix (NN-SS).
 # close    End the session. `next` says when nothing is left.
-# import   Convert a format-1 CHECKLIST.md (items as ### headings in one file) in place.
+# import   Convert a format-1 CHECKLIST.md (items as ### headings in one file) in place, or
+#          move 7.4.0's flat checklist/C-NN_*.md items into their epic folders.
 #
 # CK_TODAY overrides today's date (tests).
 
@@ -69,9 +71,11 @@ fm() { ck_fm "$1" "$2" | sed 's/\\"/"/g; s/\\\\/\\/g'; }
 # fset FILE KEY VALUE — ck_fm_set, with backslashes doubled because awk -v unescapes them.
 fset() { ck_fm_set "$1" "$2" "$(printf '%s' "$3" | sed 's/\\/\\\\/g')"; }
 
+has_flat() { [ -n "$(find "$DIR" -maxdepth 1 -type f -name 'C-*.md' 2>/dev/null | head -1)" ]; }
 is_v1() { [ -f "$IDX" ] && [ "$(ck_fm "$IDX" format)" != 2 ] && grep -qE '^### C-[0-9]+ ' "$IDX"; }
 need_index() {
   is_v1 && die "$IDX is format 1 — run \`ck-checklist import $PLAN\` first"
+  has_flat && die "$DIR holds ungrouped items — run \`ck-checklist import $PLAN\` first"
   [ -f "$IDX" ] || die "$PLAN has no CHECKLIST.md — run \`ck-checklist init $PLAN\` first"
 }
 norm_id() {
@@ -80,7 +84,7 @@ norm_id() {
   printf 'C-%02d' "$((10#$n))"
 }
 item_file() { # ID → its path (empty when absent)
-  find "$DIR" -maxdepth 1 -type f -name "$1_*.md" 2>/dev/null | head -1
+  find "$DIR" -maxdepth 2 -type f -name "$1_*.md" 2>/dev/null | head -1
 }
 need_item() { local f; f="$(item_file "$1")"; [ -n "$f" ] || die "no item $1 in $DIR"; printf '%s' "$f"; }
 slugify() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]\{1,\}/-/g; s/^-//; s/-$//' | cut -c1-40 | sed 's/-$//'; }
@@ -88,19 +92,36 @@ story_file() { # NN-SS → the story file of this plan
   local e="${1%%-*}" s="${1#*-}"
   find "$PLAN/epics" -type f -path "*/epics/${e}_*/stories/${s}_*.md" 2>/dev/null | head -1
 }
+# group_of EPICS SOURCE — the folder an item lives in: its epic's folder name, or `journeys`
+# for a flow and for anything spanning several epics.
+group_of() {
+  case "$2" in journey*) printf 'journeys'; return ;; esac
+  case "$1" in *" "*) printf 'journeys'; return ;; esac
+  basename "$(find "$PLAN/epics" -mindepth 1 -maxdepth 1 -type d -name "$1_*" 2>/dev/null | head -1)"
+}
+# group_title GROUP — the heading a group is listed under.
+group_title() {
+  [ "$1" = journeys ] && { printf 'Journeys'; return; }
+  local t; t="$(fm "$PLAN/epics/$1/EPIC.md" title)"
+  printf 'Epic %s — %s' "${1%%_*}" "${t:-${1#*_}}"
+}
 story_status() { local f; f="$(story_file "$1")"; [ -n "$f" ] && ck_fm "$f" status || printf 'missing'; }
 
-# rows — num, id, status, stories, epics, tested_in, file, title, source; one item per line, by C-NN.
+# rows — num, id, status, stories, epics, tested_in, file, group, gorder, title, source; one item
+# per line, by C-NN. gorder sorts epics by number and journeys last.
 # Fields are split by US (\037), never a tab: `read` collapses runs of whitespace IFS, so an
 # empty tested_in would shift every later field.
 US=$(printf '\037')
 rows() {
   [ -d "$DIR" ] || return 0
   local f
-  for f in "$DIR"/C-*.md; do
+  local f g go
+  for f in "$DIR"/*/C-*.md "$DIR"/C-*.md; do
     [ -f "$f" ] || continue
-    printf '%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\n' "$(fm "$f" id | sed 's/^C-0*//;s/^$/0/')" "$(fm "$f" id)" \
-      "$(fm "$f" status)" "$(fm "$f" stories)" "$(fm "$f" epics)" "$(fm "$f" tested_in)" "$f" "$(fm "$f" title)" "$(fm "$f" source)"
+    g="$(basename "$(dirname "$f")")"
+    case "$g" in journeys|checklist) go=999 ;; *) go="$((10#${g%%_*}))" ;; esac
+    printf '%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\037%s\n' "$(fm "$f" id | sed 's/^C-0*//;s/^$/0/')" "$(fm "$f" id)" \
+      "$(fm "$f" status)" "$(fm "$f" stories)" "$(fm "$f" epics)" "$(fm "$f" tested_in)" "$f" "$g" "$go" "$(fm "$f" title)" "$(fm "$f" source)"
   done | sort -n -k1,1
 }
 
@@ -135,7 +156,7 @@ cmd_init() {
 }
 
 cmd_new() {
-  local title="" stories="" source="" criterion="" checks="" expected="" after="" rec=0 st=todo res="" s epics="" last n id f
+  local title="" stories="" source="" criterion="" checks="" expected="" after="" rec=0 st=todo res="" s epics="" last n id f g
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --title) title="${2:-}"; shift 2 ;;
@@ -160,8 +181,10 @@ cmd_new() {
   [ "$rec" = 1 ] && { st=pass; res="$(q "pass (recorded in story)")"; }
   last="$(rows | awk -F'\037' 'END { print ($1 == "" ? 0 : $1) }')"
   n=$((last + 1)); id="$(printf 'C-%02d' "$n")"
-  mkdir -p "$DIR"
-  f="$DIR/${id}_$(slugify "$title").md"
+  g="$(group_of "$epics" "$source")"
+  [ -n "$g" ] || die "no epic folder for $epics in $PLAN/epics"
+  mkdir -p "$DIR/$g"
+  f="$DIR/$g/${id}_$(slugify "$title").md"
   {
     printf -- '---\nid: %s\ntitle: %s\nstatus: %s\nstories: %s\nepics: %s\nsource: %s\n' "$id" "$(q "$title")" "$st" "$stories" "$epics" "$(q "$source")"
     printf 'criterion: %s\ndetail: outline\nafter: %s\nresult: %s\nwas:\nfix:\ntested_in:\nupdated: %s\n---\n\n' \
@@ -176,9 +199,15 @@ cmd_list() {
   local open=0
   [ "${1:-}" = --open ] && open=1
   need_index
-  rows | awk -F'\037' -v open="$open" '
-    open && $3 != "todo" && $3 != "fail" && $3 != "blocked" { next }
-    { printf "%-6s %-8s %-12s %s · %s\n", $2, $3, $4, $8, $9 }'
+  local g="" num id st stories ep ti file grp go title src
+  while IFS="$US" read -r num id st stories ep ti file grp go title src; do
+    [ -n "$id" ] || continue
+    [ "$open" = 1 ] && case "$st" in todo|fail|blocked) ;; *) continue ;; esac
+    [ "$grp" = "$g" ] || { g="$grp"; echo "## $(group_title "$grp")"; }
+    printf '%-6s %-8s %-12s %s · %s\n' "$id" "$st" "$stories" "$title" "$src"
+  done <<EOF
+$(rows | sort -t"$US" -k9,9n -k1,1n)
+EOF
 }
 
 cmd_count() {
@@ -202,6 +231,13 @@ cmd_summary() {
 $(rows)
 EOF
   echo "$all items · $p pass · $f fail · $b blocked · $t todo · $k skip"
+  rows | sort -t"$US" -k9,9n -k1,1n | awk -F'\037' '
+    $8 != g { if (g != "") out(); g = $8; n = p = o = 0 }
+    { n++; if ($3 == "pass") p++; if ($3 == "todo" || $3 == "fail" || $3 == "blocked") o++ }
+    function out() { printf "%s\037%d items · %d pass · %d open\n", g, n, p, o }
+    END { if (g != "") out() }' | while IFS="$US" read -r grp line; do
+    printf '  %s: %s\n' "$(group_title "$grp")" "$line"
+  done
   echo "Retest:${retest:- none}"
   echo "Waiting on fix:${wait:- none}"
   sess="$(ck_fm "$IDX" session)"
@@ -228,19 +264,20 @@ cmd_start() {
   echo "ck-checklist: session $n started · scope $scope$([ "$retest_all" = true ] && printf ' --all')"
 }
 
-# queue — "id<TAB>kind<TAB>file" in session order: Retest, then todo/blocked (and pass/skip
-# with --all), each in C-NN order; never an item answered this session or waiting on a fix.
+# queue — "phase<TAB>gorder<TAB>num<TAB>id<TAB>kind<TAB>file": Retest first, then todo/blocked
+# (and pass/skip with --all); each epic by epic, journeys last, C-NN within a group. Never an
+# item answered this session or waiting on a fix.
 queue() {
   local scope all sess num id st stories ep ti file title kind
   scope="$(ck_fm "$IDX" session_scope)"; all="$(ck_fm "$IDX" session_all)"; sess="$(ck_fm "$IDX" session)"
-  while IFS="$US" read -r num id st stories ep ti file _; do
+  while IFS="$US" read -r num id st stories ep ti file _ go _; do
     [ -n "$id" ] || continue
     [ -n "$sess" ] && [ "$ti" = "$sess" ] && continue
     case "$scope" in "epic "*) case " $ep " in *" ${scope#epic } "*) ;; *) continue ;; esac ;; esac
     case "$st" in
-      fail) kind="$(fail_kind "$stories")"; [ "$kind" = retest ] || continue; printf '0\t%s\t%s\t%s\n' "$num" "$id	retest" "$file" ;;
-      todo|blocked) printf '1\t%s\t%s\t%s\n' "$num" "$id	$st" "$file" ;;
-      pass|skip) [ "$all" = true ] && printf '1\t%s\t%s\t%s\n' "$num" "$id	$st" "$file" ;;
+      fail) kind="$(fail_kind "$stories")"; [ "$kind" = retest ] || continue; printf '0\t%s\t%s\t%s\t%s\n' "$go" "$num" "$id	retest" "$file" ;;
+      todo|blocked) printf '1\t%s\t%s\t%s\t%s\n' "$go" "$num" "$id	$st" "$file" ;;
+      pass|skip) [ "$all" = true ] && printf '1\t%s\t%s\t%s\t%s\n' "$go" "$num" "$id	$st" "$file" ;;
     esac
   done <<EOF
 $(rows)
@@ -253,7 +290,7 @@ cmd_next() {
   need_index
   [ -n "$(ck_fm "$IDX" session_scope)" ] || cmd_start >/dev/null
   echo "# session $(ck_fm "$IDX" session) · scope $(ck_fm "$IDX" session_scope)$([ "$(ck_fm "$IDX" session_all)" = true ] && printf ' --all') · last $(ck_fm "$IDX" session_last | sed 's/^$/—/')"
-  out="$(queue | sort -t"$(printf '\t')" -k1,1n -k2,2n | cut -f3- | head -n "$n")"
+  out="$(queue | sort -t"$(printf '\t')" -k1,1n -k2,2n -k3,3n | cut -f4- | head -n "$n")"
   if [ -z "$out" ]; then echo "# nothing left in this session"; else printf '%s\n' "$out"; fi
 }
 
@@ -322,7 +359,18 @@ cmd_close() {
 }
 
 cmd_import() {
-  is_v1 || die "$IDX is not a format-1 checklist — nothing to import"
+  local f g
+  if ! is_v1; then
+    has_flat || die "$IDX is neither format 1 nor ungrouped — nothing to import"
+    for f in "$DIR"/C-*.md; do
+      g="$(group_of "$(fm "$f" epics)" "$(fm "$f" source)")"
+      [ -n "$g" ] || die "no epic folder for $(fm "$f" id) (epics: $(fm "$f" epics))"
+      mkdir -p "$DIR/$g" && mv "$f" "$DIR/$g/" || exit 1
+    done
+    echo "ck-checklist: grouped the items of $DIR by epic"
+    echo "stage: $DIR"
+    return 0
+  fi
   command -v python3 >/dev/null 2>&1 || die "import needs python3"
   python3 - "$PLAN" "$TODAY" <<'PY' || exit 1
 import glob, os, re, sys
@@ -400,7 +448,13 @@ for it in items:
            f"result: {q(res) if res else ''}", f"was: {q(was) if was else ''}", f"fix: {fix}", "tested_in:",
            f"updated: {today}", "---", ""]
     out = [l.rstrip() for l in out] + lines + [""]
-    with open(os.path.join(d, f"{it['id']}_{slug(it['title'])}.md"), "w", encoding="utf-8") as fh:
+    if src.startswith("journey") or len(epics) != 1:
+        g = "journeys"
+    else:
+        hits = glob.glob(os.path.join(plan, "epics", epics[0] + "_*"))
+        g = os.path.basename(hits[0]) if hits else epics[0]
+    os.makedirs(os.path.join(d, g), exist_ok=True)
+    with open(os.path.join(d, g, f"{it['id']}_{slug(it['title'])}.md"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(out))
 
 rest = re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip("\n")

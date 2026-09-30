@@ -15,8 +15,9 @@ hooks:
 # Verify — Whole-Feature Manual Test Checklist
 
 Builds one checklist of every manual test a feature needs, walks the tester through it, and
-records each result: an index `tasks/<plan>/CHECKLIST.md` plus one `checklist/C-NN_<slug>.md`
-per item, state in YAML frontmatter like a story. A pass ticks the story's human-check box.
+records each result: an index `tasks/<plan>/CHECKLIST.md` plus one file per item, grouped by epic
+like the stories (`checklist/NN_<epic-slug>/C-NN_<slug>.md`, cross-epic journeys in
+`checklist/journeys/`), state in YAML frontmatter. A pass ticks the story's human-check box.
 An issue is recorded, then handed to `/ck-code:fix`, which diagnoses it against the right story
 and writes the bug. The session is stored too, so a re-run — in this chat or a new one —
 resumes at the next item. With `--all`, it retests every item, passed ones included.
@@ -64,8 +65,8 @@ state before it passes.
 `--all` combines with any row above. It changes only which items the session walks (3.1),
 never how the checklist is built.
 
-**Format 1.** When `CHECKLIST.md` holds `### C-NN` headings and no `format: 2`, run
-`ck-checklist import tasks/<plan>` first, relay its WARN lines, and commit the conversion
+**Older layouts.** When `CHECKLIST.md` holds `### C-NN` headings and no `format: 2`, or any
+`ck-checklist` command says the items are ungrouped, run `ck-checklist import tasks/<plan>` first, relay its WARN lines, and commit the conversion
 (`git add` the paths it prints) as `chore(tasks): convert the checklist of <plan> to format 2`.
 
 `--epic` without a two-digit number is an error. Say so and stop. Never guess a plan.
@@ -119,8 +120,9 @@ Then print `ck-checklist summary` as it outputs it: counts, **Retest**, **Waitin
 
 Print the index's `## Before you test` steps once. Then `ck-checklist next tasks/<plan>`
 gives the items in order: Retest, then `todo` and `blocked` (plus `pass` and `skip` with
-`--all`, a full retest after a refactor or before a release), each by `C-NN`, only epic `NN`
-with `--epic`. Items **Waiting on fix** and items already answered this session never come up.
+`--all`, a full retest after a refactor or before a release), epic by epic with journeys last,
+by `C-NN` within an epic, only epic `NN` with `--epic`. When the next item opens a new epic,
+say so in one line (`Epic 42 — <title>`) before printing it. Items **Waiting on fix** and items already answered this session never come up.
 Never reorder or pick items by hand.
 
 ### 3.2 Detail, then ask
@@ -155,7 +157,7 @@ record. Relay any WARN it prints. An ISSUE then goes to 3.4.
 Then commit every path the `stage:` lines printed, on the current branch:
 
 ```bash
-git add tasks/2026-09-24_ariary-paid-games/CHECKLIST.md tasks/2026-09-24_ariary-paid-games/checklist/C-04_real-ariary-counter-after-sign-in.md tasks/2026-09-24_ariary-paid-games/epics/41_soka-stake-integration/stories/02_real-ariary-status-read.md
+git add tasks/2026-09-24_ariary-paid-games/CHECKLIST.md tasks/2026-09-24_ariary-paid-games/checklist/41_soka-stake-integration/C-04_real-ariary-counter-after-sign-in.md tasks/2026-09-24_ariary-paid-games/epics/41_soka-stake-integration/stories/02_real-ariary-status-read.md
 git commit -m "chore(tasks): record manual verification for ariary-paid-games"
 ```
 
