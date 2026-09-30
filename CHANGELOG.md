@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.4.2] — 2026-09-30
+
+### Added
+- **verify**: `/ck-code:verify --recheck` (`ck-checklist start --recheck`) resets every item in
+  scope to `todo`, passes inherited from ticked story human checks included, so the tester
+  reruns the whole checklist from step 1. Each previous result is kept as `was`, a fail still
+  waiting on its fix is left as it is, and story ticks are never undone.
+
 ## [7.4.1] — 2026-09-30
 
 ### Changed
