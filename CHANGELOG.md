@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.3.1] — 2026-09-30
+
+### Changed
+- **build**: TDD now runs one behaviour per cycle (a failing test, then the minimum code to
+  pass it) instead of writing every test before any code. Edge-case and error tests are
+  written only where the code branches on them, which removes most speculative tests.
+- **build**: the refactor phase adds a test-prune scan from the new
+  `references/test-craft.md`. It deletes or merges the story's duplicate, scaffolding,
+  implementation-coupled, trivial and oversized tests. It never deletes the only test of an
+  acceptance criterion, a bug's reproduction or regression test, or a test the story did not
+  add.
+- **qa-validation**: Step 3.5 verifies the prune scan ran and restores any test removed
+  against a guard. Edge-case analysis no longer asks for tests of branches the code doesn't
+  have, and the fix loop writes a new test only for a behaviour defect.
+
 ## [7.3.0] — 2026-09-30
 
 ### Added
