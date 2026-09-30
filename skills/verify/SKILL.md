@@ -116,7 +116,7 @@ Take the next two items. For each whose Steps read `outline`, or fall short of t
 write it in full now, and write it into `CHECKLIST.md`. Ground it by reading that item's
 stories' `files:` directly, in one parallel batch, plus a targeted `grep` for a label or string
 they do not show. Read nothing else, and never dispatch a subagent. A tester who has never seen
-the code must be able to run the item alone. Detail wins over brevity.
+the code must be able to run the item alone, and the item stays terse: exact, never wordy.
 
 Print the two items **in full**, every field exactly as the checklist has it. Never
 shorten, merge or paraphrase steps when printing. Then **one** `AskUserQuestion` with one

@@ -25,14 +25,13 @@ updated: YYYY-MM-DD
 
 ### C-01 · todo · NN-SS — <short scenario name>
 - **Source:** NN-SS human check
-- **What this checks:** <one plain sentence: the behavior under test and why it matters to a user>
-- **Start from:** <the state before step 1: signed in as whom, on which page, which data exists>
+- **Checks:** <the behavior under test, in user terms>
+- **Start:** <only what Before you test does not set up — account, page, data, or "after C-NN">
 - **Steps:**
-  1. <one action: where (page / URL / screen / menu path), what to do (click the "Save" button,
-     type `2500` in the "Amount" field)> → <what appears right after>
+  1. <where> — <action with exact label / value> → <visible change>
   2. <…>
-- **Expected:** <the final observable outcome, with the exact text, value, count or state>
-- **It failed if:** <what the tester would see instead: an error, a wrong value, nothing changing>
+- **Expected:** <final state, with the exact text, value or count>
+- **Fail if:** <the likely wrong outcomes>
 - **Result:** —
 
 ### C-02 · pass · NN-SS — <short scenario name>
@@ -66,7 +65,7 @@ updated: YYYY-MM-DD
 ## Writing an item — the detail standard
 
 An item is written as an **outline** first (`- **Steps:** outline`, with a one-line Expected
-and no It-failed-if), and filled to this standard just before a session prints it.
+and no Fail if), and filled to this standard just before a session prints it.
 
 Write for a tester who has never seen the code, the stories or this feature. They must be able
 to run the item from the checklist alone, without asking what a step means. A step that says
@@ -74,12 +73,28 @@ to run the item from the checklist alone, without asking what a step means. A st
 
 | Part | Rule |
 |---|---|
-| What this checks | One plain sentence in user terms. No story IDs, file paths or internal names |
-| Start from | Everything the item assumes that `## Before you test` does not already set up: the account, the page, the data that must exist, a previous item that must run first |
-| Steps | **One action per step**, numbered. Each names *where* (page title, URL, screen, menu path such as Settings › Billing) and *what* (the exact button or field label in quotes, the exact value to type in backticks). Each ends with `→` and what the tester should see right after, so they notice at once which step went wrong. No "etc.", "and so on", or "as usual" |
-| Expected | The concrete end state, with the real text, number, count, color or state change. Never "works correctly", "is displayed properly" or "behaves as expected" |
-| It failed if | The likely wrong outcomes spelled out, so a near-miss (a fixture value, a stale count, a silent no-op) is not mistaken for a pass |
-| Journeys | The same rules, step by step across every screen the flow crosses. Never collapse a hop into "go through checkout" |
+| Checks | One short line in user terms. No story IDs, file paths or internal names |
+| Start | Only what `## Before you test` does not set up: the account, the page, the data, or `after C-NN`. Omit the line when there is nothing to add |
+| Steps | **One action per step**: *where* (page, URL, screen, menu path such as Settings › Billing) — *what* (exact label in quotes, exact value in backticks) `→` the visible change. The `→` part is omitted when nothing visible changes. No "etc.", "and so on", or "as usual" |
+| Expected | The concrete end state, with the real text, number, count or state. Never "works correctly" or "is displayed properly". Never repeat a step's `→` |
+| Fail if | One line, the near-misses that could pass for success: a fixture value, a stale count, a silent no-op |
+| Journeys | The same rules across every screen the flow crosses. Never collapse a hop into "go through checkout" |
+
+**Precise and terse.** Every word carries a location, a label, a value or an outcome. Write
+fragments, not sentences, and no explanations of why or restated context. Put shared setup in
+`## Before you test` once, never in each item. Short is fine. Vague is not.
+
+```markdown
+### C-04 · todo · 41-02 — Real Ariary counter after sign-in
+- **Source:** 41-02 human check
+- **Checks:** the games page shows the player's real paid-game count
+- **Start:** signed out, on `/games`
+- **Steps:**
+  1. Header — click "Sign in", log in as `player1@test.mg` / `Test1234!` → back on `/games`
+  2. Fifth card, "Soka" → counter under the title
+- **Expected:** `7/10` (the seeded count for player1)
+- **Fail if:** `3/10` (the fixture), `0/10`, or no counter
+```
 
 Every label, route, value and message comes from a file read (source, fixtures, seed data,
 i18n strings). When a value can only be known at run time (a generated ID, today's balance),
