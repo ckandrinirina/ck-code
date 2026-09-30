@@ -25,7 +25,7 @@ contract.
 
 | Tier | Skills | Who calls `Skill` |
 |---|---|---|
-| **DIRECT** | `build` `config` `design` `fix` `migrate` `plan` `ship` `spec` `team` | The skill itself, via `Skill({ skill: "ck-code:<name>", args: "<resolved args>" })`. |
+| **DIRECT** | `build` `config` `design` `fix` `migrate` `plan` `ship` `spec` `team` `verify` | The skill itself, via `Skill({ skill: "ck-code:<name>", args: "<resolved args>" })`. |
 | **DIRECTIVE** | `doctor` `explain` `guide` `track` | Nobody, inside the skill. It prints a terminal `NEXT:` line; the main session runs the prompt below on its behalf. |
 
 The DIRECTIVE tier is not a weaker form of consent — it asks the same single question. It

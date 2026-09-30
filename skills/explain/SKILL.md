@@ -160,6 +160,9 @@ gets one line saying that work is not on the trunk branch yet.
 Ground every step in files you read; never invent a screen, route or command. When a step
 cannot be pinned down from the code, say what to look for instead.
 
+End with one line: `To run these tests as a tracked checklist, with results recorded and issues
+sent to fix, use /ck-code:verify <feature>.` It is prose, not a `NEXT:` directive.
+
 ---
 
 ## EPIC MODE — `--epic NN`

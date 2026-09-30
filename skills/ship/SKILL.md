@@ -417,6 +417,13 @@ project *state*, never off 6.1 having acted. Skip entirely at level `story`, and
 every non-`skip` story of epic `NN` reads `status: done`. Fire the gate only on the ship run
 that completes the epic — if the epic was already DONE and already promoted, say nothing.
 
+**Manual-verification check.** Before opening an epic PR into the trunk or running the plan
+gate, count the open items in `tasks/<plan>/CHECKLIST.md` (format in
+[`checklist-format.md`](../verify/references/checklist-format.md#counting-open-items)).
+Neither a missing file nor zero open items adds a prompt. Otherwise ask once, **Promote anyway** /
+**Not yet**. **Not yet** stops here and prints `/ck-code:verify tasks/<plan>`. It warns, never
+blocks, and makes no `Skill` call.
+
 Then run the **epic gate**, and — at level `plan`, when its condition holds — the **plan
 gate**, both defined with their staleness handling in
 [`branch-topology.md`](../../references/branch-topology.md#promotion):

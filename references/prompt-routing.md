@@ -18,6 +18,7 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | architecture, tech choices, data or flow design; bloated docs → `design optimize` | `design` |
 | expert or guide skills, house coding conventions | `team` |
 | progress, status, which story is next | `track` |
+| a tracked checklist of manual tests for a whole feature or plan; recording or resuming manual test results | `verify` |
 | explain what was built, how to verify it, or what an epic is for | `explain` |
 | unsure which skill fits, or no task yet | `guide` |
 Do not route when: a ck-code skill is already running and this prompt answers its question — continue it; the prompt is a question, a read-only or non-code request — answer directly; the prompt is a one-off edit that adds no behaviour (a typo, a rename, a config value) — do it, but first read the matching expert or guide skill under `.claude/skills/` and follow its conventions, test first.

@@ -72,6 +72,7 @@ and so on. What `/ck-code:guide` adds on top (never instead):
   `NEXT:` line.
 - `in_progress > 0` → `/ck-code:build <story-path>` resumes the story instead, when it is not
   finished yet.
-- `done > 0` → the next plan starts with `/ck-code:spec` or `/ck-code:plan`.
+- `done > 0` → `/ck-code:verify tasks/<plan>` hand-tests the finished feature before its
+  promotion; the next plan starts with `/ck-code:spec` or `/ck-code:plan`.
 - Any stale-looking bookkeeping (a merged PR the view still shows as `PR #<n>`) → mention
   `/ck-code:doctor --fix`, which reconciles delivery with GitHub.

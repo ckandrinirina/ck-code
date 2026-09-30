@@ -19,11 +19,12 @@ read that rather than restating it here. This file is the per-command syntax onl
 | `plan` | `[path-to-spec] \| --quick [brief] [--epic NN] \| --publish [--mode plan\|epics\|stories] [tasks/<plan>]` | Architecture → a plan of epics, stories and a roadmap (asks the integration level once); `--quick` adds one small story; `--publish` publishes a plan to GitHub Issues and writes each number back | `tasks/` (+ Issues for `--publish`) |
 | `track` | `[status\|next\|progress]` | Progress dashboard / next ready story | read-only |
 | `build` | `[story-path] \| [story-ids...] \| --epic NN` | TDD-implement stories end-to-end — one inline, several in worktrees, or a whole epic in waves; also a `bug` story's recorded fix (Bug-Fix Mode) | source, tests, story frontmatter; a branch per story in PARALLEL MODE |
-| `fix` | `[path-to-story.md]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, story frontmatter |
+| `fix` | `[path-to-story.md] [--report "<text>"]` | Diagnose a bug, record it to its story (`status: bug`), route the fix | failing test, Fix Plan, story frontmatter |
 | `ship` | `[path-to-story.md] \| --promote [--epic NN \| tasks/<plan>]` | Commit and open or update the PR for a story, a fix or any standalone change; `--promote` opens the epic PR (level `epic`), or merges the epic into the plan branch and opens the whole-plan PR (level `plan`) | git + GitHub; story `pr:`/`delivery:` |
 | `config` | `[show \| board \| trunk <branch> \| integration <tasks/plan> <story\|epic\|plan> \| experts ask\|none \| on \| off]` | Project settings: issue tracking, the Projects board (create, adopt or re-map), the trunk branch every PR targets, a plan's integration level, and whether the team-skills question is asked | `tasks/SETTINGS.md`, `OVERVIEW.md` + board |
 | `doctor` | `[tasks/<plan>] [--quiet] [--fix]` | Report what is broken — layout stamp, story frontmatter, dependencies, feature docs, stale team skills, the committed ck-code-required guard; `--fix` reconciles delivery, the board and Issues with GitHub (incl. work merged straight to the trunk) and commits the changed story files | read-only; `--fix` writes `tasks/` frontmatter, board, Issues |
 | `migrate` | `[--dry-run]` | Upgrade a v6, older **or ck-code-lite** project to the v7 layout in one revertable commit (runs the internal `ck-migrate` converter; never call it yourself) | `tasks/`, `docs/`, `.claude/skills/`, `VERSION.md` |
+| `verify` | `[tasks/<plan> \| --epic NN \| <feature name>]` | Build and walk a whole-feature manual test checklist; a pass ticks the story's human check, an issue is handed to `fix` | `tasks/<plan>/CHECKLIST.md`, story human-check lines |
 | `explain` | `[file-or-concept] \| --epic NN` | Explain what was built and how to verify it, or `--epic NN` for that epic's goal, its plan's integration level and each story's goal | read-only |
 
 The generated views (`STORIES_INDEX.md`, `EPICS_INDEX.md`) are gitignored and regenerate on
@@ -49,6 +50,7 @@ every read, so no command commits them.
 /ck-code:build --epic 02                            # whole epic, in waves
 /ck-code:fix                                        # pick from implemented stories
 /ck-code:ship                                       # commit + PR + issue updates
+/ck-code:verify tasks/2026-01-10_billing           # hand-test the whole feature
 /ck-code:ship --promote --epic 02                   # open the epic PR
 /ck-code:config integration tasks/2026-01-10_billing epic   # change a plan's level
 /ck-code:doctor --fix                               # reconcile bookkeeping with GitHub

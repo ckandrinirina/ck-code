@@ -21,6 +21,9 @@ duplicating the workflow graph.
                         bug story's recorded fix (Bug-Fix Mode)
    /ck-code:fix          Diagnose a bug, record it to its story (→ bug), route the fix
 
+   /ck-code:verify       Whole-feature manual test checklist (tasks/<plan>/CHECKLIST.md);
+                        a pass ticks the human check, an issue goes to fix
+
 8. /ck-code:ship         Commit, open PR, update GitHub Issues; --promote opens the epic
                         PR (level epic), or at level plan merges the epic --no-ff into
                         the plan branch (no epic PR) and opens the plan PR
@@ -47,6 +50,7 @@ duplicating the workflow graph.
 | `build` | `/ck-code:ship` (inline, once per story); after PARALLEL MODE merged into an epic or plan branch, `/ck-code:ship --promote --epic NN` (or the plan) — never one ship per story |
 | `fix` (easy) | auto-runs `/ck-code:build` → `/ck-code:ship` |
 | `fix` (complex) | `/ck-code:build <story>` or `/ck-code:build <ids>` (Bug-Fix Mode) |
+| `verify` | `/ck-code:fix <story> --report "…"` for an issue; `/ck-code:ship --promote` once nothing is open |
 | `ship` | `/ck-code:track next` (more stories) or `/ck-code:explain` |
 | `doctor` | the finding's repair command; `/ck-code:doctor --fix` for delivery/board/issue drift |
 | `doctor --fix` | `/ck-code:track` (refreshed picture) |
@@ -79,6 +83,7 @@ asks the same single question but makes no `Skill` call and adds no link to the 
 | `build` (PARALLEL MODE) | `ship --promote --epic NN` (or the plan) | DIRECT | the run merged into an epic or plan branch |
 | `fix` | `plan --quick` | DIRECT | a missing-functionality slot needs a story (Phase 2.6) |
 | `fix` | `build` | DIRECT | AUTO-BUILD eligible (Phase 6.3) |
+| `verify` | `fix <story> --report "…"` | DIRECT | the tester reported an ISSUE on a checklist item |
 | `config` | `doctor` | DIRECT | board mapping changed |
 | any gated skill except `doctor --fix` | `migrate` | DIRECT | version gate BLOCKed ([`version-gate.md`](version-gate.md)) |
 | `doctor --fix` | `migrate` | DIRECTIVE | version gate BLOCKed — prints `NEXT: /ck-code:migrate` and stops, never stamps ([`version-gate.md`](version-gate.md#scope)) |
@@ -105,6 +110,7 @@ to this table first.
 | Deliver code (commit + PR + close issues) | `ship` | `plan --publish` |
 | Open the PR for a finished epic or plan | `ship --promote` | one `ship` per story |
 | Change how a plan's work merges (story / epic / plan) | `config integration <tasks/plan> <level>` | editing `OVERVIEW.md` by hand |
+| Hand-test a whole feature and keep the results | `verify` | `explain` (FEATURE MODE — a guide, nothing recorded) |
 | See what is broken, change nothing | `doctor` | `doctor --fix` |
 | Repair delivery/board/issue drift (PR merged but not showing) | `doctor --fix` | `doctor` |
 
@@ -141,6 +147,8 @@ the last column instead.
 | `ship` | the story isn't implemented yet | `build` / `fix` (first) |
 | `ship` | publishing the plan (not code) to GitHub Issues | `plan --publish` |
 | `ship` | changing a plan's integration level | `config integration` |
+| `verify` | no story in scope is `done` yet | `build` (first) |
+| `verify` | a bug found outside a test session | `fix` |
 | `migrate` | generating *new* architecture docs from a spec | `design` |
 | `design` / `plan` / `build` | the project is a ck-code-lite one (`tasks/PLAN.md`) | `migrate` (first — it converts the flat plan into epics/stories) |
 
@@ -161,6 +169,7 @@ command reference.
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`). Auto-invokes `build` for an easy fix; never writes the source fix itself |
 | `ship` | Git commit, PR, GitHub Issue updates; writes the PR number + `delivery: pr` back to story frontmatter (`pr:`), or to `EPIC.md` / `OVERVIEW.md` for a `--promote` PR; no local writes outside git + frontmatter |
 | `migrate` | Converts a v6 project with `ck-migrate v7` (one commit); a legacy (v3–v5) project through the legacy steps to v6, then `ck-migrate v7`, in the same commit — including flattening nested `experts/` + `guides/` skill folders; or a ck-code-lite project straight to v7 (`tasks/PLAN.md` → epics/stories, `docs/ARCHITECTURE.md` → `docs/architecture/`, lite artifacts marked superseded); stamps `tasks/VERSION.md` `layout: v7` |
+| `verify` | `tasks/<plan>/CHECKLIST.md` (committed) and the one human-check line a PASS ticks in a story; commits both as `chore(tasks): record manual verification for <plan>`; never `status:` |
 | `track`, `explain`, `guide`, `doctor` | Read-only |
 | `doctor --fix` | Reconciles derived state only (`ck-project backfill` to recover a missing `pr:` from the linked issue, then `ck-project reconcile`, then confirmed `ck-project landed` entries) — `delivery:`/`pr:` frontmatter, board columns, GitHub Issue/PR state; commits the changed story/`EPIC.md`/`OVERVIEW.md` files as `chore(tasks): reconcile delivery with GitHub`. Never writes `status:`, a story body, or source |
 | `config` | Writes `tasks/SETTINGS.md`, the GitHub Project board, and a plan's integration level (`ck-plan set`) — never story state |

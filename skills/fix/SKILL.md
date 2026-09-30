@@ -1,7 +1,7 @@
 ---
 name: fix
-description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Runs only on an explicit bug report or a hand-off from another ck-code skill, never speculatively. Argument is an optional story-file path.
-argument-hint: "[path-to-story.md]"
+description: Use when the user reports a bug in already-built behavior tied to one or more existing stories, or asks to diagnose, reproduce, or triage a defect and record it for fixing. Not for new functionality (use plan) or for shipping a finished change (use ship). Runs only on an explicit bug report or a hand-off from another ck-code skill, never speculatively. Argument is an optional story-file path, optionally with a `--report` describing the issue.
+argument-hint: "[path-to-story.md] [--report \"<what the tester saw>\"]"
 effort: high
 allowed-tools: Bash(ck-story*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git blame*) Bash(git branch*) Bash(git add*) Bash(git commit*) Bash(git ls-files*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
@@ -32,6 +32,8 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 ## INPUT
 
 `$ARGUMENTS` is an optional path to the story file. If provided, it is the starting candidate — no confirmation (Phase 2.5 may still expand scope). If empty, enter interactive story selection (Phase 1.2) with `AUTO` as a supported answer.
+
+A trailing `--report "<text>"` (passed by `/ck-code:verify` when a manual test fails) is the tester's own description of the bug. Keep it verbatim for Phase 2.1.
 
 ## PROGRESS TRACKING
 
@@ -85,7 +87,7 @@ For `AUTO`, defer both batches until Phase 2.5 narrows the candidate set.
 
 ### 2.1 Ask About the Bug
 
-Present the questionnaire from `references/qa-dialogue.md` (Phase 2.1).
+Present the questionnaire from `references/qa-dialogue.md` (Phase 2.1). With a `--report`, pre-fill the answers it already gives (its `expected` part as expected behavior, its `saw` part as actual behavior, and the checklist item's steps) and ask only the questions it leaves open. Never ask the tester to repeat what the report says.
 
 ### 2.2 Targeted Follow-ups
 
