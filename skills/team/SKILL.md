@@ -1,6 +1,6 @@
 ---
 name: team
-description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed, or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill. Requires docs/architecture/ to exist already — run design first if it does not. Runs only on an explicit request or a hand-off from another ck-code skill.
+description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed (also after a dependency migration), or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill. Requires docs/architecture/ to exist already — run design first if it does not. Runs only on an explicit request or a hand-off from another ck-code skill.
 argument-hint: "[--basic|--standard|--max] [--check|--refresh|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
 effort: high
 allowed-tools: Bash(ck-bootstrap*) Bash(ck-team*) Bash(ls*) Bash(mkdir*) Bash(rm*) Bash(git status*) Bash(git ls-files*) Bash(find*) Bash(grep*) Bash(awk*) Bash(wc*) Bash(npx*) Skill
@@ -27,8 +27,11 @@ folder name *is* the skill name, and it must match the frontmatter `name:`.
 
 **Auto-loaded by:** `/ck-code:build` and `/ck-code:fix`. After `tech-stack.md` or
 `folder-structure.md` changes, run `--refresh` — it regenerates only the skills written
-against the old docs (`ck-team stale`). `--regenerate` refreshes every owned skill, e.g.
-after a framework upgrade that the docs do not show. Both are **merge-safe** (see
+against the old docs (`ck-team stale`). It also catches the change made in code alone — a
+package migration, a major bump, a removed library — by comparing the code's stack with the
+snapshot taken at the last run (`ck-team drift`); `/ck-code:ship` offers it when that happens.
+`--regenerate` refreshes every owned skill, e.g. after a framework upgrade that the docs do
+not show. Both are **merge-safe** (see
 [THE MERGE RULE](#the-merge-rule)); neither clobbers your edits.
 
 ## HARD GATES
@@ -96,7 +99,7 @@ Both axes below are gated by **real detection**: TIER gates *breadth*, detection
 
 - (none) → **GENERATE** the derived skill set (merge-safe: existing skills are handled per [THE MERGE RULE](#the-merge-rule)).
 - `--check` → audit which skills are missing/present **for the resolved tier**, then STOP (report only — never prompts).
-- `--refresh` → regenerate **only** the owned skills `ck-team stale` lists (written against an older `tech-stack.md`/`folder-structure.md`), and offer to delete owned guides whose technology left `tech-stack.md` → [PHASE R](#phase-r-refresh). **Merge-safe.** This is what `/ck-code:design` hands off to.
+- `--refresh` → bring the team back in line with the docs **and** the code: regenerate **only** the owned skills `ck-team stale` lists or a documented dependency change affects, after one approval → [PHASE R](#phase-r-refresh). **Merge-safe.** This is what `/ck-code:design` and `/ck-code:ship` hand off to.
 - `--regenerate` → refresh **every** team-owned skill with fresh research, stale or not, **merge-safe** (see below).
 - `--conventions` → run **only** the house-rules capture → [PHASE C](#phase-c-conventions-capture). Not needed for a normal run: generation and `--regenerate` already offer it inline at [2.4](#24-present-the-plan-and-settle-house-conventions).
 - `--new expert <slug>` / `--new guide <slug>` → scaffold a custom skill → [PHASE N](#phase-n-new-custom-skill).
@@ -551,6 +554,13 @@ send it back to. `guide-design-system` is exempt (3.4: verbatim data). Report ea
 had to be re-tightened; never ship an over-budget skill silently, because every line is
 re-read by every `build`/`fix` session that matches its `paths`.
 
+Last, record the stack these skills were written for — the baseline `ck-team drift` compares
+the code against:
+
+```bash
+ck-team snapshot
+```
+
 ### 4.2 Summary
 
 Show every generated/refreshed expert and guide (tech focus/version, research source, sample
@@ -566,40 +576,97 @@ experts are invoked directly, and state the 2.5 house-conventions outcome on its
 
 ## PHASE R: REFRESH
 
-**Goal:** bring the owned skills back in line with the architecture docs after `design`
-changed `tech-stack.md` or `folder-structure.md`, touching nothing that is still current.
-`ck-team` is the contract; never re-implement its comparison by reading marker lines yourself.
+**Goal:** bring the owned skills back in line with the architecture docs **and** the code,
+spending research only on what a change actually broke. Two sources of change: `design`
+edited `tech-stack.md`/`folder-structure.md` (`ck-team stale`), or the code moved under the
+docs — a package migration, a major bump, a removed library (`ck-team drift`). `ck-team` is
+the contract; never re-implement its comparisons by reading marker lines yourself.
 
-1. **Find what is stale.**
+**Nothing is written before the step 4 approval** — no doc edit, no skill, no snapshot.
+
+1. **Detect** — all four, one message:
 
    ```bash
    ck-team digest
    ck-team stale
+   ck-team drift
+   ck-team drift --relevant
    ```
 
    An empty digest means neither `tech-stack.md` nor `folder-structure.md` exists → say
    there is nothing to compare against and STOP. `stale` prints one path per owned skill
-   whose SOURCES stamp differs from the digest or is missing; PROTECTED files never appear.
-2. **Find retired guides.** Quick-read `tech-stack.md`. Every owned `guide-<tech>` (GENERATED
-   marker present, not `guide-design-system`) whose technology no longer appears there is a
-   **deletion candidate**. Drop candidates from the stale list; they are not refreshed.
-3. **Nothing stale, no candidate** → print `Team is current (digest <digest>).` and STOP.
-4. **Propose deletions — only when candidates exist.** One **AskUserQuestion**, multi-select,
-   **nothing pre-selected**: one option per candidate (`guide-grpc — gRPC no longer in
-   tech-stack.md`). Delete only what the user picks (`rm -rf .claude/skills/guide-<tech>`);
-   an unpicked candidate stays as it is and is reported as `? extra`. This is the only
-   question PHASE R asks.
-5. **Refresh the stale list.** Run the Phase 1.2 global-doc reads and Phase 1.6 research for
-   the technologies those skills cover only (the 1.6a fan-out decision applies to that
-   count). Rewrite each file **inline** per THE MERGE RULE step 3 and the 3.2/3.3/3.4
-   contracts: both marker lines with the new digest, every MANUAL fence re-inserted
-   verbatim. Every path here already exists, so none goes to an `Agent` or `Workflow`
-   (3.1). `guide-design-system` with its cache gone follows THE MERGE RULE step 4.
-6. **Verify.** Run `ck-team stale` again — it must print nothing, or only a stale file the
-   user kept in step 4. Then apply the Phase 4.1 size check to the rewritten files.
-7. **Report** refreshed, deleted and kept paths, one line each. When `tech-stack.md` now
-   names a technology with no guide, name `/ck-code:team` (generates missing skills) in
-   prose; `--refresh` never adds a skill. Then STOP — no hand-off to `plan`.
+   whose SOURCES stamp differs from the digest or is missing (PROTECTED files never appear).
+   `drift` prints every code change since the last snapshot (`~ dep npm react 18 -> 19`,
+   `- dep npm redux 4`, `+ dep npm zustand 4`, `+ dir worker`); `--relevant` keeps only the
+   removed or major-bumped dependencies a guide, `tech-stack.md` or `guide-conventions`
+   already covers. **No `.claude/skills/.ck-team-stack` yet** → `drift` is empty; step 6
+   records the first snapshot.
+2. **Scope — the major-need filter.** Only these earn work:
+   - a skill `stale` lists — **unless** it is stale only because of this run's own doc
+     edits (step 5), which is restamped, never regenerated;
+   - for each `--relevant` line: the `guide-<tech>` for that library, any owned expert whose
+     body names it, the `tech-stack.md` row, and — when it names the library — a
+     **targeted** edit of `guide-conventions` (PROTECTED: only the lines that name it);
+   - a library **replacing** a removed one (a `+` line beside a relevant `-`, e.g. redux →
+     zustand): a new `guide-<tech>` only if it passes the 2.2 idiom bar;
+   - an owned `guide-<tech>` whose technology left the stack → **deletion candidate**, never
+     refreshed.
+
+   Everything else in `drift` — a new utility, a dev tool, a minor bump, a new folder no
+   expert's `paths:` misses — is **not** worked on: it is recorded by the snapshot and named
+   in one line of the plan. A minor or patch bump never reaches this list at all (the
+   fingerprint keeps majors only).
+3. **Nothing in scope** → `stale` empty and nothing scoped from drift: print
+   `Team is current (digest <digest>).`, and when `drift` printed anything or no snapshot
+   exists, ask one **AskUserQuestion** — **Record snapshot** / **Leave** — then STOP.
+4. **Present the plan — one AskUserQuestion, before any write.** Show, one line each: doc
+   edits (`tech-stack.md: React 18 → 19`), skills to refresh with the reason, guides to
+   create, the `guide-conventions` lines to change (quoted), and skills that will only be
+   restamped. Options:
+   - **Apply** — everything listed, then the deletion question below.
+   - **Pick** — a multi-select follow-up, nothing pre-selected, one option per item.
+   - **Record only** — change no doc and no skill; take the snapshot so these changes stop
+     being reported.
+   - **Cancel** — write nothing; the next `ship` or session start reports them again.
+
+   When deletion candidates exist and the user did not cancel, ask a second, multi-select
+   question, nothing pre-selected (`guide-redux — redux removed from package.json`). Delete
+   only what is picked (`rm -rf .claude/skills/guide-<tech>`); an unpicked one stays and is
+   reported as `? extra`.
+5. **Apply what was approved, in this order.**
+   1. Note which owned skills `ck-team stale` listed **before** any edit — only those are
+      regenerated for doc reasons.
+   2. Make the approved **minimal** edits to `tech-stack.md` / `folder-structure.md` —
+      the version cell, the added or removed row; never rewrite a section. These are the
+      docs `design` owns; touch only the facts the drift proved.
+   3. Research — Phase 1.6, **for the changed technologies only** (the 1.6a fan-out decision
+      applies to that count) — then rewrite each approved skill **inline** per THE MERGE RULE
+      step 3 and the 3.2/3.3/3.4 contracts: both marker lines with the new digest, every
+      MANUAL fence re-inserted verbatim. Every refreshed path already exists, so none goes to
+      an `Agent` or `Workflow` (3.1); a new guide follows 3.3 like any generation.
+   4. Edit `guide-conventions` only on the lines the user approved — the PHASE A minimal
+      edit, never a rewrite, never a GENERATED marker.
+   5. Restamp every owned skill the step 2 edits staled but no change concerns — they link
+      the docs, so a fact they do not mention cannot have made them wrong:
+
+      ```bash
+      ck-team restamp .claude/skills/expert-backend/SKILL.md .claude/skills/guide-sql/SKILL.md
+      ```
+
+   `guide-design-system` with its cache gone follows THE MERGE RULE step 4.
+6. **Snapshot and verify** — unless the user cancelled:
+
+   ```bash
+   ck-team snapshot
+   ck-team stale
+   ck-team drift
+   ```
+
+   `stale` must print nothing, or only a skill the user left out of **Pick**; `drift` must
+   print nothing. Then apply the Phase 4.1 size check to the rewritten files.
+7. **Report** refreshed, created, restamped, deleted and kept paths, one line each, and the
+   doc lines changed. Name `/ck-code:ship` to commit them when the run did not come from
+   `ship`. Then STOP — no hand-off to `plan`.
 
 ## PHASE C: CONVENTIONS CAPTURE
 
@@ -689,7 +756,8 @@ itself. Never pass a placeholder or a phrase like "the spec these docs were buil
 - **Never write the skill set inline when the 3.0 write set holds ≥3 files** — experts and guides share one dispatch decision (3.1), taken before the first file is written, never after the experts are already done.
 - **Never overwrite a PROTECTED file** — one lacking the team GENERATED marker (`guide-conventions`, every `--new` skill, any file the user un-marked) is off-limits, even on `--refresh` or `--regenerate`.
 - **Regeneration is merge-safe** — `--refresh` and `--regenerate` refresh only team-owned files, and re-insert every `MANUAL` fence verbatim. Never clobber user edits.
-- **Never refresh a skill `ck-team stale` did not list on `--refresh`**, and never write an owned skill without both marker lines carrying the current `ck-team digest` output.
+- **Never refresh a skill on `--refresh` that neither `ck-team stale` listed before this run's doc edits nor a `ck-team drift --relevant` line concerns** — a skill staled only by those edits is restamped (`ck-team restamp`), never regenerated; and never write an owned skill without both marker lines carrying the current `ck-team digest` output.
+- **Never write anything in PHASE R before its plan question is answered** — no doc edit, no skill, no snapshot. A new dependency, a minor bump or an undocumented library never earns research or a rewrite; it is recorded by the snapshot only.
 - **Never mark a `--conventions` or `--new` file GENERATED** — those outputs are permanent.
 - **Never invent conventions** — CAPTURE records only rules the user states or the code demonstrably follows; an empty area stays empty.
 - **Never enter PHASE C twice in one run** — inline (2.5) and standalone (`--conventions`) are mutually exclusive entry points; inline never re-scans what Phase 1.3 already read, and no skill file is written until the 2.4 gate and 2.5 have both resolved.

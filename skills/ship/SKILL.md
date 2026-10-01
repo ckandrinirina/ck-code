@@ -3,7 +3,7 @@ name: ship
 description: Use when finished work needs committing and its PR and linked GitHub Issue opened or updated after a story or fix — or for any standalone commit. `--promote` promotes a completed epic (its PR, or its merge into the plan branch) or opens the PR for a whole plan. Argument is an optional story path, or `--promote` with `--epic NN` or a `tasks/<plan>` path. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN | tasks/<plan>]"
 effort: medium
-allowed-tools: Bash(ck-checklist count*) Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
+allowed-tools: Bash(ck-checklist count*) Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(ck-team drift*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -184,6 +184,28 @@ network that is down must not block a commit.
 The frontmatter it writes is derived: `delivery:`, and the `pr:` it materializes onto a
 story that inherits its epic's or plan's PR. Both come from a PR number already in the
 plan, so they need no confirmation of their own — 3.1 stages them and 3.3 shows them.
+
+### 2.6 Stack drift — team skills (every mode except `--promote`)
+
+A package migration or a major bump changes the code and leaves the expert and guide skills
+describing the old stack. One cheap check, no tokens spent unless it prints:
+
+```bash
+ck-team drift --relevant
+```
+
+It prints only a **documented** dependency that was removed or moved a major version (a
+guide, `tech-stack.md` or `guide-conventions` names it) — never a new library, a minor bump,
+or a new folder. Empty, or `tasks/SETTINGS.md` reads `experts: none` → continue silently.
+Otherwise, one **AskUserQuestion** naming the lines (`react 18 → 19, redux removed`):
+
+- **Update now** — `Skill({ skill: "ck-code:team", args: "--refresh" })`; it shows its plan
+  and asks before writing anything. On return, its doc and skill edits are part of the
+  working tree and 3.1 stages them with this change, so the migration and the guides that
+  describe it land in one commit.
+- **Later** — continue; the session start and `/ck-code:doctor` keep reporting it.
+
+Never run the refresh without this answer.
 
 ## PHASE 3: PREPARE COMMIT
 
@@ -504,7 +526,8 @@ first reconcile after the PR lands. Worked shape: [examples.md](references/examp
 
 ## STANDALONE MODE (no story)
 
-1. Show `git diff --stat` and `git status`.
+1. Show `git diff --stat` and `git status`, then run [2.6](#26-stack-drift--team-skills-every-mode-except---promote)
+   — a hand-made package migration usually ships through this mode.
 2. AskUserQuestion — change type (feat/fix/refactor/…).
 3. Ask for a brief description.
 4. Craft a conventional commit message (plain-language body).

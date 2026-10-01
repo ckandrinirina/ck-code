@@ -87,6 +87,7 @@ asks the same single question but makes no `Skill` call and adds no link to the 
 | `config` | `doctor` | DIRECT | board mapping changed |
 | any gated skill except `doctor --fix` | `migrate` | DIRECT | version gate BLOCKed ([`version-gate.md`](version-gate.md)) |
 | `doctor --fix` | `migrate` | DIRECTIVE | version gate BLOCKed — prints `NEXT: /ck-code:migrate` and stops, never stamps ([`version-gate.md`](version-gate.md#scope)) |
+| `ship` | `team --refresh` | DIRECT | `ck-team drift --relevant` printed (a documented dependency removed or moved a major) — asked at 2.6, before staging |
 | `ship` | `explain` / `track next` | DIRECTIVE | after delivery |
 | `track next` | `build <path>` | DIRECTIVE | next ready story selected |
 | `doctor` | `migrate` / `config` / `design sync` / `design ds` / `team` / `team --refresh` / `spec <slug>` | DIRECTIVE | a finding carries a repair command (the `NEXT:` line) |
@@ -163,7 +164,7 @@ command reference.
 |---|---|
 | `spec` | `docs/specs/YYYY-MM-DD_<slug>/spec.md` (+ canonical `.metadata.json`), optional GitHub issue, optional `design-brief.md` when the Claude Design offer is accepted |
 | `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`); in `ds` mode, `docs/architecture/design-system/` (`index.md` body + `manifest.json`, the one metadata home) and the `designSystem` block of every pending spec metadata |
-| `team` | `.claude/skills/expert-*/SKILL.md`, `.claude/skills/guide-*/SKILL.md` (incl. `guide-conventions/`); `--refresh` rewrites only the owned skills `ck-team stale` names |
+| `team` | `.claude/skills/expert-*/SKILL.md`, `.claude/skills/guide-*/SKILL.md` (incl. `guide-conventions/`); `--refresh` rewrites only the owned skills `ck-team stale` names or a `ck-team drift --relevant` change concerns, after one approval; also `.claude/skills/.ck-team-stack` (the stack snapshot) |
 | `plan` | `tasks/YYYY-MM-DD_<slug>/` (`OVERVIEW.md` plan record with the integration level, epics/ with EPIC.md, stories/ with frontmatter, ROADMAP.md); flips feature doc to `design: planned`. `--publish` creates the GitHub Issues and writes each number back to `issue:` (story, `EPIC.md`, or `OVERVIEW.md` for `--mode plan`) |
 | `build` | Source + tests in repo; the story file only (frontmatter `status`, `files:` via `ck-story files`, plan, summary; Bug Report Resolution in Bug-Fix Mode); on GitHub, assigns the story's linked `issue:` to the account running the build (plus the epic issue on an `--epic NN` run) — additive, never removing an existing assignee. In PARALLEL MODE: every story implemented by a dispatched agent — per-story branches in native worktrees when a wave holds ≥ 2 stories, one solo agent on the target branch in the main checkout when it holds one — with the same story-file outputs; the wave-start commit holds the `status: in-progress` story files only |
 | `fix` | Failing reproduction test, story file (Bug Report + Fix Plan, frontmatter `status: bug` + `prior_status`). Auto-invokes `build` for an easy fix; never writes the source fix itself |

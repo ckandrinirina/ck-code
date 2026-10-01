@@ -27,6 +27,8 @@ done
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 # shellcheck source=scripts/lib/ck-common.sh
 . "$SCRIPT_DIR/lib/ck-common.sh"
+# shellcheck source=scripts/lib/ck-stack.sh
+. "$SCRIPT_DIR/lib/ck-stack.sh"
 
 # Run from the repo root so every relative path below resolves the same way.
 ck_root || true
@@ -399,6 +401,16 @@ check_team() {
     note "run /ck-code:team --refresh — it regenerates only these, keeping MANUAL blocks"
   else
     row "team skills" "$n present, valid and current" OK
+  fi
+  local drift
+  drift=$(ck_team_drift_relevant)
+  if [ -n "$drift" ]; then
+    row "team stack" "$(printf '%s\n' "$drift" | grep -c .) documented dependency change(s) since the team snapshot" WARN
+    printf '%s\n' "$drift" | head -6 | sed 's|^|                   ✗ |'
+    note "run /ck-code:team --refresh — it proposes doc and skill updates for these only, and asks first"
+  elif ck_team_owned && [ ! -f "$CK_TEAM_SNAPSHOT" ]; then
+    row "team stack" "no stack snapshot — dependency changes go undetected" WARN
+    note "run /ck-code:team --refresh once — it records the snapshot"
   fi
 }
 

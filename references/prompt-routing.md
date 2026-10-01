@@ -12,7 +12,7 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | implement or continue an existing story; several ready stories; a whole epic | `build` / `build <ids>` / `build --epic NN` |
 | new functionality no story covers — small (one story) | `plan --quick <brief>` |
 | new functionality no story covers — large, or new work to break into epics, stories, a roadmap | `plan` |
-| expert or guide skills are stale after a stack or folder change | `team --refresh` |
+| expert or guide skills are stale after a stack or folder change, a package migration, or a major dependency bump | `team --refresh` |
 | stakeholder-facing feature spec | `spec` |
 | link a Claude Design URL, or refresh the linked design system | `design ds [url]` |
 | architecture, tech choices, data or flow design; bloated docs → `design optimize` | `design` |

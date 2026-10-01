@@ -22,6 +22,8 @@
 CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 # shellcheck source=scripts/lib/ck-common.sh
 . "$CK_HERE/lib/ck-common.sh"
+# shellcheck source=scripts/lib/ck-stack.sh
+. "$CK_HERE/lib/ck-stack.sh"
 
 json_escape() { ck_json_escape "$1"; }
 
@@ -133,6 +135,13 @@ fi
 stale_n=$(ck_team_stale | grep -c . || true)
 if [ "${stale_n:-0}" -gt 0 ]; then
   CK_NOTE="${CK_NOTE:+$CK_NOTE }$stale_n expert/guide skill(s) predate the current tech-stack.md or folder-structure.md — /ck-code:team --refresh regenerates just those."
+fi
+# Code-side drift: a documented library removed or moved a major version since the team
+# snapshot. Only what a guide, tech-stack.md or guide-conventions covers — never a prompt
+# for a new dependency or a minor bump.
+drift=$(ck_team_drift_relevant | awk '{ printf "%s%s", (NR > 1 ? ", " : ""), ($1 == "~" ? $4 " " $5 "->" $7 : "-" $4) }')
+if [ -n "$drift" ]; then
+  CK_NOTE="${CK_NOTE:+$CK_NOTE }The code's stack moved under the team skills ($drift). Ask the user before running /ck-code:team --refresh — it proposes the doc and skill updates and changes nothing without approval."
 fi
 
 # Views: regenerated here, from frontmatter, whenever any is missing or stale. The

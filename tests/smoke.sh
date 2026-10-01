@@ -869,6 +869,55 @@ assert_not_contains "ck-doctor: a protected skill is never stale" "$TEAM_DOC" "g
 rm -rf "$TEAM"
 
 echo
+echo "=== team stack drift: package migration caught from the code ==="
+TS="$(mktemp -d)"
+(
+  cd "$TS" || exit 1
+  git init -q
+  mkdir -p web svc tasks docs/architecture .claude/skills/guide-react .claude/skills/guide-redux .claude/skills/guide-conventions
+  printf '{\n  "dependencies": {\n    "react": "^18.2.0",\n    "redux": "~4.2.1",\n    "lodash": "4.17.21"\n  },\n  "devDependencies": { "vitest": "^0.34.6" }\n}\n' > web/package.json
+  printf '[dependencies]\naxum = "0.7"\nserde = { version = "1.0", features = ["derive"] }\n[dependencies.sqlx]\nversion = "0.8.1"\n' > svc/Cargo.toml
+  printf '[project]\ndependencies = [\n  "fastapi[all]>=0.110",\n]\n' > pyproject.toml
+  printf 'module x\nrequire (\n\tgithub.com/gin-gonic/gin v1.9.1\n\tgolang.org/x/net v0.20.0 // indirect\n)\n' > go.mod
+  printf '# Tech stack\n\n- React 18\n' > docs/architecture/tech-stack.md
+  printf -- '---\nname: guide-react\ndescription: Use when writing React.\n---\n<!-- ck-code:team GENERATED — x -->\n' > .claude/skills/guide-react/SKILL.md
+  printf -- '---\nname: guide-redux\ndescription: Use when writing Redux.\n---\n<!-- ck-code:team GENERATED — x -->\n' > .claude/skills/guide-redux/SKILL.md
+  printf -- '---\nname: guide-conventions\ndescription: Use always.\n---\n# House rules\n' > .claude/skills/guide-conventions/SKILL.md
+)
+TS_STACK=$(cd "$TS" && ck-team stack)
+assert_contains "ck-team stack: npm dependency by major" "$TS_STACK" "dep npm react 18"
+assert_contains "ck-team stack: 0.x keeps the minor" "$TS_STACK" "dep npm vitest 0.34"
+assert_contains "ck-team stack: cargo inline table" "$TS_STACK" "dep cargo serde 1"
+assert_contains "ck-team stack: cargo dependency table" "$TS_STACK" "dep cargo sqlx 0.8"
+assert_contains "ck-team stack: pyproject extras do not end the list" "$TS_STACK" "dep pypi fastapi 0.110"
+assert_contains "ck-team stack: go direct requirement" "$TS_STACK" "dep go github.com/gin-gonic/gin 1"
+assert_not_contains "ck-team stack: go indirect requirement skipped" "$TS_STACK" "golang.org/x/net"
+assert_contains "ck-team stack: a manifest's folder" "$TS_STACK" "dir web"
+assert_eq "ck-team drift: empty without a snapshot" "" "$(cd "$TS" && ck-team drift)"
+assert_contains "ck-doctor: owned skills with no snapshot" "$(cd "$TS" && ck-doctor 2>&1)" "no stack snapshot"
+(cd "$TS" && ck-team snapshot)
+assert_eq "ck-team drift: empty right after the snapshot" "" "$(cd "$TS" && ck-team drift)"
+# a migration: react 18 -> 19, redux -> zustand, a lodash minor bump, an undocumented axum bump
+(cd "$TS" && sed -e 's/\^18.2.0/^19.0.0/' -e 's/"redux": "~4.2.1"/"zustand": "^4.5.0"/' -e 's/4.17.21/4.18.0/' web/package.json > p && mv p web/package.json \
+  && sed 's/axum = "0.7"/axum = "0.8"/' svc/Cargo.toml > c && mv c svc/Cargo.toml)
+TS_DRIFT=$(cd "$TS" && ck-team drift)
+assert_contains "ck-team drift: major bump" "$TS_DRIFT" "~ dep npm react 18 -> 19"
+assert_contains "ck-team drift: removed library" "$TS_DRIFT" "- dep npm redux 4"
+assert_contains "ck-team drift: added library" "$TS_DRIFT" "+ dep npm zustand 4"
+assert_not_contains "ck-team drift: a minor bump is not drift" "$TS_DRIFT" "lodash"
+TS_REL=$(cd "$TS" && ck-team drift --relevant)
+assert_eq "ck-team drift --relevant: only the documented changes" "2" "$(printf '%s\n' "$TS_REL" | grep -c .)"
+assert_not_contains "ck-team drift --relevant: an undocumented bump never prompts" "$TS_REL" "axum"
+assert_not_contains "ck-team drift --relevant: a new library never prompts" "$TS_REL" "zustand"
+assert_contains "ck-doctor: reports documented stack drift" "$(cd "$TS" && ck-doctor 2>&1)" "documented dependency change"
+assert_contains "session-start: names the drift and asks first" "$(cd "$TS" && bash "$PLUGIN_ROOT/scripts/session-start.sh" </dev/null)" "Ask the user before running /ck-code:team --refresh"
+(cd "$TS" && printf 'x\n' > docs/architecture/folder-structure.md && ck-team restamp .claude/skills/guide-react/SKILL.md .claude/skills/guide-conventions/SKILL.md 2>/dev/null)
+assert_eq "ck-team restamp: stamps the current digest" "$(cd "$TS" && ck-team digest)" "$(sed -n 's/.*SOURCES \([0-9a-f]*\).*/\1/p' "$TS/.claude/skills/guide-react/SKILL.md")"
+assert_not_contains "ck-team restamp: never touches a protected skill" "$(cat "$TS/.claude/skills/guide-conventions/SKILL.md")" "SOURCES"
+assert_eq "ck-team stale: a restamped skill is current" ".claude/skills/guide-redux/SKILL.md" "$(cd "$TS" && ck-team stale)"
+rm -rf "$TS"
+
+echo
 echo "=== breaking a second plan (tasks/2026-02-02_other, story missing id) ==="
 add_broken_plan
 
