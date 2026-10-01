@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.5.0] — 2026-10-01
+
+### Added
+- **team**: a package migration, a major bump or a removed library is now caught from the
+  code itself, not only from `tech-stack.md`. `ck-team stack`/`drift`/`snapshot` fingerprint
+  the dependencies (npm, composer, cargo, pypi, go, pub, gem — majors only, so minor and patch
+  bumps are never drift) and folders; `/ck-code:team` snapshots them after every run.
+- **ship**: when a dependency a guide, `tech-stack.md` or `guide-conventions` covers was
+  removed or moved a major, 2.6 asks once whether to refresh the team before staging, so the
+  migration and the guides describing it land in one commit. Nothing else ever prompts.
+
+### Changed
+- **team**: `--refresh` shows one plan and writes nothing before it is approved (Apply / Pick
+  / Record only / Cancel). It researches only the changed technologies, edits
+  `guide-conventions` only on the approved lines, and restamps (`ck-team restamp`) the skills
+  its own doc edits staled instead of regenerating them.
+- **doctor** / session start: a `team stack` WARN and a one-line note name the documented
+  dependency changes since the snapshot.
+
 ## [7.4.2] — 2026-09-30
 
 ### Added
