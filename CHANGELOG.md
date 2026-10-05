@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.6.1] — 2026-10-05
+
+### Changed
+- **migrate**: the lite → v7 conversion reads ck-code-lite 1.0's architecture areas. Each
+  `## Areas` row seeds a proposed epic (holding the tasks whose `files:` fall under its paths),
+  and that epic's feature doc is written from `docs/areas/<area>.md` verbatim instead of as a
+  stub; an area no task touches is folded into `_shared.md`, so nothing is dropped. `test-one`
+  maps to `dev-guide.md` `## Testing`, and every area doc gets the superseded banner. Lite 0.x
+  projects convert as before.
+
 ## [7.6.0] — 2026-10-05
 
 ### Added
