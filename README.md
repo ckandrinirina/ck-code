@@ -582,6 +582,7 @@ ck-code/
 │   ├── ck-plan                    # → scripts/ck-plan.sh
 │   ├── ck-checklist               # → scripts/ck-checklist.sh
 │   ├── ck-qa                      # → scripts/ck-qa.sh
+│   ├── ck-reclaim                 # → scripts/ck-reclaim.sh
 │   ├── ck-team                    # → scripts/ck-team.sh
 │   ├── ck-migrate                 # → scripts/ck-migrate.sh
 │   └── ck-bootstrap               # → scripts/ck-bootstrap.sh
@@ -599,6 +600,7 @@ ck-code/
 │   ├── ck-plan.sh                 # read and set a plan's OVERVIEW.md record
 │   ├── ck-checklist.sh            # a plan's manual-test checklist: items, answers, session
 │   ├── ck-qa.sh                   # run QA commands once per code state (reuse, parallel, narrowed re-runs, wait past the Bash cap)
+│   ├── ck-reclaim.sh              # free a kept worktree's build output (target/, node_modules/…), keep its source
 │   ├── ck-team.sh                 # the team-skill refresh contract (SOURCES digest)
 │   ├── ck-migrate.sh              # deterministic v6 → v7 conversion
 │   ├── ck-bootstrap.sh            # the committed ck-code-required guard

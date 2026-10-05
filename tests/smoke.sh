@@ -1015,6 +1015,28 @@ assert_contains "ck-checklist: a format-1 checklist is refused until imported" "
 assert_contains "ck-checklist import: format 2, result and fix split out" "$CLO" 'format: 2|result: "fail 2026-09-01 — no counter"|fix: 41-02|'
 
 echo
+echo "=== ck-reclaim + ck-doctor disk ==="
+RC_DIR="$(mktemp -d)"
+( cd "$RC_DIR" && git init -q m && cd m && printf 'target/\nnode_modules/\n.env\n' > .gitignore \
+  && mkdir -p build && echo keep > build/tracked && git add -A && git -c user.email=t@t -c user.name=t commit -qm i \
+  && git worktree add -q ../wt -b story/01-01-x && cd ../wt \
+  && mkdir -p src-tauri/target/debug node_modules/p build && echo bin > src-tauri/target/debug/a && echo s > .env )
+RCO="$(ck-reclaim "$RC_DIR/wt" 2>&1)"
+assert_contains "ck-reclaim: frees the worktree's build output" "$RCO" "freed"
+RCK="$( [ -d "$RC_DIR/wt/src-tauri/target" ] || [ -d "$RC_DIR/wt/node_modules" ] && echo left || echo gone; \
+  cat "$RC_DIR/wt/.env" "$RC_DIR/wt/build/tracked"; git -C "$RC_DIR/wt" status --porcelain | wc -l | tr -d ' ')"
+assert_contains "ck-reclaim: target/ and node_modules/ gone, .env and tracked build/ kept, tree clean" "$RCK" "gone
+s
+keep
+0"
+ck-reclaim "$RC_DIR/m" >/dev/null 2>&1; RCM=$?
+assert_exit "ck-reclaim: refuses the main checkout" 1 "$RCM"
+RCD="$(cd "$RC_DIR/m" && ck-doctor 2>&1)"
+assert_contains "ck-doctor disk: reports linked worktrees" "$RCD" "1 linked worktree(s)"
+assert_contains "ck-doctor disk: reports this checkout's build output" "$RCD" "in this checkout"
+rm -rf "$RC_DIR"
+
+echo
 echo "=== shellcheck ==="
 if command -v shellcheck >/dev/null 2>&1; then
   SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/* tests/fake-gh/gh 2>&1); SC_RC=$?

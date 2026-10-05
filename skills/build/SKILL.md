@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story inline, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -779,6 +779,7 @@ is the rest of this contract; these four are the traps it does not carry.
   picked from the 1.2 menu, takes Phases 1–8 inline. `--epic NN` is the exception: it always
   orchestrates, dispatching even a lone remaining story solo (P4).
 - **Never cut a worktree for a one-story wave** — solo dispatch runs in the main checkout.
+- **Never leave a merged story's worktree standing** — remove it before `git branch -d`; `git worktree prune` deletes nothing. A worktree kept for a held, blocked or conflicted story is passed to `ck-reclaim`, which frees its build output and keeps its source.
   Worktrees are for concurrency; without a peer they buy nothing and cost a cold install.
 - **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
   names, statuses, SHAs, and structured returns only. Every implementation is a sub-agent.

@@ -606,7 +606,15 @@ to the regenerate below, saying so in one line (`Merge: none needed (solo on <$T
 clean-tree guard before the checkout, `--no-ff` so each story stays a readable unit, the
 abort-and-report path on conflict, and `git branch -d` (never `-D`) once it lands. Do not
 improvise a merge here, and do not write a story-id merge message — the shape there is the
-one every consumer uses.
+one every consumer uses. A fan-out branch is still checked out in its worktree, so remove
+that worktree first — each holds its own build output (a Rust/Tauri `target/` alone runs to
+several GB), and `-d` refuses a branch a worktree still holds. `--merged` is the gate; past
+it, `--force` discards untracked build output and nothing else:
+
+```bash
+git branch --merged "$TARGET" --format='%(refname:short)' | grep -qx "<branch>" || echo "NOT MERGED — keep"
+git worktree remove --force "<path>"   # <path>: the branch's row in `git worktree list`
+```
 
 Then **regenerate the views once** on the target branch — every dispatched agent, worktree
 or solo, carries only its own story frontmatter at `done` with its touched `files:`
@@ -652,8 +660,13 @@ main checkout on `$TARGET` (`git rev-parse --abbrev-ref HEAD` guard) invoking
 re-ask. The story stays merged — this is a fix, not a re-open.
 
 **Cleanup.** After the merge and its check settle, `git worktree prune` and confirm only the
-main worktree remains (changed native worktrees linger until pruned; unchanged ones already
-auto-cleaned). Then confirm no merged story branch is still standing — the merge step deleted
+main worktree and the worktrees of held, blocked or conflicted stories remain. `prune` only
+forgets directories already gone — it never deletes one — so a merged story's worktree still
+standing is a missed removal above: remove it now and say so. Each surviving worktree keeps its
+source and commits but not its rebuildable output: `ck-reclaim <path>…` deletes its gitignored
+build directories (`target/`, `node_modules/`, `dist/`, …) and prints one `freed` line to put in
+the report; a resume rebuilds them. Option 2 skips this — the user may want to run those
+branches as they stand. Then confirm no merged story branch is still standing — the merge step deleted
 each with `-d` as it landed, so `git branch --list 'story/*' 'fix/*'` must name only stories
 this report calls held, blocked, or conflicted. That is the only state a resume can read
 from; merged branches left standing accumulate forever and bury the real ones.

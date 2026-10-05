@@ -280,3 +280,39 @@ ck_in_story_worktree() {
   case "$b" in story/*|fix/*) return 0 ;; esac
   return 1
 }
+
+# Directory names that hold rebuildable build output or dependency installs. Rust/Tauri
+# target/ alone reaches tens of GB, and every linked worktree compiles its own copy.
+CK_BUILD_DIR_NAMES="target node_modules dist build out .next .nuxt .svelte-kit .turbo .parcel-cache .angular coverage .gradle .venv venv __pycache__ .pytest_cache .mypy_cache .ruff_cache DerivedData"
+
+# ck_is_linked_worktree DIR — 0 when DIR is a linked git worktree, never the main checkout.
+ck_is_linked_worktree() {
+  local gd cd
+  gd="$(git -C "$1" rev-parse --absolute-git-dir 2>/dev/null)" || return 1
+  cd="$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || return 1
+  gd="$(CDPATH= cd -- "$gd" 2>/dev/null && pwd -P)" || return 1
+  cd="$(CDPATH= cd -- "$cd" 2>/dev/null && pwd -P)" || return 1
+  [ "$gd" != "$cd" ]
+}
+
+# ck_build_dirs DIR — print each build-output directory under the checkout DIR (depth ≤ 4,
+# e.g. src-tauri/target, apps/web/node_modules) that git ignores and that holds no tracked
+# file. Both guards together mean deleting one loses nothing a rebuild cannot restore.
+ck_build_dirs() {
+  local root expr="" n d
+  root="$(CDPATH= cd -- "$1" 2>/dev/null && pwd -P)" || return 0
+  for n in $CK_BUILD_DIR_NAMES; do expr="$expr${expr:+ -o} -name $n"; done
+  # shellcheck disable=SC2086  # $expr is the word-split -name list
+  find "$root" -mindepth 1 -maxdepth 4 -name .git -prune -o -type d \( $expr \) -prune -print 2>/dev/null \
+    | while IFS= read -r d; do
+        git -C "$root" check-ignore -q "$d" 2>/dev/null || continue
+        [ -z "$(git -C "$root" ls-files -- "$d" 2>/dev/null | head -1)" ] || continue
+        printf '%s\n' "$d"
+      done
+}
+
+# ck_kb_of PATH… — total size in KB of the given paths (0 for none).
+ck_kb_of() {
+  [ $# -gt 0 ] || { echo 0; return; }
+  du -sk "$@" 2>/dev/null | awk '{s+=$1} END{print s+0}'
+}

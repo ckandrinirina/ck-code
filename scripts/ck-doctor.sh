@@ -765,6 +765,39 @@ check_worktreeinclude() {
   return 0
 }
 
+# ---- 14. Disk (build output) ---------------------------------------------------
+# Read-only. Linked worktrees each carry their own build output (a Tauri target/ is often
+# 5–20 GB), so a few left standing quietly fill the disk. Only sizes are reported here;
+# nothing is deleted — ck-reclaim frees a kept worktree, and the main checkout's cache is
+# the user's to clean.
+check_disk() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local main wts=() w kb gb
+  main="$(git rev-parse --show-toplevel 2>/dev/null)"
+  while IFS= read -r w; do
+    [ -n "$w" ] && [ "$w" != "$main" ] && [ -d "$w" ] && wts+=("$w")
+  done < <(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
+  if [ "${#wts[@]}" -gt 0 ]; then
+    kb="$(ck_kb_of "${wts[@]}")"; gb="$(awk -v k="$kb" 'BEGIN{printf "%.1f", k/1048576}')"
+    if [ "$kb" -ge 1048576 ]; then
+      row disk "${#wts[@]} linked worktree(s) hold $gb GB" WARN
+      [ "$QUIET" -eq 1 ] || note "merged: git worktree remove --force <path> · kept: ck-reclaim <path> (frees build output, keeps source)"
+    else
+      row disk "${#wts[@]} linked worktree(s), $gb GB" OK
+    fi
+  fi
+  local dirs=() d
+  while IFS= read -r d; do [ -n "$d" ] && dirs+=("$d"); done < <(ck_build_dirs "$main")
+  kb="$(ck_kb_of "${dirs[@]+"${dirs[@]}"}")"; gb="$(awk -v k="$kb" 'BEGIN{printf "%.1f", k/1048576}')"
+  if [ "$kb" -ge 10485760 ]; then
+    row "build output" "$gb GB in this checkout" WARN
+    [ "$QUIET" -eq 1 ] || note "rebuildable — e.g. cargo clean in the crate dir; never deleted automatically"
+  else
+    row "build output" "$gb GB in this checkout" OK
+  fi
+  return 0
+}
+
 # ---- run ---------------------------------------------------------------------
 echo
 if [ -n "$ONLY_PLAN" ] && [ ! -d "$ONLY_PLAN" ]; then
@@ -786,6 +819,7 @@ check_board
 check_bootstrap
 check_rtk
 check_worktreeinclude
+check_disk
 echo
 if [ "$ERRORS" -gt 0 ]; then
   echo "$WARNS warning(s), $ERRORS error(s)."

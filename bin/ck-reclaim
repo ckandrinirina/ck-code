@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-reclaim — see scripts/ck-reclaim.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-reclaim.sh" "$@"
