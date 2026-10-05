@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.6.0] — 2026-10-05
+
+### Added
+- **build**: PARALLEL MODE now removes each merged story's worktree (`git worktree remove
+  --force`, gated on `git branch --merged`) before deleting its branch. Before, cleanup ran
+  only `git worktree prune`, which deletes nothing, so every changed worktree stayed on disk
+  with its own build output — a Rust/Tauri `target/` alone is 5–20 GB. A worktree kept for a
+  held, blocked or conflicted story now goes through the new `ck-reclaim`, which deletes only
+  build-output directories (`target/`, `node_modules/`, `dist/`, `.venv/`, …) that git ignores
+  and that hold no tracked file. It keeps source, commits and `.env`, refuses the main
+  checkout, and prints one `freed` line, so it costs no context.
+- **doctor**: a `disk` row WARNs when linked worktrees hold ≥ 1 GB, and a `build output` row
+  WARNs when this checkout's build directories reach ≥ 10 GB. Read-only — doctor never deletes.
+
 ## [7.5.0] — 2026-10-01
 
 ### Added
