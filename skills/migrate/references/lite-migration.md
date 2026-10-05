@@ -1,7 +1,9 @@
 # Lite → v7 Migration Map
 
-Field-by-field conversion of a **ck-code-lite** project (`docs/ARCHITECTURE.md` +
-`tasks/PLAN.md`) into the ck-code **v7 layout**, directly. Read by `migrate` PHASE L only.
+Field-by-field conversion of a **ck-code-lite** project (`docs/ARCHITECTURE.md`, the area
+docs its `## Areas` table lists under `docs/areas/`, and `tasks/PLAN.md`) into the ck-code
+**v7 layout**, directly. Read by `migrate` PHASE L only. Written against ck-code-lite 1.x;
+0.x projects simply have no `## Areas` and no `test-one`.
 
 The two plugins are alternatives, not companions — this is the one-way upgrade path.
 Nothing here converts v7 back to lite.
@@ -38,8 +40,11 @@ plan's numbers.
 
 ## Epic grouping
 
-A lite plan is flat; v7 requires epics. Infer them from task titles and their `files:`
-paths (tasks touching the same directory usually belong together), then present the
+A lite plan is flat; v7 requires epics. **Areas seed the grouping:** each `## Areas` row
+proposes one epic named after the area, holding every task whose `files:` fall under that
+row's paths (a task spanning two areas goes to the one covering most of its files; a tie goes
+to the row listed first). Infer the rest from task titles and `files:` paths (tasks touching
+the same directory usually belong together), then present the
 proposal using the **Phase 4 Plan Confirmation Format** in
 [`roadmap-format.md`](../../plan/references/roadmap-format.md), extended with a
 `T-NN → EE-SS` column so the user sees every ID move before anything is written.
@@ -187,10 +192,11 @@ Every target file comes from
 |---|---|
 | intro paragraph | `overview.md` → `## Vision` |
 | `## Stack` | `tech-stack.md` → `## Overview` table |
-| `## Commands` | `dev-guide.md` → `## Setup` / `## Running` / `## Testing` |
+| `## Commands` | `dev-guide.md` → `## Setup` / `## Running` / `## Testing`; `test-one` is the "run a subset" line under `## Testing` |
 | `## Folder structure` | `folder-structure.md` → `## Directory Tree` |
 | `## Decisions` | `overview.md` → `## Key Design Decisions` |
 | `## Conventions` | `_shared.md` → `## Conventions` |
+| `## Areas` | not copied — `EPICS_INDEX`'s Docs column takes over the routing; the rows only seed the [epic grouping](#epic-grouping) |
 
 Also written: `README.md` (index, listing the globals and every feature doc) and
 `configuration.md` — the latter only when the repo actually has config files, else
@@ -213,11 +219,28 @@ design: planned
 
 `design: planned` because the epic already has stories.
 
-These are **stubs**: `## Summary` from the epic description, every other section
-`[TO BE DEFINED]`. A lite `ARCHITECTURE.md` holds no component, API, data, or flow
-detail, so there is nothing to convert — inventing it here would put unreviewed
-architecture in front of a `build`. The report tells the user to run `/ck-code:design`
-to fill them in.
+**An epic seeded by an area** gets its feature doc from `docs/areas/<area>.md`, moved
+verbatim:
+
+| area doc section | feature doc section |
+|---|---|
+| intro paragraph | `## Summary` |
+| `## Decisions`, `## Conventions` | `## Summary`, after the paragraph, as `**Decisions**` and `**Conventions**` bullet lists — a feature doc is self-contained, so the rules stay with the code they govern |
+| `## Structure` | `## Components` |
+| `## Interfaces` | `## API` |
+
+Every section the area doc lacks is `[TO BE DEFINED]`.
+
+**Every other epic** gets a **stub**: `## Summary` from the epic description, every other
+section `[TO BE DEFINED]`. The lite core holds no component, API, data, or flow detail, so
+there is nothing to convert — inventing it here would put unreviewed architecture in front of
+a `build`.
+
+**An area no task falls under** proposes no epic, so its doc has no feature doc to land in:
+append it verbatim to `_shared.md` under a `## <Area>` heading and list it in the report.
+Nothing an area doc says is dropped.
+
+The report tells the user to run `/ck-code:design` to fill the `[TO BE DEFINED]` sections.
 
 ## Retiring the lite artifacts
 
@@ -231,7 +254,7 @@ Content is kept; only the live plan is stood down.
    > Kept for reference; nothing reads this file.
    ```
 
-2. Prepend to `docs/ARCHITECTURE.md`:
+2. Prepend to `docs/ARCHITECTURE.md`, and to every `docs/areas/*.md`:
 
    ```markdown
    > **Superseded** by `docs/architecture/` — see its `README.md`.
@@ -269,7 +292,8 @@ On top of the standard `migrate` report:
 
 - the full `T-NN → EE-SS` ID map
 - every task that was `blocked` and is now `todo`
-- feature-doc stubs written, with the `/ck-code:design` follow-up
+- feature docs written from area docs, stubs written, and any area folded into `_shared.md`,
+  with the `/ck-code:design` follow-up
 - the plan record: `integration: story`, and `/ck-code:config integration` to change it
 - the plugin swap: the answer, **and the final value of both `enabledPlugins` keys**.
   `ck-code@ck-marketplace` is `true` either way because `ck-bootstrap install` sets it, so

@@ -131,20 +131,22 @@ Open [references/lite-migration.md](references/lite-migration.md) before L1; eve
 mapping, template pointer and banner lives there. Always inline: a lite plan is small by
 contract, so nothing fans out.
 
-- **L1 — Read the source.** `docs/ARCHITECTURE.md` whole (one screen by contract), then
-  the task rows and headers (`grep -n '^| T-' tasks/PLAN.md`, `grep -n '^## T-'
-  tasks/PLAN.md`), each task section by offset.
+- **L1 — Read the source.** `docs/ARCHITECTURE.md` whole (one screen by contract) and every
+  area doc its `## Areas` table lists, then the task rows and headers
+  (`grep -n '^| T-' tasks/PLAN.md`, `grep -n '^## T-' tasks/PLAN.md`), each task section
+  by offset.
 - **L2 — Grouping (hard gate).** Propose the epics with the `T-NN → EE-SS` column and ask
   (Accept / Single epic / Adjust). Write nothing before the answer; on Adjust, re-present.
 - **L3 — Plan folder.** `OVERVIEW.md` with its record, `ROADMAP.md`, one `EPIC.md` per
   epic, one story per task, bodies verbatim. `blocked` tasks become `todo`.
 - **L4 — Architecture docs.** Split `docs/ARCHITECTURE.md` into the global docs and write
-  one stub feature doc per epic. Never invent detail lite never recorded.
+  one feature doc per epic — from its area doc when an area seeded the epic, else a stub.
+  Never invent detail lite never recorded.
 - **L5 — Views, stamp, retire.** Write `tasks/.gitignore`, run `ck-index` (the views stay
   uncommitted), stamp `layout: v7` with `requires: ck-code >= 7.0.0`, rename
   `tasks/PLAN.md` to `tasks/PLAN.superseded.md` with its banner, banner
-  `docs/ARCHITECTURE.md`, and offer the `.claude/settings.json` plugin swap (one
-  `AskUserQuestion`, applied only on Swap).
+  `docs/ARCHITECTURE.md` and every `docs/areas/*.md`, and offer the `.claude/settings.json`
+  plugin swap (one `AskUserQuestion`, applied only on Swap).
 - **L6 — Nested team skills.** Only when the probe also fired the nested-skill marker:
   run Phase S of [legacy-v6.md](references/legacy-v6.md#phase-s--flatten-the-team-skill-folders).
 - **L7 — Commit** after Phase 4:
