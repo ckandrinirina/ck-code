@@ -203,7 +203,9 @@ writes no dated delta/journal siblings. `<slug>` matches the epic folder slug so
 The **YAML frontmatter is mandatory** (see [`data-model.md`](../../../references/data-model.md)):
 `slug:` is the feature key; `design:` is `pending` when `design` has written/updated the doc
 but `plan` has not yet turned it into epics/stories, and `planned` once `plan` has. `design`
-always writes `pending`; only `plan` flips it to `planned`.
+always writes `pending`; only `plan` flips it to `planned`. `/ck-code:init` writes `built`
+for a doc that describes code which already exists; its other as-built changes live in
+[`init/references/as-built.md`](../../init/references/as-built.md#template-deltas).
 
 > **Relative links:** `index.md` sits two levels under `docs/architecture/`, so
 > links to `_shared.md` and sibling globals use `../../` (e.g. `../../_shared.md`,

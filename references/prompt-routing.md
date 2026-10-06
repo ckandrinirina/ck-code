@@ -5,6 +5,7 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | PR merged or issue closed but the story, board or issue does not show it; fix bookkeeping drift | `doctor --fix` |
 | what is broken in the project itself — indexes, stories, layout, "why is this broken" | `doctor` |
 | upgrade an old layout, or move a ck-code-lite project (`tasks/PLAN.md`) to full ck-code | `migrate` |
+| set ck-code up on an existing codebase, check ck-code's dependencies, document the code as built without a spec | `init` (`init --deps-only`) |
 | settings — issue tracking, trunk branch, GitHub Project board or columns, a plan's integration level | `config` (`config integration <tasks/plan> <story\|epic\|plan>`) |
 | bug, crash or regression in built code | `fix` |
 | publish the plan to GitHub Issues | `plan --publish` |

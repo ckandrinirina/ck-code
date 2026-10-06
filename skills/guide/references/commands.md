@@ -13,6 +13,7 @@ read that rather than restating it here. This file is the per-command syntax onl
 | Command | Argument | Purpose | Writes |
 | --- | --- | --- | --- |
 | `guide` | `[task description \| --command [name]]` | Recommend the next step, route a task to a skill, or look up syntax | read-only |
+| `init` | `[--deps-only]` | Bring ck-code into a project: check the tools it needs, stamp the layout and install the committed guard; on an existing codebase, also inventory its docs and write the architecture docs as built (`design: built`, no spec) | `tasks/VERSION.md`, `.claude/`, `docs/architecture/` |
 | `spec` | `[feature-description \| notes-file \| existing-slug \| issue-url]` | Draft or adjust a stakeholder-facing spec | `docs/specs/<date>_<slug>/spec.md` (+ issue) |
 | `design` | `[path-to-spec \| optimize \| sync \| ds [design-url]]` | Spec → architecture docs (no argument picks up the newest spec marked ready for design); `optimize`/`sync` slim or scaffold feature docs; `ds [url]` links (or refreshes) a design-system cache | `docs/architecture/` |
 | `team` | `[--basic\|--standard\|--max] [--check\|--refresh\|--regenerate] [--conventions] [--new expert\|guide <slug>] [--adjust <slug>] [--workflow]` | Architecture → expert + guide skills; `--refresh` regenerates only the skills whose sources changed or that a package migration / major bump concerns (asks first), `--regenerate` every generated skill; offers house-conventions capture in the same run | `.claude/skills/` |
@@ -36,6 +37,7 @@ every read, so no command commits them.
 /ck-code:guide                                     # next step from project state
 /ck-code:guide "fix the login crash"               # → recommends /ck-code:fix
 /ck-code:guide --command build                     # syntax for one command
+/ck-code:init                                      # adopt an existing codebase (no spec)
 /ck-code:spec docs/notes/feature-draft.md          # create spec from notes
 /ck-code:spec intelligent-bot-system               # adjust an existing spec
 /ck-code:design docs/specifications.md
@@ -62,6 +64,10 @@ every read, so no command commits them.
 # First time
 /ck-code:design docs/specifications.md → /ck-code:team → /ck-code:plan docs/specifications.md
 → /ck-code:track next → /ck-code:build → /ck-code:ship
+
+# Existing codebase, first time
+/ck-code:init → /ck-code:team → /ck-code:design "new feature" or /ck-code:plan --quick
+# init documents what is built (design: built); plan only picks up new design: pending work
 
 # Adding a feature later
 /ck-code:spec "describe the feature" (optional) → /ck-code:design

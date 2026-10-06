@@ -415,11 +415,17 @@ count_existing() {
 }
 
 render_state() {
-  local n_specs n_arch n_team n_tasks n_idx ds_linked ds_pending
+  local n_specs n_arch n_team n_tasks n_idx n_src ds_linked ds_pending
   n_specs=$(count_existing docs/specs/*/)
   n_arch=$(find docs/architecture -name '*.md' 2>/dev/null | head -1 | grep -c . || true)
   n_team=$(count_existing .claude/skills/expert-*/ .claude/skills/guide-*/)
   n_tasks=$(count_existing tasks/*/)
+  # Tracked source outside docs, plans and tooling: an existing codebase, which
+  # /ck-code:init documents as built instead of starting from a spec. Keep this filter in
+  # lockstep with init's Phase 1 probe (skills/init/SKILL.md).
+  n_src=$(git ls-files 2>/dev/null \
+    | grep -vE '^(docs|tasks|\.claude|\.github)/|^[^/]+\.(md|txt|rst)$|^(LICENSE|\.git|\.editorconfig)' \
+    | head -1 | grep -c . || true)
   n_idx=0
   if [ -f tasks/EPICS_INDEX.md ] && ls tasks/*/STORIES_INDEX.md >/dev/null 2>&1; then n_idx=1; fi
   ds_linked=0; [ -d docs/architecture/design-system ] && ds_linked=1
@@ -449,7 +455,10 @@ $AWK_COMMON
   local total=$((ready + bug + blocked + ip + done))
 
   local cmd why
-  if [ "$n_arch" -eq 0 ] && [ "$n_specs" -eq 0 ]; then
+  if [ "$n_arch" -eq 0 ] && [ "$n_specs" -eq 0 ] && [ "$n_src" -gt 0 ]; then
+    cmd='/ck-code:init'
+    why='existing code but no spec and no architecture — init sets ck-code up and documents the code as built'
+  elif [ "$n_arch" -eq 0 ] && [ "$n_specs" -eq 0 ]; then
     cmd='/ck-code:spec "<feature description>"'
     why='no spec and no architecture — start with a stakeholder-friendly spec, or skip to /ck-code:design <spec-file> if a written spec already exists'
   elif [ "$n_arch" -eq 0 ]; then
@@ -498,8 +507,8 @@ $AWK_COMMON
     printf '| Stories            | — |\n'
   fi
   echo
-  printf 'FLAGS: specs=%s architecture=%s team_skills=%s tasks=%s indexes=%s ds_linked=%s ds_pending=%s\n' \
-    "$n_specs" "$n_arch" "$n_team" "$n_tasks" "$n_idx" "$ds_linked" "$ds_pending"
+  printf 'FLAGS: specs=%s architecture=%s team_skills=%s tasks=%s indexes=%s ds_linked=%s ds_pending=%s source=%s\n' \
+    "$n_specs" "$n_arch" "$n_team" "$n_tasks" "$n_idx" "$ds_linked" "$ds_pending" "$n_src"
   printf 'COUNTS: ready=%s bug=%s blocked=%s in_progress=%s done=%s unshipped=%s in_review=%s merged=%s\n' \
     "$ready" "$bug" "$blocked" "$ip" "$done" "$unshipped" "$review" "$merged"
   printf 'RECOMMEND: %s\n' "$cmd"

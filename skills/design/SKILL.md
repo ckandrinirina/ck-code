@@ -35,6 +35,7 @@ This skill turns a spec into **architecture docs** (before `plan`) and maintains
 If the request is actually something else, STOP and recommend the better skill:
 
 - No stakeholder spec yet and you want one → `/ck-code:spec` (first)
+- An existing codebase with no spec and no `docs/architecture/`, to be documented as it is built → `/ck-code:init`
 - Breaking work into epics/stories → `/ck-code:plan` (design comes first)
 - Project is on an older layout (v6 or earlier: committed views, `PROJECT_OVERVIEW.md`, nested team skills, layer/flat docs) → `/ck-code:migrate`
 

@@ -16,6 +16,7 @@ A change here means a change to `scripts/ck-view.sh` in the same commit.
 | `indexes` | `tasks/EPICS_INDEX.md` **and** at least one `tasks/*/STORIES_INDEX.md` |
 | `ds_linked` | `docs/architecture/design-system/` exists |
 | `ds_pending` | specs whose `.metadata.json` still reads `"awaiting-link"` (meaningful only when `ds_linked=0`) |
+| `source` | `git ls-files` lists a file outside `docs/`, `tasks/`, `.claude/`, `.github/`, root-level `*.md`/`*.txt`/`*.rst`, `LICENSE*` and `.git*`/`.editorconfig` — an existing codebase (the same filter as `init`'s Phase 1) |
 
 ## What it counts
 
@@ -53,6 +54,7 @@ two right-hand columns are the script's output, verbatim (`<N>` is the count, wi
 
 | State | `RECOMMEND:` | `WHY:` |
 |---|---|---|
+| `!architecture && !specs && source` | `/ck-code:init` | existing code but no spec and no architecture — init sets ck-code up and documents the code as built |
 | `!architecture && !specs` | `/ck-code:spec "<feature description>"` | no spec and no architecture — start with a stakeholder-friendly spec, or skip to /ck-code:design <spec-file> if a written spec already exists |
 | `!architecture` | `/ck-code:design <spec-file>` | specs exist but no architecture docs — refine the spec into architecture |
 | `!team_skills` | `/ck-code:team` | architecture exists but no project-tailored expert/guide skills |

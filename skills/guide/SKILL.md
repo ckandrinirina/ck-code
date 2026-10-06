@@ -76,7 +76,7 @@ disposable, so this touches nothing git tracks and the skill stays read-only.
 It prints the rendered `## ck-code: project state` table, then three machine lines:
 
 ```
-FLAGS: specs=2 architecture=1 team_skills=7 tasks=1 indexes=1 ds_linked=0 ds_pending=1
+FLAGS: specs=2 architecture=1 team_skills=7 tasks=1 indexes=1 ds_linked=0 ds_pending=1 source=1
 COUNTS: ready=4 bug=1 blocked=2 in_progress=1 done=12 unshipped=1 in_review=2 merged=9
 RECOMMEND: /ck-code:track next
 WHY: 1 open bug(s) — a diagnosed bug outranks new work (Bug-Fix Mode)
@@ -161,12 +161,12 @@ First matching rule:
 | Intent | If… | Recommend instead (prerequisite first) |
 |---|---|---|
 | `build` / `plan --quick` | no `tasks/<plan>/OVERVIEW.md` exists | `/ck-code:plan` (then build) |
-| `plan` | no `docs/architecture/` exists | `/ck-code:design` (then plan) |
-| `team` | no `docs/architecture/` exists | `/ck-code:design` (then team) |
+| `plan` | no `docs/architecture/` exists | `/ck-code:design` (then plan); `/ck-code:init` when the repo already has code and no spec |
+| `team` | no `docs/architecture/` exists | `/ck-code:design` (then team); `/ck-code:init` when the repo already has code and no spec |
 | `ship` | no implemented work on the branch | `/ck-code:build` or `/ck-code:fix` (then ship) |
 | `fix` | the "bug" is actually new functionality | `/ck-code:plan --quick` (add a story), then `build` |
 
-Skip this step for read-only intents (`track`, `explain`, `doctor`, `migrate`, `spec`, `design`).
+Skip this step for read-only intents (`track`, `explain`, `doctor`, `migrate`, `spec`, `design`, `init`).
 
 ### B.3 Output
 

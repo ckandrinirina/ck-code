@@ -255,8 +255,11 @@ design: planned
 ```
 
 - `slug`: the feature key; matches the epic `slug:` and the `Docs` routing path.
-- `design`: `pending` (design written, not yet planned) or `planned` (a `plan` run has
-  turned it into epics/stories). `design` sets `pending`, `plan` flips it to `planned`.
+- `design`: `pending` (design written, not yet planned), `planned` (a `plan` run has
+  turned it into epics/stories) or `built` (written by `init` from code that already
+  exists, so there is nothing to plan). `design` sets `pending`, `plan` flips it to
+  `planned`; `plan` only ever reads `pending`, so a `built` doc is never re-planned. When
+  `design` (Feature Mode) extends a `built` feature, it sets `pending` like any other.
   No separate ledger file, no dated design-record journal: git is the design history.
 
 Delta/journal docs are never written. A change's history is its commits. `index.md`

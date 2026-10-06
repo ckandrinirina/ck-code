@@ -163,8 +163,8 @@ Then run the hand-off prompt from [`skill-invocation.md`](skill-invocation.md) f
 
 ## Stamp (writing `tasks/VERSION.md`)
 
-Write only when the layout is confirmed v7: after a Tier-2 "no marker", or as the final
-step of `migrate`. `mkdir -p tasks` first if absent. Run `ck-bootstrap install`
+Write only when the layout is confirmed v7: after a Tier-2 "no marker" (including `init`'s
+own Phase 2), or as the final step of `migrate`. `mkdir -p tasks` first if absent. Run `ck-bootstrap install`
 immediately after writing the stamp. The two belong together, and the SessionStart hook
 only re-installs the guard on a project that already carries a stamp. Content is the
 template above, with `layout:` = `LAYOUT` and `requires: ck-code >= <MIN_PLUGIN>`.
@@ -178,6 +178,7 @@ template above, with `layout:` = `LAYOUT` and `requires: ck-code >= <MIN_PLUGIN>
 | `ship` STANDALONE (no `tasks/` in the repo at all) | **Exempt** — a standalone commit on a never-planned repo touches no ck-code state. Skip the gate; never stamp. The moment `tasks/` exists, the hard-block row applies. |
 | `explain`, `guide`, `track`, `doctor` (no `--fix`) | **Hint only** — Tier 1 alone, from the injected stamp. On anything but `layout: v7`, emit one line (`ℹ older ck-code layout — run /ck-code:migrate`, or `ℹ newer ck-code layout — update the plugin`) and continue read-only. Never run Tier 2, never block, never stamp. |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. It refuses a `NEWER` project. |
+| `init` | **Gate owner for an unstamped project** — on anything but `layout: v7` it runs Tier 2 itself: `NEWER` → update message; `V6`/`LEGACY`/`LITE` → BLOCK and the `migrate` hand-off; no marker → it stamps and runs `ck-bootstrap install` in its dependency phase. On `layout: v7` it passes; its dependency phase is idempotent. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here. It
 inlines the Tier-1 stamp check and never restates Tier 2.

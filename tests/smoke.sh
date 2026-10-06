@@ -423,6 +423,17 @@ STATE_OUT=$(ck-view state 2>&1); STATE_RC=$?
 assert_exit "ck-view state: exits 0" 0 "$STATE_RC"
 assert_contains "ck-view state: prints project-state probe" "$STATE_OUT" "ck-code: project state"
 
+# A repo with code but no spec and no architecture is an existing codebase: init, not spec.
+SRC_REPO="$(mktemp -d)"; git -C "$SRC_REPO" init -q
+printf 'package main\n' > "$SRC_REPO/main.go"; printf '# demo\n' > "$SRC_REPO/README.md"
+git -C "$SRC_REPO" add -A
+SRC_STATE=$(cd "$SRC_REPO" && ck-view state 2>&1)
+assert_contains "ck-view state: existing code routes to init" "$SRC_STATE" "RECOMMEND: /ck-code:init"
+assert_contains "ck-view state: FLAGS reports source=1" "$SRC_STATE" "source=1"
+git -C "$SRC_REPO" rm -q --cached main.go
+DOCS_STATE=$(cd "$SRC_REPO" && ck-view state 2>&1)
+assert_contains "ck-view state: a docs-only repo still routes to spec" "$DOCS_STATE" "RECOMMEND: /ck-code:spec"
+
 echo
 echo "=== ck-view waves --epic 02 ==="
 WAVES_OUT=$(ck-view waves --epic 02 2>&1); WAVES_RC=$?

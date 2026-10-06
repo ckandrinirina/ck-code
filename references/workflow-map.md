@@ -8,6 +8,9 @@ duplicating the workflow graph.
 ```
 0. /ck-code:guide        Active entry-point — no arg: state → next step; free-text: intent → skill; --command: syntax
 
+   /ck-code:init         (Existing codebase) Dependencies + stamp + guard, then the
+                        architecture docs read off the code (design: built) — replaces 1–2
+
 1. /ck-code:spec         (Optional) Stakeholder-friendly feature spec
 2. /ck-code:design       Spec → architecture docs (docs/architecture/); also sync/optimize maintenance
 3. /ck-code:team         Architecture → expert + guide skills (.claude/skills/); also captures house conventions
@@ -41,6 +44,8 @@ duplicating the workflow graph.
 
 | After running … | Recommended next step |
 |---|---|
+| `init` (existing code) | `/ck-code:team` |
+| `init` (empty repo) | `/ck-code:spec` (or `/ck-code:design <spec>` when one exists) |
 | `spec` | `/ck-code:design` |
 | `design` | `/ck-code:team` (`/ck-code:team --refresh` when it changed `tech-stack.md` or `folder-structure.md` and team skills exist) |
 | `team` | `/ck-code:plan` |
@@ -68,6 +73,8 @@ asks the same single question but makes no `Skill` call and adds no link to the 
 
 | Caller | Callee | Tier | Trigger |
 |---|---|---|---|
+| `init` | `team` | DIRECT | as-built architecture docs written (EXISTING) |
+| `init` | `spec` / `design <spec>` | DIRECT | dependencies set up on a repo with no code yet (EMPTY) |
 | `spec` | `design` | DIRECT | spec approved by the user |
 | `design` | `team` | DIRECT | feature docs written, no team skills yet |
 | `design` | `team --refresh` | DIRECT | `tech-stack.md` or `folder-structure.md` changed and team skills exist |
@@ -130,6 +137,8 @@ the last column instead.
 | `spec` | a spec already exists / ready for technical design | `design` |
 | `spec` | one tiny tweak to an existing plan | `plan --quick` |
 | `design` | no stakeholder spec yet and you want one | `spec` (first) |
+| `design` / `spec` | documenting an existing codebase as it is built, with no spec | `init` |
+| `init` | a new feature for a project ck-code already manages | `design` or `plan --quick` |
 | `design` | breaking work into epics/stories | `plan` (design runs *before* plan) |
 | `team` | no `docs/architecture/` exists yet | `design` (first) |
 | `team` | breaking the architecture into epics/stories | `plan` |
@@ -162,6 +171,7 @@ command reference.
 
 | Skill | Writes to |
 |---|---|
+| `init` | `tasks/VERSION.md`, `.claude/ck-code-required.sh` + `.claude/settings.json` (via `ck-bootstrap install`), `tasks/.gitignore`; on an existing codebase, `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: built`), and a confirmed `git mv` of a foreign `docs/architecture/` into `archive/`. Never a spec, never a commit |
 | `spec` | `docs/specs/YYYY-MM-DD_<slug>/spec.md` (+ canonical `.metadata.json`), optional GitHub issue, optional `design-brief.md` when the Claude Design offer is accepted |
 | `design` | `docs/architecture/*.md` + `features/<slug>/index.md` (frontmatter `design: pending`); in `ds` mode, `docs/architecture/design-system/` (`index.md` body + `manifest.json`, the one metadata home) and the `designSystem` block of every pending spec metadata |
 | `team` | `.claude/skills/expert-*/SKILL.md`, `.claude/skills/guide-*/SKILL.md` (incl. `guide-conventions/`); `--refresh` rewrites only the owned skills `ck-team stale` names or a `ck-team drift --relevant` change concerns, after one approval; also `.claude/skills/.ck-team-stack` (the stack snapshot) |
