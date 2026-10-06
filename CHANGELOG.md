@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.7.0] — 2026-10-06
+
+### Added
+- **init**: new `/ck-code:init` brings ck-code into a project. It checks the tools ck-code needs (installing none), stamps `tasks/VERSION.md` and installs the committed guard. On an existing codebase it also inventories the project's own docs, confirms a feature list and writes `docs/architecture/` as built, with no spec. On an empty repo it sets up the dependencies and hands off to `spec`.
+- **data model**: feature docs accept `design: built`, written by `init` for code that already exists, so `plan` never re-plans it.
+- **guide / ck-view**: `ck-view state` reports a new `source` flag and routes a repo with code but no spec or architecture to `/ck-code:init`; `design`, the prompt router and the workflow map point brownfield work there.
+
 ## [7.6.1] — 2026-10-05
 
 ### Changed
