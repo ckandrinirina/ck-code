@@ -484,6 +484,22 @@ Each step offers the next one as a single question, so after `spec` you normally
 `/ck-code:guide "add a login screen"` routes a plain-language task to the right skill, and
 `/ck-code:guide --command build` prints a command's syntax.
 
+## Quick start — an existing codebase
+
+```bash
+/ck-code:init                              # 1. Dependencies, stamp, guard + architecture docs read off the code
+/ck-code:team                              # 2. Experts + guides from those docs
+/ck-code:design "new feature"              # 3. New work as usual (or /ck-code:plan --quick)
+```
+
+`init` writes no spec. It checks the tools ck-code needs (installing none of them), stamps
+`tasks/VERSION.md` and installs the committed guard. It then inventories the project's own
+docs (README, `docs/`, ADRs, OpenAPI files, schemas), confirms a feature list with you, and
+writes `docs/architecture/` as built, one feature doc per feature, in parallel from three
+features up. Those docs carry `design: built`, so `plan` never re-plans code that already
+exists. On a repo with no code yet, `init` only sets up the dependencies and hands off to
+`spec`. `init --deps-only` re-checks the dependencies on any project.
+
 ## The full workflow
 
 ```
@@ -497,6 +513,7 @@ Each step offers the next one as a single question, so after `spec` you normally
 
 | Skill | Purpose | Input | Output |
 | --- | --- | --- | --- |
+| `/ck-code:init` | Bring ck-code into a project: check its tool dependencies, stamp the layout, install the committed guard; on an existing codebase, inventory the project's docs and write the architecture docs as built (`design: built`, no spec) | optional `--deps-only` | `tasks/VERSION.md`, `.claude/`, `docs/architecture/` |
 | `/ck-code:spec` | Generate a stakeholder-ready feature spec for review (descriptive, no code/jargon); CREATE + ADJUST modes; offers a Claude Design brief on a UI project | feature description or notes file | `docs/specs/<date>_<slug>/spec.md` and/or GitHub issue |
 | `/ck-code:design` | Refine a spec into feature-scoped architecture docs (one self-contained doc per feature + `_shared.md`); with no argument it picks up the spec marked ready for design; also `sync`/`optimize` maintenance modes and `ds [url]` to link a Claude Design system. A tech-stack change hands off to `team --refresh` | spec file (optional) | `docs/architecture/` |
 | `/ck-code:team` | Derive per-project expert + guide skills from the architecture (depth `--basic`/`--standard`/`--max`); offers house-rules capture inline (`--conventions` re-runs it alone); `--refresh` regenerates only the skills a stack change made stale — in the docs, or in the code (package migration, major bump) — after one approval, `--regenerate` all of them; `--workflow` runs the big fan-outs as resumable scripted workflows; never overwrites protected skills or `MANUAL` blocks | `docs/architecture/` | `.claude/skills/expert-*/`, `.claude/skills/guide-*/` |
@@ -611,6 +628,7 @@ ck-code/
 │   ├── statusline.sh              # opt-in status bar: active story + plan counts
 │   └── subagent-statusline.sh
 ├── skills/
+│   ├── init/                      # adopt a project: dependencies + as-built architecture
 │   ├── spec/                      # stakeholder-ready feature spec (create + adjust)
 │   ├── design/                    # spec → feature-scoped architecture docs (+ optimize/sync)
 │   ├── team/                      # derive per-project experts + guides (+ conventions)
