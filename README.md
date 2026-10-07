@@ -86,6 +86,20 @@ is now allocated from the project-wide maximum, so a plan added later starts at 
 rather than restarting at `01`. A dependency may also point at a story in another
 plan, because its id is unambiguous.
 
+**Unique across branches and teammates too.** A plan sitting in an open PR, or planned at
+the same moment on someone else's machine, is not in your checkout — so `plan` never
+numbers from your folders alone. `ck-epic` takes the maximum over your working tree, every
+fetched branch and the numbers already reserved on the remote, then reserves the new ones
+with one atomic, create-only push of hidden `refs/ck-code/epics/<NN>` refs (stories added
+by `plan --quick` get `refs/ck-code/stories/<EE>-<SS>`). The git remote is the only thing
+collaborators share, and the server decides each race: two people planning at once get
+`37` and `38`, never two `37`s — the loser simply takes the next number, nobody waits.
+Numbers are reserved only after you confirm the plan, so a cancelled plan costs nothing; an
+abandoned one leaves a harmless gap. Offline, with no remote, or on a host that refuses
+custom refs, `plan` still numbers from every fetched branch and prints a warning — it
+never blocks. `/ck-code:doctor` reports any number already clashing with another branch
+(`ids in flight`).
+
 If your project already has two plans with colliding numbers, `/ck-code:migrate`
 renumbers them — the oldest plan keeps its numbers, so its merged branches and published
 issues stay valid.
@@ -94,7 +108,7 @@ issues stay valid.
 
 - **Spec-driven development workflow** — single source of truth from specification to merged PR
 - **Frontmatter-driven story state** — one writable location per story and one record per plan; the views are generated, never hand-maintained, and never committed
-- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the views *and* syncs the board in one call; a plan's record goes through `ck-plan`; a manual-test checklist and its session go through `ck-checklist`; QA commands go through `ck-qa`, which runs each one once per code state, runs independent checks concurrently, and lets a later QA step skip a suite that already passed on the identical tree. A story's own QA runs only the tests its diff affects (vitest, jest, Playwright, go) and lints only its changed files. The full suite runs once per wave in parallel builds, and on a single-story build's QA for the story that completes its epic. A re-run after a failure checks only the failed tests plus those affected since (`ck-qa --rerun`); the v6 → v7 conversion is `ck-migrate`. None of it costs model tokens, one shared library holds every rule the scripts share, and `tests/smoke.sh` drives all of it, the GitHub side included, through a fake `gh`
+- **Deterministic work runs in scripts, not in the model** — the progress dashboards, the next-story pick, the project-state routing and the dependency/file-conflict wave plan are rendered by `ck-view`; a story state change goes through `ck-story`, which writes the frontmatter *and* regenerates the views *and* syncs the board in one call; a plan's record goes through `ck-plan`; new epic and story numbers go through `ck-epic`, which reserves them on the git remote; a manual-test checklist and its session go through `ck-checklist`; QA commands go through `ck-qa`, which runs each one once per code state, runs independent checks concurrently, and lets a later QA step skip a suite that already passed on the identical tree. A story's own QA runs only the tests its diff affects (vitest, jest, Playwright, go) and lints only its changed files. The full suite runs once per wave in parallel builds, and on a single-story build's QA for the story that completes its epic. A re-run after a failure checks only the failed tests plus those affected since (`ck-qa --rerun`); the v6 → v7 conversion is `ck-migrate`. None of it costs model tokens, one shared library holds every rule the scripts share, and `tests/smoke.sh` drives all of it, the GitHub side included, through a fake `gh`
 - **Automatic architecture documentation** — split markdown docs in `docs/architecture/` (overview, folder structure, tech stack, configuration, dev guide, `_shared.md`, plus a self-contained `features/<slug>/index.md` per feature)
 - **Epic and story planning** — S/M-sized stories with dependency graphs in `tasks/`
 - **GitHub Issues integration** — `plan --publish` pushes the plan, its epics or its stories to GitHub Issues in one `ck-issues` call (rate-limit pacing, `issue:` write-back, epic→story relinking, and native **sub-issue** links that give each epic a progress bar); the created issue number is stored in each story's `issue:` frontmatter, so `ship` links by number (never by fragile title matching). Re-running finishes an interrupted publish — nothing is ever created twice. Starting a story assigns its linked issue to whoever runs `build` (an `--epic NN` run claims the epic issue too), so GitHub shows who owns the work in flight — additive, so an existing assignee is never removed
@@ -343,6 +357,10 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
   cards and closes delivered issues, with or without a Projects board.
 - **`gh` is unauthenticated.** GitHub calls are skipped with a warning; the local,
   commit-only half of `build`, `ship` and `doctor --fix` still completes.
+- **Two plans got the same epic number (e.g. two `37`s).** One was planned before
+  ck-code 7.9.0, or offline. `/ck-code:doctor` lists it as `ids in flight` while the plans
+  sit on different branches; once both are on one branch, `/ck-code:migrate` renumbers the
+  newer one. `plan --quick` and every plan from 7.9.0 reserve their numbers on the remote.
 - **The project is on an older layout.** Run `/ck-code:migrate` — every change-producing
   skill blocks until the project is v7.
 - **"This project requires ck-code >= …" or "uses a newer ck-code layout".** A teammate
@@ -597,6 +615,7 @@ ck-code/
 │   ├── ck-issues                  # → scripts/ck-issues.sh
 │   ├── ck-project                 # → scripts/ck-project.sh
 │   ├── ck-plan                    # → scripts/ck-plan.sh
+│   ├── ck-epic                    # → scripts/ck-epic.sh
 │   ├── ck-checklist               # → scripts/ck-checklist.sh
 │   ├── ck-qa                      # → scripts/ck-qa.sh
 │   ├── ck-reclaim                 # → scripts/ck-reclaim.sh
@@ -615,6 +634,7 @@ ck-code/
 │   ├── ck-issues.sh               # publish a plan to GitHub Issues (plan --publish)
 │   ├── ck-project.sh              # reconcile delivery, the board and GitHub Issues
 │   ├── ck-plan.sh                 # read and set a plan's OVERVIEW.md record
+│   ├── ck-epic.sh                 # epic/story numbers unique across branches and clones (remote reservations)
 │   ├── ck-checklist.sh            # a plan's manual-test checklist: items, answers, session
 │   ├── ck-qa.sh                   # run QA commands once per code state (reuse, parallel, narrowed re-runs, wait past the Bash cap)
 │   ├── ck-reclaim.sh              # free a kept worktree's build output (target/, node_modules/…), keep its source
