@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.9.0] — 2026-10-07
+
+### Fixed
+- **plan**: two plans no longer get the same epic number. Before, `plan` took the next number from the epic folders in your own checkout, so a plan still in an open PR, on another branch or on a teammate's machine was invisible. Starting a second plan, or two people planning at once, then both created epic 37. A new `ck-epic` command now picks the number from your working tree, every fetched branch and the numbers already reserved on the git remote. It reserves them with one atomic, create-only push of hidden `refs/ck-code/epics/<NN>` refs, and the server decides any race: the loser takes the next number and nobody waits. Numbers are reserved only after **Proceed**, so a cancelled plan uses none. Offline, with no remote, or on a host that refuses custom refs, `plan` warns and still numbers from every fetched branch. It never blocks.
+- **plan --quick**: story numbers are reserved the same way (`refs/ck-code/stories/<EE>-<SS>`), so two people adding a story to the same epic on different branches get `02` and `03`, not two `02`s.
+
+### Added
+- **doctor**: a new `ids in flight` WARN lists any epic or story number this checkout uses that a plan on another branch also uses. It catches the clash before the merge turns it into an `epic ids` ERROR.
+
 ## [7.8.0] — 2026-10-07
 
 ### Changed
