@@ -276,7 +276,7 @@ PY
   if [ -n "$inflight" ]; then
     row "ids in flight" "$(printf '%s\n' "$inflight" | awk 'END{print NR}') number(s) also used on another branch" WARN
     printf '%s\n' "$inflight" | sed 's/^/                   ✗ /'
-    note "the plan merged second must renumber; once both sit on one branch, /ck-code:migrate does it (Phase R)"
+    note "ck-epic resolve renumbers the losing side (plan, build and doctor --fix run it); a started epic waits for /ck-code:migrate"
   else
     row "ids in flight" "no clash with other branches" OK
   fi

@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -131,6 +131,22 @@ this PASSes.
 ---
 
 ## PHASE 1: STORY SELECTION
+
+### 1.0 Settle number clashes (no question)
+
+Before any story is resolved or any branch is cut:
+
+```bash
+ck-epic resolve
+```
+
+It renumbers a local, not-yet-started epic whose number another plan on another branch
+already uses ([`data-model.md`](../../references/data-model.md#epic-and-story-numbers-are-globally-unique)). Relay its lines.
+A `moved <old> <new>` line whose `<old>` prefixes `$ARGUMENTS` means the story moved: use
+the path under `<new>` from here on, and an `EE` in a story id or `--epic NN` given as
+`<old>`'s number now reads as the new one. The renumbered files stay uncommitted under
+`tasks/` — S1 allows that, and they are committed with the story. Never stop over a
+`WARN`.
 
 ### 1.1 If Story Path Provided
 

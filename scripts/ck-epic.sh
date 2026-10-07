@@ -28,6 +28,17 @@
 #   ck-epic.sh check                         list epic and story numbers used by more than one
 #                                            plan across the working tree and every local and
 #                                            remote-tracking branch (offline; exit 0 always)
+#   ck-epic.sh resolve [tasks/<plan>…]       auto-fix a clash: renumber each local epic that
+#                                            loses its number to another plan (exit 0 always)
+#
+# resolve decides each clash the same way on every clone, so the two sides agree on who
+# keeps the number: the plan holding its remote reservation wins; else the plan already on
+# the trunk; else the plan with work started; else the older plan folder. A winner claims
+# the number on the remote (create-only), which also settles a tie both sides think they
+# won. A loser whose epic has not started (every story `todo`, no `pr:`) is moved to a
+# freshly reserved number: folder, EPIC.md, story ids, its plan's blocked_by and roadmap.
+# A loser already started is never touched — its branches and PRs carry the number — and
+# gets a WARN pointing at /ck-code:migrate. Changes stay uncommitted, like any plan edit.
 #
 # Numbers print zero-padded to two digits on stdout; status and WARN lines go to stderr.
 # CK_EPIC_OFFLINE=1 skips the network; CK_EPIC_REMOTE overrides the remote (default origin).
@@ -80,13 +91,13 @@ refs() {
   done
 }
 
-# epic_rows — "NN_slug<TAB>plan/NN_slug<TAB>where" for every epic folder anywhere visible.
+# epic_rows — "NN_slug<TAB>plan/epics/NN_slug<TAB>where" for every epic folder anywhere visible.
 epic_rows() {
   find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
-    | awk -F/ '{ printf "%s\t%s/%s\tworking tree\n", $4, $2, $4 }'
+    | awk -F/ '{ printf "%s\t%s/epics/%s\tworking tree\n", $4, $2, $4 }'
   refs | while IFS="$(printf '\t')" read -r t where; do
     git ls-tree -r -d --name-only "$t" 2>/dev/null \
-      | awk -F/ -v w="$where" 'NF == 3 && $2 == "epics" { printf "%s\t%s/%s\t%s\n", $3, $1, $3, w }'
+      | awk -F/ -v w="$where" 'NF == 3 && $2 == "epics" { printf "%s\t%s/epics/%s\t%s\n", $3, $1, $3, w }'
   done
 }
 epic_numbers() { epic_rows | awk -F'\t' '{ n = $1; sub(/_.*/, "", n); if (n ~ /^[0-9]+$/) print n + 0 }'; }
@@ -198,6 +209,114 @@ check() {
   cat "$out"
 }
 
+# trunk_ref — the trunk's remote-tracking ref, as references/branch-topology.md resolves it.
+trunk_ref() {
+  local t
+  t="$(ck_fm tasks/SETTINGS.md trunk_branch 2>/dev/null)"
+  [ -n "$t" ] || t="$(git symbolic-ref -q --short "refs/remotes/$REMOTE/HEAD" 2>/dev/null | sed "s|^$REMOTE/||")"
+  for t in "$t" main master; do
+    [ -n "$t" ] && git rev-parse -q --verify "refs/remotes/$REMOTE/$t" >/dev/null 2>&1 && { echo "refs/remotes/$REMOTE/$t"; return; }
+  done
+}
+
+# holder NN — the plan folder a remote reservation of epic NN names, empty when none.
+holder() { git log -1 --format=%B "$NS/epics/$1" 2>/dev/null | sed -n 's/^plan: //p' | head -1; }
+
+# started WHERE EPICDIR — 0 when the epic has a story past `todo` or with a `pr:`, i.e. work
+# whose branches and PRs carry the number. WHERE is "working tree" or a ref under refs/.
+started() {
+  local pat='^(status:[[:space:]]*(in-progress|done|bug|skip)|pr:[[:space:]]*[0-9])'
+  if [ "$1" = "working tree" ]; then
+    find "tasks/$2/stories" -name '*.md' -type f 2>/dev/null | while IFS= read -r f; do
+      grep -qE "$pat" "$f" && echo y
+    done | grep -q y
+  else
+    git grep -qE "$pat" "refs/$1" -- "tasks/$2/stories/" 2>/dev/null
+  fi
+}
+
+# rank WHERE EPICDIR — "trunk started plan/epic-dir" as a sortable key; lower wins. The
+# dated plan folder leads the path, so the older plan wins a tie on the first two.
+rank() {
+  local tr=1 st=1
+  [ -n "$TRUNK" ] && git cat-file -e "$TRUNK:tasks/$2" 2>/dev/null && tr=0
+  started "$1" "$2" && st=0
+  printf "%s %s %s\n" "$tr" "$st" "$2"
+}
+
+# renumber EPICDIR RIVALS — move an unstarted local epic to a freshly reserved number.
+renumber() {
+  local ed="$1" plan="${1%%/*}" dir="${1#*/epics/}" old new slug f
+  old="${dir%%_*}"; slug="${dir#*_}"
+  if started "working tree" "$ed"; then
+    echo "ck-epic: WARN — epic $old of $plan clashes with $2 but already has work started;" \
+         "left as is. Renumber it with /ck-code:migrate once both plans sit on one branch."
+    return 1
+  fi
+  new="$(reserve_loop epics "$plan" 1 2>"$TMP/reserve.err")"
+  grep -q 'WARN' "$TMP/reserve.err" && sed 's/^/  /' "$TMP/reserve.err"
+  if git ls-files --error-unmatch "tasks/$ed" >/dev/null 2>&1; then
+    git mv "tasks/$ed" "tasks/$plan/epics/${new}_$slug" || return 1
+  else
+    mv "tasks/$ed" "tasks/$plan/epics/${new}_$slug" || return 1
+  fi
+  ck_fm_set "tasks/$plan/epics/${new}_$slug/EPIC.md" epic "$new" 2>/dev/null
+  for f in "tasks/$plan/epics/${new}_$slug"/stories/*.md; do
+    [ -f "$f" ] || continue
+    ck_fm_set "$f" epic "$new"
+    ck_fm_set "$f" id "$(ck_fm "$f" id | sed -E "s/^$old-/$new-/")"
+  done
+  # Ids and headings elsewhere in this plan: blocked_by lists and the roadmap. New numbers
+  # are above every existing one, so no substitution can hit a value it just wrote.
+  find "tasks/$plan" -name '*.md' -type f | while IFS= read -r f; do
+    sed -E -e "/^blocked_by:/s/(^|[^0-9])$old-([0-9]+)/\\1$new-\\2/g" "$f" > "$f.ck.tmp" && mv "$f.ck.tmp" "$f"
+  done
+  for f in "tasks/$plan/ROADMAP.md" "tasks/$plan/OVERVIEW.md"; do
+    [ -f "$f" ] || continue
+    sed -E -e "s/(^|[^0-9])${old}_$slug/\\1${new}_$slug/g" -e "s/(^|[^0-9])$old-([0-9]{2})([^0-9]|$)/\\1$new-\\2\\3/g" \
+           -e "s/(Epic )$old([^0-9]|$)/\\1$new\\2/g" "$f" > "$f.ck.tmp" && mv "$f.ck.tmp" "$f"
+  done
+  echo "ck-epic: renumbered epic $old → $new in $plan (it clashed with $2)"
+  echo "moved tasks/$ed tasks/$plan/epics/${new}_$slug"
+  grep -lq '^issue:[[:space:]]*[0-9]' "tasks/$plan/epics/${new}_$slug"/EPIC.md "tasks/$plan/epics/${new}_$slug"/stories/*.md 2>/dev/null \
+    && echo "  note: its GitHub issue titles still show $old — rename them, or re-publish"
+  return 0
+}
+
+# resolve [tasks/<plan>…] — find every clash for a local epic and settle it (see header).
+resolve() {
+  local only="" ed n rivals h me best win changed=0 p
+  for p in "$@"; do only="$only $(basename "${p%/}")"; done
+  fetch
+  [ "$ONLINE" = 1 ] || echo "ck-epic: WARN — remote not consulted ($REASON); resolving against fetched branches only" >&2
+  TRUNK="$(trunk_ref)"
+  epic_rows > "$TMP/rows"
+  find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null | sed 's|^tasks/||' | sort > "$TMP/local"
+  while IFS= read -r ed; do
+    case " $only " in "  ") ;; *" ${ed%%/*} "*) ;; *) continue ;; esac
+    n="${ed#*/epics/}"; n="${n%%_*}"
+    case "$n" in ''|*[!0-9]*) continue ;; esac
+    rivals="$(awk -F'\t' -v n="$n" -v me="$ed" '{ m = $1; sub(/_.*/, "", m) }
+      m ~ /^[0-9]+$/ && m + 0 == n + 0 && $2 != me { print $3 "\t" $2 }' "$TMP/rows" | sort -u -t "$(printf '\t')" -k2,2)"
+    [ -n "$rivals" ] || continue
+    h="$(holder "$(pad "$n")")"
+    if [ "$h" = "${ed%%/*}" ]; then win=1
+    elif [ -n "$h" ]; then win=0
+    else
+      me="$(rank "working tree" "$ed")"
+      best="$(printf '%s\n' "$rivals" | while IFS="$(printf '\t')" read -r w r; do rank "$w" "$r"; done | sort | head -1)"
+      if [ "$(printf '%s\n%s\n' "$me" "$best" | sort | head -1)" = "$me" ] && [ "$me" != "$best" ]; then win=1; else win=0; fi
+      if [ "$win" = 1 ] && [ "$ONLINE" = 1 ]; then
+        push_reserve "${ed%%/*}" "$NS/epics/$(pad "$n")"; [ $? = 2 ] && win=0
+      fi
+    fi
+    [ "$win" = 1 ] && continue
+    renumber "$ed" "$(printf '%s\n' "$rivals" | awk -F'\t' '{ printf "%s%s (%s)", (NR > 1 ? ", " : ""), $2, $1 }')" && changed=1
+  done < "$TMP/local"
+  [ "$changed" = 1 ] && { "$CK_HERE/ck-index.sh" >/dev/null 2>&1 || true; }
+  return 0
+}
+
 CMD="${1:-}"
 case "$CMD" in
   next)
@@ -215,6 +334,7 @@ case "$CMD" in
     [ -n "${3:-}" ] || die "reserve-story needs the plan folder (tasks/<plan>)"
     reserve_loop stories "$(basename "${3%/}")" 1 "$(pad "$2")" ;;
   check) check ;;
-  -h|--help|"") sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//' ;;
-  *) die "unknown command: $CMD (next|reserve|next-story|reserve-story|check)" ;;
+  resolve) shift; resolve "$@" ;;
+  -h|--help|"") sed -n '3,45p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) die "unknown command: $CMD (next|reserve|next-story|reserve-story|check|resolve)" ;;
 esac

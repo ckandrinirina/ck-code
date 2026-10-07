@@ -4,7 +4,7 @@ description: Use when checking a ck-code project for problems — a stale or new
 argument-hint: "[tasks/<plan>] [--quiet] [--fix]"
 effort: low
 model: haiku
-allowed-tools: Bash(ck-doctor*) Bash(ck-project*) Bash(ck-story*) Bash(ck-index*) Bash(ck-bootstrap*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*)
+allowed-tools: Bash(ck-doctor*) Bash(ck-epic*) Bash(ck-project*) Bash(ck-story*) Bash(ck-index*) Bash(ck-bootstrap*) Bash(git status*) Bash(git add*) Bash(git commit*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*)
 disallowed-tools: Write, Edit, NotebookEdit
 hooks:
   PreToolUse:
@@ -86,7 +86,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `views` (WARN) | `tasks/.gitignore` does not exclude the views, or a view is stale or missing. Stale is harmless — every reader regenerates it | `ck-index` |
 | `epic ids` (ERROR) | the same epic number is used by more than one plan; branches and `blocked_by` are ambiguous | `/ck-code:migrate` (it renumbers) |
 | `story ids` (ERROR) | one story id names two stories across plans — breaks `build EE-SS`, `blocked_by`, and branch names | `/ck-code:migrate` (it renumbers) |
-| `ids in flight` (WARN) | an epic or story number this checkout uses is also used by a plan on another branch — an open PR, a teammate's pushed plan. Read from the last fetch, offline. It becomes an `epic ids` ERROR the moment both meet | the plan merged second renumbers; once both sit on one branch, `/ck-code:migrate` (Phase R). New plans avoid it — `plan` reserves numbers through `ck-epic` |
+| `ids in flight` (WARN) | an epic or story number this checkout uses is also used by a plan on another branch — an open PR, a teammate's pushed plan. Read from the last fetch, offline. It becomes an `epic ids` ERROR the moment both meet | none by hand — `plan`, `build` and `doctor --fix` run `ck-epic resolve`, which renumbers the losing side when its epic has not started. A started loser stays a WARN: `/ck-code:migrate` once both plans sit on one branch |
 | `plan overview` (ERROR) | an `epics/` dir has no `OVERVIEW.md`, so the plan is invisible to `ck-index` and `migrate` yet still feeds dependency checks | add the plan record; a v6 plan (`PROJECT_OVERVIEW.md`) → `/ck-code:migrate` |
 | `plan naming` (WARN) | a hand-made plan folder name contains whitespace — `ck-issues`/`ck-project` silently skip spaced paths | rename to a hyphenated slug |
 | `settings` (WARN) | `tasks/SETTINGS.md` has no frontmatter fence, issue tracking is on with no project configured, or the mapped board/columns are gone or unreachable | `/ck-code:config board` |
@@ -145,9 +145,10 @@ ck-project show
 the pass still runs locally (delivery from git, views); say which GitHub steps are skipped.
 Never stop the run over it.
 
-### 3.2 Recover anchors, then reconcile
+### 3.2 Settle number clashes, recover anchors, then reconcile
 
 ```bash
+ck-epic resolve                          # renumber a local epic that lost its number to another branch
 ck-project backfill [tasks/<plan>]      # pr: recoverable from a closed issue (needs gh)
 ck-project reconcile [tasks/<plan>]     # landed + PR delivery + views + board + issues
 ```
@@ -198,8 +199,10 @@ git status --porcelain tasks/
 ```
 
 Clean → say so and skip. Otherwise stage **only** the story, `EPIC.md` and `OVERVIEW.md`
-files it lists — by name, never a view, never anything outside `tasks/` — and commit on
-the current branch:
+files it lists — by name, never a view, never anything outside `tasks/` — plus, for each
+`moved <old> <new>` line 3.2's `ck-epic resolve` printed, `git add -A <old> <new>` and that
+plan's `ROADMAP.md`. Commit on the current branch (subject `chore(tasks): renumber clashing
+epics and reconcile` when anything moved):
 
 ```bash
 git add <changed story / EPIC.md / OVERVIEW.md paths>

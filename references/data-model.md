@@ -58,12 +58,20 @@ on a teammate's machine is invisible there, and that is how two plans both mint 
 | `ck-epic next` / `next-story EE` | the next free number: max over the working tree, every local and remote-tracking branch, and the remote's reservations, after one fetch. Reserves nothing |
 | `ck-epic reserve <n> tasks/<plan>` / `reserve-story EE tasks/<plan>` | takes the number(s) with one atomic, create-only push of `refs/ck-code/epics/<NN>` (`refs/ck-code/stories/<EE>-<SS>`); a lost race retries with the next free number |
 | `ck-epic check` | offline: every number used by more than one plan across the working tree and all fetched branches (`ck-doctor`'s `ids in flight`) |
+| `ck-epic resolve [tasks/<plan>…]` | auto-fix: renumbers each local epic that loses its number to another plan. `plan` (1.0), `build` (1.0) and `doctor --fix` (3.2) run it first |
 
 The git remote is the only state collaborators share, so the reservation lives there, in a
 namespace no branch list, tag list or default fetch shows. A reserved number is never
 released — a cancelled plan leaves a gap, and gaps are harmless. `ck-epic` never blocks:
 no remote, no network or a host refusing custom refs degrades to the branch scan with a
-`WARN`. No counter is stored in a file — it would be a second source of truth that can
+`WARN`. A clash that still slips through — a plan made offline or before 7.9.0 — is settled by
+`resolve`, the same way on every clone so both sides agree: the plan holding the remote
+reservation keeps the number; else the plan already on the trunk; else the one with work
+started (a story past `todo`, or a `pr:`); else the older plan folder. The winner claims the
+number on the remote. The loser, **only while its epic is unstarted**, moves to a fresh
+reserved number — folder, `EPIC.md`, story `id`/`epic`, its plan's `blocked_by` and
+`ROADMAP.md` — uncommitted, like any plan edit. A started loser is never touched (its
+branches and PRs carry the number) and stays a WARN for `/ck-code:migrate`. No counter is stored in a file — it would be a second source of truth that can
 drift from the folders.
 
 Team-generated skills live in flat `.claude/skills/expert-*/` and `guide-*/` folders,

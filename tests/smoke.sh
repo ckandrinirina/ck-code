@@ -1070,6 +1070,25 @@ EP_CHK="$(cd "$EP_DIR/b" && ck-epic check)"
 assert_contains "ck-epic check: flags epic 37 used on another branch" "$EP_CHK" "epic 37: "
 assert_contains "ck-epic check: …names the remote branch holding it" "$EP_CHK" "remotes/origin/plan/feat"
 assert_contains "ck-doctor: reports the clash as ids in flight" "$(cd "$EP_DIR/b" && ck-doctor 2>&1)" "ids in flight"
+rm -f "$EP_DIR/origin.git/hooks/pre-receive"
+printf '# Roadmap\n## Epic 37: other\n- 37-01 in 37_other\n' > "$EP_DIR/b/tasks/2026-10-02_other/ROADMAP.md"
+printf -- '---\nid: 37-02\nepic: 37\nstatus: todo\nblocked_by: [37-01]\n---\n' \
+  > "$EP_DIR/b/tasks/2026-10-02_other/epics/37_other/stories/02_e.md"
+EP_RES="$(cd "$EP_DIR/b" && ep_env && ck-epic resolve 2>&1)"
+assert_contains "ck-epic resolve: renumbers the newer, unstarted plan's clashing epic" "$EP_RES" "renumbered epic 37 → 42 in 2026-10-02_other"
+assert_eq "ck-epic resolve: …moves the folder and rewrites ids, blocked_by and the roadmap" "42-01 42-02 [42-01] ## Epic 42: other" \
+  "$(cd "$EP_DIR/b/tasks/2026-10-02_other" && printf '%s %s %s %s' "$(ck_fm epics/42_other/stories/01_d.md id)" \
+     "$(ck_fm epics/42_other/stories/02_e.md id)" "$(ck_fm epics/42_other/stories/02_e.md blocked_by)" "$(sed -n 2p ROADMAP.md)")"
+assert_eq "ck-epic resolve: …and reserves the new number on the remote" "1" \
+  "$(git -C "$EP_DIR/origin.git" for-each-ref refs/ck-code/epics/42 | awk 'END{print NR}')"
+assert_eq "ck-epic resolve: a second run changes nothing" "" "$(cd "$EP_DIR/b" && ck-epic resolve 2>&1)"
+assert_eq "ck-epic resolve: the clash is gone" "" "$(cd "$EP_DIR/b" && ck-epic check)"
+# Epic 36 is on the trunk, so it keeps its number even against a started rival.
+( cd "$EP_DIR/b" && mkdir -p tasks/2026-10-09_late/epics/36_late/stories \
+  && printf -- '---\nid: 36-01\nepic: 36\nstatus: in-progress\n---\n' > tasks/2026-10-09_late/epics/36_late/stories/01_l.md )
+EP_RES2="$(cd "$EP_DIR/b" && ep_env && ck-epic resolve 2>&1)"
+assert_contains "ck-epic resolve: a started epic that loses is left alone with a WARN" "$EP_RES2" "already has work started"
+assert_eq "ck-epic resolve: …its folder is untouched" "0" "$([ -d "$EP_DIR/b/tasks/2026-10-09_late/epics/36_late" ]; echo $?)"
 rm -rf "$EP_DIR"
 
 echo

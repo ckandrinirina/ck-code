@@ -98,6 +98,17 @@ write project state before this PASSes. The gate covers `--quick` and `--publish
 
 ## PHASE 1: INPUT & MODE
 
+### 1.0 Settle number clashes (every mode, no question)
+
+```bash
+ck-epic resolve
+```
+
+It renumbers any local epic that lost its number to a plan on another branch, before this
+run reads a single epic folder ([`data-model.md`](../../references/data-model.md#epic-and-story-numbers-are-globally-unique)). Relay
+each `ck-epic: renumbered …` and `WARN` line; silence means no clash. Never ask about it
+and never stop over it — the run continues either way.
+
 ### 1.1 Route quick, publish or full
 
 - `$ARGUMENTS` contains `--quick` → **QUICK MODE**: go to [PHASE Q](#phase-q-quick-single-story-mode).
@@ -754,6 +765,7 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never restart epic numbering at `01` in a new plan folder** (3.1) — allocate from the project-wide maximum in every mode. Colliding epic numbers make every `EE-SS` ambiguous.
 - **Never number an epic or a `--quick` story from the working tree alone** (3.1, Q.1) — `ck-epic next`/`next-story` see every branch and the remote's reservations; a local `find … | tail -1` misses any plan still in a PR or on a teammate's machine, which is how two plans both mint epic 37.
 - **Never write an epic folder or a `--quick` story before `ck-epic reserve`/`reserve-story`** (5.1, Q.4), and never under a number it did not print — reserving after Proceed is what makes a concurrent plan pick another number instead of the same one.
+- **Never skip 1.0** — `ck-epic resolve` is what turns a clash that still slipped through (an offline plan, one made before 7.9.0) into a renumber instead of two epics sharing a number.
 - **Never block on the remote** — a `ck-epic: WARN` (offline, no remote, refs refused) still yields a number; relay it and continue.
 - **Never store the next epic number in a file** — derive it each run (3.1); the remote's `refs/ck-code/*` reservations are the only shared record.
 - **Never ask which plan an `--epic NN` belongs to** (Q.1) — the number is unique project-wide; more than one match is a collision to migrate, not a question to ask.
