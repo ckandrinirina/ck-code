@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.8.0] — 2026-10-07
+
+### Changed
+- **build**: a single story is now always built by a sub-agent, never in the main context. That covers an explicit path, a single menu pick, a `/ck-code:fix` AUTO-BUILD and a `/ck-code:plan --quick` hand-off. The new SINGLE-STORY DISPATCH keeps the clean-tree check, the one branch question, the integrity check from git, the `qa-validator` dispatch, the manual gate and the ship hand-off in the main context. One solo `story-implementer` agent plans, test-drives and commits each cycle on the story's own `story/`/`fix/` branch, and QA fixes and manual-test issues go back to that same agent. The plan's integration level is never switched for it. Build runs inline only when there is no `Agent` tool.
+- **ship**: a clean tree no longer stops ship when the story or fix branch has commits of its own. It previews those commits and goes straight to push + PR (or the merge into its parent).
+
 ## [7.7.0] — 2026-10-06
 
 ### Added
