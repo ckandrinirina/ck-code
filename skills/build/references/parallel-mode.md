@@ -1,7 +1,8 @@
 # Parallel Mode — Orchestration Detail (P1–P9)
 
-Detail for `SKILL.md` § PARALLEL MODE. Read when two or more stories are in scope, or when
-`--epic NN` orchestrates a single remaining story. The orchestrator decides, verifies, and
+Detail for `SKILL.md` § PARALLEL MODE. Read when two or more stories are in scope, when
+`--epic NN` orchestrates a single remaining story, or for the sections SINGLE-STORY DISPATCH
+links (P3 team gate, P5 solo integrity, model tier, affected tests). The orchestrator decides, verifies, and
 merges; it never builds, tests, or reads source.
 
 Companions: [agent-prompts.md](agent-prompts.md) (prompts + return schema) ·
@@ -81,7 +82,7 @@ trunk**. So when `resolve_parent` returns the default branch, do not check it ou
 plan a dispatch: carry the switch into P3's single question — **Switch this plan to epic
 level** (`ck-plan set tasks/<Plan> integration=epic`, create `epic/<NN>-<slug>` from
 `<trunk>`, and that branch becomes `$TARGET`) or **Cancel** (the stories stay untouched;
-build them one at a time inline). P2 may be planned meanwhile; nothing is dispatched until
+build them one at a time, each by SINGLE-STORY DISPATCH). P2 may be planned meanwhile; nothing is dispatched until
 the answer lands.
 
 **Check out `$TARGET` and verify HEAD, before the announce.** Creating it when absent is part
@@ -153,8 +154,9 @@ own stories. It is also the state a reverted story returns to ([wave-mode.md](wa
 step 4).
 
 **One story in scope from anything other than `--epic NN`** — an explicit story path, a lone
-story ID, a single-story pick from the 1.2 menu — **is never orchestrated**: hand it to
-SKILL.md Phase 1.3 and run Phases 1–8 inline.
+story ID, a single-story pick from the 1.2 menu — **is never orchestrated here**: hand it to
+SKILL.md Phase 1.3 and on to SINGLE-STORY DISPATCH (still one solo agent, on the story's own
+branch, so the plan's level is never switched for it).
 **`--epic NN` always orchestrates**, even when one story remains: it dispatches that story
 solo at P4 (no worktree), because an epic run keeps the orchestrator's context clean and lands
 every story the same way on `$TARGET`.
@@ -223,8 +225,8 @@ It offers exactly these two options, never a path into the trunk:
   say so when stories of the plan are already merged. `OVERVIEW.md` is now modified; the P4
   wave-start commit records it.
 - **Cancel** — dispatch nothing and leave every story's status exactly as it is; a
-  `story`-level plan is built one story at a time inline (SKILL.md Phases 1–8), each on its
-  own `story/…` branch with its own PR.
+  `story`-level plan is built one story at a time (SKILL.md SINGLE-STORY DISPATCH), each on
+  its own `story/…` branch with its own PR.
 
 Never synthesize an epic branch without this answer, and never fall back to the trunk.
 
@@ -473,7 +475,7 @@ it cannot disturb the checkout.
 
 Resolve each story's commands from the component its `files:` touch — detect the stack from
 that directory's manifest. **This table is the one per-stack QA command list in ck-code** —
-inline Phase 7 uses it too, via [tdd-walkthrough.md](tdd-walkthrough.md) § Phase 7:
+single-story QA uses it too, via [tdd-walkthrough.md](tdd-walkthrough.md) § Phase 7:
 
 | Manifest | QA commands |
 | --- | --- |
@@ -495,13 +497,13 @@ regression outside the story's reach, so every story-scope pass has a full-scope
 | Run | Scope |
 | --- | --- |
 | delegated 6.3 + 7, P7 | story |
-| inline 6.3 / 7, level `epic` or `plan` | story, except on the story that completes its epic |
-| inline 6.3 / 7 on the story that completes its epic (every other non-`skip` story of the epic reads `status: done`) | full, the inline counterpart of P8 |
-| inline 6.3 / 7, level `story` (or empty) | full — each story's PR goes straight to `<trunk>`, and nothing runs after it |
+| single-story S5 QA (or inline-fallback 6.3 / 7), level `epic` or `plan` | story, except on the story that completes its epic |
+| single-story S5 QA on the story that completes its epic (every other non-`skip` story of the epic reads `status: done`) | full, the single-story counterpart of P8 |
+| single-story S5 QA, level `story` (or empty) | full — each story's PR goes straight to `<trunk>`, and nothing runs after it |
 | P8 post-wave QA | full, always |
 
-`<base>` is the dispatch's `Base SHA` in PARALLEL MODE, and inline it is
-`git merge-base HEAD <the 3.5 base branch>`. The changed files are
+`<base>` is the dispatch's `Base SHA` (PARALLEL MODE, and the S3 SHA of a single-story
+dispatch); in the inline fallback it is `git merge-base HEAD <the 3.5 base branch>`. The changed files are
 `git diff --name-only --diff-filter=d <base>` plus `git ls-files --others --exclude-standard`.
 
 **Tests at story scope** are those importing a changed file, plus the story's own new or
@@ -557,7 +559,7 @@ therefore checks only:
 | anything else | the label's full command again, without `--rerun` |
 
 `--rerun` makes `ck-qa` stamp the label's **recorded** full command when the narrowed run
-passes. A later `--reuse` of that command, such as inline Phase 7 after 6.3, then reports
+passes. A later `--reuse` of that command, such as the single-story QA after the agent's run, then reports
 `REUSED` ([`rtk.md` § QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)).
 Drop the failed-files half when the last run passed. Re-run the full command, without
 `--rerun`, when any of these holds:

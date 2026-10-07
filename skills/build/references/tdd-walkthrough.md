@@ -161,7 +161,7 @@ Issue handling and common refactorings: rules in SKILL.md Phase 6.2.
 
 The per-stack build/test/lint commands are the manifest table in
 [parallel-mode.md](parallel-mode.md#p7--qa-one-validator-per-story) — the single source for
-both inline Phase 7 and PARALLEL MODE P7. Detect the manifest, run that row's commands, and
+both Phase 7 (run by every building agent) and PARALLEL MODE P7. Detect the manifest, run that row's commands, and
 let a project's `guide-conventions` skill override them when it names canonical ones.
 
 ---

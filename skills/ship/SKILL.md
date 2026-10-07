@@ -134,7 +134,15 @@ git diff --staged --stat
 git log --oneline -5
 ```
 
-If clean and nothing staged: "Nothing to commit. Working tree is clean." → STOP.
+If clean and nothing staged, the work may already be committed — `build` commits a story on
+its own `story/`/`fix/` branch. Do not stop yet: after 1.3, count the branch's own commits
+(`git rev-list --count <parent>..HEAD`). **Zero, or not a story/fix branch** → "Nothing to
+commit. Working tree is clean." → STOP. **Non-zero** → **COMMITTED WORK**: skip 3.1, 3.2 and
+Phase 4; 3.3 previews the branch's commits (`git log --oneline <parent>..HEAD`) in place of
+files and message, and its options drop the word *Commit* (`Open a PR into <trunk>` /
+`Push and update PR #<n>` / `Merge into <parent>`, plus `Abort`). Phase 5 then runs unchanged,
+with the PR title and body written to 3.2's subject and body rules from the story, since there
+is no new commit line to reuse.
 
 ### 2.2 Detect story context
 

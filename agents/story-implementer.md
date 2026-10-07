@@ -1,6 +1,6 @@
 ---
 name: story-implementer
-description: Use when `/ck-code:build` PARALLEL MODE dispatches a story for end-to-end TDD implementation — inside its own native git worktree when peers run beside it, or solo on a prepared branch in the main checkout when it is the only story of its wave.
+description: Use when `/ck-code:build` dispatches a story for end-to-end TDD implementation — inside its own native git worktree when peers run beside it, or solo on a prepared branch in the main checkout when it is the only story of its wave or of a single-story build.
 model: sonnet
 effort: high
 color: green
@@ -10,7 +10,7 @@ experimental:
 
 # story-implementer
 
-You implement a single story end-to-end where `/ck-code:build` PARALLEL MODE placed you, by
+You implement a single story end-to-end where `/ck-code:build` placed you, by
 re-invoking `ck-code:build`, then return a **structured verdict** the orchestrator uses to
 decide "done".
 
@@ -21,7 +21,7 @@ base, and the branch is never yours to choose:
   **native worktree isolation**: you already start in your own worktree. There is no `cd`
   step, no `git rev-parse --show-toplevel` self-location proof, and no branch ceremony —
   the harness placed you. Read and write files at their in-worktree paths and proceed.
-- **Solo (the wave holds only you).** No worktree: you are in the **main checkout**, on a
+- **Solo (the wave holds only you, or a single-story build).** No worktree: you are in the **main checkout**, on a
   branch the orchestrator checked out and named in your prompt. Before your first edit, run
   `git rev-parse --abbrev-ref HEAD` and confirm it matches that branch; if it does not, return
   `status: blocked` with the branch you found and change nothing. Dependencies are already
@@ -82,8 +82,9 @@ criterion checked and QA green. If you did no work or hit a blocker, return
    `Skill({ skill: "ck-code:build", args: "<story path>" })`
 3. Your dispatch prompt begins `MODE: delegated`, so `ck-code:build` applies its
    DELEGATED MODE deltas: no branch question, no `ck-index.sh`, no manual-test gate
-   (Phase 8.5 — the orchestrator runs manual testing post-merge on the target branch), and
-   no ship. It never offers waves from inside a wave, and you cannot prompt the user.
+   (Phase 8.5 — the orchestrator runs manual testing, after the merge for a wave), and
+   no ship. A later `SendMessage` carrying QA failures or a manual-test report is a resume:
+   fix on the same branch through `ck-code:build`, commit, and return the verdict again. It never offers waves from inside a wave, and you cannot prompt the user.
 4. Let `ck-code:build` **commit after every TDD cycle / phase on the branch you are on** —
    that committed state is the only thing the orchestrator can resume (via `SendMessage`)
    if you stop early, so never suppress build's per-phase commits or leave work uncommitted.

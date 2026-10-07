@@ -1,10 +1,9 @@
 # Sub-Agent Dispatch, Resume & Return Schema
 
-Prompt templates and the structured return contract for every sub-agent PARALLEL MODE
-dispatches: the per-story implementer (P4), its resume (P5), and QA (P7). Read only when two
-or more stories are in scope — **except** the last section, [Inline QA
-dispatch](#inline-qa-dispatch), which single-story `build` Phase 7 and `fix` Phase 4 read on
-their own.
+Prompt templates and the structured return contract for every sub-agent `build` dispatches:
+the per-story implementer (P4), its resume (P5), and QA (P7) in PARALLEL MODE, plus the
+[single-story dispatch](#single-story-dispatch) (S4) and the [Inline QA
+dispatch](#inline-qa-dispatch), which single-story `build` (S5) and `fix` Phase 4 read.
 
 ## The structured return schema (all implementer agents)
 
@@ -93,6 +92,23 @@ The guard replaces the worktree. With no harness-owned worktree holding the agen
 this instruction is the only thing keeping it off another branch — never dispatch solo
 without it.
 
+## Single-story dispatch
+
+`build` SINGLE-STORY DISPATCH (S4) sends the **solo** dispatch above, with these deltas — the
+return object and the resume below are unchanged:
+
+1. **Branch.** `<$WORKBRANCH>` is the story's own `story/…` or `fix/…` branch from S3, not an
+   epic `$TARGET`; `Base SHA:` is the S3 `git rev-parse HEAD`. The branch guard is the same.
+2. **Replace the opening line** with:
+   `You are implementing story EE-SS in the main checkout, already on branch <branch>.`
+   `You are the only agent running. Your orchestrator owns QA sign-off, the manual test and shipping.`
+3. **Append the S2 answers** when there are any — `Clarifications:` followed by each
+   acceptance criterion and the user's reading of it. The agent cannot ask; this is all it gets.
+
+A QA failure or a manual-test report goes back to the **same agent** by `SendMessage`, worded
+like the resume below with the failing criteria or the user's report in place of
+`remaining`, and on the same branch in the main checkout.
+
 ### Tier map — write the alias, never the tier name
 
 The `Agent` tool's `model` parameter accepts **only** `haiku`, `fable`, `sonnet`, `opus`.
@@ -177,7 +193,8 @@ green.
 
 ## Inline QA dispatch
 
-The single-story dispatch, used by `build` Phase 7 and `fix` Phase 4. No `isolation` (the
+The single-story QA dispatch, used by `build` S5 (and Phase 7 in the no-`Agent` fallback) and
+`fix` Phase 4. No `isolation` (the
 work is in the main checkout on its own branch) and no worktree; everything the agent needs
 is in the prompt, because it cannot ask.
 
@@ -192,9 +209,9 @@ prompt: |
 
   Story file: <repo-relative story path>   # acceptance criteria are in its body
 
-  Run these commands exactly, in one call, WITH --reuse (the suite 6.3 just passed on this
-  exact tree reports REUSED; everything else runs):
-    ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, verbatim>' <label>='<command>' …
+  Run these commands exactly, in one call, WITH --reuse (a command that already passed on
+  this exact tree — 6.3, or the agent's story-scope run — reports REUSED; everything else runs):
+    ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, or the single-story scope's>' <label>='<command>' …
     <this story's stack commands from parallel-mode.md § P7, at the scope 6.3 resolved:
      story scope lints the changed files, full scope the full row; typecheck/build full>
   Take a short excerpt of each failure (failing test names, lint or type errors) from the

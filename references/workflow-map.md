@@ -19,9 +19,9 @@ duplicating the workflow graph.
 5. /ck-code:plan --publish   (Optional) Publish the plan → GitHub Issues
 6. /ck-code:track        Show progress / find next ready story
 
-7. /ck-code:build        TDD-implement stories (story → done): one inline, several at once in
-                        worktrees (story IDs), or a whole epic in waves (--epic NN); also a
-                        bug story's recorded fix (Bug-Fix Mode)
+7. /ck-code:build        TDD-implement stories (story → done), each by a sub-agent: one,
+                        several at once in worktrees (story IDs), or a whole epic in waves
+                        (--epic NN); also a bug story's recorded fix (Bug-Fix Mode)
    /ck-code:fix          Diagnose a bug, record it to its story (→ bug), route the fix
 
    /ck-code:verify       Whole-feature manual test checklist (tasks/<plan>/CHECKLIST.md);
@@ -52,7 +52,7 @@ duplicating the workflow graph.
 | `plan` | `/ck-code:plan --publish` *(optional)* or `/ck-code:track next` |
 | `plan --quick` | `/ck-code:build <new story>` |
 | `track next` | `/ck-code:build [path]` |
-| `build` | `/ck-code:ship` (inline, once per story); after PARALLEL MODE merged into an epic or plan branch, `/ck-code:ship --promote --epic NN` (or the plan) — never one ship per story |
+| `build` | `/ck-code:ship` (single story, once per story — pushes its already-committed branch); after PARALLEL MODE merged into an epic or plan branch, `/ck-code:ship --promote --epic NN` (or the plan) — never one ship per story |
 | `fix` (easy) | auto-runs `/ck-code:build` → `/ck-code:ship` |
 | `fix` (complex) | `/ck-code:build <story>` or `/ck-code:build <ids>` (Bug-Fix Mode) |
 | `verify` | `/ck-code:fix <story> --report "…"` for an issue; `/ck-code:ship --promote` once nothing is open |
