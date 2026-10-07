@@ -100,6 +100,14 @@ custom refs, `plan` still numbers from every fetched branch and prints a warning
 never blocks. `/ck-code:doctor` reports any number already clashing with another branch
 (`ids in flight`).
 
+**And if a clash still happens, it fixes itself.** A plan made offline, or before 7.9.0, can
+still collide. `plan`, `build` and `doctor --fix` first run `ck-epic resolve`, which settles each clash
+the same way on every machine: the plan holding the remote reservation keeps the number,
+else the one already on the trunk, else the one with work started, else the older plan.
+The other side's epic moves to the next free number — folder, story ids, `blocked_by` and
+roadmap — as long as nothing on it has started yet. An epic with branches or PRs is never
+renumbered behind your back; it stays a doctor warning for `/ck-code:migrate`.
+
 If your project already has two plans with colliding numbers, `/ck-code:migrate`
 renumbers them — the oldest plan keeps its numbers, so its merged branches and published
 issues stay valid.
@@ -358,9 +366,10 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 - **`gh` is unauthenticated.** GitHub calls are skipped with a warning; the local,
   commit-only half of `build`, `ship` and `doctor --fix` still completes.
 - **Two plans got the same epic number (e.g. two `37`s).** One was planned before
-  ck-code 7.9.0, or offline. `/ck-code:doctor` lists it as `ids in flight` while the plans
-  sit on different branches; once both are on one branch, `/ck-code:migrate` renumbers the
-  newer one. `plan --quick` and every plan from 7.9.0 reserve their numbers on the remote.
+  ck-code 7.9.0, or offline. The next `plan`, `build` or `doctor --fix` renumbers the losing
+  side automatically (`ck-epic resolve`) while its epic is unstarted. If work on it has
+  already started, `/ck-code:doctor` keeps it as an `ids in flight` warning; once both plans
+  are on one branch, `/ck-code:migrate` renumbers it.
 - **The project is on an older layout.** Run `/ck-code:migrate` — every change-producing
   skill blocks until the project is v7.
 - **"This project requires ck-code >= …" or "uses a newer ck-code layout".** A teammate
