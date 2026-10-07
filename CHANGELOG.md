@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.10.0] — 2026-10-07
+
+### Added
+- **plan / build / doctor**: an epic-number clash that still slips through now fixes itself. This covers a plan made offline, or before 7.9.0. A new `ck-epic resolve` runs first in `plan` (1.0), `build` (1.0) and `doctor --fix` (3.2). It settles each clash the same way on every clone: the plan holding the remote reservation keeps the number, else the plan already on the trunk, else the one with work started, else the older plan folder. The winner claims the number on the remote, and the loser's epic moves to a freshly reserved one: folder, `EPIC.md`, story ids, its plan's `blocked_by` and `ROADMAP.md`. An epic whose work has started (a story past `todo`, or a `pr:`) is never renumbered behind the user's back. It stays an `ids in flight` WARN for `/ck-code:migrate`. `build` follows a story whose folder moved.
+
 ## [7.9.0] — 2026-10-07
 
 ### Fixed
