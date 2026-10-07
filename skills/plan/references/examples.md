@@ -40,7 +40,7 @@ tasks/
 
 A new dated folder named for the work — no prefix; the date keeps it distinct from earlier
 plans. It gets its own `OVERVIEW.md` record and its own integration level. Epic numbering
-does **not** restart here — it continues from the project-wide maximum (SKILL.md 3.1), so
+does **not** restart here — it continues from the project-wide maximum across every branch (SKILL.md 3.1, `ck-epic`), so
 the numbers below are illustrative of a project whose prior plans ended at epic `04`.
 
 ```

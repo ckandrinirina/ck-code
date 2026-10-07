@@ -1026,6 +1026,53 @@ assert_contains "ck-checklist: a format-1 checklist is refused until imported" "
 assert_contains "ck-checklist import: format 2, result and fix split out" "$CLO" 'format: 2|result: "fail 2026-09-01 — no counter"|fix: 41-02|'
 
 echo
+echo "=== ck-epic: numbers unique across branches and clones ==="
+EP_DIR="$(mktemp -d)"
+ep_env() { export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t; }
+ep_story() { # ep_story PLAN EPIC_DIR ID FILE
+  mkdir -p "tasks/$1/epics/$2/stories"
+  printf -- '---\nid: %s\nepic: x\n---\n' "$3" > "tasks/$1/epics/$2/stories/$4.md"
+}
+( cd "$EP_DIR" && ep_env && git init -q --bare origin.git && git clone -q origin.git a 2>/dev/null \
+  && cd a && git checkout -q -b main && ep_story 2026-01-01_base 35_core 35-01 01_a \
+  && ep_story 2026-01-01_base 36_more 36-01 01_b && git add -A && git commit -qm base \
+  && git push -q origin main 2>/dev/null && cd .. && git clone -q origin.git b 2>/dev/null \
+  && cd a && git checkout -q -b plan/feat && ep_story 2026-10-01_feat 37_feat 37-01 01_c \
+  && git add -A && git commit -qm feat && git push -q origin plan/feat 2>/dev/null && git checkout -q main )
+assert_eq "ck-epic next: counts an epic that exists only on an unmerged remote branch" "38" \
+  "$(cd "$EP_DIR/b" && ck-epic next 2>/dev/null)"
+( cd "$EP_DIR/a" && ep_env && ck-epic reserve 2 tasks/2026-10-07_x > "$EP_DIR/ra" 2>&1 ) &
+( cd "$EP_DIR/b" && ep_env && ck-epic reserve 2 tasks/2026-10-07_y > "$EP_DIR/rb" 2>&1 ) &
+wait
+EP_FIRST="$(tail -1 "$EP_DIR/ra") $(tail -1 "$EP_DIR/rb")"
+case "$EP_FIRST" in
+  "38 40"|"40 38") log_ok "ck-epic reserve: two racing clones get 38–39 and 40–41, never the same" ;;
+  *) log_fail "ck-epic reserve: two racing clones get 38–39 and 40–41, never the same" "got [$EP_FIRST]: $(cat "$EP_DIR/ra" "$EP_DIR/rb")" ;;
+esac
+assert_eq "ck-epic reserve: the remote holds one ref per reserved number" "4" \
+  "$(git -C "$EP_DIR/origin.git" for-each-ref refs/ck-code/epics | awk 'END{print NR}')"
+assert_eq "ck-epic next: counts the remote's reservations" "42" "$(cd "$EP_DIR/b" && ck-epic next 2>/dev/null)"
+EP_S="$(cd "$EP_DIR/a" && ep_env && ck-epic reserve-story 36 tasks/2026-01-01_base 2>/dev/null) $(cd "$EP_DIR/b" && ep_env && ck-epic reserve-story 36 tasks/2026-01-01_base 2>/dev/null)"
+assert_eq "ck-epic reserve-story: two clones adding to epic 36 get 02 and 03" "02 03" "$EP_S"
+EP_OFF="$(cd "$EP_DIR/b" && CK_EPIC_OFFLINE=1 ck-epic reserve 1 tasks/2026-10-07_z 2>&1)"; EP_OFF_RC=$?
+assert_exit "ck-epic reserve: offline never blocks" 0 "$EP_OFF_RC"
+assert_contains "ck-epic reserve: offline warns the number is not reserved" "$EP_OFF" "NOT reserved"
+printf '#!/bin/sh\nwhile read o n r; do case "$r" in refs/ck-code/*) echo "custom refs denied"; exit 1;; esac; done\n' \
+  > "$EP_DIR/origin.git/hooks/pre-receive" && chmod +x "$EP_DIR/origin.git/hooks/pre-receive"
+EP_REF="$(cd "$EP_DIR/b" && ep_env && ck-epic reserve 1 tasks/2026-10-07_z 2>&1)"; EP_REF_RC=$?
+assert_exit "ck-epic reserve: a host refusing custom refs never blocks" 0 "$EP_REF_RC"
+assert_contains "ck-epic reserve: …and falls back with a WARN and a number" "$EP_REF" "NOT reserved"
+assert_eq "ck-epic reserve: …the fallback number is past every reservation" "42" "$(printf '%s\n' "$EP_REF" | tail -1)"
+assert_eq "ck-epic check: no clash on a clean project" "" "$(cd "$EP_DIR/b" && ck-epic check)"
+( cd "$EP_DIR/b" && git checkout -q -b plan/other && ep_story 2026-10-02_other 37_other 37-01 01_d \
+  && printf -- '---\nslug: other\n---\n' > tasks/2026-10-02_other/OVERVIEW.md )
+EP_CHK="$(cd "$EP_DIR/b" && ck-epic check)"
+assert_contains "ck-epic check: flags epic 37 used on another branch" "$EP_CHK" "epic 37: "
+assert_contains "ck-epic check: …names the remote branch holding it" "$EP_CHK" "remotes/origin/plan/feat"
+assert_contains "ck-doctor: reports the clash as ids in flight" "$(cd "$EP_DIR/b" && ck-doctor 2>&1)" "ids in flight"
+rm -rf "$EP_DIR"
+
+echo
 echo "=== ck-reclaim + ck-doctor disk ==="
 RC_DIR="$(mktemp -d)"
 ( cd "$RC_DIR" && git init -q m && cd m && printf 'target/\nnode_modules/\n.env\n' > .gitignore \

@@ -49,16 +49,22 @@ consumes an ID (`build --epic NN`, `build EE-SS`, `blocked_by`, the `epic/<NN>-*
 glob in [`branch-topology.md`](branch-topology.md), `ck-doctor`'s dependency graph)
 resolves it on its own, with no plan to disambiguate against.
 
-`plan` allocates each new epic from the project-wide maximum, derived from the folders
-on every run and never stored:
+`plan` takes every new epic number (and every `plan --quick` story number) through
+`ck-epic`, never from the working tree alone — a plan still in a PR, on another branch or
+on a teammate's machine is invisible there, and that is how two plans both mint epic 37:
 
-```bash
-find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
-  | sed 's|.*/epics/||;s|_.*||' | sort -n | tail -1
-```
+| Call | Does |
+|---|---|
+| `ck-epic next` / `next-story EE` | the next free number: max over the working tree, every local and remote-tracking branch, and the remote's reservations, after one fetch. Reserves nothing |
+| `ck-epic reserve <n> tasks/<plan>` / `reserve-story EE tasks/<plan>` | takes the number(s) with one atomic, create-only push of `refs/ck-code/epics/<NN>` (`refs/ck-code/stories/<EE>-<SS>`); a lost race retries with the next free number |
+| `ck-epic check` | offline: every number used by more than one plan across the working tree and all fetched branches (`ck-doctor`'s `ids in flight`) |
 
-Next epic is that + 1, zero-padded; `01` when it returns nothing. A stored counter
-would be a second source of truth that can drift from the folders.
+The git remote is the only state collaborators share, so the reservation lives there, in a
+namespace no branch list, tag list or default fetch shows. A reserved number is never
+released — a cancelled plan leaves a gap, and gaps are harmless. `ck-epic` never blocks:
+no remote, no network or a host refusing custom refs degrades to the branch scan with a
+`WARN`. No counter is stored in a file — it would be a second source of truth that can
+drift from the folders.
 
 Team-generated skills live in flat `.claude/skills/expert-*/` and `guide-*/` folders,
 never nested under `experts/` or `guides/`.
@@ -364,5 +370,5 @@ creation of a new project ([`version-gate.md`](version-gate.md)).
 - **Always change story state with `ck-story set`**, which writes the field, regenerates the views and syncs the board in one call. After a structural edit by hand, run `ck-index tasks/<plan>`.
 - **Frontmatter stays generator-readable**: one `key: value` per line, inline `[...]` lists, no block scalars.
 - **Never restart epic numbering in a new plan**: allocate from the project-wide maximum, or two plans collide and every ID consumer silently picks the wrong one.
-- **Never store the next epic number**: derive it from the epic folders on every run.
+- **Never store the next epic number**: derive it on every run, through `ck-epic` — never from the working tree alone.
 - **Never qualify an ID with its plan**: `EE-SS` and `NN` are unique project-wide; a skill that asks which plan an ID belongs to is working around a collision that `/ck-code:migrate` should fix.

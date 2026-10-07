@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-epic — allocate epic/story numbers unique across branches and clones; see scripts/ck-epic.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-epic.sh" "$@"

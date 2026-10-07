@@ -53,8 +53,8 @@ tasks/YYYY-MM-DD_[slug]/
 ```
 
 The epic numbers above (`Epic 01`, `Epic 02`, the final `NN_integration-e2e`) are
-**illustrative shape only**. Real numbers are allocated from the project-wide maximum
-(`plan` 3.1), so a second plan folder in an existing project starts at whatever comes next —
+**illustrative shape only**. Real numbers are allocated by `ck-epic` from the project-wide maximum across every branch
+(`plan` 3.1, reserved at 5.1), so a second plan folder in an existing project starts at whatever comes next —
 `Epic 07`, not `Epic 01`. Never renumber a plan to make it match this example.
 
 The ordering strategy is shown so **Adjust** can change it; do not add a separate prompt

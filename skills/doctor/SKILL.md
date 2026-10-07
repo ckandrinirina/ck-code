@@ -86,6 +86,7 @@ Exit status is the verdict: `0` = healthy (warnings allowed), `1` = at least one
 | `views` (WARN) | `tasks/.gitignore` does not exclude the views, or a view is stale or missing. Stale is harmless — every reader regenerates it | `ck-index` |
 | `epic ids` (ERROR) | the same epic number is used by more than one plan; branches and `blocked_by` are ambiguous | `/ck-code:migrate` (it renumbers) |
 | `story ids` (ERROR) | one story id names two stories across plans — breaks `build EE-SS`, `blocked_by`, and branch names | `/ck-code:migrate` (it renumbers) |
+| `ids in flight` (WARN) | an epic or story number this checkout uses is also used by a plan on another branch — an open PR, a teammate's pushed plan. Read from the last fetch, offline. It becomes an `epic ids` ERROR the moment both meet | the plan merged second renumbers; once both sit on one branch, `/ck-code:migrate` (Phase R). New plans avoid it — `plan` reserves numbers through `ck-epic` |
 | `plan overview` (ERROR) | an `epics/` dir has no `OVERVIEW.md`, so the plan is invisible to `ck-index` and `migrate` yet still feeds dependency checks | add the plan record; a v6 plan (`PROJECT_OVERVIEW.md`) → `/ck-code:migrate` |
 | `plan naming` (WARN) | a hand-made plan folder name contains whitespace — `ck-issues`/`ck-project` silently skip spaced paths | rename to a hyphenated slug |
 | `settings` (WARN) | `tasks/SETTINGS.md` has no frontmatter fence, issue tracking is on with no project configured, or the mapped board/columns are gone or unreachable | `/ck-code:config board` |

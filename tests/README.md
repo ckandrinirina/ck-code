@@ -12,6 +12,9 @@ covers:
   `ck-view` regenerating a missing or stale view;
 - **the Ready rule**: a skipped blocker releases its dependant in `ck-view next`,
   `ck-view waves`, `ck-doctor` and the board;
+- **`ck-epic`** against a local bare remote: a plan on an unmerged branch is counted, two
+  clones racing for the same number get different ones, story numbers, an offline and a
+  refused-ref fallback that still print a number, and `ck-doctor`'s `ids in flight`;
 - **`ck-story`, `ck-plan`, `ck-migrate`**: state flips, `files` merging, the plan record,
   and a full v6 → v7 conversion of a synthetic project (formatting kept, second run a
   no-op, a newer layout refused);

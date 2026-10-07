@@ -3,7 +3,7 @@ name: plan
 description: Use when breaking a project spec, feature doc or feature description into epics, stories, and a roadmap under `tasks/`. With `--quick [brief] [--epic NN]`, adds one small story to an existing epic instead of running a full planning cycle. With `--publish [--mode plan|epics|stories] [tasks/<plan>]`, publishes an existing plan to GitHub Issues. Argument is the spec path, or the `--quick` or `--publish` flags.
 argument-hint: "[path-to-spec] | --quick [brief] [--epic NN] | --publish [--mode plan|epics|stories] [tasks/<plan>]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-plan*) Bash(ck-issues*) Bash(ck-project*) Bash(git status*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh issue list*) Bash(mkdir*) Bash(awk*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(tail*) Bash(npx*) Bash(ls*) Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-issues*) Bash(ck-project*) Bash(git status*) Bash(git branch*) Bash(git rev-parse*) Bash(git ls-files*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh issue list*) Bash(mkdir*) Bash(awk*) Bash(find*) Bash(grep*) Bash(sed*) Bash(sort*) Bash(tail*) Bash(npx*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -240,19 +240,21 @@ Each epic: a coherent deliverable chunk, numbered sequentially, a short descript
 **Set the epic slug to match its feature-doc slug** so the generated `EPICS_INDEX.md`
 links its `Docs` cell.
 
-**Epic numbers are unique across the whole project, never per-folder.** Allocate the first
-new epic from the project-wide maximum — in **every** mode, including a brand-new plan
-folder — then number consecutively from there:
+**Epic numbers are unique across the whole project, never per-folder** — and across every
+branch and every clone, not just this checkout. A plan still in a PR, or on a teammate's
+machine, is invisible to the working tree, so never number from the local folders. Take a
+provisional first number — in **every** mode, including a brand-new plan folder — then
+number consecutively from there:
 
 ```bash
-find tasks -mindepth 3 -maxdepth 3 -type d -path 'tasks/*/epics/*' 2>/dev/null \
-  | sed 's|.*/epics/||;s|_.*||' | sort -n | tail -1
+ck-epic next
 ```
 
-First new epic = that + 1, zero-padded to two digits; `01` when the command prints
-nothing. Run it **once**, at the start of 3.1. `find`, not a `tasks/*/…` glob — an
-unmatched glob aborts the command under zsh and would silently return "no epics" on a
-project that has some.
+It prints the next free number (zero-padded): the maximum over this working tree, every
+local and remote-tracking branch, and every number reserved on the remote, after one
+fetch. It reserves nothing — numbers are taken only after **Proceed** (5.1), so an
+Adjust or Cancel burns none. A `ck-epic: WARN` line means the remote could not be
+consulted; relay it and continue — it never blocks. Run it **once**, at the start of 3.1.
 
 Never restart at `01` because the folder is new: two plans owning epic `01` make every
 `EE-SS` ambiguous, and `build --epic NN`, `blocked_by` and the `epic/<NN>-*` branch glob
@@ -429,6 +431,24 @@ Use today's date for `YYYY-MM-DD` (ISO 8601). A new plan folder is
 `tasks/YYYY-MM-DD_<slug>/` in every mode — no prefix. Layouts per mode:
 [examples.md](references/examples.md) (New Project / Increment / Continue).
 
+**Reserve the epic numbers before writing any file** — this run's epic count, for the plan
+folder being written:
+
+```bash
+ck-epic reserve <epic-count> tasks/<plan>
+```
+
+It pushes one hidden ref per number (`refs/ck-code/epics/<NN>`) to the remote in a single
+atomic, create-only push, and prints the first number of the reserved consecutive range.
+When a teammate reserved the same numbers meanwhile it retries with the next free ones on
+its own, so the printed first number can be **higher than 3.1's**. When it is, shift every
+epic number of this run by the difference — folder names, `epic:`, story `id:`s, and
+`blocked_by` entries that name this run's own stories — before the first write; nothing
+has been written yet, so the shift is free. Never write an epic folder under a number
+`ck-epic reserve` did not print. A `ck-epic: WARN … NOT reserved` line (no remote, offline,
+host refusing the refs) still prints a usable number: relay the WARN in the Phase 6
+summary with "push this plan soon" and continue.
+
 ### 5.2 Overview — the plan record
 
 Write `OVERVIEW.md` from [templates.md](references/templates.md#overview-template): the
@@ -535,16 +555,16 @@ Adds one small story to an **existing epic**, no full cycle. (Phase 0 already ga
 2. **No `--epic`** — `Glob "tasks/*/OVERVIEW.md"`; take the most recent. **No plan → redirect:**
    "No `tasks/` plan found. Run `/ck-code:plan <spec>` first." Stop. Multiple plans → ask
    which. Then list that plan's epic folders and ask which epic.
-3. Record the target epic's highest existing `SS`, read from **story frontmatter `id:`**,
-   never from a filename prefix — the frontmatter is the source of truth
-   ([`data-model.md`](../../references/data-model.md)) and a file whose `SS_` prefix drifted
-   from its `id` would otherwise hand out a duplicate:
+3. Take the provisional next story number of the target epic:
 
    ```bash
-   find tasks/<plan>/epics/NN_<epic-slug>/stories -name '*.md' -exec grep -h '^id:' {} + 2>/dev/null | sed 's/.*-//' | sort -n | tail -1
+   ck-epic next-story NN
    ```
 
-   Empty output = an epic with no stories. Q.3 numbers the new story from this value.
+   It reads **story frontmatter `id:`** values — never a filename prefix, which can drift
+   from its `id` ([`data-model.md`](../../references/data-model.md)) — across this working
+   tree, every branch, and the story numbers reserved on the remote, so a story a teammate
+   added to the same epic on another branch is counted. Q.3 uses it; Q.4 reserves it.
    **No epic exists anywhere → redirect to full plan** — there is nothing to add to.
 
 ### Q.2 Capture intent
@@ -557,9 +577,7 @@ Adds one small story to an **existing epic**, no full cycle. (Phase 0 already ga
 ### Q.3 Draft & confirm
 
 Compute the ID: `EE-SS` where `EE` is the epic number and `SS` is the Q.1 step 3 value
-(the highest `SS` across that epic's story **frontmatter `id:` values**) **+ 1**,
-zero-padded to two digits; an epic with no stories ⇒ `01`. Slug = kebab-case of the brief,
-≤ 5 words.
+(already the next free number, zero-padded). Slug = kebab-case of the brief, ≤ 5 words.
 
 Draft the full story from [templates.md#story-template](references/templates.md#story-template):
 title (title-case one-liner), description (1–2 sentences), 1–3 concrete testable
@@ -570,6 +588,16 @@ then gate with `AskUserQuestion` — "Add this story?" Options: **Confirm** / **
 before Confirm.
 
 ### Q.4 Write the story file
+
+After Confirm, reserve the number, then write — never the other way round:
+
+```bash
+ck-epic reserve-story NN tasks/<plan>
+```
+
+It prints the `SS` it reserved (`refs/ck-code/stories/<EE>-<SS>` on the remote). When it
+differs from the draft's — a teammate took that number meanwhile — use the printed one in
+the `id:` and the filename. Relay a `ck-epic: WARN` line and continue; it never blocks.
 
 Path `tasks/<slug>/epics/NN_<epic-slug>/stories/SS_<story-slug>.md`, frontmatter
 (`status: todo`, `size` S/M, `blocked_by` `[]` unless a dependency was named, `files`,
@@ -724,7 +752,10 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 ## RULES
 
 - **Never restart epic numbering at `01` in a new plan folder** (3.1) — allocate from the project-wide maximum in every mode. Colliding epic numbers make every `EE-SS` ambiguous.
-- **Never store the next epic number** — derive it from the epic folders each run (3.1).
+- **Never number an epic or a `--quick` story from the working tree alone** (3.1, Q.1) — `ck-epic next`/`next-story` see every branch and the remote's reservations; a local `find … | tail -1` misses any plan still in a PR or on a teammate's machine, which is how two plans both mint epic 37.
+- **Never write an epic folder or a `--quick` story before `ck-epic reserve`/`reserve-story`** (5.1, Q.4), and never under a number it did not print — reserving after Proceed is what makes a concurrent plan pick another number instead of the same one.
+- **Never block on the remote** — a `ck-epic: WARN` (offline, no remote, refs refused) still yields a number; relay it and continue.
+- **Never store the next epic number in a file** — derive it each run (3.1); the remote's `refs/ck-code/*` reservations are the only shared record.
 - **Never ask which plan an `--epic NN` belongs to** (Q.1) — the number is unique project-wide; more than one match is a collision to migrate, not a question to ask.
 - **Never plan an L/XL story** (3.2) — split at a natural seam and connect with `blocked_by`.
 - **Never skip the final Integration & E2E epic** (3.6), and never fold it into another epic.
@@ -747,7 +778,7 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never re-publish a plan with a different mode** — `issue:` holds one number per file, so a second mode publishes a parallel hierarchy the frontmatter cannot point at.
 - **Never create or adopt a Projects board in this skill** — that is `/ck-code:config board`.
 - **Never leave a template's `[bracketed placeholder]` in a written file** — every one is replaced with real content, or with the literal `[TO BE DEFINED]`, which is the **only** bracketed string allowed to survive. A shipped `[Story Title]` or `[Criterion 1]` is a defect.
-- **Never derive a story's `SS` from a filename** (Q.1, Q.3) — read the epic's stories' frontmatter `id:` values; a drifted `SS_` prefix would otherwise mint a duplicate ID.
+- **Never derive a story's `SS` from a filename** (Q.1, Q.3) — `ck-epic next-story` reads the frontmatter `id:` values; a drifted `SS_` prefix would otherwise mint a duplicate ID.
 - **Never hardcode** project names, technologies, or paths — derive everything from the spec.
 - **Always cover every functional requirement** with at least one story; flag vague ones for clarification.
 - **Always keep frontmatter generator-readable** — one `key: value` per line, inline `[…]` lists, no block scalars.

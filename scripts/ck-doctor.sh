@@ -268,6 +268,19 @@ PY
     row "story ids" "python3 missing — check skipped" WARN
   fi
 
+  # The same collision before it lands: a number this checkout uses that a plan on another
+  # branch (an open PR, a teammate's pushed plan) uses too. Offline — it reads the refs the
+  # last fetch left. Working-tree-only duplicates are the ERRORs above, so skip those lines.
+  local inflight
+  inflight=$("$SCRIPT_DIR/ck-epic.sh" check 2>/dev/null | grep -E '\((heads|remotes)/' || true)
+  if [ -n "$inflight" ]; then
+    row "ids in flight" "$(printf '%s\n' "$inflight" | awk 'END{print NR}') number(s) also used on another branch" WARN
+    printf '%s\n' "$inflight" | sed 's/^/                   ✗ /'
+    note "the plan merged second must renumber; once both sit on one branch, /ck-code:migrate does it (Phase R)"
+  else
+    row "ids in flight" "no clash with other branches" OK
+  fi
+
   # A directory holding epics but no overview file is invisible to ck-index's plans()
   # and to migrate Phase R, yet still feeds check_deps below. Never renumber around it.
   orphans=$(find tasks -mindepth 2 -maxdepth 2 -type d -name epics 2>/dev/null \
