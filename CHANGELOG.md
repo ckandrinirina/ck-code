@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.11.0] — 2026-10-09
+
+### Changed
+- **spec**: the Claude Design offer is now a design-first step. **Design first — write the brief** is the first, recommended option, and the brief is copied to the clipboard.
+- **spec** brief template: rewritten as one paste-ready prompt. It covers platform and breakpoints, real screens with real content and every empty, loading and error state, key flows, data realism and accessibility. It also asks for one `Screens` card per screen, composed from the component cards. The `/ck-code:design ds` hand-back line is now printed instead of written into the brief, where it would be pasted into the design tool. The brief shape is shared with ck-code-lite 1.2.0.
+- **design**: New Project Mode offers design-first with three options (design first, link one I have, skip). It writes the brief itself when no spec did, into the spec folder or else `docs/design-brief.md`, which then serves as the pending marker.
+- **build**: a UI story reached while the design link is pending asks once per run, inside the existing single question call (single-story S2, parallel P3). The user can paste the URL to link it before dispatch, build without it, or stop. A screen story reads its `Screens` card before the component cards.
+- **session-start**, **ck-view**: `docs/design-brief.md` beside `docs/architecture/` counts as a pending design link.
+- **migrate**: a ck-code-lite 1.2.0 project's `docs/design-system/` cache is moved unchanged to `docs/architecture/design-system/`, and its `docs/design-brief.md` stays as the pending marker.
+
 ## [7.10.2] — 2026-10-09
 
 ### Changed
