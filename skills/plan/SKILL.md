@@ -227,7 +227,7 @@ Either way, **all** cross-domain dependency mapping stays yours in 2.7 — never
 ### 2.6 Research tech stack (when beneficial)
 
 Only for unfamiliar or rapidly-evolving frameworks the spec references, use context7
-(MCP, else `npx -y @upstash/context7` CLI) or WebSearch to confirm current best
+(MCP, else `npx -y ctx7` CLI) or WebSearch to confirm current best
 practices, version considerations, and standard project structures.
 
 ### 2.7 Identify dependencies & complexity

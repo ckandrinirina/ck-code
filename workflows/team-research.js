@@ -43,7 +43,7 @@ for (let round = 0; round < 3 && todo.length; round++) {
 FIRST run ToolSearch with query "select:WebSearch,mcp__context7__resolve-library-id,mcp__context7__query-docs,mcp__plugin_context7_context7__resolve-library-id,mcp__plugin_context7_context7__query-docs"
 to load those schemas — they are deferred and not callable until you do. context7 ships under two
 MCP names; use whichever of the two pairs the ToolSearch result actually returned. If neither
-resolves, fall back via Bash to \`npx -y @upstash/context7 library "${t.name}" "<query>"\` (or
+resolves, fall back via Bash to \`npx -y ctx7 library "${t.name}" "<query>"\` (or
 \`ctx7 library …\` if installed globally), then to WebSearch.
 
 Resolve the context7 library id and fetch its docs; use WebSearch only where context7 lacks coverage.

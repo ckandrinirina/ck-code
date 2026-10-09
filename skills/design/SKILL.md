@@ -253,7 +253,7 @@ Full wording of every question and the CLEAR/PARTIAL confirmation phrasing:
 
 ### Research During Refinement
 
-When the user names specific technologies, use context7 (MCP, else `npx -y @upstash/context7`
+When the user names specific technologies, use context7 (MCP, else `npx -y ctx7`
 CLI) or WebSearch to verify current structure conventions and recommended config patterns.
 
 ### Refinement Loop

@@ -40,7 +40,7 @@ this order:
 
    ```bash
    # Resolve library ID:
-   npx -y @upstash/context7 library "<technology name>" "<query>"
+   npx -y ctx7 library "<technology name>" "<query>"
    # Or, if installed globally:
    ctx7 library "<technology name>" "<query>"
 
@@ -48,9 +48,9 @@ this order:
    ctx7 docs <library-id> "<query>"
    ```
 
-   First-run setup (one-time per machine): `npx -y @upstash/context7 setup`
+   First-run setup (one-time per machine): `npx -y ctx7 setup`
    handles OAuth/API-key auth. Subsequent calls are non-interactive.
-   If `npx -y @upstash/context7` does not resolve, treat the CLI as unavailable
+   If `npx -y ctx7` does not resolve, treat the CLI as unavailable
    and go straight to step 3.
 
 3. **WebSearch** (last-resort fallback if neither MCP nor CLI is reachable):
