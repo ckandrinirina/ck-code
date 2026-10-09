@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.10.1] — 2026-10-09
+
+### Fixed
+- **team / design / plan**: the context7 CLI fallback used `npx -y @upstash/context7`, which does not exist on npm (404). Without the MCP server, every fallback silently fell through to WebSearch. It now uses the published `ctx7` CLI (`npx -y ctx7 library|docs`).
+- **migrate**: the ck-code-lite mapping covers the 1.1.1 `## Stack` format. Each version goes into the `tech-stack.md` `Version` column, the `verified` date is dropped, and the best-practice bullets move under their technology as sub-bullets.
+
 ## [7.10.0] — 2026-10-07
 
 ### Added
