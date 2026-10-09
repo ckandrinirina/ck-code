@@ -191,7 +191,7 @@ Every target file comes from
 | lite section | v7 destination |
 |---|---|
 | intro paragraph | `overview.md` → `## Vision` |
-| `## Stack` | `tech-stack.md` → `## Overview` table |
+| `## Stack` | `tech-stack.md` → `## Overview` table (version into `Version`; the `— verified <date>` stamp dropped). Idiom bullets under a line (ck-code-lite 1.1.1+) → that technology's entry under `## [Component/Layer Name]`, verbatim, as sub-bullets |
 | `## Commands` | `dev-guide.md` → `## Setup` / `## Running` / `## Testing`; `test-one` is the "run a subset" line under `## Testing` |
 | `## Folder structure` | `folder-structure.md` → `## Directory Tree` |
 | `## Decisions` | `overview.md` → `## Key Design Decisions` |
