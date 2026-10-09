@@ -588,6 +588,10 @@ Three things this guarantees:
 The biggest win is the version gate. An older project used to cost *two* retypes — type
 `/ck-code:migrate`, then retype your original command from memory once it finished. It now
 offers migration once and resumes what you were doing, with the arguments you already gave.
+A ck-code-lite project (`tasks/PLAN.md`, no stamp) is the exception: that usually means
+the wrong plugin was typed, so every ck-code skill stops with a ⛔ wrong-plugin warning naming
+the `/ck-code-lite:` command to use, and never offers migration. Converting stays your own
+explicit `/ck-code:migrate`.
 
 The full contract lives in [`references/skill-invocation.md`](references/skill-invocation.md);
 which hand-offs exist is the invocation matrix in
