@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.10.2] — 2026-10-09
+
+### Changed
+- **version gate** (every gated skill, plus `explain`, `guide`, `track` and `doctor`): a ck-code-lite project (`tasks/PLAN.md` with no stamp) is now treated as the wrong plugin, not an old layout. The skill prints a ⛔ warning naming the `/ck-code-lite:` command to use and stops before any read or write. It no longer offers the `migrate` hand-off, which turned a mistyped command into a project conversion. `/ck-code:migrate` still converts a lite project when run on purpose. The injected stamp line reports `LITE` without brace groups, which the shell permission check rejects.
+
 ## [7.10.1] — 2026-10-09
 
 ### Fixed
