@@ -29,13 +29,16 @@ STORY MODE is everything below down to *Reading Context (STORY MODE)*; FEATURE M
 EPIC MODE are their own sections further down. The modes share only the Tone and RULES
 blocks.
 
-Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+Layout stamp: !`cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && cat tasks/VERSION.md 2>/dev/null || ls tasks/PLAN.md 2>/dev/null | sed 's/^/LITE — /' | grep . || echo "ABSENT — no tasks/VERSION.md"`
 
 Version check is **Tier 1 only**, from the stamp injected above — never spend a `Read` on
 `tasks/VERSION.md` and never run Tier 2. `layout: v7` → proceed silently. A layout newer than
-v7 → emit `ℹ newer ck-code layout — update the plugin`; anything else (older, or `ABSENT`
-with a `tasks/` folder present) → emit `ℹ older ck-code layout — run /ck-code:migrate`. Either
-way **continue read-only**. Never block, never stamp. See
+v7 → emit `ℹ newer ck-code layout — update the plugin`; `LITE …` → print the [wrong-plugin
+BLOCK](../../references/version-gate.md#lite--wrong-plugin-block) and **stop**, never offering
+to run `/ck-code:migrate`; anything else
+(older, or `ABSENT` with a `tasks/` folder present) → emit `ℹ older ck-code layout — run
+/ck-code:migrate`. Either hint, **continue read-only**. Never block on anything but `LITE`,
+never stamp. See
 [`../../references/version-gate.md`](../../references/version-gate.md#scope).
 
 ---

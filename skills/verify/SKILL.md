@@ -49,11 +49,15 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PHASE 0: VERSION GATE (hard gate)
 
-Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+Layout stamp: !`cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && cat tasks/VERSION.md 2>/dev/null || ls tasks/PLAN.md 2>/dev/null | sed 's/^/LITE — /' | grep . || echo "ABSENT — no tasks/VERSION.md"`
 
 `layout: v7` → **PASS**. Anything else runs the shared
 [version gate](../../references/version-gate.md) (HARD GATE). Never read or write project
 state before it passes.
+
+`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout: print the
+[wrong-plugin BLOCK](../../references/version-gate.md#lite--wrong-plugin-block), naming the
+`/ck-code-lite:` command to use, and **stop**. Never offer to run `/ck-code:migrate` for it.
 
 ## PHASE 1: RESOLVE SCOPE
 

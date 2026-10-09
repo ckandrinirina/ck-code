@@ -31,13 +31,16 @@ Pick the mode from `$ARGUMENTS`, then run only that section:
 
 ## VERSION GATE (hint only — Tier 1)
 
-Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+Layout stamp: !`cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && cat tasks/VERSION.md 2>/dev/null || ls tasks/PLAN.md 2>/dev/null | sed 's/^/LITE — /' | grep . || echo "ABSENT — no tasks/VERSION.md"`
 
 Read the injected stamp; never spend a `Read` call on `tasks/VERSION.md`. `layout: v7` →
 proceed silently. A newer layout → emit `ℹ newer ck-code layout — update the plugin`;
-anything else (older, or `ABSENT` with a `tasks/` folder) → emit
-`ℹ older ck-code layout — run /ck-code:migrate`. Then **continue read-only**. Never run
-Tier 2, never block, never stamp. See
+`LITE …` → print the [wrong-plugin
+BLOCK](../../references/version-gate.md#lite--wrong-plugin-block) and **stop**, never offering
+to run `/ck-code:migrate`; anything else
+(older, or `ABSENT` with a `tasks/` folder) → emit `ℹ older ck-code layout — run
+/ck-code:migrate` and **continue read-only**. Never run Tier 2, never block on anything but
+`LITE`, never stamp. See
 [`../../references/version-gate.md`](../../references/version-gate.md#scope).
 
 ## The Ready rule

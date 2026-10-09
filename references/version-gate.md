@@ -94,15 +94,18 @@ injection, so Claude Code runs the `cat` *before* the skill content is sent and 
 receives the stamp already rendered. Skills restate *only* this one check, never Tier 2.
 
 ```
-Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+Layout stamp: !`cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && cat tasks/VERSION.md 2>/dev/null || ls tasks/PLAN.md 2>/dev/null | sed 's/^/LITE — /' | grep . || echo "ABSENT — no tasks/VERSION.md"`
 ```
 
 1. Read the injected stamp. **Never spend a `Read` tool call on `tasks/VERSION.md`.**
 2. `layout: v7` → **PASS**. Proceed with no scan and without loading this file. The
    session hook has already refused a `requires:` above the running plugin.
-3. `ABSENT`, or any other `layout:` → read this file and run Tier 2.
+3. `LITE — tasks/PLAN.md` → a ck-code-lite project: print the [wrong-plugin
+   BLOCK](#lite--wrong-plugin-block) and stop. No Tier 2.
+4. `ABSENT`, or any other `layout:` → read this file and run Tier 2.
 
-The injection resolves from the **git repo root**, not the cwd, so a skill invoked from a
+The injection reports `LITE` only when there is no stamp, so a migrated project
+whose lite plan was left behind still reads as v7. It resolves from the **git repo root**, not the cwd, so a skill invoked from a
 subdirectory still finds the stamp. Outside a git repo it falls back to the cwd.
 
 ### Tier 2 — full detection (only when the stamp is missing or stale)
@@ -123,7 +126,8 @@ find tasks -type f -path 'tasks/*/epics/*/stories/*.md' -exec grep -L '^id: ' {}
 ```
 
 - **`NEWER`** → BLOCK with the update message. Never offer `migrate`.
-- **`V6`**, **`LEGACY`** or **`LITE`** → BLOCK with the migrate message. `migrate` detects
+- **`LITE`** → the [wrong-plugin BLOCK](#lite--wrong-plugin-block). Never the migrate hand-off.
+- **`V6`** or **`LEGACY`** → BLOCK with the migrate message. `migrate` detects
   which conversion applies. A legacy project is converted to v6 and then to v7 in the same
   run and the same commit.
 - **No marker** → the project is v7-shaped or greenfield. Write the stamp (below) and
@@ -142,10 +146,10 @@ For `NEWER`, print exactly, then stop the skill with no hand-off:
    Never run /ck-code:migrate on it; a newer layout cannot be converted down.
 ```
 
-For `V6`, `LEGACY` or `LITE`, print:
+For `V6` or `LEGACY`, print:
 
 ```
-⛔ This project uses an older ck-code layout (v6 or earlier, or ck-code-lite).
+⛔ This project uses an older ck-code layout (v6 or earlier).
    /ck-code:migrate converts it to v7 in one revertable commit.
    Migrate with /ck-code:migrate  →  [see the hand-off prompt below]
 ```
@@ -161,6 +165,27 @@ Then run the hand-off prompt from [`skill-invocation.md`](skill-invocation.md) f
   hand-off, and never call `migrate` a second time in the same run.
 - **Skip** → stop the current skill. Do not read or write any project state.
 
+### LITE — wrong-plugin BLOCK
+
+A `tasks/PLAN.md` with no stamp is a ck-code-lite project. It usually means the wrong plugin
+was invoked, not that the project wants converting, so the block names the lite command
+and **never runs or offers the `migrate` hand-off**. Print, then stop with no hand-off:
+
+```
+⛔ This is a ck-code-lite project (tasks/PLAN.md), not a ck-code one.
+   /ck-code:<skill> would write ck-code state beside the lite plan.
+   Use <equivalent> instead.
+   To move the project to full ck-code for good, run /ck-code:migrate yourself.
+```
+
+| Invoked `/ck-code:` skill | `<equivalent>` |
+|---|---|
+| `spec`, `design`, `plan`, `init` | `/ck-code-lite:start` |
+| `build`, `track` | `/ck-code-lite:build` (with no argument it lists the ready tasks) |
+| `fix` | `/ck-code-lite:start` to record the bug as a task, then `/ck-code-lite:build` |
+| `ship` | `/ck-code-lite:ship` |
+| `explain`, `guide`, `verify`, `doctor`, `config`, `team` | no ck-code-lite equivalent — drop the line |
+
 ## Stamp (writing `tasks/VERSION.md`)
 
 Write only when the layout is confirmed v7: after a Tier-2 "no marker" (including `init`'s
@@ -174,11 +199,11 @@ template above, with `layout:` = `LAYOUT` and `requires: ck-code >= <MIN_PLUGIN>
 | Skills | Gate behavior |
 |---|---|
 | `spec`, `design`, `team`, `plan` (incl. `--publish`), `build`, `fix`, `ship`, `config` | **Hard-block** — run the full procedure; BLOCK halts the skill. |
-| `doctor --fix` | **Hard-block, DIRECTIVE** — doctor never calls `Skill` and never stamps. On anything but `layout: v7` (Tier 1, from the injected stamp) it prints the BLOCK message, then `NEXT: /ck-code:migrate` for an older or missing stamp (for `NEWER`, the update message alone — never migrate), and stops before any write. The read-only report (Phases 1–2) still runs first. |
+| `doctor --fix` | **Hard-block, DIRECTIVE** — doctor never calls `Skill` and never stamps. On anything but `layout: v7` (Tier 1, from the injected stamp) it prints the BLOCK message, then `NEXT: /ck-code:migrate` for an older or missing stamp (for `NEWER`, the update message alone — never migrate), and stops before any write. The read-only report (Phases 1–2) still runs first — except on `LITE`, which prints the wrong-plugin BLOCK and stops before the report. |
 | `ship` STANDALONE (no `tasks/` in the repo at all) | **Exempt** — a standalone commit on a never-planned repo touches no ck-code state. Skip the gate; never stamp. The moment `tasks/` exists, the hard-block row applies. |
-| `explain`, `guide`, `track`, `doctor` (no `--fix`) | **Hint only** — Tier 1 alone, from the injected stamp. On anything but `layout: v7`, emit one line (`ℹ older ck-code layout — run /ck-code:migrate`, or `ℹ newer ck-code layout — update the plugin`) and continue read-only. Never run Tier 2, never block, never stamp. |
+| `explain`, `guide`, `track`, `doctor` (no `--fix`) | **Hint only** — Tier 1 alone, from the injected stamp. `LITE` → the wrong-plugin BLOCK, stop (the one case a hint-only skill blocks). On any other non-`layout: v7`, emit one line (`ℹ older ck-code layout — run /ck-code:migrate`, or `ℹ newer ck-code layout — update the plugin`) and continue read-only. Never run Tier 2, never block, never stamp. |
 | `migrate` | **Never gates** — it is the migrator. It writes the stamp. It refuses a `NEWER` project. |
-| `init` | **Gate owner for an unstamped project** — on anything but `layout: v7` it runs Tier 2 itself: `NEWER` → update message; `V6`/`LEGACY`/`LITE` → BLOCK and the `migrate` hand-off; no marker → it stamps and runs `ck-bootstrap install` in its dependency phase. On `layout: v7` it passes; its dependency phase is idempotent. |
+| `init` | **Gate owner for an unstamped project** — on anything but `layout: v7` it runs Tier 2 itself: `NEWER` → update message; `LITE` → the wrong-plugin BLOCK; `V6`/`LEGACY` → BLOCK and the `migrate` hand-off; no marker → it stamps and runs `ck-bootstrap install` in its dependency phase. On `layout: v7` it passes; its dependency phase is idempotent. |
 
 A change-producing skill lists this gate in its **HARD GATES** block and links here. It
 inlines the Tier-1 stamp check and never restates Tier 2.
@@ -192,6 +217,7 @@ with the stamp; the rest are for the Tier-2 probe.
 
 - **Never read or write project state before this gate PASSes** in a change-producing skill.
 - **Never offer `migrate` for a `NEWER` layout** — update the plugin instead.
+- **Never hand off to `migrate` from a `LITE` project** — it is the wrong plugin, not an old layout. Name the `/ck-code-lite:*` command and stop; converting is the user's own explicit `/ck-code:migrate`.
 - **Always run `ck-bootstrap install` in the same step that writes the stamp.**
 - **Never stamp `tasks/VERSION.md` while a `V6`, `LEGACY`, `LITE` or `NEWER` marker is present.**
 - **Never auto-migrate without confirmation** — BLOCK always asks, per [`skill-invocation.md`](skill-invocation.md).

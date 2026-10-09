@@ -41,9 +41,13 @@ Parse `$ARGUMENTS`:
 
 ## VERSION GATE
 
-Layout stamp: !`cat "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tasks/VERSION.md" 2>/dev/null || echo "ABSENT — no tasks/VERSION.md"`
+Layout stamp: !`cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && cat tasks/VERSION.md 2>/dev/null || ls tasks/PLAN.md 2>/dev/null | sed 's/^/LITE — /' | grep . || echo "ABSENT — no tasks/VERSION.md"`
 
-- **No `--fix` — hint only.** Never block. The layout stamp is itself check 1 of the
+- **`LITE …`, with or without `--fix`** → a ck-code-lite project: print the
+  [wrong-plugin BLOCK](../../references/version-gate.md#lite--wrong-plugin-block) and stop
+  before the report — its checks only describe ck-code state. Never offer to run
+  `/ck-code:migrate` for it.
+- **No `--fix` — hint only.** Never block otherwise. The layout stamp is itself check 1 of the
   report, so an older or newer project is diagnosed rather than refused. On anything but
   `layout: v7`, print one hint line and continue read-only; never run Tier 2, never stamp.
 - **`--fix` — hard gate, DIRECTIVE.** Reads `layout: v7` → PASS. Anything else → the report
