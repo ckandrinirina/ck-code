@@ -3,7 +3,7 @@ name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing for epics in EPICS_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
 argument-hint: "[path-to-spec | optimize | sync | ds [design-url]]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) DesignSync Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) Bash(pbcopy*) Bash(wl-copy*) Bash(xclip*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -220,16 +220,18 @@ Fill gaps and clarify ambiguities through adaptive questioning.
   Stack → Data Flow & APIs → Database & State → Configuration → Build & Run →
   Non-Functional).
 
-**Design-system offer (New Project Mode only, at most once per project).** Offer only when
-the answers so far put a UI in the stack **and both guards below come back empty** — one
-probe, run once:
+**Design-first offer (New Project Mode only, at most once per project).** A UI project is
+designed before it is built ([`design-system.md` § Design
+first](../../references/design-system.md#design-first)). Offer only when the answers so far
+put a UI in the stack **and both guards below come back empty** — one probe, run once:
 
 ```bash
-ls -d docs/architecture/design-system 2>/dev/null
+ls -d docs/architecture/design-system docs/design-brief.md 2>/dev/null
 find docs/specs -maxdepth 2 -name .metadata.json -exec grep -ho '"status": *"\(none\|awaiting-link\|linked\)"' {} + 2>/dev/null
 ```
 
-- Any output from the first line → a design system is already cached. Do not offer.
+- Any output from the first line → a design system is already cached, or a brief is already
+  waiting on the user. Do not offer.
 - Any output from the second → some spec already carries a `designSystem.status`, so the
   question has already been answered for this project. **`none` counts**: a decline is a
   decision, not a gap to re-fill ([`design-system.md` § Pending
@@ -239,18 +241,27 @@ When it does run, append the design-system option to an existing question round 
 a standalone prompt, never in Feature Mode. Wording:
 [references/qna-examples.md](references/qna-examples.md) § Design system offer.
 
-**Write the answer back** when this run's spec argument was a `docs/specs/*_<slug>/` folder
-(a sibling `.metadata.json` exists), so the offer can never fire twice:
+**Apply the answer** after Phase 3 completes (the architecture docs exist first, so the brief
+and the cache both draw on them):
 
-- **Skip** → set `designSystem.status: "none"`, the other four sub-keys `null`.
-- **Accept** → set `designSystem.status: "awaiting-link"` with `briefPath: null`, then run
-  [PHASE DS](#phase-ds-claude-design-system-optional) after Phase 3 completes (the
-  architecture docs exist first), whose step 3 closes that `awaiting-link` to `linked`.
+- **Design first** (recommended) → write the brief from
+  [`design-brief.md`](../spec/references/design-brief.md), deriving every section from the
+  refined answers and the docs just written: into the spec folder when this run's argument was
+  a `docs/specs/*_<slug>/` spec (stamp `designSystem.status: "awaiting-link"` with that
+  `briefPath`), else to `docs/design-brief.md` — the file is then the pending marker. Copy it
+  to the clipboard (`pbcopy`, else `wl-copy`, else `xclip -selection clipboard`, best-effort)
+  and print spec PHASE 5.3's three-line hand-off. Never call `DesignSync` for it.
+- **Link one I have** → with a spec folder set `designSystem.status: "awaiting-link"`,
+  `briefPath: null`; then run [PHASE DS](#phase-ds-claude-design-system-optional), whose
+  step 3 closes that `awaiting-link` to `linked`.
+- **Skip** → with a spec folder set `designSystem.status: "none"`, the other four sub-keys
+  `null`. Without one nothing is written — the offer cannot recur, because a second design run
+  is Feature Mode.
 
 Either way, re-emit the whole file in the canonical key order from
 [`templates.md`](../spec/references/templates.md#write-procedure) — never a text patch. With
-no spec folder there is nothing to write back; the `design-system/` directory itself is then
-the only guard, which is correct.
+no spec folder, `docs/design-brief.md` and the `design-system/` directory are the guards,
+which is correct.
 
 Full wording of every question and the CLEAR/PARTIAL confirmation phrasing:
 [references/qna-examples.md](references/qna-examples.md).

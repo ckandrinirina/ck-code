@@ -340,6 +340,10 @@ most 4 questions** — the agent cannot ask anything, so everything is settled h
   `experts: none` (the three options of [parallel-mode.md § P3](references/parallel-mode.md#p3--team-gate-and-confirmation)).
 - **Criteria ambiguity** (Story Mode) — only a genuinely vague acceptance criterion; the
   answer goes into the dispatch prompt.
+- **Design pending** — a UI story while the Claude Design link is still pending: the question
+  and its three answers from [`design-system.md` § Pending at build
+  time](../../references/design-system.md#pending-at-build-time). A pasted URL links it here,
+  before S3.
 
 **S3 — Cut and record the base.** Run the chosen option's branch command (`story/…`, or
 `fix/…` for a bug story); the S1-allowed uncommitted paths travel with the checkout.

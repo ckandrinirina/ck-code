@@ -81,23 +81,28 @@ guard_notice
 # ---- pending Claude Design link ---------------------------------------------
 # /ck-code:spec can hand the user a design brief to build at claude.ai/design and then
 # stop -- the user may come back days later, in a session that never saw that
-# conversation. The only thing bridging the gap is docs/specs/*/.metadata.json, so the
-# reminder is re-derived here from disk.
+# conversation. The only things bridging the gap are docs/specs/*/.metadata.json and, with
+# no spec, docs/design-brief.md, so the reminder is re-derived here from disk.
 #
 # Deliberately BEFORE the `tasks/` early-exit below: a project that has only ever run
 # `spec` has no tasks/ directory at all, and that is exactly the project waiting.
 # Suppressed once the cache exists -- a linked project has nothing to be reminded of.
 ds_pending_notice() {
-  [ -d docs/specs ] || return 0
   [ -d docs/architecture/design-system ] && return 0
-  local hits n first
+  local hits n first what=""
   hits=$(grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null)
-  [ -n "$hits" ] || return 0
-  n=$(printf '%s\n' "$hits" | grep -c .)
-  first=$(printf '%s\n' "$hits" | head -1)
-  first=$(dirname "$first")
-  local what="a Claude Design system is pending for $first"
-  [ "$n" -gt 1 ] && what="a Claude Design system is pending for $n specs (including $first)"
+  if [ -n "$hits" ]; then
+    n=$(printf '%s\n' "$hits" | grep -c .)
+    first=$(dirname "$(printf '%s\n' "$hits" | head -1)")
+    what="a Claude Design system is pending for $first"
+    [ "$n" -gt 1 ] && what="a Claude Design system is pending for $n specs (including $first)"
+  elif [ -f docs/design-brief.md ] && [ -d docs/architecture ]; then
+    # A brief written by /ck-code:design with no spec folder is its own pending marker.
+    # design writes it after the architecture docs, so docs/architecture/ is always there;
+    # without it the file belongs to a ck-code-lite project, whose own design skill owns it.
+    what="a Claude Design system is pending (brief: docs/design-brief.md)"
+  fi
+  [ -n "$what" ] || return 0
   CK_NOTE="${CK_NOTE:+$CK_NOTE }ck-code: $what. Once the design system is ready at claude.ai/design, paste its URL into /ck-code:design ds <url> to link and cache it."
 }
 ds_pending_notice

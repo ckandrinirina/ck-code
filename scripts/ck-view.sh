@@ -430,6 +430,8 @@ render_state() {
   if [ -f tasks/EPICS_INDEX.md ] && ls tasks/*/STORIES_INDEX.md >/dev/null 2>&1; then n_idx=1; fi
   ds_linked=0; [ -d docs/architecture/design-system ] && ds_linked=1
   ds_pending=$(grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null | grep -c . || true)
+  # A brief /ck-code:design wrote with no spec folder is its own pending marker.
+  [ -f docs/design-brief.md ] && [ -d docs/architecture ] && ds_pending=$((ds_pending + 1))
 
   local counts
   counts=$(awk -F '\t' "

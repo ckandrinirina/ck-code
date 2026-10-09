@@ -197,6 +197,17 @@ Every target file comes from
 | `## Decisions` | `overview.md` → `## Key Design Decisions` |
 | `## Conventions` | `_shared.md` → `## Conventions` |
 | `## Areas` | not copied — `EPICS_INDEX`'s Docs column takes over the routing; the rows only seed the [epic grouping](#epic-grouping) |
+| `## Design` (ck-code-lite 1.2.0+) | not copied — the state is carried by the design files below. A `none` line has no counterpart and needs none: the migrated project has `docs/architecture/`, so `design` runs in Feature Mode and never re-offers |
+
+### Claude Design files (ck-code-lite 1.2.0+)
+
+| lite path | v7 destination |
+|---|---|
+| `docs/design-system/` (`index.md`, `manifest.json`, `cards/`) | `git mv` to `docs/architecture/design-system/` unchanged — the cache format is identical by contract ([`design-system.md`](../../../references/design-system.md) § Cache layout). `manifest.json` `tokensPath` already names the repo-relative token file, so it carries over as-is |
+| `docs/design-brief.md` | stays where it is. With no `docs/architecture/design-system/`, it is ck-code's no-spec pending marker ([§ Pending link](../../../references/design-system.md#pending-link)) |
+
+After the move, the report names `/ck-code:team --regenerate` when a design system came across —
+that generates `guide-design-system`, which is how UI stories pick up the fidelity rules.
 
 Also written: `README.md` (index, listing the globals and every feature doc) and
 `configuration.md` — the latter only when the repo actually has config files, else
@@ -299,3 +310,4 @@ On top of the standard `migrate` report:
   `ck-code@ck-marketplace` is `true` either way because `ck-bootstrap install` sets it, so
   say plainly whether `ck-code-lite@ck-marketplace` is still `true` and how to turn it off
 - lite artifacts renamed / bannered
+- a moved design system, with `/ck-code:team --regenerate` as the follow-up

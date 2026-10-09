@@ -1,138 +1,158 @@
 # Claude Design Brief — Template & Authoring Rules
 
-> Read by `spec` PHASE 5 only. Produces `design-brief.md` inside the spec folder: a
-> self-contained brief the user pastes into [claude.ai/design](https://claude.ai/design)
-> to build the project's design system.
+> Read by `spec` PHASE 5 and by `design` New Project Mode. Produces `design-brief.md` — inside
+> the spec folder, or `docs/design-brief.md` when there is no spec folder: one self-contained
+> prompt the user pastes into [claude.ai/design](https://claude.ai/design) to build the
+> project's design system in a single pass.
 
-The brief has two jobs. The obvious one is describing the product so the design comes out
-right. The second is **making the resulting design system machine-readable for ck-code**:
-a system whose foundations are CSS custom properties and whose groups carry the names
-[`design-system.md`](../../../references/design-system.md) already looks for extracts
-cleanly on the high-confidence path, with no `⚠️` low-confidence tokens and no gaps for
-`build` to invent. A brief that skips § 6 produces a design system that technically works
-and costs the user a manual token-confirmation pass on every sync.
+The brief has three jobs:
+
+1. **Describe the product precisely enough that the first design is the right one** — real
+   screens, real content, every state a user will actually hit. A vague brief buys a generic
+   design and three rounds of revision.
+2. **Leave nothing for the design tool to guess** — every open point is either decided by the
+   spec or asked as an explicit question in § 9.
+3. **Make the result machine-readable for ck-code** — § 8 makes the foundations CSS custom
+   properties under the group names [`design-system.md`](../../../references/design-system.md)
+   extracts, so `design ds` yields zero `⚠️` tokens and `build` ports components verbatim.
+
+The shape is shared with ck-code-lite's brief, so a project that moves between the plugins
+keeps one brief format.
 
 ## Authoring rules
 
-- **Derive every word from the spec.** The brief restates what `spec.md` established —
-  product, users, surfaces, tone. It never introduces a product decision the spec has not
-  made. A dimension the spec left open is written as an open question in § 7, not filled in.
-- **Plain language, same as the spec.** No file paths, no framework names, no ck-code
-  vocabulary. The reader is Claude Design, and after it the user.
-- **Same language as the spec** (`.metadata.json#language`), except § 6, which stays in
-  English — it names literal group labels and CSS property syntax that must not be translated.
-- **Name the screens the spec actually implies**, not a generic app skeleton. Three real
-  screens beat twelve invented ones.
-- **Never mention `/ck-code:*` inside §§ 1–5.** § 6 is technical instruction for the design
-  tool and § 8 is the hand-back line — those are the only places tooling appears.
+- **Derive every fact from the spec** — product, users, surfaces, behaviors, tone; in `design`
+  New Project Mode, from the refined answers and the architecture docs just written. Never
+  introduce a product decision the spec has not made; an open point goes to § 9.
+- **Name the screens the spec actually implies** — its user-facing views and behaviors, not a
+  generic app skeleton. Three real screens beat twelve invented ones.
+- **Real content, never lorem ipsum.** Sample rows, labels, names, numbers and error messages
+  in the product's own domain — the spec's examples first.
+- **Every state, per screen** — empty, loading, error, populated, overflow.
+- **Plain language, same as the spec, in §§ 1–7** — no file paths, no framework names, no
+  ck-code vocabulary. The reader is a designer.
+- **The spec's language** (`.metadata.json#language`) for §§ 1–7 and § 9; § 8 stays in English
+  — it names literal group labels and CSS syntax that must not be translated.
+- **Fixed means fixed.** A brand color, typeface, logo or reference product the spec names is a
+  constraint, never a suggestion.
+- **Never write a `/ck-code:*` command into the brief** — it is pasted into the design tool.
+  The hand-back line (`/ck-code:design ds <url>`) is printed by the skill.
 
 ## Template
 
-Write the file exactly in this shape. Omit § 5 when the spec describes no data-heavy
-surface; omit § 7 when nothing is open. Everything else is always present.
+Write the file exactly in this shape. Omit § 6 when nothing in the product shows tabular or
+list data; omit § 9 when nothing is open. Everything else is always present.
 
 ---
 
 ```markdown
 # Design brief — <Product name>
 
-<One paragraph: what the product is and who uses it, lifted from the spec's Context
-section. Two or three sentences.>
+Build a **design system project** for <Product name>: foundations, every component listed
+below, and one card per key screen composed from those components. Follow § 8 exactly — the
+system is consumed directly by the product's codebase.
+
+<One paragraph: what the product is, who uses it, and the one thing it must make easy.>
 
 ## 1. Product & audience
 
-- **Product** — <name and one-line description>
-- **Primary users** — <who, from the spec's target-user material>
-- **Platform** — <web / mobile web / iOS / Android / desktop, per the spec>
-- **Tone** — <3-5 adjectives that describe the intended feel, e.g. "calm, precise,
-  data-dense, unfussy">
+- **Product** — <name, one-line description>
+- **Primary users** — <who, their context of use, their expertise>
+- **Core job** — <the single task the product exists for>
+- **Tone** — <3–5 adjectives, e.g. "calm, precise, data-dense, unfussy">
+- **Reference feel** — <a product the user named, or "none named">
 
-## 2. Brand direction
+## 2. Platform & layout
 
-<A short paragraph. If the spec or project already states brand colors, typefaces, or a
-reference product, say so plainly and mark them as fixed. If it does not, say the
-direction is open and give the constraints that exist — contrast requirements,
-dark mode, an existing logo — rather than inventing a palette.>
+- **Platform** — <web / mobile web / iOS / Android / desktop>
+- **Breakpoints** — <the sizes that matter, e.g. "phone 375, tablet 768, desktop 1280">
+- **Navigation model** — <top bar / sidebar / tab bar / single page>
+- **Input** — <touch, mouse, keyboard-first>
 
-| Element | Direction |
-|---|---|
-| Color | <fixed values, or the intent: "one calm accent, generous neutral range"> |
-| Typography | <fixed family, or the intent: "one sans for UI, tabular figures needed"> |
-| Density | <compact / comfortable / spacious, with the reason> |
-| Motion | <how much, and where it is forbidden> |
-| Dark mode | <required / not required> |
+## 3. Brand direction
 
-## 3. Screens
+<Fixed elements stated as constraints; open ones stated as intent with their constraints.
+Never an invented palette.>
 
-One row per screen the spec implies. Purpose is what the user is doing there.
+| Element        | Direction                                                                 |
+| -------------- | ------------------------------------------------------------------------- |
+| Color          | <fixed values, or intent: "one calm accent, generous neutral range">      |
+| Typography     | <fixed family, or intent: "one sans for UI, tabular figures for numbers"> |
+| Density        | <compact / comfortable / spacious — and why>                              |
+| Shape          | <radius feel: sharp / soft / pill>                                        |
+| Motion         | <how much, and where it is forbidden>                                     |
+| Dark mode      | <required / not required>                                                 |
+| Logo & imagery | <exists and fixed / to design / none>                                     |
 
-| Screen | Purpose | Key elements |
-|---|---|---|
-| <name> | <what the user accomplishes> | <the 3-6 things on it> |
+## 4. Screens
 
-## 4. Components needed
+One block per screen, in the order a user meets them.
 
-The component inventory, grouped. Each line names the component and every state or
-variant the spec's behaviors actually require.
+### <Screen name>
 
-- **Actions** — <buttons: variants, sizes, states including disabled and loading>
-- **Forms** — <inputs, selects, toggles; include error and helper-text states>
-- **Navigation** — <nav bars, tabs, breadcrumbs>
-- **Feedback** — <toasts, banners, empty states, loading states, error states>
-- **Data display** — <tables, lists, cards, badges, charts>
-- **Overlays** — <modals, drawers, tooltips, menus>
+- **Purpose** — <what the user accomplishes here>
+- **Content** — <the elements on it, top to bottom, with real sample content>
+- **States** — empty: <…> · loading: <…> · error: <…> · populated: <…>
+- **Actions** — <what the user can do, and where each leads>
 
-## 5. Data & density notes
+## 5. Key flows
 
-<Only when the product shows real data. What the heaviest screen holds, roughly how many
-rows or items, and whether the design must survive long strings, missing values, or
-right-to-left text.>
+<2–4 flows, each a numbered path across screens: "1. Land on Home → 2. Tap Add → 3. Fill the
+form → 4. See the new item highlighted in the list". Name the feedback at each step.>
 
-## 6. Design-system output requirements
+## 6. Data & content realism
 
-Please build this as a **design system project** and follow these output conventions —
-they let the project's codebase consume the system directly:
+<What the heaviest screen holds and how much of it; the longest realistic strings; missing
+values; numbers, dates and currencies and their formats; right-to-left or multi-language needs.>
 
-1. **Foundations as CSS custom properties.** Every foundation value is declared as a
-   custom property on `:root` — `--color-…`, `--font-…`, `--space-…`, `--radius-…`,
-   `--shadow-…`. Components reference those properties; no literal color, size, radius,
-   or shadow values inside a component's CSS.
-2. **Foundation cards use these exact group labels**, one card per group:
-   `Type`, `Colors`, `Spacing`, `Radii`, `Shadows`, `Brand`. A group with nothing in it is
-   omitted rather than renamed.
-3. **One card per component**, showing every variant and state side by side in that single
-   card, grouped under a component label such as `Actions`, `Forms`, `Navigation`,
-   `Feedback`, `Data display`, or `Overlays`.
-4. **Self-contained cards.** Each card's HTML carries its own styles and depends on no
-   external stylesheet, script, or font CDN. Web-safe stacks or embedded fonts only.
-5. **Semantic, stable class names** on every element — the component's markup and class
-   names are copied verbatim into the codebase, so they are part of the deliverable, not
-   scaffolding.
-6. **Both themes** when § 2 requires dark mode: define the dark values as overrides of the
-   same custom properties, never as a separate parallel set of names.
+## 7. Components needed
 
-## 7. Open questions
+Grouped. Each line names the component and every variant and state the screens above use.
 
-<Only when the spec left something genuinely undecided that affects the design. One
-bullet per question, phrased so the designer can answer it inline.>
+- **Actions** — <buttons: variants, sizes; default, hover, focus, disabled, loading>
+- **Forms** — <inputs, selects, toggles; helper text, error, disabled>
+- **Navigation** — <bars, tabs, breadcrumbs; active and inactive>
+- **Feedback** — <toasts, banners, empty states, skeletons, error panels>
+- **Data display** — <lists, tables, cards, badges, charts>
+- **Overlays** — <modals, drawers, menus, tooltips>
 
-## 8. When the design system is ready
+**Accessibility** — text contrast at least WCAG AA (4.5:1, 3:1 for large text), a visible
+focus style on every interactive component, touch targets at least 44 px, and no meaning
+carried by color alone.
 
-Copy its URL from the address bar and hand it back in Claude Code:
+## 8. Output requirements
 
-    /ck-code:design ds <paste the URL here>
+These conventions let the codebase consume the system directly. Please follow them exactly.
 
-That links the design system to this project, caches its tokens and component sources into
-the repository, and makes every later UI implementation build against it.
+1. **Foundations as CSS custom properties** declared on `:root` — `--color-…`, `--font-…`,
+   `--text-…`, `--space-…`, `--radius-…`, `--shadow-…`. Components reference those properties;
+   no literal color, size, radius or shadow value inside a component's CSS.
+2. **One foundations card per group, with these exact group labels:** `Type`, `Colors`,
+   `Spacing`, `Radii`, `Shadows`, `Brand`. Omit an empty group rather than renaming it.
+3. **One card per component**, every variant and state side by side in that card, grouped under
+   `Actions`, `Forms`, `Navigation`, `Feedback`, `Data display` or `Overlays`.
+4. **One card per screen in § 4**, grouped under `Screens`, built only from the component
+   cards — no one-off styles.
+5. **Self-contained cards** — each card's HTML carries its own styles and depends on no external
+   stylesheet, script or font CDN. Web-safe stacks or embedded fonts only.
+6. **Semantic, stable class names** on every element — markup and class names are copied
+   verbatim into the codebase, so they are part of the deliverable.
+7. **Both themes** when § 3 requires dark mode — dark values as overrides of the same custom
+   properties, never a parallel set of names.
+
+## 9. Open questions
+
+<Only what the project left undecided and the design depends on. One bullet each, answerable
+inline. The designer answers them in the design rather than guessing.>
 ```
 
 ---
 
 ## After writing the brief
 
-`spec` PHASE 5 owns the rest: stamp `designSystem` in `.metadata.json`
-(`status: "awaiting-link"`, `briefPath`), and print the hand-off — open
-[claude.ai/design](https://claude.ai/design), paste the brief, then return with
-`/ck-code:design ds <url>`. Nothing else is written, and no `DesignSync` call is made:
-the whole point of the brief is that the user leaves and comes back, possibly days later
-in a different session.
+The calling skill owns the rest: `spec` PHASE 5 stamps `designSystem` in `.metadata.json`
+(`status: "awaiting-link"`, `briefPath`); `design` with no spec folder writes nothing else —
+`docs/design-brief.md` is itself the pending marker
+([`design-system.md` § Pending link](../../../references/design-system.md#pending-link)). Both copy
+the brief to the clipboard and print the hand-off. No `DesignSync` call is made: the user
+leaves and comes back, possibly days later in a different session.

@@ -23,6 +23,17 @@ Never create the directory implicitly. It is created only by an explicit
 `/ck-code:design ds` run, or by the user answering yes to the single opt-in question
 `design` asks in New Project Mode.
 
+## Design first
+
+A UI project is designed before it is built. The offer is made **once per project**, at the
+first skill that knows the product has screens: `spec` PHASE 5, or `design` New Project Mode
+when no spec carries a decision. Its recommended answer is always **Design first** — write the
+brief now — because every UI story built before the link improvises components the design
+would then replace. The brief template is
+[`design-brief.md`](../skills/spec/references/design-brief.md): one paste-ready prompt with
+real screens, real content and every state, ending in output conventions this file extracts
+cleanly.
+
 ## Pull-only
 
 ck-code uses the `DesignSync` **read** methods only: `list_projects`, `get_project`,
@@ -172,6 +183,12 @@ inherently a two-visit flow with an unbounded gap between the visits. `spec` han
 brief and stops; the user may return in an hour or next week, in a new Claude Code session
 with none of that conversation in context. The gap is bridged on disk.
 
+**With no spec folder** (`design` run on a free-text description, or a project migrated from
+ck-code-lite) the brief is written to `docs/design-brief.md`, and that file **is** the pending
+marker: `docs/design-brief.md` present and `docs/architecture/design-system/` absent reads as
+`awaiting-link`. Linking needs no write-back for it — the cache directory supersedes it — and
+the file stays as the record of what was asked for.
+
 **The state lives in the spec's `.metadata.json`** (`docs/specs/<date>_<slug>/.metadata.json`,
 beside `spec.md` and the handed-out `design-brief.md`), in the `designSystem` block whose key
 contract is in [`templates.md`](../skills/spec/references/templates.md#designsystem-block).
@@ -186,7 +203,8 @@ property of the spec that asked for it.
 
 **Who reads it, and what each does — no other touchpoint may act on it:**
 
-- `session-start.sh` — greps `docs/specs/*/.metadata.json` for `awaiting-link` and appends
+- `session-start.sh` — greps `docs/specs/*/.metadata.json` for `awaiting-link` (or finds
+  `docs/design-brief.md`) and appends
   one line naming the resume command. This runs before its `tasks/` early-exit: a project
   that has only ever run `spec` has no `tasks/` directory, and that is exactly the project
   waiting for a link.
@@ -198,13 +216,41 @@ property of the spec that asked for it.
 
 **Never re-offer.** `spec` asks at most once per project: the offer is skipped when any
 sibling spec metadata reads `awaiting-link` or `linked`, or when
-`docs/architecture/design-system/` already exists. A user who declined chose `none`, and
+`docs/architecture/design-system/` or `docs/design-brief.md` already exists. A user who declined chose `none`, and
 `none` is a decision, not a gap to re-fill.
 
 **A pending link never blocks anything.** `design`, `plan`, `build`, and `ship` run
 normally while a link is outstanding; UI stories built in that window fall back to
 § Component lookup order step 3 (build from tokens, note it in `## Unplanned Changes`)
 exactly as they would in a project that never opted in.
+
+### Pending at build time
+
+A design that is pending when `build` reaches a **UI story** — its `files:` touch components,
+pages, screens, views, layouts, styles or themes — gets **one question per build run**, folded
+into the orchestrator's existing single question call (single-story S2, PARALLEL MODE P3), never
+a round of its own:
+
+```
+Question: The Claude Design system for this UI is not linked yet. Build against it?
+Header:   Design
+Options:
+  - Paste the claude.ai/design URL (Other) — links it now, then builds against it.
+  - Build without it — UI from the feature doc; restyle later from the design.
+  - Stop — I'll finish the design first.
+```
+
+A URL → `Skill({ skill: "ck-code:design", args: "ds <url>" })` before dispatch, so the agent
+loads the fresh cache. `Build without it` → the dispatch prompt's settled answers carry
+`design pending — build from the feature doc` and the agent notes it in `## Unplanned Changes`.
+`Stop` → the UI stories are not dispatched and keep their status. In a run with no user to ask,
+build without it. The probe:
+
+```bash
+ls -d docs/architecture/design-system docs/design-brief.md 2>/dev/null; grep -l '"awaiting-link"' docs/specs/*/.metadata.json 2>/dev/null
+```
+
+Pending = no `design-system` line and at least one other line.
 
 ## Freshness protocol
 
@@ -235,6 +281,8 @@ Followed by `build`/`fix` when implementing UI, and restated in the generated
 
 1. **Cached card exists** (`cards/<path>` present and in the inventory) → read the local
    file and port its markup structure, class names, and CSS exactly. **No network call.**
+   A story that builds a whole screen reads that screen's `Screens` card first, for layout and
+   composition, then each component's card.
    This is the happy path and must stay the happy path.
 2. **In the inventory but `cached: false`** → one `get_file`, write `cards/<path>`, update
    `manifest.json` (`cached: true` + `sha256`), and commit both with the story. One call,

@@ -198,7 +198,10 @@ Never dispatch without asking.
 
 Fold that question, the wave-plan confirmation (`PROCEED` / `DROP A STORY` / `ABORT`), the P1
 **Sync `$TARGET` from origin first** option when the target is behind, the P1 **level-switch**
-question when the plan's level is `story`, and any genuine acceptance-criteria ambiguity into
+question when the plan's level is `story`, the **design-pending** question when the wave holds a
+UI story and the Claude Design link is still pending (once per run —
+[`design-system.md` § Pending at build time](../../../references/design-system.md#pending-at-build-time)),
+and any genuine acceptance-criteria ambiguity into
 **one `AskUserQuestion`, at most 4 questions** — the dispatched agents have no user, so
 ambiguity is resolved here or not at all. Skip the wave-plan question when the SKILL.md 1.2
 menu already resolved this exact scope; that selection was the confirmation, and re-asking it

@@ -262,7 +262,7 @@ Fields this run may change — everything else is carried through unmodified:
 
 ---
 
-## PHASE 5 — Claude Design link (optional)
+## PHASE 5 — Design first with Claude Design
 
 A design system built at [claude.ai/design](https://claude.ai/design) is the highest-value
 thing this project can have before any UI is written: `build` then reproduces its
@@ -274,7 +274,8 @@ generated from it.
 
 Ask **only** when all three hold. Each is a cheap local check; run them together:
 
-1. `docs/architecture/design-system/` does not exist (the project is not already linked).
+1. Neither `docs/architecture/design-system/` nor `docs/design-brief.md` exists (the project
+   is not already linked or waiting on a brief).
 2. No sibling `docs/specs/*/.metadata.json` has `designSystem.status` of `awaiting-link`
    or `linked` — glob and read them.
 3. The spec just written or edited has user-visible surfaces (it has a
@@ -287,15 +288,17 @@ answered; the decline is recorded as `none` and is a decision, not a gap.
 
 ### 5.2 The offer
 
-One `AskUserQuestion`, one question, three options:
+One `AskUserQuestion`, one question, three options, in this order:
 
-- **Yes — write the brief** — generates `design-brief.md` here and hands it to the user.
-- **Not now** — writes nothing; the project behaves exactly as it does today.
+- **Design first — write the brief (Recommended)** — generates `design-brief.md` here: the
+  paste-ready prompt for claude.ai/design, built from the spec just written.
 - **Already have one** — the user already has a design system at `claude.ai/design`; skip
   the brief and print the link command directly (`/ck-code:design ds <url>`).
+- **Not now** — recorded as `none`; UI is built from the architecture docs alone.
 
-Frame it in one sentence: a design system means every screen this spec describes gets
-built against real components and tokens rather than improvised ones.
+Frame it in one sentence: designing first means every screen this spec describes is built
+against real components and tokens, rather than improvised story by story and restyled later
+([`design-system.md` § Design first](../../references/design-system.md#design-first)).
 
 ### 5.3 On "Yes" — write the brief
 
@@ -311,10 +314,12 @@ spec just written. Then stamp the metadata (canonical rewrite, per the Phase 4 p
 }
 ```
 
+Copy the brief to the clipboard, best-effort — `pbcopy`, else `wl-copy`, else
+`xclip -selection clipboard`, each `< <briefPath>`; none available → the file is the prompt.
 Then print the hand-off — three lines, no more:
 
 1. Open [claude.ai/design](https://claude.ai/design) and start a **design system** project.
-2. Paste the contents of `<briefPath>`.
+2. Paste the brief (already on the clipboard, else the contents of `<briefPath>`).
 3. When it is ready, copy the URL and run `/ck-code:design ds <url>` — in this session or
    any later one.
 

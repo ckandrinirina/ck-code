@@ -423,6 +423,14 @@ STATE_OUT=$(ck-view state 2>&1); STATE_RC=$?
 assert_exit "ck-view state: exits 0" 0 "$STATE_RC"
 assert_contains "ck-view state: prints project-state probe" "$STATE_OUT" "ck-code: project state"
 
+# A brief /ck-code:design wrote with no spec folder is a pending design link on its own.
+DS_REPO="$(mktemp -d)"; git -C "$DS_REPO" init -q
+mkdir -p "$DS_REPO/docs/architecture"; printf '# Design brief\n' > "$DS_REPO/docs/design-brief.md"
+assert_contains "ck-view state: docs/design-brief.md counts as ds_pending" "$(cd "$DS_REPO" && ck-view state 2>&1)" "ds_pending=1"
+rm -f "$DS_REPO/docs/design-brief.md"
+assert_contains "ck-view state: no brief, no pending link" "$(cd "$DS_REPO" && ck-view state 2>&1)" "ds_pending=0"
+rm -rf "$DS_REPO"
+
 # A repo with code but no spec and no architecture is an existing codebase: init, not spec.
 SRC_REPO="$(mktemp -d)"; git -C "$SRC_REPO" init -q
 printf 'package main\n' > "$SRC_REPO/main.go"; printf '# demo\n' > "$SRC_REPO/README.md"

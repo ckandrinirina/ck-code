@@ -216,17 +216,19 @@ Note: Existing content is preserved. New feature sections are clearly marked wit
 
 ## Design system offer
 
-Appended as one extra option to an existing New Project Mode refinement round. Never a
+Appended as one extra question to an existing New Project Mode refinement round. Never a
 standalone prompt.
 
 ```
-Question: Do you want UI built against a Claude Design system?
-Header:   Design system
+Question: Design the UI with Claude Design before building it?
+Header:   Design
 Options:
-  - Link a design system — I have one at claude.ai/design. ck-code caches it in the repo
-    and builds every component against its exact tokens and markup.
-  - Skip — build UI from the architecture docs alone. You can link one later with
-    /ck-code:design ds.
+  - Design first (Recommended) — I write a complete prompt for claude.ai/design from these
+    answers; once you hand back its URL, every component is built against its exact tokens
+    and markup.
+  - Link one I have — I already have a design system at claude.ai/design; ck-code caches it
+    in the repo now.
+  - Skip — build UI from the architecture docs alone. /ck-code:design ds links one later.
 ```
 
 ## DS Sync Report

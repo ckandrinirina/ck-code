@@ -15,7 +15,7 @@ A change here means a change to `scripts/ck-view.sh` in the same commit.
 | `tasks` | count of `tasks/*/` |
 | `indexes` | `tasks/EPICS_INDEX.md` **and** at least one `tasks/*/STORIES_INDEX.md` |
 | `ds_linked` | `docs/architecture/design-system/` exists |
-| `ds_pending` | specs whose `.metadata.json` still reads `"awaiting-link"` (meaningful only when `ds_linked=0`) |
+| `ds_pending` | specs whose `.metadata.json` still reads `"awaiting-link"`, plus 1 for a `docs/design-brief.md` beside `docs/architecture/` (meaningful only when `ds_linked=0`) |
 | `source` | `git ls-files` lists a file outside `docs/`, `tasks/`, `.claude/`, `.github/`, root-level `*.md`/`*.txt`/`*.rst`, `LICENSE*` and `.git*`/`.editorconfig` — an existing codebase (the same filter as `init`'s Phase 1) |
 
 ## What it counts

@@ -141,7 +141,8 @@ contract, so nothing fans out.
   epic, one story per task, bodies verbatim. `blocked` tasks become `todo`.
 - **L4 — Architecture docs.** Split `docs/ARCHITECTURE.md` into the global docs and write
   one feature doc per epic — from its area doc when an area seeded the epic, else a stub.
-  Never invent detail lite never recorded.
+  Never invent detail lite never recorded. A `docs/design-system/` cache is `git mv`ed to
+  `docs/architecture/design-system/` unchanged; `docs/design-brief.md` stays.
 - **L5 — Views, stamp, retire.** Write `tasks/.gitignore`, run `ck-index` (the views stay
   uncommitted), stamp `layout: v7` with `requires: ck-code >= 7.0.0`, rename
   `tasks/PLAN.md` to `tasks/PLAN.superseded.md` with its banner, banner
