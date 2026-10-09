@@ -728,7 +728,7 @@ file that has drifted from it.
   checked against is recorded here and in the `CHANGELOG.md` entry that raised it.
 - **gh CLI** — required for `plan --publish`, the GitHub side of `ship` and `doctor --fix`, and the board
 - **git** — required for `build` PARALLEL MODE (uses worktrees)
-- **[context7](https://context7.com)** — recommended for `team`, `design`, `plan`, and `build` to fetch up-to-date framework documentation. Either the MCP server or the `ctx7` CLI (`npx -y @upstash/context7 setup`) works.
+- **[context7](https://context7.com)** — recommended for `team`, `design`, `plan`, and `build` to fetch up-to-date framework documentation. Either the MCP server or the `ctx7` CLI (`npx -y ctx7 setup`) works.
 
 ## Contributing
 
