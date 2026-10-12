@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.12.0] — 2026-10-12
+
+### Added
+- **build `--auto`**: runs one epic (`--epic NN --auto`, story IDs, or `--auto` alone for the next unfinished epic) or one story to the end with no question. Every question takes its recommended answer, announced as `Auto: <decision>`. The manual test is deferred to a final checklist that hands off to `/ck-code:verify --epic NN`, never dropped. Nothing is shipped, promoted or pushed. Hard stops (dirty tree, branch drift, a red post-wave QA) still end the run.
+
+### Changed
+- **build**: the builder agent no longer loads the `build` skill. Phases 1.7–8.6 (TDD, SOLID, the three 6.1 scans, QA, completion) moved unchanged into `references/story-cycle.md`, which every `story-implementer` dispatch names by absolute path. Measured on 380 real runs, a ck-code builder carried about 80 KB of skill text on every turn and took 51 turns to reach its first edit, against 5 KB and 26 turns for ck-code-lite's. `SKILL.md` keeps only the orchestrator (918 → about 600 lines), so the orchestrating context is lighter too. Phase numbers are unchanged.
+- **build**: the per-stack QA commands, story versus full scope and the re-run rules moved out of `parallel-mode.md` into `references/qa-scope.md`, so a builder or validator reads about 120 lines instead of 700.
+- **build** PARALLEL MODE: fewer prompts. The wave plan alone no longer triggers a question, because an explicit `--epic NN` or ID list already confirmed it. Branches that are all ✓, `QA: PASS` and conflict-free merge without asking. The per-wave manual gate offers **PASS, and defer the gate for the remaining waves**, which collects their steps into one checklist before promotion.
+- **story-implementer**: follows the `Cycle:` file from its prompt. An older orchestrator's prompt without that line still works, through the skill's DELEGATED MODE pointer.
+
 ## [7.11.1] — 2026-10-12
 
 ### Changed
