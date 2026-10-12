@@ -1,7 +1,7 @@
 ---
 name: build
-description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`; with no argument, picks interactively.
-argument-hint: "[story-path] | [story-ids...] | --epic NN"
+description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves, optionally unattended. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`, any of them with `--auto`; with no argument, picks interactively.
+argument-hint: "[story-path] | [story-ids...] | --epic NN [--auto]"
 effort: high
 allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
@@ -20,9 +20,10 @@ automated QA. Cycle: plan → test-drive one behaviour at a time (RED → GREEN,
 **Every story is implemented by a sub-agent — never in this context.** **One story** —
 an explicit path, a single menu pick, or a hand-off from `/ck-code:fix` or
 `/ck-code:plan --quick` — runs Phase 1 here, then [SINGLE-STORY DISPATCH](#single-story-dispatch)
-hands Phases 2–8.4 to one solo agent on its own branch; **more than one** runs through
-[PARALLEL MODE](#parallel-mode) (one worktree agent per story, dependency-ordered waves).
-Every gate below still applies. A `status: bug` story runs in **Bug-Fix Mode** (Phase 1.3.5)
+hands the [story cycle](#the-story-cycle-phases-1786) to one solo agent on its own branch;
+**more than one** runs through [PARALLEL MODE](#parallel-mode) (one worktree agent per story,
+dependency-ordered waves). Every gate below still applies. `--auto` runs either to the end
+with no question ([INPUT](#input)). A `status: bug` story runs in **Bug-Fix Mode** (Phase 1.3.5)
 inside whichever agent builds it. Argument shapes: [INPUT](#input).
 
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
@@ -30,11 +31,11 @@ views are **generated, gitignored and never committed** — this skill changes f
 through `ck-story`, which regenerates them, and commits only story files. The plan record
 (`tasks/<plan>/OVERVIEW.md`) is read with `ck-plan get`. See [`data-model.md`](../../references/data-model.md).
 
-References: [output-blocks.md](references/output-blocks.md) (compact per-phase present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [tdd-walkthrough.md](references/tdd-walkthrough.md) (SOLID templates, test mappings, quality checks, JUCE rules) · [story-template.md](references/story-template.md) (story-body blocks) · [completion.md](references/completion.md) (Phase 8 summary fields, Files Touched precision, bug-fix sub-loop) · [bug-fix-mode.md](references/bug-fix-mode.md) (implementing a `fix`-recorded bug — per-phase deltas) · [`code-craft.md`](../../references/code-craft.md) (clean-code + comment standard, 6.1 scan) · [`test-craft.md`](../../references/test-craft.md) (minimal-test standard, 6.1 prune scan) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings).
+References for this context: [output-blocks.md](references/output-blocks.md) (compact present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings). The builder's references (`story-cycle.md`, `tdd-walkthrough.md`, `completion.md`, `story-template.md`, `bug-fix-mode.md`, `qa-scope.md`) are the agent's to read, never this context's.
 
-Parallel-mode references, read **only** when two or more stories are in scope: [parallel-mode.md](references/parallel-mode.md) (orchestration detail for P1–P9) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [wave-mode.md](references/wave-mode.md) (wave planning) · [conflict-format.md](references/conflict-format.md) (table/integrity/conflict/QA/summary formats).
+Parallel-mode references, read **only** when two or more stories are in scope: [parallel-mode.md](references/parallel-mode.md) (orchestration detail for P1–P9) · [wave-mode.md](references/wave-mode.md) (wave planning) · [conflict-format.md](references/conflict-format.md) (table/integrity/conflict/QA/summary formats).
 
-**Read each reference at most once per run** — `output-blocks.md` and `tdd-walkthrough.md` are cited from many phases; load each once, keep it resident, and reuse it.
+**Read each reference at most once per run**, keep it resident, and reuse it.
 
 ## ROUTING CHECK (do first)
 
@@ -51,7 +52,8 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## INPUT
 
-`$ARGUMENTS` is empty, a story path, space-separated story IDs, or `--epic NN`:
+`$ARGUMENTS` is empty, a story path, space-separated story IDs, or `--epic NN`, any of them
+optionally with `--auto`:
 
 - **A story path** (`tasks/<slug>/epics/02_<epic>/stories/05_<story>.md`) — Phase 1 for that
   one story, then [SINGLE-STORY DISPATCH](#single-story-dispatch). Validate it before anything
@@ -61,10 +63,17 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
   dependency-ordered waves.
 - **Empty** — interactive selection (Phase 1.2), which also offers the parallel set and
   whole-epic waves.
+- **`--auto`** — the same run with **no `AskUserQuestion` until it ends**. Every question takes
+  its recommended answer, announced in one line (`Auto: <decision>`) where it would have been
+  asked ([parallel-mode.md § Auto mode](references/parallel-mode.md#auto-mode----auto)). The
+  scope is **one epic**, never more. `--auto` alone means `--epic NN --auto` for the epic the
+  1.2.0 gate would pick, and when several are unfinished, the lowest-numbered one that has a
+  ready story, announced. With a story path it is a SINGLE-STORY DISPATCH whose S2 and S6 take
+  their auto defaults. The manual test is **deferred, never dropped**: the run ends with the
+  checklist and `/ck-code:verify`. Nothing is shipped or promoted under `--auto`.
 
 A dispatch prompt beginning `MODE: delegated` means this run **is** the agent another
-`build` run dispatched (a wave member or a single-story dispatch) — read
-[DELEGATED MODE](#delegated-mode) before Phase 1.
+`build` run dispatched — read [DELEGATED MODE](#delegated-mode) and nothing else.
 
 ---
 
@@ -76,46 +85,16 @@ gate passes. Drop a phase that mode routing skips; never leave it pending. A lon
 view into where it is comes from this list, so update it as you go and never batch the
 updates to the end.
 
-## TOOL-CALL DISCIPLINE (every phase, every mode)
+## TOOL-CALL DISCIPLINE
 
-Measured on real delegated runs, model round trips take 60–70% of a story's wall clock,
-and 89% of turns issue a single tool call. Speed comes from fewer turns and fewer repeated
-commands, never from skipping a check:
+Model round trips are most of a build's wall clock. Batch every independent `Read`, `grep`,
+`ls` and read-only `git` query into **one message**, and chain dependent shell steps with `&&`
+in one Bash call. Never `find /` or search `$HOME`. A relative link in this skill
+(`references/story-cycle.md`) resolves against the `Base directory for this skill` line
+printed when the skill loaded. The builder's own discipline (the targeted inner loop, the
+run-once `ck-qa` logs, story versus full scope) lives in
+[story-cycle.md](references/story-cycle.md#tool-call-discipline).
 
-- **Batch independent calls.** Every `Read`, `grep`, `ls`, and read-only `git` query that
-  does not need another call's result goes into **one message**. Examples: the source files
-  a change touches, plus their tests; `git status` beside `git log`. Chain dependent shell
-  steps with `&&` in one Bash call rather than across turns.
-- **Run slow commands once per code state.** The full suite, lint, typecheck, build, and e2e
-  commands are captured to a `$TMPDIR` log and read from there. Never re-run one on an
-  unchanged tree to see a different slice of its output
-  ([`rtk.md` § Slow commands](../../references/rtk.md#slow-commands--run-once-read-the-log)).
-  The 6.3 check and every QA pass run through `ck-qa`, which stamps each pass with its code
-  state so a later step that may reuse it (`--reuse`) skips an identical run
-  ([§ QA runs go through `ck-qa`](../../references/rtk.md#qa-runs-go-through-ck-qa)). A run
-  past the 600 s Bash cap (a serial e2e suite) prints `ck-qa: RUNNING`. Continue it with
-  `ck-qa wait <id>`, and never start it again or poll its output.
-- **Keep the inner loop targeted.** Every RED (4.4) and GREEN (5.2/5.3) of each cycle, and each
-  refactoring (6.2) run the story's own test files. Lint only the files the story touched,
-  by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,
-  `ruff check app/x.py`). Never run a package-wide lint and `grep` it for one file: measured
-  at 60–120 s a call, it ran up to seven times in one story. A package-wide typecheck runs at
-  most once per GREEN subtask, logged, and the build never runs in the inner loop. The suite,
-  lint, typecheck and build run once through `ck-qa`, at 6.3 and in QA (7), where regressions
-  are caught. A linter that takes no file paths waits for 6.3/7 too.
-- **Check the story's scope, then only what is left.** The 6.3/7 suite and lint run at
-  **story scope**: the affected tests and the changed files. The one exception is a
-  **full-scope** backstop, which runs where the regression outside the story's reach is
-  caught: P8 once per wave, and the single-story QA (S5) on the story that completes its epic
-  and on every story at level `story`. A re-run after a red check or a NEEDS FIXES round runs only the
-  failed tests plus those affected since the last run (`ck-qa run <id> --rerun`). Typecheck
-  and build are never scoped
-  ([parallel-mode.md § Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command),
-  [§ Re-runs after a failure](references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left)).
-- **Stay inside the repo.** Never `find /` or search `$HOME`, because each such search hit the
-  120 s Bash timeout. A relative link in this skill (`references/story-template.md`)
-  resolves against the `Base directory for this skill` line printed when the skill loaded.
-  A dependency's types live in the repo's own `node_modules`: the package's, then the root's.
 
 ## PHASE 0: VERSION GATE (hard, before any project read/write)
 
@@ -224,7 +203,7 @@ Technical Notes reference it explicitly.
 ### 1.4 Epic-Wave Hint (explicit-path only, no question)
 
 Runs ONLY for an explicit `$ARGUMENTS` story path — **skip** when the 1.2 menu ran, in
-Bug-Fix Mode, in DELEGATED MODE, or non-interactively. Never ask and never auto-pull
+Bug-Fix Mode, under `--auto`, or non-interactively. Never ask and never auto-pull
 parallel-safe peers: an explicit single-story request is respected, and batch routing
 belongs to the 1.2 menu.
 
@@ -254,15 +233,14 @@ carry on building.
 If `issue:` is empty, present `No linked issue found` — no `gh` search, `/ck-code:ship`
 re-reads the number from frontmatter itself.
 
-**DELEGATED MODE skips the claim** — the orchestrator already claimed it: the whole wave at
-P4 before cutting worktrees ([parallel-mode.md](references/parallel-mode.md)), or this 1.5
-before a single-story dispatch. Repeating it per agent is duplicate API calls on the same
-account.
+Only an orchestrating context claims: this 1.5 before a single-story dispatch, or the whole
+wave at P4 before cutting worktrees ([parallel-mode.md](references/parallel-mode.md)). A
+builder never repeats it.
 
 ### 1.6 Set Status → in-progress (frontmatter + regenerate)
 
 **Bug-Fix Mode:** skip this phase — the story stays `bug` through the fix and is restored
-to `prior_status` at Phase 8.6. Do NOT flip `bug → in-progress`.
+to `prior_status` at 8.6 by the builder. Do NOT flip `bug → in-progress`.
 
 One call flips the frontmatter and regenerates both views:
 
@@ -277,34 +255,8 @@ frontmatter, so there is no index cell, `EPIC.md`, or rollup to touch, and the v
 never staged (they are gitignored). The board is one more generated view
 ([`github-projects.md`](../../references/github-projects.md)): `ck-project` is a no-op when
 the project has no `tasks/SETTINGS.md` or `github_issues` is off, and a board failure never
-blocks the build — report it and continue. **DELEGATED MODE adds `--no-sync`**
-(`ck-story set <story-path> status=in-progress --no-sync`) — a worktree agent writes only
-its own story's frontmatter; the orchestrator regenerates and syncs once on the target
-branch after merge (`ck-story` already refuses the board sync inside a story worktree). In that mode the frontmatter edit is normally a **no-op**: P4
-already flipped this story to `in-progress` on the target before cutting the worktree
-([parallel-mode.md](references/parallel-mode.md)), and a single-story orchestrator flipped it
-at its own 1.6. Finding `in-progress` where `todo` was
-expected is the normal case, never drift — leave it and carry on.
-
-### 1.7 Effort Route (from frontmatter `size:`)
-
-Fixed by the run that builds the story — the dispatched agent, never the orchestrator.
-Scale the *ceremony* to the story, never the guarantees. Read `size:` and fix the route now
-— it governs Phases 3.3, 3.4, and 6.1 only:
-
-| `size:` | Route | 3.3 SOLID | 3.4 Subtasks | 6.1 SOLID review |
-|---|---|---|---|---|
-| `S` | **LEAN** | 2–4 line note, only the principles actually in play | 3-task chain: tests → implement → QA | targeted spot-check of the principles named in 3.3 |
-| `M` (or absent) | **FULL** | full SOLID Analysis template | full 6-task breakdown | full SOLID Compliance Check template |
-
-**Bug-Fix Mode always uses LEAN** — its scope is the recorded Fix Plan, which is already
-narrow. Announce the route in one line (`Route: LEAN (size S)`) so the user can override by
-saying so; an explicit user request for a full pass wins over the table.
-
-**The route NEVER skips:** the version gate (0), skill detection + report (2), the
-plan+branch gate (3.5), failing-tests-before-implementation (4), the `## Unplanned Changes`
-log (5.2/6.2), QA delegation and its cap (7), or the manual-test gate (8.5). A LEAN story
-that grows past its `size:` during Phase 5 switches to FULL for 6.1 — say so when it happens.
+blocks the build — report it and continue. Because this flip happens before dispatch (here, or
+at P4 for a wave), the builder's own 1.6 finds `in-progress` already and changes nothing.
 
 ---
 
@@ -312,15 +264,15 @@ that grows past its `size:` during Phase 5 switches to FULL for 6.1 — say so w
 
 One story, from any entry point — an explicit path, a single 1.2 pick, a `/ck-code:fix`
 AUTO-BUILD, a `/ck-code:plan --quick` hand-off. This context ran Phase 1 (1.1–1.6) and now
-**decides, verifies and gates**; one `ck-code:story-implementer` agent runs Phases 1.7–8.4 in
-DELEGATED MODE on the story's own branch. Its source reads, TDD loop and suite output stay in
+**decides, verifies and gates**; one `ck-code:story-implementer` agent runs the
+[story cycle](#the-story-cycle-phases-1786) delegated, on the story's own branch. Its source reads, TDD loop and suite output stay in
 its context and are discarded on return; this one sees only the verdict. It is PARALLEL MODE's
 solo dispatch with a story branch in place of `$TARGET`, so the level is never switched — at
 level `story` the branch still ships its own PR into `<trunk>`.
 
 **Fallback, the only inline path:** when this context has no `Agent` tool (this `build` is
-itself running inside a sub-agent), run Phases 1.7–8 here as written. Never fall back for
-any other reason.
+itself running inside a sub-agent), `Read` [story-cycle.md](references/story-cycle.md) and run
+it here, as its **Inline fallback** line says. Never fall back for any other reason.
 
 **S1 — Clean start.** `git status --porcelain`. Uncommitted paths are allowed only under
 `tasks/` (the story file — 1.6's flip, or a story `plan --quick` just wrote), ck-code's own
@@ -345,6 +297,12 @@ most 4 questions** — the agent cannot ask anything, so everything is settled h
   time](../../references/design-system.md#pending-at-build-time). A pasted URL links it here,
   before S3.
 
+**`--auto`:** S1 still stops on a dirty path, but it reports the paths and asks nothing. S2
+asks no question. It takes the recommended base option, continues without experts when the
+team gate would fire (named in the final report), takes the narrowest reading of a vague
+criterion that matches the existing code (passed as `Settled: assumed <reading>`), and builds
+a pending-design UI story without the design.
+
 **S3 — Cut and record the base.** Run the chosen option's branch command (`story/…`, or
 `fix/…` for a bug story); the S1-allowed uncommitted paths travel with the checkout.
 Commit them as the branch's first commit, and skip the commit when nothing is staged:
@@ -367,10 +325,12 @@ line replaces the unchecked-criteria grep). Its classes and the 2-round resume c
 apply unchanged; branch drift is a hard stop. On ✓ complete, dispatch `ck-code:qa-validator`
 per [agent-prompts.md § Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch), at
 the single-story scope of
-[§ Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)
+[§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)
 against the Base SHA. **`QA: FAIL` is NEEDS FIXES:** `SendMessage` the same agent the failing
 criteria and excerpt, let it fix and commit, then re-run S5. Cap = 3 QA iterations, then
-escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (Phase 7).
+escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (wording in
+[output-blocks.md](references/output-blocks.md)). Under `--auto` the cap ends the run instead:
+the branch is kept, the story stays `in-progress`, and the report says why.
 
 **S6 — Manual gate and hand-off, here.** Run Phase 8.5 in this context (both questions, one
 call). **PASS** — the agent already wrote `done` (or the restored `prior_status`) and `files:`
@@ -384,68 +344,27 @@ ck-index tasks/<Plan> && ck-project sync tasks/<Plan>
 branch and commits. Then S5 again and re-ask; cap = 3 cycles. `/ck-code:ship` then pushes the
 already-committed branch — it has nothing left to stage.
 
----
-
-## PHASE 2: SKILL DETECTION & CONTEXT LOADING (BLOCKING GATE)
-
-Phases 2–8.4 run inside the agent that builds the story (DELEGATED MODE), never in an
-orchestrating context — except the SINGLE-STORY DISPATCH fallback.
-
-**Mandatory — blocks Phase 3. Never plan or write code until it completes.** Done ONLY when
-all three hold: (1) the `ls` of project skills ran, (2) every detected-and-present skill was
-`Read`, and (3) the "Skills loaded for this implementation" block was shown to the user.
-`expert-qa` and `expert-qa-project` are always detected (+ `expert-analyst` for bug-fix
-flows), and `guide-conventions` always loads when present. If skills exist but you loaded none, stop and
-re-run — a non-empty project must never reach Phase 3 with zero skills loaded, else Phases
-5/6 "follow loaded skills" silently become no-ops.
-
-Follow [`skill-detection.md`](../../references/skill-detection.md) end to end — it owns this
-phase: the arch-doc reads (Step 1), manifest-driven detection (Steps 2–3), the `ls` +
-**team gate** for a project with no skills (Step 4a / 4a.1 — `Run /ck-code:team first`
-invokes `Skill({ skill: "ck-code:team" })`, then redo this phase; `Never ask in this project`
-writes `experts: none` to `tasks/SETTINGS.md`, and with `experts: none` the gate never fires), the `Read`-only loading (Step 4b),
-and the mandatory "Skills loaded" report (Step 5). Do not restate its gates here; run them.
-
-Two build-specific bindings on top of that procedure:
-
-- **Match against the selected story's `files:` set** already in context — prefer narrow
-  `paths` matches over broad `keywords` matches so an unrelated body is never `Read` on a
-  keyword coincidence (every body loaded here stays resident through Phases 5–6).
-- **Batch every arch-doc read and skill load into parallel tool-call messages** — sequential
-  reads are the largest avoidable latency in this phase.
+**`--auto`:** the gate is deferred, never dropped. Regenerate and sync as on PASS, print the
+8.5.1 manual-testing steps as the run's checklist, and end with `/ck-code:ship <story-path>` as
+the next step. The ship answer is always SKIP, and nothing is pushed.
 
 ---
 
-## PHASE 3: IMPLEMENTATION PLANNING
+## THE STORY CYCLE (Phases 1.7–8.6)
 
-Create a SOLID-compliant plan **before writing any code.**
+The work itself lives in [story-cycle.md](references/story-cycle.md): the effort route (1.7),
+skill detection (2), planning (3), the RED → GREEN loop (4–5), refactor and the three scans (6),
+QA (7) and completion (8.1–8.4, 8.6). This orchestrating context never reads it. The dispatch
+prompt hands its absolute path to every `ck-code:story-implementer` agent, which reads it
+once instead of loading this skill
+([agent-prompts.md](references/agent-prompts.md)). The one exception is the SINGLE-STORY
+DISPATCH fallback, a `build` with no `Agent` tool: `Read` it then and follow its
+**Inline fallback** line. The gates this context keeps are 3.5 (the base), 8.5 (the manual test)
+and 8.7 (the ship hand-off), below.
 
-**3.1 Research (only if needed).** context7 (MCP) for framework docs, WebSearch for uncommon
-patterns — only when the story needs current docs, never for well-known basics.
+---
 
-**3.2 Clarify ambiguities.** If an acceptance criterion is vague, ask 1–2 targeted questions
-— never about what the story or architecture docs already make clear.
-
-### 3.3 Design with SOLID
-
-Plan the implementation applying SOLID. Per the 1.7 route: **FULL** fills the SOLID Analysis
-template in [tdd-walkthrough.md](references/tdd-walkthrough.md), every principle addressed
-before moving on. **LEAN** writes a 2–4 line note naming only the principles actually at
-stake in this story and how each is satisfied; principles with nothing to decide are stated
-as such, never silently dropped. Either way the reasoning is explicit before any test is
-written.
-
-### 3.4 Create Subtasks
-
-**Seed from the story's `## Implementation Tasks` section when present** (authored by
-`plan`) — fold those ordered tasks in rather than inventing generic ones; if absent, use the
-default breakdown. Track subtasks on **Claude Tasks** (TaskCreate; per-route chains in
-[tdd-walkthrough.md](references/tdd-walkthrough.md)), each blocked by the previous. If Task
-tools are unavailable, fall back to an in-session checklist (never written to the story file)
-— never skip the breakdown. **Never persist the plan itself to the story file** — the file
-records only frontmatter status, the final summary, and unplanned changes.
-
-### 3.5 Confirm Plan + Base Branch (single gate)
+## 3.5 BASE BRANCH — Confirm Plan + Base Branch (single gate)
 
 **Never start on whatever branch this run was launched from.** Resolve the base first, in one
 batched call. The integration level is the **plan's**, read from its record — this skill never
@@ -492,178 +411,16 @@ re-run, 3.5 re-resolves the base from the new level. A hand-picked base with a s
 
 Record the chosen branch — the ship phase reuses it (no second branch prompt). Nothing is
 touched in Phase 4 until this gate returns a branch. **SINGLE-STORY DISPATCH runs this base
-resolution in the orchestrator at S2** (no plan to confirm there). **DELEGATED MODE skips the whole base
-resolution** — the run is already on the branch the orchestrator chose (worktree or solo) — but
-still presents the plan.
+resolution in the orchestrator at S2** (no plan to confirm there), and the inline fallback runs
+the whole gate. A delegated builder never runs it: it is already on the branch the
+orchestrator chose, and it only presents its plan ([story-cycle.md](references/story-cycle.md) 3.5).
 
----
+## 8.5 MANUAL TEST — REQUIRED GATE
 
-## PHASE 4: TDD — ONE BEHAVIOUR AT A TIME (RED PHASE)
-
-Phases 4 and 5 form **one loop over behaviours**, not two batches. Each cycle writes a
-failing test for the next behaviour, then the minimum code to pass it. Never write the whole
-suite up front: tests written before the design exists pin guesses, and those guesses become
-the over-testing that 6.1 then has to prune. Every test meets
-[`test-craft.md`](../../references/test-craft.md): behaviour through the public surface, and
-only the tests a real regression would need.
-
-**4.1 Start the cycle.** Mark the current test-drive task `in_progress` (TaskUpdate).
-
-**4.2 Determine test structure** (first cycle only). Read existing test files to learn
-conventions: naming (`.test.ts`, `_test.rs`, `test_*.py`), location (co-located,
-`__tests__/`, `tests/`), framework, assertion style, mock/stub patterns. Follow loaded guide
-skills.
-
-**4.3 Write the next test.** Pick the next acceptance criterion (worked mapping in
-[tdd-walkthrough.md](references/tdd-walkthrough.md)) and write **one** test for its
-behaviour. Add a test for an edge case, an error or an integration point only when the code
-of this cycle will actually branch on it, or when a criterion names it
-([`test-craft.md` § What to write](../../references/test-craft.md#what-to-write)). A small
-test that drives a tricky internal step is allowed as scaffolding and gets reviewed at 6.1.
-
-**4.4 Run it — confirm RED.** **Expected: the new test FAILS.** A new test that passes
-without implementation is testing something that already exists or is trivially true. Delete
-or fix it; never keep it. A red run needs no report of its own; the loop reports once, at
-5.3.
-
----
-
-## PHASE 5: IMPLEMENTATION (GREEN PHASE)
-
-Write the **minimum** code to make the cycle's test pass, then loop back to 4.3.
-
-**5.1 Guard.** On the first cycle, confirm the Phase 2 "Skills loaded" block was shown this
-run. If not, stop and run Phase 2 now, because implementation must apply the loaded
-experts/guides.
-
-**5.2 Implement.** Write only what the current test needs: create or modify the files from
-the story's `files:` as it requires, run the story's test files, and stop as soon as they
-pass. Don't over-engineer and don't build ahead of the next test. **Rules:** follow the Phase 3 SOLID plan + loaded guide/expert standards; reuse
-existing code (check `docs/architecture/`, scan files); simplest code that passes; write to
-the clean-code and comment standard in [`code-craft.md`](../../references/code-craft.md) —
-names that explain themselves, comments only where they say *why*, in the fewest precise
-words. **Log unplanned changes
-incrementally** — any file touched outside the
-story's `files:` set gets one line in a `## Unplanned Changes` body section in the same Edit
-pass: `- <path> — <what> — <why>`. Record at the moment of change; empty section = omit the
-heading.
-
-**5.3 Run tests — confirm GREEN, then loop.** **Expected: ALL of the story's tests PASS.**
-On failure read the output and fix the implementation (NOT the tests, unless a test itself
-has a bug); re-run until green, then **return to 4.3** for the next behaviour. When every acceptance
-criterion has a passing test, report the loop as **one line** (output-blocks) and mark the
-test-drive task(s) `completed`.
-
----
-
-## PHASE 6: REFACTOR PHASE
-
-Improve quality without changing behavior. **Tests stay green throughout.**
-
-**6.1 SOLID + redundancy review.** Per the 1.7 route: **FULL** reviews all new/modified code
-with the SOLID Compliance Check template in [tdd-walkthrough.md](references/tdd-walkthrough.md),
-every principle checked. **LEAN** spot-checks the principles named in the 3.3 note plus any the
-diff newly put at stake. Either way, record every violation as an ISSUE to fix in 6.2 — a LEAN
-review that uncovers a structural problem escalates to the FULL template before continuing.
-**Then run the redundancy scan on the diff** — the five checks in
-[`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)
-(reimplementation, copy-paste, dead code, needless indirection, unasked-for surface), at both
-routes, no template. **Then the comment & readability scan** — the four checks in
-[`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)
-(restating or wordy comments, missing *why*, doc comments, readability), same diff, same routes.
-**Then the test-prune scan** — the five checks in
-[`test-craft.md`](../../references/test-craft.md#test-prune-scan-implementation)
-(duplicate, scaffolding, implementation-coupled, trivial or speculative, oversized), run on the
-tests this story added or changed, same routes, with its deletion guards. Each hit from any
-of the three scans is an ISSUE for 6.2 like any SOLID violation.
-
-**6.2 Apply refactorings.** For each issue: apply the refactoring, run the story's test files (must stay green),
-revert and reconsider if they break. Common refactorings: collapse a reimplementation into
-the existing code, delete dead code, delete or merge a pruned test, inline a single-caller wrapper, delete a restating
-comment, add the missing *why* line, extract function, rename,
-introduce interface/trait for dependency inversion, split large functions, move code to the
-correct module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
-also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
-
-**6.3 Final green check.** Resolve the scope first
-([parallel-mode.md § Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)).
-It is **story scope** at level `epic`/`plan`, and **full scope** at level `story` or on the
-story that completes its epic. Then run the suite once through `ck-qa`, using the **same
-`test=` command string** Phase 7 will hand the validator. For example, story scope is
-`ck-qa run EE-SS test='npx vitest run --changed <base> --passWithNoTests'`, and full scope is
-`ck-qa run EE-SS test='npm run test'`. Report REFACTOR as **one line** (output-blocks). This
-is where a regression the targeted runs could not see surfaces. On red, fix it and re-run
-only what is left: `ck-qa run EE-SS --rerun test='<failed files + affected since ck-qa since
-EE-SS test>'` ([§ Re-runs after a failure](references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left)).
-A green 6.3, including a green `--rerun`, is stamped on the code state under the full
-`test=` command, so Phase 7 reads it instead of running the suite again on the same tree. **DELEGATED MODE folds
-6.3 into Phase 7** (see the table there).
-
----
-
-## PHASE 7: QA VALIDATION
-
-QA reviews the work — this is **not** a self-review.
-
-**Always delegate to the `ck-code:qa-validator` agent** (Haiku) — it absorbs the verbose
-suite/build/lint output in its own context and returns a compact verdict. The dispatch call —
-model, cwd, story path, stack commands, return shape — is
-[agent-prompts.md § Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch); do
-not improvise it. Run the heavy commands inline **only** when that subagent_type is
-unregistered, or in DELEGATED MODE (where the orchestrator runs `qa-validator` per story
-instead).
-
-Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../references/qa-validation.md)
-— it loads the QA experts, validates every acceptance criterion, runs the suite +
-code-quality checks (commands per stack in [tdd-walkthrough.md](references/tdd-walkthrough.md)),
-and checks architecture compliance against the feature doc. Present the QA Report
-(output-blocks).
-
-**Nothing may change the tree between 6.3 and this dispatch.** The validator runs with
-`--reuse`, so the suite that 6.3 just passed on this exact code state reports `REUSED`, and
-lint, typecheck and build still run (concurrently where the stack allows). Any edit in
-between is a new state, and the suite simply runs again. The validator still reviews every
-acceptance criterion, the architecture and the code quality itself. Only the repeated
-command is skipped, never the judgement.
-
-**A delegated `QA: FAIL` is a `NEEDS FIXES` verdict** — the agent's verdict line replaces the
-inline report's verdict and enters the same loop; never treat it as a separate outcome, and
-never re-run the suite here to confirm it.
-
-**Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`
-via `AskUserQuestion` (wording in output-blocks); never silently continue past 3. On NEEDS
-FIXES inside the loop: fix each issue → re-run Phase 6, whose 6.3 is a `--rerun` of only the
-tests affected since the last pass → re-run this phase with a fresh QA check.
-
----
-
-## PHASE 8: COMPLETION
-
-### 8.1 Update Story Body — Implementation Summary
-
-**Bug-Fix Mode:** do NOT append an Implementation Summary. Instead fill the Bug Report
-`### Resolution` + `### Files Touched` and flip its `Status: DIAGNOSED → FIXED` (templates in
-[../fix/references/bug-section-template.md](../fix/references/bug-section-template.md) Phase
-8.1), then continue to 8.6 for the status restore. Full deltas:
-[bug-fix-mode.md](references/bug-fix-mode.md).
-
-Append the Implementation Summary block (template in
-[story-template.md](references/story-template.md)) to the story body. Required fields and the
-**mandatory Files Touched precision** (CREATED = path; MODIFIED = `path:lines` via `git diff`)
-are in [completion.md](references/completion.md).
-
-### 8.2–8.4 Checklist, Subtasks, Summary
-
-- **8.2** — mark all acceptance criteria `[x]` in the story body.
-- **8.3** — mark every implementation subtask `completed` on Claude Tasks (TaskUpdate);
-  subtasks live on Claude Tasks, never the story file.
-- **8.4** — `TaskList` to show the completed summary of all tasks.
-
-### 8.5 User Manual Testing — REQUIRED GATE
-
-Story stays `in-progress` until the user confirms PASS here. Never set `done` before that.
-**DELEGATED MODE skips this phase** — the orchestrator runs the manual gate once on the
-target branch after merge, where every merged story sits together.
+Asked in this context only: at S6 for a single story, once per wave on the target after the
+merge (P8, where every merged story sits together), or in the inline fallback, where the story
+stays `in-progress` until PASS. A delegated builder never runs it. Under `--auto` it is
+deferred to the run's final checklist, never dropped.
 
 **8.5.1** Present the manual-testing prompt (template in
 [output-blocks.md](references/output-blocks.md)) — scenarios from acceptance criteria + an
@@ -685,63 +442,15 @@ pre-ask a gate whose outcome could change the work in between.
 `FIXED` → re-prompt at 8.5.1. **Cap = 3 cycles**; on the 3rd, escalate `FIX MANUALLY / ACCEPT
 AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never continue past 3.
 
-### 8.6 Set Status → done (frontmatter + regenerate + touched files)
-
-**Bug-Fix Mode:** restore `prior_status` (from the Bug Report — normally `done`) instead of
-`done`, and clear `prior_status` in the same call. Then 8.7 as usual (`fix/` branch, Bug ID
-in commit):
-
-```bash
-ck-story set <story-path> status=<prior_status> prior_status=
-```
-
-**Story Mode:**
-
-```bash
-ck-story set <story-path> status=done
-```
-
-**Touch `status` only — never `pr:` or `delivery:`.** They are the second, orthogonal axis
-([`data-model.md`](../../references/data-model.md#two-axes-status-is-work-delivery-is-integration)):
-`done` means the work is finished, not that it reached the trunk. `ship` writes `pr`, and
-`ck-project sync` promotes `delivery` to `merged`. In Bug-Fix Mode this matters twice — a
-defect found in already-merged code keeps `delivery: merged` while it is fixed, and the
-restore touches `status`/`prior_status` alone.
-
-`ck-story` regenerates in the same call — recomputing `STORIES_INDEX.md` and the
-`EPICS_INDEX.md` rollup (an epic whose stories are all `done` rolls up to `DONE`, or to
-`MERGED` once every one of them is on the trunk) and syncing the board. The views stay
-local; nothing here stages them.
-
-No index cell-edit, no `EPIC.md` story-table edit — those artifacts do not exist.
-The sync moves this story's card to Done and rolls its epic card up
-([`github-projects.md`](../../references/github-projects.md)).
-**DELEGATED MODE passes `--no-sync`** (see 1.6).
-
-**Record the touched files — both modes, same phase.** `files:` was the plan's guess; after
-the work it must hold what was actually touched, because parallel conflict detection
-(`ck-view waves`) and expert-skill matching read it. Diff against the base recorded at 3.5,
-working tree included (inline-fallback work is not committed until `ship`), `tasks/` excluded:
-
-```bash
-ck-story files <story-path> $(git diff --name-only "$(git merge-base <base> HEAD)" -- . ':!tasks') $(git ls-files --others --exclude-standard -- . ':!tasks')
-```
-
-`ck-story files` merges (sorted, de-duplicated, never shrunk) and touches nothing else — no
-regenerate, no sync. An empty diff makes it print a usage error; ignore it.
-**DELEGATED MODE** diffs its committed work against the `Base SHA` the dispatch prompt names
-(`git diff --name-only <base-sha>...HEAD -- . ':!tasks'`) and commits the story file with its
-last cycle.
-
-### 8.7 Ship (Commit + PR + Issue Updates)
+## 8.7 SHIP — Commit + PR + Issue Updates
 
 Apply the ship answer already collected at 8.5.1 Q2 — **do not ask again**: **SHIP** —
 hand off to `/ck-code:ship` with the story file path per
 [`skill-invocation.md`](../../references/skill-invocation.md) (handles branch, staging,
 commit, PR, and GitHub Issue updates); **SKIP** — don't commit yet; remind the user they can run
 `/ck-code:ship [story-path]` later. Only ask here if 8.5.1 ran without Q2 (e.g. a
-non-interactive caller). **DELEGATED MODE never ships** — it commits inside its worktree and
-returns its verdict.
+non-interactive caller). A delegated builder never ships — it commits on its branch and
+returns its verdict — and neither does a `--auto` run.
 
 ---
 
@@ -764,7 +473,7 @@ isolate from, and the cold dependency install it forces is pure cost.
 
 **First action of this mode: `Read` [parallel-mode.md](references/parallel-mode.md).** It owns
 P1–P9 — the P-step map with each step's non-negotiable, the exact commands, the resume prompt,
-the stack-command table, the classification rules, the cleanup contract — and is mandatory,
+the `--auto` table, the classification rules, the cleanup contract — and is mandatory,
 not a lookup: nothing here substitutes for it. It pulls in its own companions as needed
 ([agent-prompts.md](references/agent-prompts.md) dispatch/resume prompts + return schema ·
 [wave-mode.md](references/wave-mode.md) wave planning ·
@@ -777,34 +486,17 @@ decision** before the first dispatch (`Fan-out: N stories → dispatching N agen
 The four gates that bind even before that read: **P1** checks out and verifies `$TARGET`
 before any dispatch, and never lets it be the trunk (a `story`-level plan switches to `epic`
 at P3, or the run cancels) · **P3** never dispatches into a project with zero skills without
-asking, unless `tasks/SETTINGS.md` says `experts: none` (agents cannot prompt) · **P5** derives "done" from git, never from an agent's self-report ·
+asking, unless `tasks/SETTINGS.md` says `experts: none` or the run is `--auto` (agents cannot prompt) · **P5** derives "done" from git, never from an agent's self-report ·
 **P7/P8** never accept work that has not returned `QA: PASS`.
 
 ---
 
 ## DELEGATED MODE
 
-Active only when the dispatch prompt begins `MODE: delegated`. The run is already on the
-branch it must work on — its own harness-created worktree (fan-out), or the branch the
-orchestrator checked out in the main checkout (a solo wave, or a single-story dispatch on its
-`story/`/`fix/` branch, where the prompt names it and asks for the branch guard first). Either way the branch is not this run's to choose, and there
-is no user to ask.
-
-| Phase | Change |
-|---|---|
-| 1.1–1.2 | Skipped — the story path is given. |
-| 1.4 | Skipped — never hint at waves from inside a wave. |
-| 1.6 / 8.6 | `ck-story set … --no-sync` and `ck-story files` against the prompt's `Base SHA` — **this story's frontmatter only**; never regenerate an index or commit a view, the orchestrator regenerates once on the target after the wave. |
-| 3.5 | Present the plan; no branch question — the orchestrator owns the branch. Never create, switch, rebase or reset one; on a solo dispatch, run the prompt's branch guard before the first edit and return `status: blocked` if HEAD is not the named branch. An ambiguity that blocks progress returns `status: blocked`; never guess. |
-| 4–6.2 | Unchanged. RED still gates GREEN. |
-| 6.3 + 7 | **One run.** Phase 7's inline command set is the final green check, at **story scope** against the prompt's `Base SHA`: the affected-tests `test=` and the changed-file lint, or the full rows when a fallback applies ([parallel-mode.md § Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)). Typecheck and build stay full. The orchestrator's P8 runs the full scope once per wave; a single-story orchestrator's S5 QA runs the scope § Affected tests gives it. A failing run is followed by a `--rerun` of only what is left ([§ Re-runs after a failure](references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left)). The check is run with `ck-qa run <id> --parallel …` (no `--reuse`, and no `--parallel` for a shared build lock). Never run the suite at 6.3 and again at 7 on the same tree: back to back, in one agent, they measure identical state. Every other Phase 7 check still runs. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
-| 8.5 | Skipped — manual sign-off happens in the orchestrator (once per wave after it lands, or S6 for a single story). A resume that carries a manual-test or QA report runs the 8.5.3 Bug-Fix Sub-Loop (or the QA fixes) on the same branch, commits, and returns the verdict again. |
-| 8.7 | No ship. Commit after **every** TDD cycle so an early stop still leaves resumable work, then return `{status, branch, commits, remaining, criteria_met}` ([agent-prompts.md](references/agent-prompts.md)). |
-
-Uncommitted work cannot be merged, cannot be resumed, and (solo) leaves the shared branch
-dirty for the orchestrator. Commit messages are conventional
-(`test(EE-SS):`, `feat(EE-SS):`) with **no AI references** — full rule:
-[`no-ai-references.md`](../../references/no-ai-references.md).
+A dispatch prompt beginning `MODE: delegated` means this run **is** a builder that another
+`build` dispatched (a wave member or a single-story dispatch), loaded through the skill
+rather than the [story-cycle.md](references/story-cycle.md) path. `Read` story-cycle.md and
+follow it from **Placement — delegated** to **RETURN**. Skip every phase of this file.
 
 ---
 
@@ -813,22 +505,18 @@ dirty for the orchestrator. Commit messages are conventional
 - **0** — version gate PASSes (`layout: v7`) before any project read/write.
 - **1.2.0** — epics index read first; ask when > 2 epics unfinished.
 - **1.2** — interactive selection prefers the parallel set; an explicit path is single-story.
-- **2** — skills detected, `Read`, and reported BEFORE any planning or code; zero project
-  skills → warn + ask (`/ck-code:team` first) rather than proceed silently, unless
-  `experts: none` is set.
-- **1.7** — effort route fixed from `size:` and announced; it scales ceremony only, never a
-  guarantee, and escalates LEAN → FULL when the work outgrows its size.
+- **1.7, 2, 3.3, 4, 5.2, 6.1, 7, 8.6 — the builder's gates**, owned by
+  [story-cycle.md](references/story-cycle.md): effort route scales ceremony only; skills
+  detected, `Read` and reported before any code (zero project skills → the team gate, asked by
+  this context at S2/P3 unless `experts: none`); SOLID at design and after refactor; each
+  behaviour's test fails before its implementation; off-plan touches logged to
+  `## Unplanned Changes`; QA cap 3; `files:` records what the story actually touched.
 - **SINGLE-STORY DISPATCH** — one story is built by one solo agent on its own branch, never in
   the orchestrating context; S1 clean start, S2 one question, S5 integrity from git + QA, S6
   manual gate here. Inline only when this context has no `Agent` tool.
 - **3.5** — plan and base branch confirmed in one gate before any code (single-story dispatch: base only, at S2); the base is **derived from the plan's `integration:` (`ck-plan get`), resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`. The level is never asked here.
-- **3.3 + 6.1** — SOLID applied at design, verified after refactor (lean or full per 1.7).
-- **4** — each behaviour's test fails before its implementation, one behaviour per cycle, never the whole suite up front (trivial boilerplate exempt).
-- **5.2 / 6.2** — off-plan touches logged to `## Unplanned Changes` in the same Edit pass.
-- **7** — QA delegated to `qa-validator`; iteration cap = 3, then escalate.
-- **8.5** — manual-test gate; bug-fix loop cap = 3.
-- **8.6** — `files:` records what the story actually touched (`ck-story files`) in the same
-  phase that flips its status.
+- **8.5** — manual-test gate; bug-fix loop cap = 3. Under `--auto`, deferred to the final
+  checklist, never dropped.
 - **1.3.5 (Bug-Fix Mode)** — implement only the recorded Fix Plan; the failing repro test is
   the RED target; restore `prior_status`, never an Implementation Summary. `status: bug`
   without a `DIAGNOSED` Bug Report → STOP (run `/ck-code:fix`).
@@ -857,9 +545,6 @@ dirty for the orchestrator. Commit messages are conventional
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
 - **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
-- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy, comment and test-prune scans run in full at both routes.
-- **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../references/reuse-first.md#redundancy-scan-implementation)).
-- **Never ship a comment that restates the code or runs longer than it needs, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../references/code-craft.md#comment--readability-scan-implementation)).
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
   claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
   failure is one reported line, not a stop.
@@ -869,18 +554,10 @@ dirty for the orchestrator. Commit messages are conventional
 - **Never keep work off `<trunk>` by picking a different base** — name
   `/ck-code:config integration tasks/<Plan> <level>` and stop, or `ship` targets `<trunk>` from
   the stored level regardless.
-- **Never edit a test to force GREEN.** Pruning at 6.1/6.2 is not that: it runs on a green suite, only on tests this story added, and never removes the sole test of an acceptance criterion or a bug's reproduction/regression test ([`test-craft.md`](../../references/test-craft.md#test-prune-scan-implementation)).
-- **Never keep a test that would catch no bug another test misses** — duplicates, scaffolding a behaviour test now covers, tests of internals or the framework, and speculative edge cases are pruned at 6.2.
-- **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already
-  wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline-every-phase-every-mode)). The inner
-  loop is targeted: the story's test files, and lint on touched files only. Never run a
-  package-wide lint to check one file, and never build in the inner loop. The scoped suite
-  runs at 6.3, and Phase 7 reuses that pass through `ck-qa --reuse` when the tree has not
-  changed since.
-- **Never run a story-scope pass without a full-scope run after it** — P8 once per wave, the single-story S5 QA on the story that completes its epic and on every story at level `story`. Never scope P8, typecheck or build. Story scope falls back to full when the diff touches config, migrations, fixtures or dependencies ([§ Affected tests](references/parallel-mode.md#affected-tests--the-story-level-test-command)).
-- **Never repeat a whole scope after a failure** — re-run the failed tests plus those affected since the last run with `ck-qa run <id> --rerun`, and fall back to the full command only on a crash, a config change or no recorded run ([§ Re-runs after a failure](references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left)).
-- **Never `find /` or search outside the repo** — resolve skill references against the skill's base directory and dependency types in the repo's `node_modules`.
-- **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
+- **Never run a story-scope pass without a full-scope run after it** — P8 once per wave, the single-story S5 QA on the story that completes its epic and on every story at level `story`. Never scope P8, typecheck or build. Story scope falls back to full when the diff touches config, migrations, fixtures or dependencies ([§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)).
+- **Never `find /` or search outside the repo.**
+- **Never ask under `--auto`, and never ship, promote or push under it** — every question takes its recommended answer, announced; the manual test is deferred to the final checklist and `/ck-code:verify`, never dropped. Hard stops still stop the run; they are reported, not asked ([parallel-mode.md § Auto mode](references/parallel-mode.md#auto-mode----auto)).
+- **Never hand a builder this skill** — every dispatch names [story-cycle.md](references/story-cycle.md) by absolute path, and the builder's rules live there.
 - **Never implement a story in an orchestrating context** — one story goes to SINGLE-STORY DISPATCH, several to PARALLEL MODE; source reads, the TDD loop and suite output belong to the agent. The only inline path is a context with no `Agent` tool.
 - Story frontmatter is the source of truth. All output is English regardless of story language.
 
@@ -905,13 +582,13 @@ is the rest of this contract; these four are the traps it does not carry.
 
 ## NEXT
 
-After manual-test PASS (S6 / 8.5), run `/ck-code:ship <story-path>` to push the committed
+After manual-test PASS (S6 / 8.5) — or after the checklist of a `--auto` run — run `/ck-code:ship <story-path>` to push the committed
 branch, open the PR, and update the linked GitHub Issue. After a PARALLEL MODE run the stories sit merged on an epic
 branch, so P9 hands off (one ask) to `/ck-code:ship --promote --epic NN` — never ship each
 story. If more stories remain, follow with `/ck-code:track next`.
 
 **Native speed-ups (optional, user-driven — see [native-commands.md](../../references/native-commands.md)):**
 `/goal "all acceptance criteria in <story> pass and the suite is green"` autonomises the
-Phase 7–8 loops; `/fast` suits **`S`** stories (off for `M`/SOLID-heavy); `/code-review --fix`
+QA and manual-test loops; `/fast` suits **`S`** stories (off for `M`/SOLID-heavy); `/code-review --fix`
 is a deeper pre-ship diff pass; `/simplify` catches the cross-story duplication one story's 6.1
 cannot see — after a wave merges, not per story.

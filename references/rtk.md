@@ -138,7 +138,7 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   passes, it stamps the label's recorded full command on the new state, so a later `--reuse`
   of that command reports `REUSED`. It is refused when the label has no recorded run in this
   directory. The narrowed commands per runner are in
-  [`parallel-mode.md` § Re-runs after a failure](../skills/build/references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left).
+  [`qa-scope.md` § Re-runs after a failure](../skills/build/references/qa-scope.md#re-runs-after-a-failure--only-what-is-left).
 - **A run can outlast one Bash call.** One Bash call is capped at 600 s, after which Claude
   Code moves it to the background. A serial e2e suite passes that cap. An agent then polls an
   empty output file or starts a second copy of the suite against the same test database.

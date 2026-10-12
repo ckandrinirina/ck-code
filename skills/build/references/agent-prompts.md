@@ -45,15 +45,15 @@ prompt: |
 
   Story file: <repo-relative story path from the index File column>
   Base SHA: <git rev-parse "$TARGET" after the P4 wave-start commit>
+  Cycle: <absolute path of references/story-cycle.md — this skill's base directory + /references/story-cycle.md>
+  Settled: <the P3/S2 answers and `--auto` assumptions for this story, or "nothing">
 
   Your task:
-  1. Invoke /ck-code:build via the Skill tool:
-     Skill({ skill: "ck-code:build", args: "<story path>" })
-  2. Follow it completely — it owns TDD, SOLID, QA, and committing. Because this prompt
-     begins `MODE: delegated`, build applies its DELEGATED MODE deltas: no branch question,
-     no `ck-index`, no manual-test gate, no ship. **Commit after every TDD cycle /
-     phase** so an early stop still leaves resumable, committed work.
-  3. At done (build 8.6), record what you actually touched in your own story, then commit
+  1. `Read` the Cycle file once and follow it from "Placement — delegated" to "RETURN".
+     It owns TDD, SOLID, the scans, QA and committing. Never load the ck-code:build skill.
+  2. **Commit after every TDD cycle / phase** so an early stop still leaves resumable,
+     committed work.
+  3. At done (8.6), record what you actually touched in your own story, then commit
      the story file with your last cycle:
        ck-story files <story path> $(git diff --name-only <Base SHA>...HEAD -- . ':!tasks')
 
@@ -71,7 +71,7 @@ prompt: |
 ## Per-story implementer, solo (P4, wave of exactly 1)
 
 The dispatch above, with three deltas — everything else (subagent_type, stable name, model
-tiering, `MODE: delegated`, task steps, constraints, return object) is identical:
+tiering, `MODE: delegated`, `Cycle:` and `Settled:` lines, task steps, constraints, return object) is identical:
 
 1. **Drop `isolation`.** The agent runs in the main checkout on the branch the orchestrator
    already checked out (`$WORKBRANCH`).
@@ -102,8 +102,8 @@ return object and the resume below are unchanged:
 2. **Replace the opening line** with:
    `You are implementing story EE-SS in the main checkout, already on branch <branch>.`
    `You are the only agent running. Your orchestrator owns QA sign-off, the manual test and shipping.`
-3. **Append the S2 answers** when there are any — `Clarifications:` followed by each
-   acceptance criterion and the user's reading of it. The agent cannot ask; this is all it gets.
+3. **Put the S2 answers in `Settled:`** — each acceptance criterion the user clarified and their
+   reading of it (or the `--auto` assumption). The agent cannot ask; this is all it gets.
 
 A QA failure or a manual-test report goes back to the **same agent** by `SendMessage`, worded
 like the resume below with the failing criteria or the user's report in place of
@@ -141,9 +141,9 @@ SendMessage({
   to: "story-EE-SS",
   message: "Your last run stopped before every acceptance criterion was met (remaining:
     <list>). Continue in the same worktree — inspect git log / git status and the story's
-    unchecked criteria, finish only the remaining work via /ck-code:build, commit each
-    cycle, and return the updated {status, branch, commits, remaining, criteria_met}. Do
-    not redo completed work.",
+    unchecked criteria, finish only the remaining work following the Cycle file you already
+    read, commit each cycle, and return the updated {status, branch, commits, remaining,
+    criteria_met}. Do not redo completed work.",
   summary: "resume story EE-SS"
 })
 ```
@@ -167,7 +167,7 @@ prompt: |
   Run QA for story EE-SS, read-only — never edit any file. Check out / operate on branch
   <branch>. Run these stack commands exactly, in one call, WITHOUT --reuse:
     ck-qa run EE-SS [--parallel] test='<affected-tests command against the Base SHA>' lint='<changed-file lint>' <label>='<command>' …
-    <concrete commands from parallel-mode.md § P7 at story scope (§ Affected tests) — the
+    <concrete commands from qa-scope.md at story scope (§ Affected tests) — the
      full rows when that section's fallback applies; typecheck/build are always full rows>
   Take the first failure's short excerpt (failing test names / lint / type errors) from the
   tail it prints or from its log, and never re-run a command to see more of its output.
@@ -212,7 +212,7 @@ prompt: |
   Run these commands exactly, in one call, WITH --reuse (a command that already passed on
   this exact tree — 6.3, or the agent's story-scope run — reports REUSED; everything else runs):
     ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, or the single-story scope's>' <label>='<command>' …
-    <this story's stack commands from parallel-mode.md § P7, at the scope 6.3 resolved:
+    <this story's stack commands from qa-scope.md, at the scope 6.3 resolved:
      story scope lints the changed files, full scope the full row; typecheck/build full>
   Take a short excerpt of each failure (failing test names, lint or type errors) from the
   tail it prints or from its log, never by re-running the command. Use a 600000 ms Bash

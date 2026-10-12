@@ -39,12 +39,12 @@ detailed in its section below.
 |---|---|---|
 | **P1** | Resolve `$TARGET` from the plan's `integration:` level (`ck-plan get`; dirty tree or detached HEAD stops the run), **check it out — creating it if absent — and verify HEAD**, announce it with its reason and staleness, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never dispatch before HEAD is on `$TARGET`; never merge into a hardcoded `main`, into whatever branch happened to be checked out, or into the trunk (level `story` → switch to `epic` or cancel at P3) |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
-| **P3** | Team gate (see § P3) + wave-plan confirmation + criteria ambiguity + the level-`story` switch when P1 raised it, folded into **one `AskUserQuestion`, ≤ 4 questions** | Never dispatch with zero project skills without asking (unless `experts: none`) — agents cannot prompt |
+| **P3** | Team gate (see § P3) + criteria ambiguity + the level-`story` switch when P1 raised it, folded into **one `AskUserQuestion`, ≤ 4 questions** — asked only when one of them is needed; the wave plan alone is printed, not asked. `--auto`: no question | Never dispatch with zero project skills without asking (unless `experts: none`) — agents cannot prompt |
 | **P4** | Dispatch the wave: **fan-out** (≥ 2) = one worktree `Agent` per story in a single message; **solo** (= 1) = one `Agent` on `$WORKBRANCH`, no worktree. Both `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` | Every story goes to an agent; a worktree only when a peer runs beside it. Tier the model by reasoning complexity, never `size` |
 | **P5** | Integrity **the moment an agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / ⚠ deletion review (ask accept-or-exclude) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
 | **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Cross-branch by construction — the fan-out wave's one barrier. **Skipped entirely on a solo wave.** Every dry-run is aborted; nothing lands here |
 | **P7** | One `ck-code:qa-validator` per ✓ story, launched as it clears P5 | Acceptable = ✓ complete + `QA: PASS` (+ conflict-free, fan-out only) |
-| **P8** | Fan-out: merge in P6's order. Solo: nothing to merge. Then `ck-index` + `ck-project sync` **once** (local; no view is committed), run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave | Never accept work that has not passed P7 |
+| **P8** | Fan-out: merge in P6's order — without asking when every branch is ✓, `QA: PASS` and conflict-free. Solo: nothing to merge. Then `ck-index` + `ck-project sync` **once** (local; no view is committed), run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave (deferrable for the remaining waves; deferred under `--auto`) | Never accept work that has not passed P7; a deferred gate is listed at P9, never dropped |
 | **P9** | Re-resolve the next wave from the regenerated index and loop from P3; when the epic is done, hand off to `/ck-code:ship --promote --epic NN` (one ask) | A held story keeps its branch (and worktree, if any) and holds its dependents; never tell the user to ship each story |
 
 **P5 and P7 are pipelined, P6 and P8 are barriers.** P5 and P7 judge one story against
@@ -53,6 +53,37 @@ while the slowest is still coding. P6 derives an order from the overlaps *betwee
 and P8 merges into a moving `$TARGET`; neither can start on a partial set. Barriering P5 or
 P7 on the whole wave is the single largest avoidable delay in this mode. On a solo wave the
 pipeline collapses to one story and P6 does not run at all.
+
+## Auto mode — `--auto`
+
+`--auto` runs one epic to the end with **no `AskUserQuestion` at all**. Every question below
+takes its row here, announced in one line (`Auto: <decision>`) where it would have been asked.
+
+| Question | Auto decision |
+|---|---|
+| P1 `$TARGET` behind origin | `git merge --ff-only origin/$TARGET`; diverged → hard stop, never a merge commit |
+| P3 level switch (level `story`) | **Switch this plan to epic level**: it is local, and the run cannot land anywhere else |
+| P3 team gate | **Continue without experts this time**, named in the final report. `/ck-code:team` is interactive, so it is never run from here |
+| P3 wave-plan confirmation | every story kept |
+| P3 criteria ambiguity | the narrowest reading that matches the literal criterion and the existing code, passed to the agent as `Settled: assumed <reading>` and listed in the report |
+| P3 design pending | build without it; each UI story is named in the report |
+| P5 ⚠ deletion review | **Exclude this story** (branch kept, reported), never accepted unseen |
+| P7 a story without `QA: PASS` | held (fan-out) or the run stops (solo), as below; never asked |
+| P8 merge | merge every eligible branch (the default already) |
+| P8 post-wave `QA: FAIL` | hard stop: branches kept, nothing reverted, reported |
+| P8 manual gate | **deferred**: the wave completes as on PASS so its dependents schedule; its steps go into the final checklist |
+| P9 hand-off | **Not yet**: nothing is promoted, shipped or pushed |
+
+Everything else is unchanged: the integrity gate, `QA: PASS` before any merge, the post-wave
+full-scope QA, held branches never merged. A hard stop (dirty tree, branch drift, a red post-wave
+QA, a resume cap reached on every story) still ends the run. It is reported, never asked. A
+project with no manifest row for its QA commands is refused before P1 writes anything
+(`--auto needs QA commands`).
+
+The final report adds a **Manual test checklist**: the 8.5.1 steps for every story completed
+this run, the `assumed` readings, and the excluded or held stories with their reasons. It ends
+with `/ck-code:verify --epic NN` (the guided manual test) and `/ck-code:ship --promote --epic NN`
+for once it passes. A problem found there is a bug for `/ck-code:fix`, never a reopened run.
 
 ## P1 — Freeze the target and resolve scope
 
@@ -203,9 +234,11 @@ UI story and the Claude Design link is still pending (once per run —
 [`design-system.md` § Pending at build time](../../../references/design-system.md#pending-at-build-time)),
 and any genuine acceptance-criteria ambiguity into
 **one `AskUserQuestion`, at most 4 questions** — the dispatched agents have no user, so
-ambiguity is resolved here or not at all. Skip the wave-plan question when the SKILL.md 1.2
-menu already resolved this exact scope; that selection was the confirmation, and re-asking it
-is a wasted round-trip. When the slots are contended the level-switch question wins, then the
+ambiguity is resolved here or not at all. **The wave plan alone never triggers the call.** An
+explicit scope (`--epic NN`, story IDs, or the SKILL.md 1.2 menu pick) already confirmed it, so
+print the plan and dispatch. Add the `PROCEED` / `DROP A STORY` / `ABORT` question only when
+one of the others is being asked anyway. Under `--auto` nothing is asked
+([§ Auto mode](#auto-mode----auto)). When the slots are contended the level-switch question wins, then the
 team gate and the sync offer — without a target there is nothing to dispatch, and the other
 two change what every dispatched agent starts from.
 
@@ -266,7 +299,7 @@ One commit and one sync per wave, whatever the wave's width. This is the only pl
 In Progress can be expressed: a dispatched agent writes `in-progress` inside its own
 worktree branch, which `$TARGET` never sees until the merge already made it `done`. Because
 the worktrees are cut *after* this commit, every agent branches from a tree that already
-reads `in-progress`, so its SKILL.md 1.6 edit is a no-op and its 8.6 write of `done` touches
+reads `in-progress`, so its story-cycle 1.6 edit is a no-op and its 8.6 write of `done` touches
 the same line on its own branch — no merge conflict either way. The epic card rolls up to
 In Progress automatically, since `role_for_epic` reports `in_progress` when any story is
 ([`github-projects.md`](../../../references/github-projects.md)).
@@ -306,10 +339,11 @@ they run concurrently. Per story (full prompt: [agent-prompts.md](agent-prompts.
   worktrees persist for merge; unchanged ones auto-clean.
 - `subagent_type: "ck-code:story-implementer"` (falls back to `general-purpose`).
 - A stable **name** per agent (`story-EE-SS`) so P5 can resume it with `SendMessage`.
-- A prompt beginning `MODE: delegated`, so the dispatched `build` run applies its
-  DELEGATED MODE deltas (no branch question, no `ck-index`, no manual gate, no ship), and a
+- A prompt beginning `MODE: delegated` that names the absolute path of
+  [story-cycle.md](story-cycle.md), which the agent follows in place of the `build` skill
+  (no branch question, no `ck-index`, no manual gate, no ship), and a
   `Base SHA:` line — `git rev-parse "$TARGET"` after the P4 commit, the commit every worktree
-  is cut from — which the agent diffs against to record `files:` (SKILL.md 8.6).
+  is cut from — which the agent diffs against to record `files:` (story-cycle.md 8.6).
 - Worktree agents flip their own story with `ck-story set … --no-sync`; `ck-story` also
   refuses the board sync by itself inside a story worktree, so no card can move before the
   merge.
@@ -476,113 +510,10 @@ this context (prompt: [agent-prompts.md](agent-prompts.md)).
 the main checkout — there is no worktree to check out and re-install. It stays read-only, so
 it cannot disturb the checkout.
 
-Resolve each story's commands from the component its `files:` touch — detect the stack from
-that directory's manifest. **This table is the one per-stack QA command list in ck-code** —
-single-story QA uses it too, via [tdd-walkthrough.md](tdd-walkthrough.md) § Phase 7:
+Resolve each story's commands, its scope and any re-run from [qa-scope.md](qa-scope.md): the
+per-stack command table, story versus full scope, and how a check is re-run after a failure.
 
-| Manifest | QA commands |
-| --- | --- |
-| `Cargo.toml` | `cargo test && cargo clippy -- -D warnings && cargo fmt --check` |
-| `package.json` | the declared `test`, `lint`, and typecheck scripts — typically `npm run test`, `npx eslint .`, `npx tsc --noEmit`, `npx prettier --check .` |
-| `pyproject.toml` | `pytest`, plus the declared lint/format/type checks — typically `ruff check .`, `black --check .`, `mypy .` |
-| `go.mod` | `go test ./... && go vet ./...` |
-| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)) |
-
-A project's `guide-conventions` skill overrides this table when it names canonical commands.
-No manifest match → ask once and reuse.
-
-### Affected tests — the story-level test command
-
-Every QA pass runs at one of two scopes. **Story scope** checks only what the story's diff
-can affect. **Full scope** runs the full rows above and is the backstop that catches a
-regression outside the story's reach, so every story-scope pass has a full-scope run after it.
-
-| Run | Scope |
-| --- | --- |
-| delegated 6.3 + 7, P7 | story |
-| single-story S5 QA (or inline-fallback 6.3 / 7), level `epic` or `plan` | story, except on the story that completes its epic |
-| single-story S5 QA on the story that completes its epic (every other non-`skip` story of the epic reads `status: done`) | full, the single-story counterpart of P8 |
-| single-story S5 QA, level `story` (or empty) | full — each story's PR goes straight to `<trunk>`, and nothing runs after it |
-| P8 post-wave QA | full, always |
-
-`<base>` is the dispatch's `Base SHA` (PARALLEL MODE, and the S3 SHA of a single-story
-dispatch); in the inline fallback it is `git merge-base HEAD <the 3.5 base branch>`. The changed files are
-`git diff --name-only --diff-filter=d <base>` plus `git ls-files --others --exclude-standard`.
-
-**Tests at story scope** are those importing a changed file, plus the story's own new or
-changed test files, e2e specs included:
-
-| Runner | Affected-tests command (the `test=` label) |
-| --- | --- |
-| vitest | `npx vitest run --changed <base> --passWithNoTests` |
-| jest | `npx jest --changedSince <base> --passWithNoTests` |
-| Playwright e2e | `npx playwright test --only-changed=<base> --pass-with-no-tests` |
-| go | `go test` on the touched packages (`go test ./internal/auth/... ./internal/api/...`) |
-| anything else (pytest, cargo, CMake, a custom runner) | the full test row above, unchanged |
-
-Run the command through the package's own runner when the suite needs its script's env
-(`pnpm --filter web exec vitest run --changed <base> --passWithNoTests`). A project whose
-test script adds setup, such as a test database or a `.env.test`, keeps that setup and only
-appends the flag. An e2e suite that runs through a wrapper script appends the flag to the
-script.
-
-**Lint at story scope** checks only the changed files, by path, because a linter judges each
-file on its own: `npx eslint <files>`, `npx prettier --check --ignore-unknown <files>`,
-`ruff check <files>`, `black --check <files>`. Keep only the extensions the tool handles, and
-leave out a label whose file list is empty. `cargo clippy`, `cargo fmt --check` and
-`go vet` stay whole-crate and whole-package. A lint rule that reads other files (type-aware
-or import-cycle rules) can still fire on an unchanged file. The full-scope run after it
-catches that. **Typecheck and build are never scoped.** A fresh typecheck and build of the
-committed branch is what catches a file the agent forgot to `git add`.
-
-**Fall back to full scope** when the diff touches anything a per-file or import-graph check
-cannot trace. That covers test or runner config (`vitest.config.*`, `jest.config.*`,
-`playwright.config.*`, `tsconfig*.json`), lint or format config (`eslint.config.*`,
-`.eslintrc*`, `.prettierrc*`, `ruff.toml`), `package.json`, `pyproject.toml` or a lockfile,
-env files, DB migrations or schema, global test setup, and shared fixtures or seed data.
-Never scope P8.
-
-### Re-runs after a failure — only what is left
-
-A check re-run on the same `ck-qa` id and label after its last run (a red 6.3, a failed
-delegated run, or a NEEDS FIXES round) never repeats the whole scope. A test that passed on
-the last run, and imports nothing changed since, cannot have changed its result. The re-run
-therefore checks only:
-
-- the test files that failed, read from the last run's log, **plus**
-- the tests affected since that run's snapshot, `<snap>` = `ck-qa since <id> test`.
-
-| Runner | Re-run command, passed with `ck-qa run <id> --rerun` |
-| --- | --- |
-| vitest | `npx vitest run <failed files> && npx vitest run --changed <snap> --passWithNoTests` |
-| jest | `npx jest <failed files> && npx jest --changedSince <snap> --passWithNoTests` |
-| Playwright e2e | `npx playwright test <failed specs> && npx playwright test --only-changed=<snap> --pass-with-no-tests` |
-| go | `go test` on the failed packages plus the packages touched since `<snap>` |
-| story-scope lint | the same lint command on the files that failed plus those changed since `<snap>` |
-| anything else | the label's full command again, without `--rerun` |
-
-`--rerun` makes `ck-qa` stamp the label's **recorded** full command when the narrowed run
-passes. A later `--reuse` of that command, such as the single-story QA after the agent's run, then reports
-`REUSED` ([`rtk.md` § QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)).
-Drop the failed-files half when the last run passed. Re-run the full command, without
-`--rerun`, when any of these holds:
-
-- the change since `<snap>` hits a full-scope fallback above,
-- the last run crashed before it reported per-test results (a setup error, a syntax error,
-  a missing module),
-- `ck-qa since` finds no recorded run.
-
-Typecheck and build always re-run in full. P7 and P8 are never re-runs: each is a fresh
-check of a tree nobody has run it on.
-
-**How the commands run.** Every QA pass hands them to `ck-qa run <id> …`, one
-`<label>='<command>'` per independent command
-([`rtk.md` § QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)).
-Add `--parallel` when there are two or more labels, as with the `package.json` and
-`pyproject.toml` rows: test, lint and typecheck then run concurrently, and one pass reports
-every failing command instead of costing one QA iteration per failure. A row written as an
-`&&` chain (`Cargo.toml`, `go.mod`, `CMakeLists.txt`) shares one build lock or tree, so it
-stays **one label** and runs in order. **P7 never passes `--reuse`**, so its run is always
+**P7 never passes `--reuse`**, so its run is always
 fresh against the committed branch. That fresh run is the whole point of P7. Mark any QA-failing story **BLOCKED** — from merge in
 a fan-out wave — and keep its branch. Acceptable = ✓ complete + `QA: PASS`, plus conflict-free
 in a fan-out wave.
@@ -594,14 +525,18 @@ Never advance P9 past a red solo story — its dependents would build on broken 
 
 ## P8 — Merge, regenerate, verify
 
-Print the final summary with options ([conflict-format.md](conflict-format.md)) and use
-**AskUserQuestion**:
+Print the final summary ([conflict-format.md](conflict-format.md)). **When every branch of the
+wave is ✓ complete, `QA: PASS` and conflict-free, merge them in P6's order without asking**:
+that is the only answer the question could take, and the summary already shows what lands.
+Ask (**AskUserQuestion**) only when a branch is held, blocked or conflicted:
 
 1. **Merge ready branches now** (conflict-free order) — *fan-out only*
 2. **Review branches first, merge manually** — print branch names and stop
 3. **Re-dispatch blocked/failed stories** — fresh `Agent` call for empty or errored stories
    only (◐ incomplete is resumed at P5, not here). A new worktree in fan-out; a fresh solo
    dispatch on `$WORKBRANCH` in a solo wave.
+
+Under `--auto` that question takes option 1 for the eligible branches, and the rest stay held.
 
 **A solo wave** has its work already on the target; there is no merge question. Skip straight
 to the regenerate below, saying so in one line (`Merge: none needed (solo on <$TARGET>).`).
@@ -644,7 +579,7 @@ state is new, so everything runs. The P7 runs happened in other worktrees, so th
 count here.
 
 **The post-wave QA runs the full test and lint rows**, never a story-scope command
-([§ Affected tests](#affected-tests--the-story-level-test-command)). It is the wave's only
+([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command)). It is the wave's only
 full-scope run.
 
 **Solo wave:** dispatch this post-wave QA too, even though P7 just passed on the same branch.
@@ -659,7 +594,10 @@ come back out.
 exercise the wave's work on `$TARGET` in the main checkout (`AskUserQuestion` `PASS / ISSUES`)
 — the only place every story of the wave sits together with real dependencies. A solo wave is
 not exempt: one story still lands on the shared target, and the gate is what keeps it from
-becoming the next wave's foundation unverified. On `ISSUES`, dispatch one `Agent` into the
+becoming the next wave's foundation unverified. When later waves remain, add a third answer,
+**PASS, and defer the gate for the remaining waves**. It skips the question for the rest of
+the run, and their steps join one checklist at P9, so they are never dropped. Under `--auto`
+every wave is deferred that way. On `ISSUES`, dispatch one `Agent` into the
 main checkout on `$TARGET` (`git rev-parse --abbrev-ref HEAD` guard) invoking
 `/ck-code:build`, which enters its bug-fix loop and commits the fix on `$TARGET`; then
 re-ask. The story stays merged — this is a fix, not a re-open.
@@ -684,7 +622,11 @@ say `Cleanup: none (solo on <$TARGET>).` rather than skipping the step silently.
 Re-resolve the following wave from the freshly regenerated index and loop from P3. A story
 held back from merge stays non-`done` and holds every story that depends on it — those cannot
 dispatch. When no scheduled story remains, print the batch report naming every held,
-`UNSCHEDULABLE`, and blocked story with its reason.
+`UNSCHEDULABLE`, and blocked story with its reason. Any wave whose manual gate was deferred
+(by the user, or under `--auto`) adds the **Manual test checklist** from
+[§ Auto mode](#auto-mode----auto) here, before the hand-off. A deferred gate is still a gate:
+the first hand-off option becomes `/ck-code:verify --epic NN`, and promotion waits for it.
+Under `--auto` there is no ask at all: print the checklist and the two commands, then stop.
 
 Then hand off — **DIRECT, one ask** per
 [`skill-invocation.md`](../../../references/skill-invocation.md). The merged stories sit on

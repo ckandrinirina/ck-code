@@ -1,6 +1,7 @@
 # Completion Mechanics — Implementation Summary, Files Touched, Bug-Fix Sub-Loop
 
-Detail for build Phase 8. SKILL.md holds the gates and the phase order; this file holds
+Detail for build Phase 8. [story-cycle.md](story-cycle.md) holds the phases and SKILL.md the 8.5
+manual gate; this file holds
 the field specs and the manual-test bug-fix sub-loop steps.
 
 ## 8.1 — Implementation Summary Fields (mandatory)

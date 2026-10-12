@@ -2,7 +2,7 @@
 
 Blocks written to the story file at specific phases of the build skill. **Status lives in
 the frontmatter** (`status:`) — the only status mutation is one `ck-story set` call, which
-writes the field and regenerates (SKILL.md 1.6 / 8.6). The only other frontmatter build
+writes the field and regenerates (SKILL.md 1.6 / story-cycle.md 8.6). The only other frontmatter build
 writes is `files:` — at 8.6 `ck-story files` merges in every path the story actually
 touched, so it ends as the real set rather than the plan's guess. The blocks below are the free-form **body** additions
 (Unplanned Changes, Implementation Summary, checklist, Manual-Test Bugs); the body never

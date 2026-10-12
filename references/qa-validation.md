@@ -39,7 +39,7 @@ Run the tests the caller's scope names, not just the new ones, and watch for reg
 previously-green tests. **Story scope** is every test the diff can affect. **Full scope** is
 the whole suite. `build` resolves which one applies, and a full-scope run always follows a
 story-scope one
-([`parallel-mode.md` § Affected tests](../skills/build/references/parallel-mode.md#affected-tests--the-story-level-test-command)). The suite and the Step 3 checks run together in one
+([`qa-scope.md` § Affected tests](../skills/build/references/qa-scope.md#affected-tests--the-story-level-test-command)). The suite and the Step 3 checks run together in one
 `ck-qa run <id> --reuse [--parallel] …` call
 ([`rtk.md` § QA runs go through `ck-qa`](rtk.md#qa-runs-go-through-ck-qa)). A suite that
 `build` 6.3 already passed on this exact tree reports `REUSED`, and that counts as its
@@ -52,7 +52,7 @@ on your own.
 Run all applicable quality tools for the stack, lint at the same scope as Step 2 (changed
 files at story scope). Detect the component's manifest and run that row of the per-stack
 command table in
-[`parallel-mode.md`](../skills/build/references/parallel-mode.md#p7--qa-one-validator-per-story)
+[`qa-scope.md`](../skills/build/references/qa-scope.md#per-stack-commands)
 — the single source for both inline and PARALLEL MODE QA. Zero compiler
 warnings in project-owned files is the bar.
 
@@ -129,7 +129,7 @@ calling skill's completion phase.
   architecture finding gets no new test), re-run any refactor pass, then
   re-run QA from Step 1 with a fresh check. The suite in that re-run checks only what is left,
   meaning the failed tests plus those affected since the last run
-  ([§ Re-runs after a failure](../skills/build/references/parallel-mode.md#re-runs-after-a-failure--only-what-is-left)).
+  ([§ Re-runs after a failure](../skills/build/references/qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
 - **Iteration = 3:** **escalate to user** with three options:
   - **A) FIX MANUALLY** — apply specific fixes the user suggests.
   - **B) ACCEPT AS-IS** — proceed, recording each remaining issue under the story's

@@ -8,7 +8,7 @@ test-prune pass, and the SOLID review, applied to a single story. The rules in S
 ## Phase 3.3 — SOLID Analysis Template
 
 Two shapes, picked by the Phase 1.7 effort route. Either is filled before any test or code
-is written (rule in SKILL.md 3.3).
+is written (rule in story-cycle.md 3.3).
 
 ### LEAN (size `S`, and Bug-Fix Mode)
 
@@ -112,7 +112,7 @@ not written   test_port_is_8765()                → tests a constant (never wri
 not written   test_empty_frame()                 → the decoder has no empty-frame branch
 ```
 
-Rules: SKILL.md Phase 4.3 and [`test-craft.md`](../../../references/test-craft.md).
+Rules: story-cycle.md Phase 4.3 and [`test-craft.md`](../../../references/test-craft.md).
 
 ---
 
@@ -153,14 +153,14 @@ D — Dependency Inversion:
   [ ] ISSUE: [module X] directly instantiates [concrete Y] → inject
 ```
 
-Issue handling and common refactorings: rules in SKILL.md Phase 6.2.
+Issue handling and common refactorings: rules in story-cycle.md Phase 6.2.
 
 ---
 
 ## Phase 7 — Code Quality Checks by Stack
 
 The per-stack build/test/lint commands are the manifest table in
-[parallel-mode.md](parallel-mode.md#p7--qa-one-validator-per-story) — the single source for
+[qa-scope.md](qa-scope.md#per-stack-commands) — the single source for
 both Phase 7 (run by every building agent) and PARALLEL MODE P7. Detect the manifest, run that row's commands, and
 let a project's `guide-conventions` skill override them when it names canonical ones.
 
