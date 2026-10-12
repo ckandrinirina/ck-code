@@ -589,9 +589,11 @@ The biggest win is the version gate. An older project used to cost *two* retypes
 `/ck-code:migrate`, then retype your original command from memory once it finished. It now
 offers migration once and resumes what you were doing, with the arguments you already gave.
 A ck-code-lite project (`tasks/PLAN.md`, no stamp) is the exception: that usually means
-the wrong plugin was typed, so every ck-code skill stops with a ⛔ wrong-plugin warning naming
-the `/ck-code-lite:` command to use, and never offers migration. Converting stays your own
-explicit `/ck-code:migrate`.
+the wrong plugin was typed, so a ck-code skill with a lite counterpart runs it for you
+(`/ck-code:build T-03` → `/ck-code-lite:build T-03`, `ship` → `ship`, `spec`/`plan`/`init`/`fix`
+→ `start`, `design ds <url>` → `design <url>`) and never offers migration. The rest
+(`explain`, `guide`, `track`, `verify`, `doctor`, `config`, `team`) stop with a ⛔ wrong-plugin
+warning. Converting stays your own explicit `/ck-code:migrate`.
 
 The full contract lives in [`references/skill-invocation.md`](references/skill-invocation.md);
 which hand-offs exist is the invocation matrix in

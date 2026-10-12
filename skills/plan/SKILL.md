@@ -94,9 +94,9 @@ shared [version gate](../../references/version-gate.md) (HARD GATE) — it detec
 or newer layout, offers `/ck-code:migrate` or a plugin update, and stamps. Never read or
 write project state before this PASSes. The gate covers `--quick` and `--publish` too.
 
-`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout: print the
-[wrong-plugin BLOCK](../../references/version-gate.md#lite--wrong-plugin-block), naming the
-`/ck-code-lite:` command to use, and **stop**. Never offer to run `/ck-code:migrate` for it.
+`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout:
+[redirect to ck-code-lite](../../references/version-gate.md#lite--redirect-to-ck-code-lite) —
+print its `↪` line, run `ck-code-lite:start` with the brief or spec path (`--publish` → the BLOCK instead), and **stop**. Never offer to run `/ck-code:migrate` for it.
 
 ---
 

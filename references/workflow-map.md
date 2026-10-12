@@ -160,7 +160,7 @@ the last column instead.
 | `verify` | no story in scope is `done` yet | `build` (first) |
 | `verify` | a bug found outside a test session | `fix` |
 | `migrate` | generating *new* architecture docs from a spec | `design` |
-| `design` / `plan` / `build` | the project is a ck-code-lite one (`tasks/PLAN.md`) | `migrate` (first — it converts the flat plan into epics/stories) |
+| `spec` / `design` / `plan` / `init` / `fix` / `build` / `ship` | the project is a ck-code-lite one (`tasks/PLAN.md`) | runs the `ck-code-lite:` counterpart itself ([redirect](version-gate.md#lite--redirect-to-ck-code-lite)); `migrate` only when the user asks to convert |
 
 When the user is simply unsure which skill to run (no work invoked yet), route them:
 `/ck-code:guide "<task>"` maps a plain-language task to a skill, `/ck-code:guide` (no arg)

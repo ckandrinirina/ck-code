@@ -69,9 +69,9 @@ write project state before this PASSes.
 **Exception:** a SHIP-MODE standalone commit in a repo with **no `tasks/` directory** is
 not a ck-code project — skip the gate and do not stamp; just commit.
 
-`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout: print the
-[wrong-plugin BLOCK](../../references/version-gate.md#lite--wrong-plugin-block), naming the
-`/ck-code-lite:` command to use, and **stop**. Never offer to run `/ck-code:migrate` for it.
+`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout:
+[redirect to ck-code-lite](../../references/version-gate.md#lite--redirect-to-ck-code-lite) —
+print its `↪` line, run `ck-code-lite:ship` with a `T-NN` argument only, and **stop**. Never offer to run `/ck-code:migrate` for it.
 
 ---
 

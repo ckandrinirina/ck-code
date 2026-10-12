@@ -128,9 +128,9 @@ shared [version gate](../../references/version-gate.md) (HARD GATE) — it detec
 or newer layout, offers `/ck-code:migrate` (older only), and stamps a greenfield project. Never read or write project state before
 this PASSes.
 
-`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout: print the
-[wrong-plugin BLOCK](../../references/version-gate.md#lite--wrong-plugin-block), naming the
-`/ck-code-lite:` command to use, and **stop**. Never offer to run `/ck-code:migrate` for it.
+`LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout:
+[redirect to ck-code-lite](../../references/version-gate.md#lite--redirect-to-ck-code-lite) —
+print its `↪` line, run `ck-code-lite:build` with only the `T-NN`, `--waves` and `--auto` arguments, and **stop**. Never offer to run `/ck-code:migrate` for it.
 
 ---
 

@@ -28,7 +28,7 @@ afterwards.
 
 ## ROUTING CHECK (do first)
 
-- A ck-code-lite project (`tasks/PLAN.md`) → `/ck-code-lite:start` (Phase 0 blocks it;
+- A ck-code-lite project (`tasks/PLAN.md`) → `/ck-code-lite:start` (Phase 0 runs it for you;
   `/ck-code:migrate` only on the user's explicit request)
 - An older ck-code layout → `/ck-code:migrate` (Phase 0 routes it)
 - A new feature for a project ck-code already manages → `/ck-code:design` or `/ck-code:plan --quick`
@@ -53,7 +53,8 @@ Layout stamp: !`cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && cat 
   the mode, and every Phase 2 write is idempotent.
 - Anything else, including `ABSENT` → run the Tier-2 probe of the shared
   [version gate](../../references/version-gate.md#tier-2--full-detection-only-when-the-stamp-is-missing-or-stale)
-  verbatim. `NEWER` → its update message, stop. `LITE` → its wrong-plugin BLOCK, stop, never
+  verbatim. `NEWER` → its update message, stop. `LITE` → [redirect](../../references/version-gate.md#lite--redirect-to-ck-code-lite)
+  to `ck-code-lite:start` with no argument (`--deps-only` → the BLOCK instead), stop, never
   offering to run `/ck-code:migrate`.
   `V6` / `LEGACY` → its BLOCK and `migrate` hand-off; never initialise over an older layout. **No marker → continue**: this
   skill writes the stamp itself in Phase 2.
