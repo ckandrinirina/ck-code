@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.11.1] — 2026-10-12
+
+### Changed
+- **version gate** (`spec`, `design`, `plan`, `init`, `fix`, `build`, `ship`): a ck-code-lite project (`tasks/PLAN.md` with no stamp) now runs the ck-code-lite counterpart for you instead of printing the ⛔ wrong-plugin warning: `build` → `/ck-code-lite:build` (keeping `T-NN`, `--waves`, `--auto`), `ship` → `/ck-code-lite:ship`, `spec`/`plan`/`init` → `/ck-code-lite:start`, `fix` → `/ck-code-lite:start "<bug>"`, `design ds <url>` → `/ck-code-lite:design <url>`. Arguments with no lite meaning are dropped and named. A redirect happens once and never bounces back. The warning remains for skills with no lite equivalent (`explain`, `guide`, `track`, `verify`, `doctor`, `config`, `team`) and when ck-code-lite is not installed. `migrate` is still never offered. Ships alongside ck-code-lite 1.2.1, which redirects the other way.
+
 ## [7.11.0] — 2026-10-09
 
 ### Changed
