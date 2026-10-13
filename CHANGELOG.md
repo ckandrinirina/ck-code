@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.13.1] — 2026-10-13
+
+### Fixed
+- **mod**: a lite project is decided by ck-code-lite's own rule (`tasks/PLAN.md` or `docs/ARCHITECTURE.md`, with neither `docs/architecture/` nor `tasks/VERSION.md`), so the ck-code and ck-code-lite mods never both act on a project, nor both stay silent. Before, a `tasks/PLAN.md` beside `docs/architecture/` was lite to ck-code and not lite to ck-code-lite, and neither routed its prompts. Ships alongside ck-code-lite 1.3.0 and its mod; the marketplace now serves ck-code-lite v1.3.0.
+
 ## [7.13.0] — 2026-10-13
 
 ### Added
