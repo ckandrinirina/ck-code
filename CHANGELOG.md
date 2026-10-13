@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.14.0] — 2026-10-13
+
+### Added
+- **mod**: the session is compacted by itself after a `/ck-code:build` wave run. When a turn that dispatched two or more `story-implementer` agents ends cleanly and `ck-view.sh state` shows no story in progress, the mod calls `$.session.compact` between turns, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command. An interrupt, an error, a held story or a prompt already typed leaves the session as it is. The new `compact_after_waves` setting (on by default) turns it off. Ships alongside ck-code-lite 1.4.0; the marketplace now serves ck-code-lite v1.4.0.
+
 ## [7.13.1] — 2026-10-13
 
 ### Fixed
