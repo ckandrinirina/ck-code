@@ -330,7 +330,10 @@ against the Base SHA. **`QA: FAIL` is NEEDS FIXES:** `SendMessage` the same agen
 criteria and excerpt, let it fix and commit, then re-run S5. Cap = 3 QA iterations, then
 escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (wording in
 [output-blocks.md](references/output-blocks.md)). Under `--auto` the cap ends the run instead:
-the branch is kept, the story stays `in-progress`, and the report says why.
+the branch is kept, the story goes back to `in-progress` — its builder already committed `done`,
+so run `ck-story set <story-path> status=in-progress --no-sync` (Bug-Fix Mode: `status=bug
+prior_status=<prior_status>`) and commit it on the branch as `chore(tasks): EE-SS back to
+in-progress — QA failed` — and the report says why.
 
 **S6 — Manual gate and hand-off, here.** Run Phase 8.5 in this context (both questions, one
 call). **PASS** — the agent already wrote `done` (or the restored `prior_status`) and `files:`

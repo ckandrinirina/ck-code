@@ -24,7 +24,7 @@ nothing). Order them into dependency phases by `Blocked by`:
 - **Wave 1** = stories whose every blocker is `done` or `skip` (or that have none). A `BUG` story always
   qualifies for wave 1 regardless of its `blocked_by` — Bug-Fix Mode outranks dependency
   ordering, same as the Ready rule elsewhere.
-- **Wave k+1** = stories whose every blocker is `done`, `skip`, or scheduled in a wave < k (one
+- **Wave k+1** = stories whose every blocker is `done`, `skip`, or scheduled in a wave ≤ k (one
   scheduled in the wave being filled right now does not count — it has not landed yet).
 
 Within one dependency level, stories are further split into **sub-waves** so no two
@@ -52,7 +52,9 @@ re-scoping. Create one Claude Task per scheduled story prefixed by wave (`W1 · 
 
 For each wave, in order:
 
-1. **Confirm** — the P3 question call, `PROCEED / DROP A STORY / ABORT` for this wave.
+1. **Plan** — print this wave's plan, then dispatch. Ask the P3 question call only when P3
+   already needs one ([parallel-mode.md P3](parallel-mode.md) — the wave plan alone never
+   triggers it); `PROCEED / DROP A STORY / ABORT` rides along only then.
 2. **Dispatch** this wave's stories through [parallel-mode.md](parallel-mode.md) P4, then walk
    each through P5 (integrity/resume) → P7 (QA) **as its agent returns** — those two are
    per-story and pipelined, never barriered on the wave. P6 (conflict, intra-wave only) is the

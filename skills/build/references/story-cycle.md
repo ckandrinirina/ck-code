@@ -34,8 +34,8 @@ Stage explicit paths only. Never run `ck-index`, `git checkout -b`, `git switch 
 `git rebase`, `git reset` or any `git worktree` command.
 
 **Inline fallback** (a `build` with no `Agent` tool): the user is present. Phases 1.3–1.6 already
-ran in `SKILL.md`, 3.2 may ask, 3.5 runs `SKILL.md`'s gate, 6.3 and 7 stay separate (7
-delegates per [agent-prompts.md § Inline QA dispatch](agent-prompts.md#inline-qa-dispatch)),
+ran in `SKILL.md`, 3.2 may ask, 3.5 runs `SKILL.md`'s gate, 6.3 and 7 stay separate (with
+no `Agent` tool to dispatch it, 7 runs its commands inline),
 `ck-story` runs without `--no-sync`, and 8.5 and 8.7 run in `SKILL.md`.
 
 ## TOOL-CALL DISCIPLINE
@@ -279,7 +279,7 @@ suite/build/lint output in its own context and returns a compact verdict. The di
 model, cwd, story path, stack commands, return shape — is
 [agent-prompts.md § Inline QA dispatch](agent-prompts.md#inline-qa-dispatch); do
 not improvise it. Run the heavy commands inline **only** when that subagent_type is
-unregistered, or when delegated (where the orchestrator runs `qa-validator` per story
+unregistered or there is no `Agent` tool (the inline fallback), or when delegated (where the orchestrator runs `qa-validator` per story
 instead).
 
 Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../../references/qa-validation.md)

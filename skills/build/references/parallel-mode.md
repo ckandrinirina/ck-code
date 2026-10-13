@@ -515,12 +515,15 @@ per-stack command table, story versus full scope, and how a check is re-run afte
 
 **P7 never passes `--reuse`**, so its run is always
 fresh against the committed branch. That fresh run is the whole point of P7. Mark any QA-failing story **BLOCKED** — from merge in
-a fan-out wave — and keep its branch. Acceptable = ✓ complete + `QA: PASS`, plus conflict-free
+a fan-out wave — and keep its branch. Its builder already committed `done`, so revert that on
+its branch (in its worktree, fan-out): `ck-story set <story-path> status=in-progress --no-sync`
+(Bug-Fix Mode: `status=bug prior_status=<prior_status>`), committed as
+`chore(tasks): EE-SS back to in-progress — QA failed`. Acceptable = ✓ complete + `QA: PASS`, plus conflict-free
 in a fan-out wave.
 
 A solo wave that QA-fails has its work sitting on `$WORKBRANCH` with nothing to withhold, so
 "blocked" means *do not proceed to the manual gate or the next wave*: report the failure, keep
-the commits, and offer the same P8 choices (fix agent on `$WORKBRANCH`, or stop for review).
+the commits (plus the status revert above, committed on `$WORKBRANCH`), and offer the same P8 choices (fix agent on `$WORKBRANCH`, or stop for review).
 Never advance P9 past a red solo story — its dependents would build on broken code.
 
 ## P8 — Merge, regenerate, verify
@@ -597,10 +600,11 @@ not exempt: one story still lands on the shared target, and the gate is what kee
 becoming the next wave's foundation unverified. When later waves remain, add a third answer,
 **PASS, and defer the gate for the remaining waves**. It skips the question for the rest of
 the run, and their steps join one checklist at P9, so they are never dropped. Under `--auto`
-every wave is deferred that way. On `ISSUES`, dispatch one `Agent` into the
-main checkout on `$TARGET` (`git rev-parse --abbrev-ref HEAD` guard) invoking
-`/ck-code:build`, which enters its bug-fix loop and commits the fix on `$TARGET`; then
-re-ask. The story stays merged — this is a fix, not a re-open.
+every wave is deferred that way. On `ISSUES`, dispatch `ck-code:story-implementer` solo into the
+main checkout on `$TARGET` — the [solo dispatch](agent-prompts.md#per-story-implementer-solo-p4-wave-of-exactly-1)
+with `$TARGET` as its branch (`git rev-parse --abbrev-ref HEAD` guard) and its `Cycle:` line,
+plus the user's issue report and a pointer to [completion.md § 8.5.3 Bug-Fix Sub-Loop](completion.md#853--manual-test-bug-fix-sub-loop).
+It runs that sub-loop and commits the fix on `$TARGET`; then re-ask. The story stays merged — this is a fix, not a re-open.
 
 **Cleanup.** After the merge and its check settle, `git worktree prune` and confirm only the
 main worktree and the worktrees of held, blocked or conflicted stories remain. `prune` only

@@ -184,9 +184,10 @@ PLAN: tasks/<slug>
 ```
 
 `(parallel)` labels a wave with 2+ stories, `(solo)` a wave with exactly one — that shape is
-what dispatch (parallel-mode.md P4) acts on. The `← needs …` suffix appears only on a row
-still waiting on an unmet blocker scheduled in the same or a later wave (never on a row
-whose blockers are already `done`); `🐛 Bug-Fix Mode` appears only on `BUG` rows. The
+what dispatch (parallel-mode.md P4) acts on. The `← needs …` suffix appears on any row with a blocker not
+yet `DONE` or `SKIP`, naming each such blocker — for a non-`BUG` row that blocker is always
+scheduled in an earlier wave, which lands before this one dispatches (never on a row whose
+blockers are all `DONE`/`SKIP`); `🐛 Bug-Fix Mode` appears only on `BUG` rows. The
 `UNSCHEDULABLE` block and the `Note:` line each appear only when they apply (an unschedulable
 story, or more than 3 waves). The final `PLAN: <plan dir>` line is always printed — it is the
 machine-readable trailer, always the last line, mirroring `next`'s `NEXT:` trailer.

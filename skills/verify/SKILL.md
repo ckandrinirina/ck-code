@@ -3,7 +3,7 @@ name: verify
 description: Use when the user wants to manually test a whole feature, plan or epic before promoting it — a checklist of every human check to run, resuming a test session, recording pass or fail results, or reporting an issue found while testing. Not for explaining code (use explain) or for a bug found outside a test session (use fix). Argument is an optional `tasks/<plan>` path, `--epic NN`, or a feature name, plus `--all` (retest passed items too) or `--recheck` (reset, retest from scratch).
 argument-hint: "[tasks/<plan> | --epic NN | <feature name>] [--all | --recheck]"
 effort: medium
-allowed-tools: Bash(ck-checklist*) Bash(ck-story get*) Bash(ck-plan get*) Bash(ck-view*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Skill
+allowed-tools: Bash(ck-checklist*) Bash(ck-story get*) Bash(ck-plan get*) Bash(ck-view*) Bash(ck-bootstrap*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git branch*) Bash(git rev-parse*) Bash(git add*) Bash(git commit*) Bash(git ls-files*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash

@@ -193,8 +193,9 @@ green.
 
 ## Inline QA dispatch
 
-The single-story QA dispatch, used by `build` S5 (and Phase 7 in the no-`Agent` fallback) and
-`fix` Phase 4. No `isolation` (the
+The single-story QA dispatch, used by `build` S5 and
+`fix` Phase 4 (the no-`Agent` fallback has nothing to dispatch with, so its Phase 7 runs the
+same commands inline). No `isolation` (the
 work is in the main checkout on its own branch) and no worktree; everything the agent needs
 is in the prompt, because it cannot ask.
 

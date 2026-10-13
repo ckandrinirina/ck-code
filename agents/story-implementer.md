@@ -92,8 +92,9 @@ and its 6.3 + 7 run green. If you did no work or hit a blocker, return
    that committed state is the only thing the orchestrator can resume (via `SendMessage`)
    if you stop early, so never suppress the per-phase commits or leave work uncommitted.
 4. At done (8.6), in your worktree (or solo branch), flip and record your own story
-   with no sync, then commit the story file with your last cycle:
-   `ck-story set <story path> status=done --no-sync` and
+   with no sync, then commit the story file with your last cycle: set the status as the
+   Cycle file's 8.6 says — `ck-story set <story path> status=done --no-sync` in Story Mode,
+   `ck-story set <story path> status=<prior_status> prior_status= --no-sync` in Bug-Fix Mode — and
    `ck-story files <story path> $(git diff --name-only <Base SHA>...HEAD -- . ':!tasks')`.
    In a story worktree `ck-story` refuses the board sync by itself anyway.
 5. Return the structured verdict above.
