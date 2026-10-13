@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.13.0] — 2026-10-13
+
+### Added
+- **mod**: ck-code ships a mod, an in-process hooks module (`hooks/mod/register.tsx`, Claude Code ≥ 2.1.287) beside its shell hooks. It acts only in a ck-code project and calls the same scripts the skills call, so nothing in it is load-bearing:
+  - a **band above the prompt** with the active story, the plan's counts and the recommended next command (**Use** fills it, **Hide** hides it; `/ck-band` toggles);
+  - **commands with no model turn**: `/ck-status`, `/ck-next`, `/ck-progress`, `/ck-waves <NN>`, `/ck-check` (`ck-doctor --quiet`), printed at once, even mid-turn;
+  - an **agents pane** (`/ck-agents`) with a live row per ck-code agent, opened by itself when two story builders run at once, plus a status-line count;
+  - a **verify pane** (`/ck-verify-pane`) with Pass, Skip, Steps and Fail… on the next checklist items, recorded through `ck-checklist.sh`;
+  - a **profile** (`/ck-profile`) of time, tool calls, agents and tokens per ck-code skill over the project's last 200 turns;
+  - **guards** refusing hand edits of `STORIES_INDEX.md`/`EPICS_INDEX.md` and a model-run `git clean -x`/`-X`;
+  - **no AI attribution**: the engine's commit and PR attribution text is dropped in a ck-code project;
+  - a **merged-PR watch** pointing at `/ck-code:doctor --fix`, **story-id completion** in the prompt box, **one command list** when ck-code-lite is installed too, and the last `/ck-code:*` command carried across a `/clear`.
+- **settings**: `guards`, `band` and `pr_watch` turn those parts off (all on by default).
+- **tests**: `tests/mod/` (23 offline tests, `claude plugin test`), run in CI's new `mod` job.
+
+### Changed
+- **prompt router**: now the mod's `prompt.submit` hook; `scripts/prompt-router.sh` and its `UserPromptSubmit` entry are removed. It also skips prompts that are not the person's own (task notifications, other sessions' messages), and a failure lets the prompt through.
+- **compatibility**: built and tested against Claude Code 2.1.296 (was 2.1.280). The mod needs 2.1.287 or later.
+
 ## [7.12.0] — 2026-10-12
 
 ### Added
