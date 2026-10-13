@@ -11,6 +11,7 @@
 //   AbovePrompt band   active story, counts, recommended next command, merged-PR notes
 //   panes              agents cockpit during a build; verify checklist with buttons
 //   turn.*             per-skill time and token profile (/ck-profile)
+//   session.compact    compacts the session once a wave run of builders has finished
 //
 // Pure rules live in logic.ts. `$` never leaves this file except into the state helpers.
 
@@ -19,6 +20,7 @@ import type { EngineInterface, Register } from "claude-code";
 
 import type { CkAgentRow, CkBand, CkVerify } from "../../types";
 import {
+  COMPACT_INSTRUCTIONS,
   HANDOFF_TTL_MS,
   PROFILE_KEEP,
   addUsage,
@@ -29,6 +31,7 @@ import {
   handoffText,
   hideCommand,
   isLive,
+  isWaveRunOver,
   isRoutable,
   parseChecklistNext,
   parseMergedPrs,
@@ -61,6 +64,8 @@ const AGENT_POLL_MS = 3000;
 let guardsOn = true;
 let bandOn = true;
 let prWatchOn = true;
+let compactOn = true;
+let builders = 0;
 let routingCache: string | undefined;
 let stories: StoryRow[] = [];
 let isRefreshing = false;
@@ -367,6 +372,33 @@ async function saveTurn($: EngineInterface, record: TurnRecord): Promise<void> {
   await $.store.set(key, [...old, record].slice(-PROFILE_KEEP));
 }
 
+// ---- compaction after a wave run --------------------------------------------------------
+
+// Runs between turns: $.session.compact rejects while one runs, and a person who has already
+// typed the next prompt keeps the session as it is. The next command (ship --promote, verify)
+// starts from the story files, not from the transcript.
+async function compactAfterWaves(
+  $: EngineInterface,
+  reason: string,
+  dispatched: number,
+): Promise<void> {
+  try {
+    if ((await projectKind($)) !== "code") return;
+    const state = parseState((await script($, "ck-view.sh", ["state"])).stdout);
+    const inProgress = state?.counts.in_progress;
+    if (inProgress === undefined) return;
+    if (!isWaveRunOver({ reason, builders: dispatched, inProgress })) return;
+    const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS });
+    $.ui.toast(
+      out.skip
+        ? `ck-code: not compacted, ${out.skip}`
+        : "ck-code: wave run finished, session compacted",
+    );
+  } catch {
+    // A turn already running, or a failed probe: the session stays as it is.
+  }
+}
+
 // ---- commands ------------------------------------------------------------------------
 
 async function viewCommand($: EngineInterface, mode: string, args: string): Promise<{ text: string }> {
@@ -380,6 +412,7 @@ export const register: Register = (on, options) => {
   guardsOn = options.guards !== false;
   bandOn = options.band !== false;
   prWatchOn = options.pr_watch !== false;
+  compactOn = options.compact_after_waves !== false;
 
   on("session.start", async ($, e, next) => {
     cwdCache = await $.session.cwd();
@@ -554,6 +587,7 @@ export const register: Register = (on, options) => {
   // ---- profiler ----
 
   on("turn.start", async ($, e, next) => {
+    builders = 0;
     turn = {
       at: await $.clock.now(),
       skill: "-",
@@ -569,6 +603,12 @@ export const register: Register = (on, options) => {
       turn.tools += 1;
       if (e.tool === "Agent") turn.agents += 1;
     }
+    if (
+      e.tool === "Agent" &&
+      e.agentId === undefined &&
+      e.subagent_type === "ck-code:story-implementer"
+    )
+      builders += 1;
     return next(e);
   }).catch(($, e, next) => next(e));
 
@@ -598,6 +638,10 @@ export const register: Register = (on, options) => {
       });
     }
     $.clock.after(50, () => void refreshBand($));
+    const dispatched = builders;
+    builders = 0;
+    if (compactOn && dispatched >= 2)
+      $.clock.after(500, () => void compactAfterWaves($, e.reason, dispatched));
     return out;
   });
 
