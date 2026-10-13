@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.14.2] — 2026-10-13
+
+### Fixed
+- **mod**: compaction after a wave run now fires with background builders — the builder count runs since the last compaction and waits until no `story-implementer` is live, instead of resetting every turn (it never fired before).
+- **mod**: the lite-project rule (`isLiteLayout`, shared word for word with ck-code-lite) matches the skills' plugin guards, so a half-migrated `tasks/PLAN.md` beside an unstamped `docs/architecture/` no longer hides ck-code-lite's commands; the project is found from the session's folder upward, so a shell `cd` keeps routing, guards and the band.
+- **mod**: the band shows the current story instead of the whole status line; verify pane items show a title, not a path; Use fills only the slash command when the recommendation holds placeholders; Hide persists; story-ID completion works with the band off; command lists refresh after migrate or design; one failed `gh` call no longer ends the merged-PR watch; the `git clean` guard ignores quoted text and sees through `(`, `sudo`, `command`, `env`; the agents toast counts only the current run; late background-subagent tokens are kept.
+- **build**: a story that fails QA is set back to `in-progress` (`bug` in Bug-Fix Mode) — its builder had already committed `done`, so dependents could be scheduled on broken code.
+- **build**: manual-gate ISSUES in a wave dispatch `story-implementer` with the Bug-Fix Sub-Loop instead of handing a sub-agent the build skill; `story-implementer` restores `prior_status` in Bug-Fix Mode; `wave-mode.md` no longer asks before every wave; the no-`Agent` fallback runs QA inline; wave and `← needs` prose match `ck-view.sh`.
+- **verify**: listed in the version gate's hard-block scope, with the `ck-bootstrap` and `git ls-files` grants the gate needs.
+- **marketplace**: ck-code-lite is described with its four skills.
+
 ## [7.14.1] — 2026-10-13
 
 ### Changed
