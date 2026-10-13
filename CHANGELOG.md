@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.14.1] — 2026-10-13
+
+### Changed
+- **mod**: a livelier band, a toast when a story is done, a 🎉 toast when every story is, and a colored agents pane. The band now opens with `◆ ck-code`, a progress bar and the done/total score with a percentage, the active story (`⚡`), the counts, then the next command (`→`). It falls back to one row when only one fits. The agents pane gains a running/done header with its own bar, a turning glyph on live agents, green ✓ and red ✗. Ships alongside ck-code-lite 1.4.1; the marketplace now serves ck-code-lite v1.4.1.
+
 ## [7.14.0] — 2026-10-13
 
 ### Added
