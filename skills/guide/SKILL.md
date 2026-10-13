@@ -134,7 +134,7 @@ design system is ready at claude.ai/design.>
 ### B.1 Classify the intent
 
 Read [`../../references/prompt-routing.md`](../../references/prompt-routing.md) — the
-single intent → skill table, the same one the `UserPromptSubmit` hook injects on every
+single intent → skill table, the same one the mod's `prompt.submit` hook injects on every
 free-text prompt. This skill keeps no copy of it. Apply it with guide's own behaviour, not
 the hook's:
 

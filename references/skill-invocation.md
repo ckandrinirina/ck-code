@@ -15,7 +15,7 @@ hand, and then approving a `Skill` permission prompt on top. After it, saying ye
 selecting **Run it** once.
 
 **The one exception is the prompt router** (an owner decision). In an adopted project,
-[`scripts/prompt-router.sh`](../scripts/prompt-router.sh) injects
+the mod's `prompt.submit` hook ([`hooks/mod/register.tsx`](../hooks/mod/register.tsx)) injects
 [`prompt-routing.md`](prompt-routing.md) on every free-text prompt, and the main session
 invokes the routed skill without asking: the user's prompt is the consent. That covers only
 the prompt → first skill step. Every hand-off *between* skills after it still asks, per this

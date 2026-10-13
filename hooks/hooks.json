@@ -1,4 +1,8 @@
 {
+  "description": "ck-code hooks: settings hooks for session start and formatting, and the mod (hooks module) for routing, guards, band, panes and zero-model commands",
+  "modules": [
+    "./mod/register.tsx"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -6,16 +10,6 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/session-start.sh"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/prompt-router.sh"
           }
         ]
       }

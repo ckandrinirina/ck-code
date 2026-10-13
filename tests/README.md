@@ -41,11 +41,25 @@ when `jq` is absent.
 `main`, on both `ubuntu-latest` (with shellcheck installed) and `macos-latest`
 (bash 3.2 — the portability check).
 
+## Mod tests
+
+The mod (`hooks/mod/`, Claude Code ≥ 2.1.287) has its own suite in `tests/mod/`:
+`logic.test.ts` for the pure rules (routing, guards, parsers, the profile report),
+`hooks.test.ts` for the hooks driven through the engine (guard denials, routing context,
+attribution, the de-duplicated command list), and `band.test.tsx` for the band drawn on
+the terminal and the desktop. They need no session, sign-in or network:
+
+    claude plugin validate .     # what the module hooks and calls, and what would be refused
+    claude plugin test .         # every tests/mod/*.test.ts[x]
+
+CI runs both in the `mod` job. Run them after any change under `hooks/mod/`, `types/`
+or a script the mod calls (`ck-view.sh state`, `statusline.sh`, `ck-checklist.sh`).
+
 ## Evals (skill routing) — local only
 
 `tests/evals.sh` runs the `claude plugin eval` suite in `evals/` (Claude Code ≥ 2.1.269).
 Each case sends a realistic free-text prompt inside a seeded ck-code project, where
-`scripts/prompt-router.sh` injects `references/prompt-routing.md`, and checks with
+the mod's `prompt.submit` hook injects `references/prompt-routing.md`, and checks with
 `tool_used` graders that the right `/ck-code:*` skill is called — and no other.
 `noroute-*` cases assert that no skill fires (a question, a one-off edit), and
 `prereq-*` that a skill with a missing prerequisite is not entered.
@@ -56,7 +70,7 @@ Each case sends a realistic free-text prompt inside a seeded ck-code project, wh
 
 It runs on your logged-in Claude account (a Max plan works, no API key) and is not in
 CI, because every run spends model tokens. Run it after changing a skill `description:`,
-`references/prompt-routing.md`, `scripts/prompt-router.sh`, or guide Mode B.
+`references/prompt-routing.md`, the router in `hooks/mod/`, or guide Mode B.
 
 - **Seeded project:** `evals/_fixture/adopted/`, copied into each run's cwd by
   `evals/_fixture/scaffold.sh` (`no-arch` variant drops `docs/architecture/`). It is a v7

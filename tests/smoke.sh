@@ -517,7 +517,7 @@ BOOTSTRAP_OUT=$(ck-bootstrap check 2>&1); BOOTSTRAP_RC=$?
 assert_exit "ck-bootstrap check: exits 0 (read-only report)" 0 "$BOOTSTRAP_RC"
 
 echo
-echo "=== hook scripts (statusline / session-start / subagent-statusline / prompt-router) ==="
+echo "=== hook scripts (statusline / session-start / subagent-statusline) ==="
 STATUSLINE_JSON=$(printf '{"workspace":{"current_dir":"%s"}}' "$FIXTURE")
 STATUSLINE_OUT=$(printf '%s' "$STATUSLINE_JSON" | "$PLUGIN_ROOT/scripts/statusline.sh" 2>&1); STATUSLINE_RC=$?
 assert_exit "statusline.sh: exits 0" 0 "$STATUSLINE_RC"
@@ -577,22 +577,7 @@ else
   log_skip "subagent-statusline.sh: jq not on PATH — script no-ops by design, skipping content assertion"
 fi
 
-# prompt-router.sh: routes a free-text prompt, stays silent on a slash command, a short
-# reply, and outside an adopted project (references/prompt-routing.md is the payload).
-ROUTER="$PLUGIN_ROOT/scripts/prompt-router.sh"
-ROUTER_OUT=$(printf '{"cwd":"%s","prompt":"fix the \\"login\\" bug, it crashes on submit"}' "$FIXTURE" | "$ROUTER" 2>&1); ROUTER_RC=$?
-assert_exit "prompt-router.sh: exits 0" 0 "$ROUTER_RC"
-assert_contains "prompt-router.sh: emits a UserPromptSubmit hook JSON line" "$ROUTER_OUT" '"hookEventName":"UserPromptSubmit"'
-assert_contains "prompt-router.sh: injects the routing table" "$ROUTER_OUT" 'ck-code router'
-if [ "$HAVE_JQ" -eq 1 ]; then
-  assert_true "prompt-router.sh: output is valid JSON" "$(printf '%s' "$ROUTER_OUT" | jq -e . >/dev/null 2>&1; echo $?)"
-fi
-ROUTER_SLASH=$(printf '{"prompt":"/ck-code:fix"}' | "$ROUTER" 2>&1)
-assert_eq "prompt-router.sh: silent on a slash command" "" "$ROUTER_SLASH"
-ROUTER_SHORT=$(printf '{"prompt":"yes"}' | "$ROUTER" 2>&1)
-assert_eq "prompt-router.sh: silent on a short reply" "" "$ROUTER_SHORT"
-ROUTER_ELSEWHERE=$(cd "$(mktemp -d)" && printf '{"prompt":"fix the login bug please"}' | "$ROUTER" 2>&1)
-assert_eq "prompt-router.sh: silent outside an adopted project" "" "$ROUTER_ELSEWHERE"
+# The prompt router is the mod's prompt.submit hook since 7.13.0: tests/mod/hooks.test.ts.
 
 echo
 echo "=== one Ready rule: a skipped blocker releases its dependant ==="

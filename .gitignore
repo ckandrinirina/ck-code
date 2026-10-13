@@ -17,3 +17,7 @@ node_modules/
 
 # claude plugin eval output (tests/evals.sh)
 /evals/results/
+
+# Written by Claude Code beside the mod when it loads from --plugin-dir (type declarations)
+/.claude-plugin/types/
+/tsconfig.json

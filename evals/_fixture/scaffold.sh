@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copies the shared eval project into the run's working directory (the cwd a scaffold
 # runs in). `context.add_dirs` cannot do this: it mounts a side directory, leaves the cwd
-# empty, and prompt-router.sh then sees an un-adopted project and stays silent.
+# empty, and the mod's prompt router then sees an un-adopted project and stays silent.
 #   adopted  — full ck-code project (docs/architecture + tasks/ v7 layout)
 #   no-arch  — same, minus docs/architecture (plan's prerequisite is missing)
 set -eu

@@ -57,6 +57,25 @@
         "sonnet",
         "opus"
       ]
+    },
+    "guards": {
+      "type": "boolean",
+      "title": "Mod guards",
+      "description": "Refuse hand edits of generated views (STORIES_INDEX.md, EPICS_INDEX.md) and git clean -x/-X in a ck-code project.",
+      "default": true
+    },
+    "band": {
+      "type": "boolean",
+      "title": "Band above the prompt",
+      "description": "Show the active story, the story counts and the recommended next command above the prompt.",
+      "default": true
+    },
+    "pr_watch": {
+      "type": "boolean",
+      "title": "Merged-PR watch",
+      "description": "Check your merged GitHub PRs every 5 minutes and say when the plan has not recorded one yet.",
+      "default": true
     }
-  }
+  },
+  "types": "./types/index.d.ts"
 }

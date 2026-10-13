@@ -1,4 +1,4 @@
-<!-- Emitted verbatim by scripts/prompt-router.sh as UserPromptSubmit context on every free-text prompt in a ck-code project. Every line costs tokens on every prompt: keep it one screen, a routing table, never a workflow. Lines starting with "<!--" are stripped. This is THE single intent → skill table: skills/guide Mode B reads this file and keeps no copy of its own; order matters (first match wins). -->
+<!-- Attached verbatim by the mod's prompt.submit hook (hooks/mod/register.tsx) as context on every free-text prompt in a ck-code project. Every line costs tokens on every prompt: keep it one screen, a routing table, never a workflow. Lines starting with "<!--" are stripped. This is THE single intent → skill table: skills/guide Mode B reads this file and keeps no copy of its own; order matters (first match wins). -->
 ck-code router — this project uses ck-code. Before acting on this prompt, pick the best-fit ck-code skill and invoke it with the Skill tool: announce it in one line (`→ /ck-code:<skill> <args>`), then call it. The prompt itself is the consent — never ask "should I use /ck-code:fix?" first.
 | Intent (first match wins) | Skill |
 |---|---|

@@ -1,0 +1,54 @@
+import { expect, mock, test } from 'claude-code/testing'
+import type { On } from 'claude-code'
+
+const STATE = [
+  'COUNTS: ready=4 bug=0 blocked=13 in_progress=1 done=42',
+  'RECOMMEND: /ck-code:track next',
+  'WHY: 4 ready stories to implement',
+].join('\n')
+
+function project(on: On, filled: string[]) {
+  mock.store(on)
+  on('session.cwd', () => ({ value: '/p' }))
+  on('fs.exists', (_$, e) => ({ value: e.path === '/p/docs/architecture' || e.path === '/p/tasks' }))
+  on('fs.list', () => ({ value: [] }))
+  on('process.run', (_$, e) => {
+    const out = (e.argv[0] ?? '').endsWith('ck-view.sh') ? STATE : '\u001b[36m02-05\u001b[0m · 3/9'
+    return { value: { exitCode: 0, stdout: out, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  on('prompt.fill', (_$, e) => {
+    filled.push(e.text)
+    return { isFilled: true }
+  })
+}
+
+const RUN = {
+  command: 'ck-band',
+  args: '',
+  origin: { kind: 'composer' },
+  presentation: { isFullscreen: true, columns: 160 },
+} as const
+
+const PROPS = {
+  hasSurvey: false,
+  isWorking: false,
+  maxRows: 6,
+  bodyColumns: 100,
+  scroll: { offset: 0, bodyRows: 6 },
+}
+
+test('the band shows the story, the counts and fills the next command', async ($, on) => {
+  const filled: string[] = []
+  project(on, filled)
+  // /ck-band hides, then shows again and refreshes.
+  await $.command.run(RUN)
+  await $.command.run(RUN)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ plugin: 'ck-code', surface, component: 'AbovePrompt', props: PROPS as never })
+    expect(await ui.find({ text: /4 ready · 1 in progress · 13 blocked · 42 done/ })).toBeDefined()
+    expect(await ui.find({ text: /02-05 · 3\/9/ })).toBeDefined()
+    await ui.press({ key: 'fill' })
+    await ui.unmount()
+  }
+  expect(filled).toEqual(['/ck-code:track next ', '/ck-code:track next '])
+})
