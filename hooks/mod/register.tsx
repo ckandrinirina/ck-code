@@ -83,19 +83,24 @@ let turn: Turn | undefined;
 
 // ---- project probes ------------------------------------------------------------------
 
-// The shell router's adoption markers: a ck-code project has docs/architecture, docs/specs,
-// tasks/VERSION.md or a tasks/<plan>/epics. A tasks/PLAN.md with no stamp is ck-code-lite's.
+// A ck-code project has docs/architecture, docs/specs, tasks/VERSION.md or a tasks/<plan>/epics.
+// A tasks/PLAN.md or docs/ARCHITECTURE.md with neither docs/architecture nor a stamp is
+// ck-code-lite's (its mod's isLiteProject), and that plugin owns it.
 async function projectKind($: EngineInterface): Promise<ProjectKind> {
   const cwd = await $.session.cwd();
+  const isFull =
+    (await $.fs.exists(`${cwd}/docs/architecture`)) ||
+    (await $.fs.exists(`${cwd}/tasks/VERSION.md`));
+  // ck-code-lite's own rule, word for word, so the two mods never both act on one project.
   if (
-    (await $.fs.exists(`${cwd}/tasks/PLAN.md`)) &&
-    !(await $.fs.exists(`${cwd}/tasks/VERSION.md`))
+    !isFull &&
+    ((await $.fs.exists(`${cwd}/tasks/PLAN.md`)) ||
+      (await $.fs.exists(`${cwd}/docs/ARCHITECTURE.md`)))
   ) {
     return "lite";
   }
-  if (await $.fs.exists(`${cwd}/docs/architecture`)) return "code";
+  if (isFull) return "code";
   if (await $.fs.exists(`${cwd}/docs/specs`)) return "code";
-  if (await $.fs.exists(`${cwd}/tasks/VERSION.md`)) return "code";
   if (!(await $.fs.exists(`${cwd}/tasks`))) return "none";
   for (const entry of await $.fs.list(`${cwd}/tasks`)) {
     if (

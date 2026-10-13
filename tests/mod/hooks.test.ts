@@ -81,3 +81,21 @@ test('a slash command is never routed', async ($, on) => {
   const r = await $.prompt.submit({ text: '/ck-code:build 02-05 please', wait: false, origin: { kind: 'composer' } })
   expect(r.context ?? []).toEqual([])
 })
+
+test('a lite project is left to ck-code-lite: no routing, no ck-code-lite commands hidden', async ($, on) => {
+  on('session.cwd', () => ({ value: '/p' }))
+  on('fs.exists', (_$, e) => ({ value: e.path === '/p/tasks/PLAN.md' || e.path === '/p/docs/specs' }))
+  on('fs.list', () => ({ value: [] }))
+  on('fs.read', () => ({ value: '# Routing' }))
+  on('prompt.submit', (_$, e) => ({ text: e.text, context: e.context }))
+  const r = await $.prompt.submit({ text: 'add a dark mode toggle please', wait: false, origin: { kind: 'composer' } })
+  expect(r.context ?? []).toEqual([])
+})
+
+test('tasks/PLAN.md beside docs/architecture is a ck-code project', async ($, on) => {
+  on('session.cwd', () => ({ value: '/p' }))
+  on('fs.exists', (_$, e) => ({ value: e.path === '/p/tasks/PLAN.md' || e.path === '/p/docs/architecture' }))
+  on('fs.list', () => ({ value: [] }))
+  on('attribution.text', (_$, e) => ({ text: e.text }))
+  expect((await $.attribution.text({ kind: 'commit', text: 'x' })).text).toBe('')
+})
