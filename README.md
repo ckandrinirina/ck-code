@@ -304,8 +304,9 @@ discusses Claude Code is untouched. The rule is
 [documented here](references/no-ai-references.md) and enforced by `scripts/no-ai-guard.sh`
 — the hook is active only while one of those skills is running.
 
-**SessionStart hook** (`scripts/session-start.sh`) reloads generated skills, regenerates
-the views, checks the layout stamp in both directions (an older project is sent to
+**SessionStart hook** (`scripts/session-start.sh`) puts the running version's `bin/` first on
+the session's `PATH` (so a session begun before a plugin update still finds a newly added
+`ck-*` command), reloads generated skills, regenerates the views, checks the layout stamp in both directions (an older project is sent to
 `migrate`, a newer one or an unmet `requires:` asks you to update the plugin), names
 expert or guide skills a stack change made stale, injects the one-line workflow summary,
 and — only in a project already stamped `tasks/VERSION.md` —
