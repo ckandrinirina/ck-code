@@ -739,9 +739,21 @@ assert_eq "ck-affected --tests: paths are relative to the caller's directory" "s
 assert_contains "ck-affected --area: the whole backoffice, never the client" "$(AFF HEAD --area --tests)" "users.test.ts"
 assert_not_contains "ck-affected --area: an untouched area stays out" "$(AFF HEAD --area --tests)" "apps/client"
 assert_eq "ck-affected --command: the one-file command names the tests" \
-  "one apps/backoffice/src/orders/orders.controller.test.ts apps/backoffice/src/orders/orders.service.test.ts apps/backoffice/src/routes.test.ts" \
+  "one 'apps/backoffice/src/orders/orders.controller.test.ts' 'apps/backoffice/src/orders/orders.service.test.ts' 'apps/backoffice/src/routes.test.ts'" \
   "$(AFF HEAD --command full 'one {files}')"
+afw "apps/backoffice/src/it's \$(touch PWNED) & x.test.ts" "import { total } from './orders/orders.service'"
+( cd "$AF" && bash -c "$(ck-affected HEAD --command full 'ls {files}')" >/dev/null 2>&1 )
+assert_eq "ck-affected --command: a file name is data, never run" "no" "$([ -e "$AF/PWNED" ] && echo yes || echo no)"
+assert_contains "ck-affected --command: a quote in a file name survives" "$( cd "$AF" && bash -c "$(ck-affected HEAD --command full 'ls {files}')" 2>&1 )" "it's \$(touch PWNED) & x.test.ts"
+assert_contains "ck-affected: a base that is an option is refused" "$(AFF --output=x)" "unknown flag"
+assert_contains "ck-affected: a base starting with - is refused" "$(AFF -- -x 2>&1; AFF '-x' 2>&1)" "ERROR"
 AFR
+# A root main.ts would turn an unquoted *.ts pathspec into "main.ts" and hide every importer.
+afw main.ts 'export {}'
+( cd "$AF" && git add main.ts && git -c user.email=s@s -c user.name=s commit -qm main )
+echo '//' >>"$AF/apps/backoffice/src/orders/orders.service.ts"
+assert_contains "ck-affected: a root .ts file never narrows the *.ts pathspec" "$(AFF HEAD --tests)" "orders.controller.test.ts"
+AFR; ( cd "$AF" && git reset -q --hard HEAD~1 )
 
 echo '//' >>"$AF/packages/ui/src/button.ts"
 AF_T=$(AFF HEAD --tests)
