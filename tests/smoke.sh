@@ -748,6 +748,13 @@ assert_contains "ck-affected --command: a quote in a file name survives" "$( cd 
 assert_contains "ck-affected: a base that is an option is refused" "$(AFF --output=x)" "unknown flag"
 assert_contains "ck-affected: a base starting with - is refused" "$(AFF -- -x 2>&1; AFF '-x' 2>&1)" "ERROR"
 AFR
+# A file named -f<x> must never reach awk as an option: awk -f would run <x> as a program.
+printf 'BEGIN { system("touch PWNED") }\n' >"$AF/evil.ts"
+afw "-fevil.ts" "import { x } from './apps/backoffice/src/orders/orders.service'"
+echo '//' >>"$AF/apps/backoffice/src/orders/orders.service.ts"
+AFF HEAD --tests >/dev/null
+assert_eq "ck-affected: a file named like an option is never run as awk code" "no" "$([ -e "$AF/PWNED" ] && echo yes || echo no)"
+AFR
 # A root main.ts would turn an unquoted *.ts pathspec into "main.ts" and hide every importer.
 afw main.ts 'export {}'
 ( cd "$AF" && git add main.ts && git -c user.email=s@s -c user.name=s commit -qm main )
