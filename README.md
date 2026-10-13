@@ -407,9 +407,10 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **Story-id completion** | terminal | Typing `10-` in the prompt offers the plan's unfinished stories `10-01 Session assembler …` |
 | **One command list** | everywhere | With ck-code-lite installed too, a ck-code project hides `ck-code-lite:*` from the typeahead, and a lite project hides `ck-code:*` but `migrate`, `guide` and `init`. A hidden command still runs when typed |
 | **Hand-off across `/clear`** | everywhere | The last `/ck-code:*` command run before a `/clear` is given to the next conversation once, within 6 hours |
+| **Compact after a wave run** | everywhere | When a turn that dispatched two or more story builders ends cleanly with no story left `in-progress`, the session is compacted between turns (same as `/compact`, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command). Skipped after an interrupt or an error, while a story is held, or once you have typed the next prompt. A toast says it happened |
 
-Three settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
-parts off: `guards`, `band`, `pr_watch`, all on by default. The rest costs nothing until
+Four settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
+parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, all on by default. The rest costs nothing until
 you use it. `--safe-mode` starts a session with no mod at all (and none of your other
 customizations).
 
