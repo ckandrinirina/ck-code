@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.15.1] — 2026-10-13
+
+### Fixed
+- **ck-affected**: `--command` single-quotes every file and folder it splices into `{files}`/`{dirs}`, so a file name holding `$(…)`, `;` or a quote is passed as data and never run by the shell. A `<base>` starting with `-` is refused instead of reaching `git` as an option, and is used only once resolved to a commit.
+- **ck-affected**: pathspecs such as `*.ts` are no longer expanded against files in the repo root. A root `main.ts` or `eslint.config.js` had narrowed the import trace to that one file and dropped real importers.
+
 ## [7.15.0] — 2026-10-13
 
 ### Added
