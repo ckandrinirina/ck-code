@@ -6,6 +6,23 @@
 
 export type ProjectKind = "code" | "lite" | "none";
 
+// ---- the lite-project rule -------------------------------------------------------------
+
+// Kept word for word in both plugins' mods, and agreeing with the skills' plugin guards
+// (version-gate.md, plugin-redirect.md): a stamped project is ck-code's; a lite plan stays
+// lite's even beside an unstamped docs/architecture/ (half-migrated); a bare
+// docs/ARCHITECTURE.md is lite's only when no docs/architecture/ sits beside it.
+export function isLiteLayout(has: {
+  stamp: boolean;
+  plan: boolean;
+  architectureDir: boolean;
+  architectureDoc: boolean;
+}): boolean {
+  if (has.stamp) return false;
+  if (has.plan) return true;
+  return has.architectureDoc && !has.architectureDir;
+}
+
 // ---- prompt routing (was scripts/prompt-router.sh) --------------------------------
 
 // A reply to a running skill ("yes", "2", "go") is shorter than this; routing it would
@@ -95,6 +112,19 @@ export function openStoryIds(rows: readonly StoryRow[]): string[] {
     .map((r) => r.id);
 }
 
+// statusline.sh prints its whole line, `ck-code demo 0/1 33% 1⚡ · epic 01 core 1/3 33% ·
+// ⚡ 01-02 Story 2`; the band wants only the story, the last segment when it starts with ⚡.
+export function bandStory(line: string): string {
+  const last = stripAnsi(line).split(" · ").pop() ?? "";
+  return last.startsWith("⚡") ? last.slice(last.lastIndexOf("⚡ ") + "⚡ ".length).trim() : "";
+}
+
+// What the band's Use button fills: the recommended command, or only its slash command when
+// the rest is a placeholder (`/ck-code:ship <story-path>`) the person has to write.
+export function fillText(command: string): string {
+  return command.includes("<") ? `${command.split(/\s+/)[0]} ` : `${command} `;
+}
+
 // The status-line script may color its segment.
 export function stripAnsi(text: string): string {
   return text.replace(/\u001b\[[0-9;]*[A-Za-z]/g, "").trim();
@@ -120,10 +150,15 @@ export function generatedViewReason(path: string): string | undefined {
 // build cache. Freeing a kept worktree's build output is ck-reclaim's job, which deletes
 // only directories it proves rebuildable.
 export function gitCleanReason(command: string): string | undefined {
-  for (const segment of command.split(/&&|\|\||[;|\n]/)) {
-    const words = segment.trim().split(/\s+/);
-    // The command word, after any `VAR=value` assignments.
-    const git = words.findIndex((w) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(w));
+  // Quoted text is an argument, never a command: `git commit -m "a; git clean -x"` passes.
+  const bare = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, "''");
+  for (const segment of bare.split(/&&|\|\||[;|\n]/)) {
+    const words = segment.replace(/[()]/g, " ").trim().split(/\s+/);
+    // The command word, after any `sudo`, `command`, `env` and `VAR=value` before it.
+    const git = words.findIndex(
+      (w) =>
+        !/^[A-Za-z_][A-Za-z0-9_]*=/.test(w) && !/^(sudo|command|env)$/.test(w),
+    );
     if (git < 0 || words[git] !== "git") continue;
     // Skip git's own options (`-C <dir>`, `-c k=v`) to reach the subcommand.
     let i = git + 1;
@@ -358,10 +393,10 @@ function addTokens(a: Tokens, b: Tokens): Tokens {
 
 // ---- verify checklist ----------------------------------------------------------------
 
-export type ChecklistItem = { id: string; line: string };
+export type ChecklistItem = { id: string; status: string; path: string };
 
-// `ck-checklist.sh next <plan> -n N`: a `# session …` header, then one line per item,
-// or `# nothing left in this session`.
+// `ck-checklist.sh next <plan> -n N`: a `# session …` header, then `C-01<TAB>todo<TAB>
+// tasks/…/C-01_login-works.md` per item, or `# nothing left in this session`.
 export function parseChecklistNext(stdout: string): {
   header: string;
   items: ChecklistItem[];
@@ -373,10 +408,26 @@ export function parseChecklistNext(stdout: string): {
       if (!header) header = line.replace(/^#\s*/, "");
       continue;
     }
-    const id = /\bC-\d+\b/.exec(line)?.[0];
-    if (id) items.push({ id, line: line.replace(/\t/g, "  ").trim() });
+    const [id = "", status = "", path = ""] = line.trim().split("\t");
+    if (/^C-\d+$/.test(id)) items.push({ id, status, path });
   }
   return { header, items };
+}
+
+// An item's pane line: its frontmatter `title:`, else its file's slug (`C-01_login-works.md`
+// reads `login works`), and its status when it is not a plain todo.
+export function checklistLine(item: ChecklistItem, md: string): string {
+  const fm = /^---\n([\s\S]*?)\n---/.exec(md)?.[1] ?? "";
+  const quoted = /^title:\s*"((?:\\.|[^"\\])*)"\s*$/m.exec(fm)?.[1];
+  const title =
+    quoted?.replace(/\\(.)/g, "$1") ??
+    /^title:\s*(.+)$/m.exec(fm)?.[1]?.trim() ??
+    (item.path.split("/").pop() ?? "")
+      .replace(/\.md$/, "")
+      .replace(/^C-\d+_?/, "")
+      .replace(/[-_]+/g, " ");
+  const status = item.status && item.status !== "todo" ? ` · ${item.status}` : "";
+  return `${item.id}  ${title || item.id}${status}`;
 }
 
 // ---- misc ---------------------------------------------------------------------------

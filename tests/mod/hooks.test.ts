@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
 // A ck-code project at /p: docs/architecture exists, nothing else does.
@@ -92,10 +92,74 @@ test('a lite project is left to ck-code-lite: no routing, no ck-code-lite comman
   expect(r.context ?? []).toEqual([])
 })
 
-test('tasks/PLAN.md beside docs/architecture is a ck-code project', async ($, on) => {
+test('tasks/PLAN.md beside an unstamped docs/architecture stays lite (half-migrated)', async ($, on) => {
   on('session.cwd', () => ({ value: '/p' }))
   on('fs.exists', (_$, e) => ({ value: e.path === '/p/tasks/PLAN.md' || e.path === '/p/docs/architecture' }))
   on('fs.list', () => ({ value: [] }))
   on('attribution.text', (_$, e) => ({ text: e.text }))
+  expect((await $.attribution.text({ kind: 'commit', text: 'x' })).text).toBe('x')
+})
+
+test('a stamped project is ck-code’s even with a tasks/PLAN.md', async ($, on) => {
+  on('session.cwd', () => ({ value: '/p' }))
+  on('fs.exists', (_$, e) => ({ value: ['/p/tasks/PLAN.md', '/p/tasks/VERSION.md'].includes(e.path) }))
+  on('fs.list', () => ({ value: [] }))
+  on('attribution.text', (_$, e) => ({ text: e.text }))
   expect((await $.attribution.text({ kind: 'commit', text: 'x' })).text).toBe('')
+})
+
+test('a shell cd into a subfolder is still the ck-code project', async ($, on) => {
+  on('session.cwd', () => ({ value: '/p/src/app' }))
+  on('fs.exists', (_$, e) => ({ value: ['/p/docs', '/p/docs/architecture', '/p/.git'].includes(e.path) }))
+  on('fs.list', () => ({ value: [] }))
+  on('attribution.text', (_$, e) => ({ text: e.text }))
+  expect((await $.attribution.text({ kind: 'commit', text: 'x' })).text).toBe('')
+})
+
+test('compaction waits for background builders, then runs once', async ($, on) => {
+  const clock = mock.clock(on)
+  mock.store(on)
+  let inProgress = 1
+  let compacted = 0
+  on('session.cwd', () => ({ value: '/p' }))
+  on('fs.exists', (_$, e) => ({ value: e.path === '/p/docs/architecture' || e.path === '/p/tasks' }))
+  on('fs.list', () => ({ value: [] }))
+  on('agent.list', () => ({ value: [] }))
+  on('process.run', (_$, e) => {
+    const out = (e.argv[0] ?? '').endsWith('ck-view.sh')
+      ? `COUNTS: ready=0 in_progress=${inProgress} done=2\nRECOMMEND: /ck-code:track next\nWHY: x`
+      : 'ck-code 2/3 66%'
+    return { value: { exitCode: 0, stdout: out, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  on('ui.toast', () => ({ value: undefined }))
+  on('session.compact', () => {
+    compacted += 1
+    return { skip: 'the test keeps its messages' }
+  })
+  on('tool.call', () => ({ result: 'dispatched' }))
+  on('turn.start', (_$, e) => ({ turnId: e.turnId }))
+  on('turn.complete', () => ({ text: '' }))
+  const end = (turnId: string) =>
+    $.turn.complete({ turnId, reason: 'answer', answer: '', durationMs: 1, isAborted: false })
+
+  // Turn 1 dispatches two background builders and ends with both stories in progress.
+  await $.turn.start({ text: 'build --epic 01', turnId: 't1' })
+  for (const n of [1, 2])
+    await $.tool.call({ tool: 'Agent', description: `story ${n}`, prompt: 'x', subagent_type: 'ck-code:story-implementer' })
+  await end('t1')
+  await clock.advance(600)
+  expect(compacted).toBe(0)
+
+  // Turn 2, a notification turn, dispatches none and ends with nothing in progress.
+  inProgress = 0
+  await $.turn.start({ text: '', turnId: 't2' })
+  await end('t2')
+  await clock.advance(600)
+  expect(compacted).toBe(1)
+
+  // Turn 3 has nothing left to compact.
+  await $.turn.start({ text: 'thanks', turnId: 't3' })
+  await end('t3')
+  await clock.advance(600)
+  expect(compacted).toBe(1)
 })

@@ -390,7 +390,7 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 
 ck-code ships a **mod** — an in-process hooks module (`hooks/mod/register.tsx`, Claude Code
 ≥ 2.1.287) beside its shell hooks. It runs in every session that loads the plugin and acts
-only in a ck-code project (the prompt router's adoption markers). Nothing in it is
+only in a ck-code project (the prompt router's adoption markers), found from the session's folder up to the repository's top, so a shell `cd` into a subfolder keeps it. Nothing in it is
 load-bearing: it calls the same scripts the skills call, so under `--bare`, `--safe-mode`
 or `disableAllHooks`, or on an older Claude Code, every skill still does the whole job.
 
@@ -406,9 +406,9 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **No AI attribution** | everywhere | The engine's commit and PR attribution text is dropped in a ck-code project ([`no-ai-references.md`](references/no-ai-references.md)), so there is nothing left for `no-ai-guard.sh` to catch |
 | **Merged-PR watch** | toast + band | Every 5 minutes, `gh pr list --author @me --state merged`; a PR merged since the last look gets a toast and a band line pointing at `/ck-code:doctor --fix`. Silent without `gh` or a GitHub remote |
 | **Story-id completion** | terminal | Typing `10-` in the prompt offers the plan's unfinished stories `10-01 Session assembler …` |
-| **One command list** | everywhere | With ck-code-lite installed too, a ck-code project hides `ck-code-lite:*` from the typeahead, and a lite project hides `ck-code:*` but `migrate`, `guide` and `init`. A hidden command still runs when typed |
+| **One command list** | everywhere | With ck-code-lite installed too, a ck-code project hides `ck-code-lite:*` from the typeahead, and a lite project hides `ck-code:*` but `migrate`, `guide` and `init`. A hidden command still runs when typed; the list follows a `migrate` or `design` that changes the project's kind |
 | **Hand-off across `/clear`** | everywhere | The last `/ck-code:*` command run before a `/clear` is given to the next conversation once, within 6 hours |
-| **Compact after a wave run** | everywhere | When a turn that dispatched two or more story builders ends cleanly with no story left `in-progress`, the session is compacted between turns (same as `/compact`, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command). Skipped after an interrupt or an error, while a story is held, or once you have typed the next prompt. A toast says it happened |
+| **Compact after a wave run** | everywhere | Once two or more story builders have been dispatched since the last compaction, the first turn that ends cleanly with no builder still running and no story left `in-progress` compacts the session — background builders included, whose run ends in a later turn — between turns (same as `/compact`, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command). Skipped after an interrupt or an error, while a story is held, or once you have typed the next prompt. A toast says it happened |
 
 Four settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
 parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, all on by default. The rest costs nothing until

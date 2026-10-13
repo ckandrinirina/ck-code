@@ -25,14 +25,18 @@ import {
   HANDOFF_TTL_MS,
   PROFILE_KEEP,
   addUsage,
+  bandStory,
   celebration,
+  checklistLine,
   countsLine,
+  fillText,
   fmtSeconds,
   generatedViewReason,
   gitCleanReason,
   handoffText,
   hideCommand,
   isLive,
+  isLiteLayout,
   isWaveRunOver,
   isRoutable,
   openStoryIds,
@@ -77,15 +81,19 @@ let guardsOn = true;
 let bandOn = true;
 let prWatchOn = true;
 let compactOn = true;
+// Story builders dispatched from the main loop since the last compaction. Not reset per turn:
+// background builders end in later notification turns, which dispatch none themselves.
 let builders = 0;
 let routingCache: string | undefined;
 let stories: StoryRow[] = [];
 let progress: Progress | undefined;
 let isRefreshing = false;
 let lastCommand: string | undefined;
-let cwdCache = "";
+let lastKind: ProjectKind | undefined;
 let rootCache = "";
 let agentPoll: { cancel: () => void } | undefined;
+// When the running agent poll started: its end-of-run toast counts only agents seen since.
+let pollStart = 0;
 let autoOpenAgents = true;
 const firstSeen = new Map<string, number>();
 const endedAt = new Map<string, number>();
@@ -101,29 +109,45 @@ let turn: Turn | undefined;
 
 // ---- project probes ------------------------------------------------------------------
 
-// A ck-code project has docs/architecture, docs/specs, tasks/VERSION.md or a tasks/<plan>/epics.
-// A tasks/PLAN.md or docs/ARCHITECTURE.md with neither docs/architecture nor a stamp is
-// ck-code-lite's (its mod's isLiteProject), and that plugin owns it.
-async function projectKind($: EngineInterface): Promise<ProjectKind> {
+// Kept word for word in both plugins' mods. The project is the nearest folder, from the
+// session's cwd up, holding tasks/ or docs/ — never past the repository's top (.git) — so a
+// shell cd into a subfolder keeps the band, the routing and the guards.
+async function projectRoot($: EngineInterface): Promise<string> {
   const cwd = await $.session.cwd();
-  const isFull =
-    (await $.fs.exists(`${cwd}/docs/architecture`)) ||
-    (await $.fs.exists(`${cwd}/tasks/VERSION.md`));
-  // ck-code-lite's own rule, word for word, so the two mods never both act on one project.
-  if (
-    !isFull &&
-    ((await $.fs.exists(`${cwd}/tasks/PLAN.md`)) ||
-      (await $.fs.exists(`${cwd}/docs/ARCHITECTURE.md`)))
-  ) {
-    return "lite";
+  for (let dir = cwd; ;) {
+    if (
+      (await $.fs.exists(`${dir}/tasks`)) ||
+      (await $.fs.exists(`${dir}/docs`))
+    )
+      return dir;
+    const up = dir.replace(/\/[^/]+$/, "");
+    if ((await $.fs.exists(`${dir}/.git`)) || up === dir || up === "")
+      return cwd;
+    dir = up;
   }
-  if (isFull) return "code";
-  if (await $.fs.exists(`${cwd}/docs/specs`)) return "code";
-  if (!(await $.fs.exists(`${cwd}/tasks`))) return "none";
-  for (const entry of await $.fs.list(`${cwd}/tasks`)) {
+}
+
+// A lite layout (isLiteLayout, shared with ck-code-lite's mod and the skills' plugin guards)
+// is ck-code-lite's, and that plugin owns it. Otherwise a ck-code project has a stamp,
+// docs/architecture, docs/specs or a tasks/<plan>/epics.
+async function projectKind($: EngineInterface): Promise<ProjectKind> {
+  const root = await projectRoot($);
+  const stamp = await $.fs.exists(`${root}/tasks/VERSION.md`);
+  const architectureDir = await $.fs.exists(`${root}/docs/architecture`);
+  const lite = isLiteLayout({
+    stamp,
+    plan: await $.fs.exists(`${root}/tasks/PLAN.md`),
+    architectureDir,
+    architectureDoc: await $.fs.exists(`${root}/docs/ARCHITECTURE.md`),
+  });
+  if (lite) return "lite";
+  if (stamp || architectureDir) return "code";
+  if (await $.fs.exists(`${root}/docs/specs`)) return "code";
+  if (!(await $.fs.exists(`${root}/tasks`))) return "none";
+  for (const entry of await $.fs.list(`${root}/tasks`)) {
     if (
       entry.kind === "dir" &&
-      (await $.fs.exists(`${cwd}/tasks/${entry.name}/epics`))
+      (await $.fs.exists(`${root}/tasks/${entry.name}/epics`))
     )
       return "code";
   }
@@ -137,13 +161,14 @@ async function script(
   timeoutMs = 60_000,
 ) {
   return $.process.run([`${$.plugin.root}/scripts/${name}`, ...args], {
+    cwd: await projectRoot($),
     timeoutMs,
   });
 }
 
 // Every plan's STORIES_INDEX.md, read after ck-view has regenerated the views.
 async function loadStories($: EngineInterface): Promise<StoryRow[]> {
-  const cwd = await $.session.cwd();
+  const cwd = await projectRoot($);
   const rows: StoryRow[] = [];
   if (!(await $.fs.exists(`${cwd}/tasks`))) return rows;
   for (const entry of await $.fs.list(`${cwd}/tasks`)) {
@@ -158,19 +183,32 @@ async function loadStories($: EngineInterface): Promise<StoryRow[]> {
 // ---- band ----------------------------------------------------------------------------
 
 async function refreshBand($: EngineInterface): Promise<void> {
-  if (!bandOn || isRefreshing) return;
+  if (isRefreshing) return;
   isRefreshing = true;
   try {
-    if ((await projectKind($)) !== "code") {
-      await update($, band, () => null);
+    const kind = await projectKind($);
+    // command.describe answers are cached for the session: a migrate or a design that
+    // changed the kind would leave the other plugin's commands hidden.
+    if (lastKind !== undefined && kind !== lastKind)
+      $.ui.invalidate("command.describe");
+    lastKind = kind;
+    if (kind !== "code") {
+      stories = [];
+      if (bandOn) await update($, band, () => null);
+      return;
+    }
+    // Story-id completion reads these, band or no band.
+    if (!bandOn) {
+      stories = await loadStories($);
       return;
     }
     const state = parseState((await script($, "ck-view.sh", ["state"])).stdout);
     if (state === null) return;
-    const cwd = await $.session.cwd();
+    const cwd = await projectRoot($);
     const line = await $.process.run(
       [`${$.plugin.root}/scripts/statusline.sh`],
       {
+        cwd,
         stdin: JSON.stringify({ cwd, workspace: { current_dir: cwd } }),
         timeoutMs: 15_000,
       },
@@ -183,7 +221,7 @@ async function refreshBand($: EngineInterface): Promise<void> {
     progress = now;
     if (cheer) $.ui.toast(`ck-code: ${cheer}`);
     await update($, band, (old) => ({
-      story: stripAnsi(line.stdout.split("\n")[0] ?? ""),
+      story: bandStory(line.stdout.split("\n")[0] ?? ""),
       counts: countsLine(state.counts),
       done,
       total,
@@ -234,10 +272,12 @@ async function pollMergedPrs($: EngineInterface): Promise<boolean> {
       ],
       { timeoutMs: 20_000 },
     );
-  } catch {
-    return false; // no gh on this machine
+  } catch (err) {
+    // A slow network times out: try again next round. Anything else is gh missing.
+    return /time/i.test(String(err));
   }
-  if (ran.exitCode !== 0) return false; // not authenticated, or no GitHub remote
+  // Not authenticated, no GitHub remote, offline: skip this round, keep watching.
+  if (ran.exitCode !== 0) return true;
   const prs = parseMergedPrs(ran.stdout);
   const key = `prs:${rootCache}`;
   const seen = (await $.store.get(key)) as number[] | undefined;
@@ -296,16 +336,20 @@ async function pollAgents($: EngineInterface): Promise<void> {
     return;
   }
   $.ui.status(undefined);
+  // Only a poll that was running ends with a toast, and it counts only its own agents,
+  // not an earlier wave's.
+  const wasPolling = agentPoll !== undefined;
   agentPoll?.cancel();
   agentPoll = undefined;
-  const failed = rows.filter(
+  const ran = rows.filter((r) => (firstSeen.get(r.id) ?? 0) >= pollStart);
+  const failed = ran.filter(
     (r) => r.status === "failed" || r.status === "killed",
   ).length;
-  if (rows.length > 0) {
+  if (wasPolling && ran.length > 0) {
     $.ui.toast(
       failed
-        ? `ck-code: agents finished — ${rows.length - failed} completed, ${failed} failed`
-        : `ck-code: 🚀 agents finished — all ${rows.length} completed`,
+        ? `ck-code: agents finished — ${ran.length - failed} completed, ${failed} failed`
+        : `ck-code: 🚀 agents finished — all ${ran.length} completed`,
     );
   }
 }
@@ -318,7 +362,15 @@ async function loadChecklist(
   message: string,
 ): Promise<void> {
   const ran = await script($, "ck-checklist.sh", ["next", plan, "-n", "3"]);
-  const { header, items } = parseChecklistNext(ran.stdout);
+  const { header, items: found } = parseChecklistNext(ran.stdout);
+  const root = await projectRoot($);
+  const items: CkVerify["items"] = [];
+  for (const item of found) {
+    const file = item.path.startsWith("/") ? item.path : `${root}/${item.path}`;
+    const md =
+      item.path && (await $.fs.exists(file)) ? String(await $.fs.read(file)) : "";
+    items.push({ id: item.id, line: checklistLine(item, md) });
+  }
   const next: CkVerify = {
     plan,
     header:
@@ -357,9 +409,10 @@ async function showSteps(
   id: string,
 ): Promise<void> {
   const ran = await script($, "ck-checklist.sh", ["path", plan, id]);
-  const path = ran.stdout.trim();
+  const found = ran.stdout.trim();
+  const path = found.startsWith("/") ? found : `${await projectRoot($)}/${found}`;
   const text =
-    ran.exitCode === 0 && path
+    ran.exitCode === 0 && found
       ? String(await $.fs.read(path))
       : `No file for ${id}.`;
   await update($, verify, (old) =>
@@ -373,7 +426,7 @@ async function pickPlan(
   arg: string,
 ): Promise<string | undefined> {
   if (arg) return arg.replace(/\/$/, "");
-  const cwd = await $.session.cwd();
+  const cwd = await projectRoot($);
   const found: string[] = [];
   if (!(await $.fs.exists(`${cwd}/tasks`))) return undefined;
   for (const entry of await $.fs.list(`${cwd}/tasks`)) {
@@ -395,23 +448,47 @@ async function saveTurn($: EngineInterface, record: TurnRecord): Promise<void> {
   await $.store.set(key, [...old, record].slice(-PROFILE_KEEP));
 }
 
+// A background agent's turn often ends after the main turn that dispatched it: its tokens
+// go to the most recent saved turn, the one that dispatched it or a notification turn
+// after it, rather than nowhere.
+async function addLateUsage(
+  $: EngineInterface,
+  usage: Parameters<typeof addUsage>[1],
+): Promise<void> {
+  const key = `profile:${rootCache}`;
+  const old = ((await $.store.get(key)) as TurnRecord[] | undefined) ?? [];
+  const last = old[old.length - 1];
+  if (!last) return;
+  await $.store.set(key, [
+    ...old.slice(0, -1),
+    { ...last, sub: addUsage(last.sub, usage) },
+  ]);
+}
+
 // ---- compaction after a wave run --------------------------------------------------------
 
 // Runs between turns: $.session.compact rejects while one runs, and a person who has already
 // typed the next prompt keeps the session as it is. The next command (ship --promote, verify)
-// starts from the story files, not from the transcript.
+// starts from the story files, not from the transcript. Background builders end in later
+// turns, so the count runs since the last compaction and every clean turn end checks it,
+// once no builder is still live. An interrupt or an error keeps the count for a later turn.
 async function compactAfterWaves(
   $: EngineInterface,
   reason: string,
-  dispatched: number,
 ): Promise<void> {
   try {
     if ((await projectKind($)) !== "code") return;
+    const live = (await $.agent.list()).some(
+      (a) => a.type === "ck-code:story-implementer" && isLive(a.status),
+    );
+    if (live) return;
     const state = parseState((await script($, "ck-view.sh", ["state"])).stdout);
     const inProgress = state?.counts.in_progress;
     if (inProgress === undefined) return;
-    if (!isWaveRunOver({ reason, builders: dispatched, inProgress })) return;
+    if (!isWaveRunOver({ reason, builders, inProgress })) return;
     const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS });
+    // Compacted, or skipped (the next prompt is typed): either way this run is spent.
+    builders = 0;
     $.ui.toast(
       out.skip
         ? `ck-code: not compacted, ${out.skip}`
@@ -455,8 +532,7 @@ export const register: Register = (on, options) => {
   compactOn = options.compact_after_waves !== false;
 
   on("session.start", async ($, e, next) => {
-    cwdCache = await $.session.cwd();
-    rootCache = (await $.session.root()) || cwdCache;
+    rootCache = (await $.session.root()) || (await $.session.cwd());
     await $.command.register({ name: 'ck-status', description: 'ck-code dashboard, printed at once with no model turn', argumentHint: '[tasks/<plan>]', immediate: true })
     await $.command.register({ name: 'ck-next', description: 'Next ready ck-code story, printed at once with no model turn', argumentHint: '[tasks/<plan>]', immediate: true })
     await $.command.register({ name: 'ck-progress', description: 'ck-code epic rollup and milestones, with no model turn', argumentHint: '[tasks/<plan>]', immediate: true })
@@ -542,8 +618,9 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e));
 
   on("session.end", async ($, e, next) => {
-    if (e.reason === "clear" && lastCommand && cwdCache) {
-      await $.store.set(`handoff:${cwdCache}`, {
+    if (e.reason === "clear") builders = 0;
+    if (e.reason === "clear" && lastCommand) {
+      await $.store.set(`handoff:${await projectRoot($)}`, {
         command: lastCommand,
         at: await $.clock.now(),
       });
@@ -553,7 +630,7 @@ export const register: Register = (on, options) => {
 
   on("prompt.context", async ($, e, next) => {
     const out = await next(e);
-    const key = `handoff:${await $.session.cwd()}`;
+    const key = `handoff:${await projectRoot($)}`;
     const saved = (await $.store.get(key)) as
       { command: string; at: number } | undefined;
     if (!saved) return out;
@@ -614,6 +691,7 @@ export const register: Register = (on, options) => {
       e.subagent_type?.startsWith("ck-code:") &&
       agentPoll === undefined
     ) {
+      pollStart = await $.clock.now();
       agentPoll = $.clock.every(AGENT_POLL_MS, () => void pollAgents($));
     }
     return next(e);
@@ -627,7 +705,6 @@ export const register: Register = (on, options) => {
   // ---- profiler ----
 
   on("turn.start", async ($, e, next) => {
-    builders = 0;
     turn = {
       at: await $.clock.now(),
       skill: "-",
@@ -662,6 +739,7 @@ export const register: Register = (on, options) => {
     const out = await next(e);
     if (e.agentId !== undefined) {
       if (turn) turn.sub = addUsage(turn.sub, e.usage);
+      else if (rootCache) await addLateUsage($, e.usage);
       return out;
     }
     const done = turn;
@@ -678,10 +756,8 @@ export const register: Register = (on, options) => {
       });
     }
     $.clock.after(50, () => void refreshBand($));
-    const dispatched = builders;
-    builders = 0;
-    if (compactOn && dispatched >= 2)
-      $.clock.after(500, () => void compactAfterWaves($, e.reason, dispatched));
+    if (compactOn && builders >= 2 && e.reason === "answer")
+      $.clock.after(500, () => void compactAfterWaves($, e.reason));
     return out;
   });
 
@@ -815,13 +891,16 @@ export const register: Register = (on, options) => {
           <Button
             key="fill"
             label="Use"
-            onPress={() => $.prompt.fill({ text: `${command} ` })}
+            onPress={() => $.prompt.fill({ text: fillText(command) })}
           />
         )}
         <Button
           key="hide"
           label="Hide"
-          onPress={() => update($, bandHidden, () => true)}
+          onPress={async () => {
+            await update($, bandHidden, () => true);
+            await $.store.set("bandHidden", true);
+          }}
         />
       </Box>
     );
