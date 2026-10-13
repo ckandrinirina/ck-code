@@ -131,7 +131,8 @@ issues stay valid.
 - **Parallel multi-story builds** — implement multiple unblocked stories at once in isolated git worktrees (native isolation, structured returns, resumable agents) with conflict analysis before merge. A wave that narrows to a single story drops the worktree and runs one agent straight on the target branch — same delegation, none of the isolation overhead. Each builder agent reads only the lean story cycle (`story-cycle.md`), never the orchestrator's skill, so its context stays small on every turn. `--auto` runs a whole epic unattended: every question takes its recommended answer, clean QA-passed branches merge without a prompt, and the manual test is deferred to one checklist that hands off to `/ck-code:verify`
 - **Bug triage that hands off to the backlog** — `fix` diagnoses a bug, writes a failing test + Fix Plan into its story, flips it to `bug`; an easy single-story fix auto-runs `build` (Bug-Fix Mode), while a complex one is recorded for a manual `build` run
 - **ck-code is required, and the repo says so** — a ck-code project keeps its plan, stories and architecture in a layout only the `/ck-code:*` commands maintain, so a clone on a machine that never installed the plugin has nothing that can read or write that state — and nothing able to *say* so, because the plugin is what is missing. `ck-bootstrap install` commits a ~1 KB guard (`.claude/ck-code-required.sh`, wired as the project's own `SessionStart` hook) that is silent wherever ck-code is present and stops the session with the install command wherever it is not. It is written automatically the first time a session starts in a stamped project
-- **Native Claude Code integration** — `SessionStart`/`UserPromptSubmit`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, route every free-text prompt to the best-fit skill, config-gated auto-format), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
+- **An in-session mod** — a band above the prompt with the active story, the plan's counts and the recommended next command; a live agents pane during a parallel build; the manual-test checklist as a pane with Pass/Skip buttons; dashboard commands (`/ck-status`, `/ck-next`, …) that print at once with no model turn; a per-skill time and token profile; guards on generated views and `git clean -x`; and no AI attribution in a ck-code project's commits and PRs. See [The ck-code mod](#the-ck-code-mod)
+- **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), the mod's prompt router (every free-text prompt goes to the best-fit skill), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
 - **RTK-aware command forms (optional)** — [RTK](https://github.com/ckandrinirina/rtk) is a third-party `PreToolUse` hook that filters command output before it reaches context, returning a full test suite as its failures alone. ck-code writes the command forms its hook recognizes (`npm run test`, never the unfilterable `npm test` alias) so the savings need no setup, never hardcodes an `rtk` prefix, and never requires the tool. `/ck-code:doctor` reports whether it is installed and wired. Slow commands (suite, lint, typecheck, e2e) run once per code state into a `$TMPDIR` log that is read instead of re-run. RTK still filters that form, while QA runs through `ck-qa` are capped by its 40-line failure tail instead. See `references/rtk.md`
 
 ## Install
@@ -314,7 +315,7 @@ it never touches an unstamped project, so cloning ck-code itself does not trigge
 never rewrites a tracked file. See
 [ck-code is required in a ck-code project](#ck-code-is-required-in-a-ck-code-project).
 
-**Prompt router** (`scripts/prompt-router.sh`, `UserPromptSubmit`) makes the workflow the
+**Prompt router** (the mod's `prompt.submit` hook, [The ck-code mod](#the-ck-code-mod)) makes the workflow the
 default for every prompt, not only for the ones typed as `/ck-code:*`. In an adopted project
 (one with `docs/architecture/`, `docs/specs/`, `tasks/VERSION.md` or a `tasks/*/epics`
 folder) it injects [`references/prompt-routing.md`](references/prompt-routing.md) — a
@@ -323,9 +324,10 @@ crashes on submit" runs `/ck-code:fix`, "ship it" runs `/ck-code:ship`, and a on
 no story covers is still made under the project's expert/guide skills. It announces the
 chosen skill in one line and invokes it; the prompt is the consent. It stays silent on a
 slash command (you already chose), on a reply shorter than 12 characters ("yes", "2" — an
-answer to a running skill, which routing would derail), and in any repo that has not
-adopted ck-code, so a scratch project never has its prompts routed. Pure local read, always
-exits 0.
+answer to a running skill, which routing would derail), on anything that is not your own
+prompt (a task notification, another session's message), and in any repo that has not
+adopted ck-code, so a scratch project never has its prompts routed. Pure local read; a
+failure lets the prompt through unchanged.
 
 **`format.sh`** (`PostToolUse` on every `Write`/`Edit`) best-effort formats the file just
 touched: `gofmt` and `rustfmt` run whenever installed, no configuration needed — they are
@@ -383,6 +385,37 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 - **No warning ever appears for an AI-authorship trailer.** `python3` is required for
   the no-AI guard; when it is missing, the session prints one warning and the guard is
   disabled for that session rather than blocking silently.
+
+## The ck-code mod
+
+ck-code ships a **mod** — an in-process hooks module (`hooks/mod/register.tsx`, Claude Code
+≥ 2.1.287) beside its shell hooks. It runs in every session that loads the plugin and acts
+only in a ck-code project (the prompt router's adoption markers). Nothing in it is
+load-bearing: it calls the same scripts the skills call, so under `--bare`, `--safe-mode`
+or `disableAllHooks`, or on an older Claude Code, every skill still does the whole job.
+
+| What | Where it shows | Notes |
+|---|---|---|
+| **Band above the prompt** | terminal, Desktop | `ck-code · <story> · 4 ready · 13 blocked · 42 done`, then `next: /ck-code:track next` with **Use** (fills the prompt, never sends it) and **Hide**. Refreshed after every turn from `ck-view.sh state` and `statusline.sh`; while Claude works, only the story. `/ck-band` toggles it, and the choice is kept |
+| **Commands with no model turn** | everywhere | `/ck-status`, `/ck-next`, `/ck-progress` (`[tasks/<plan>]`), `/ck-waves <NN>`, `/ck-check` (`ck-doctor --quiet`): the script's output, printed at once — even mid-turn — at zero tokens of model output |
+| **Agents pane** | terminal, Desktop | A live row per ck-code agent (build · qa · merge) with its status and elapsed time. Opens by itself when two story builders run at once on a wide terminal (≥ 144 columns), never again once you close it; `/ck-agents` opens it, or prints the rows where nothing draws. A status-line entry counts running and done agents |
+| **Verify pane** | terminal, Desktop | `/ck-verify-pane [tasks/<plan>]`: the next three checklist items with **Pass**, **Skip**, **Steps** (shows the item's steps) and **Fail…** (fills `/ck-code:verify … failed:` so the skill takes your words and the fix hand-off). Records through `ck-checklist.sh`; commit with `/ck-code:verify` or `/ck-code:ship` |
+| **Profile** | everywhere | `/ck-profile`: per ck-code skill, turns, wall time, tool calls, agents dispatched, the main loop's tokens (output and cache read) and the agents' tokens, over this project's last 200 turns. `/ck-profile reset` clears it |
+| **Guards** | everywhere | Refuses a hand edit of `STORIES_INDEX.md`/`EPICS_INDEX.md` (generated views) and a model-run `git clean -x`/`-X` (it deletes `.env` and every gitignored file; `ck-reclaim` frees a worktree's build output safely). `! git clean …` typed by you is never refused. Fails open |
+| **No AI attribution** | everywhere | The engine's commit and PR attribution text is dropped in a ck-code project ([`no-ai-references.md`](references/no-ai-references.md)), so there is nothing left for `no-ai-guard.sh` to catch |
+| **Merged-PR watch** | toast + band | Every 5 minutes, `gh pr list --author @me --state merged`; a PR merged since the last look gets a toast and a band line pointing at `/ck-code:doctor --fix`. Silent without `gh` or a GitHub remote |
+| **Story-id completion** | terminal | Typing `10-` in the prompt offers the plan's unfinished stories `10-01 Session assembler …` |
+| **One command list** | everywhere | With ck-code-lite installed too, a ck-code project hides `ck-code-lite:*` from the typeahead, and a lite project hides `ck-code:*` but `migrate`, `guide` and `init`. A hidden command still runs when typed |
+| **Hand-off across `/clear`** | everywhere | The last `/ck-code:*` command run before a `/clear` is given to the next conversation once, within 6 hours |
+
+Three settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
+parts off: `guards`, `band`, `pr_watch`, all on by default. The rest costs nothing until
+you use it. `--safe-mode` starts a session with no mod at all (and none of your other
+customizations).
+
+Developing it: `claude --plugin-dir ./ck-code` hot-reloads the module on save;
+`claude plugin validate ck-code` and `claude plugin test ck-code` check it offline
+([`tests/README.md`](tests/README.md#mod-tests)).
 
 ## Status bar (opt-in, zero tokens)
 
@@ -620,7 +653,9 @@ ck-code/
 ├── references/                    # cross-skill shared contracts (version gate, data model,
 │                                  # skill detection, subagent fan-out, QA, workflow map, …)
 ├── hooks/
-│   └── hooks.json                 # SessionStart + UserPromptSubmit(router) + PostToolUse(format)
+│   ├── hooks.json                 # SessionStart + PostToolUse(format) + the mod's module
+│   └── mod/                       # the mod: register.tsx (hooks, band, panes, commands) + logic.ts (pure rules)
+├── types/index.d.ts               # the mod's $.state contract
 ├── settings.json                  # subagent status line
 ├── CHANGELOG.md
 ├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
@@ -658,7 +693,6 @@ ck-code/
 │   ├── ck-migrate.sh              # deterministic v6 → v7 conversion
 │   ├── ck-bootstrap.sh            # the committed ck-code-required guard
 │   ├── session-start.sh           # SessionStart hook (reload skills, views, layout check, status)
-│   ├── prompt-router.sh           # UserPromptSubmit hook: inject references/prompt-routing.md
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
 │   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
 │   ├── statusline.sh              # opt-in status bar: active story + plan counts
@@ -717,12 +751,13 @@ file that has drifted from it.
 > `.claude/skills/expert-*/` and `guide-*/` folders; **v4** moved story state into
 > frontmatter. The details are in `CHANGELOG.md`.
 
-- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.0.0 is built
-  and tested against Claude Code 2.1.280** (checked 2026-09-24). Its newest version-gated
+- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.13.0 is built
+  and tested against Claude Code 2.1.296** (checked 2026-10-13). Its newest version-gated
   features, and the release each first appeared in:
 
   | Feature | Used by | Claude Code |
   |---|---|---|
+  | Mods (`modules` in `hooks/hooks.json`) | the ck-code mod: prompt router, band, panes, commands, guards | 2.1.287 |
   | `omitClaudeMd` agent field | `conflict-analyzer` | 2.1.271 |
   | `AGENTS.md` as the project instructions file | `spec`, `team` | 2.1.277 |
   | `experimental.cacheTtl` agent field | all three agents | 2.1.248 |
