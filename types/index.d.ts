@@ -5,6 +5,9 @@ export type CkBand = {
   story: string;
   // "4 ready · 13 blocked · 42 done"
   counts: string;
+  // The progress bar's stories: done, and every story not skipped.
+  done: number;
+  total: number;
   // ck-view's routing verdict: the command to run next, and why.
   recommend: string;
   why: string;

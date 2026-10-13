@@ -8,7 +8,8 @@
 //   attribution.text   no AI attribution in commits and PRs (references/no-ai-references.md)
 //   tool.call          guards: generated views, `git clean -x/-X`; counts for the profiler
 //   command.*          zero-model commands, last-command hand-off, de-duplicated command list
-//   AbovePrompt band   active story, counts, recommended next command, merged-PR notes
+//   AbovePrompt band   progress bar, active story, recommended next command, merged-PR notes
+//   toasts             a cheer when a story is done, a bigger one when every story is
 //   panes              agents cockpit during a build; verify checklist with buttons
 //   turn.*             per-skill time and token profile (/ck-profile)
 //   session.compact    compacts the session once a wave run of builders has finished
@@ -24,6 +25,7 @@ import {
   HANDOFF_TTL_MS,
   PROFILE_KEEP,
   addUsage,
+  celebration,
   countsLine,
   fmtSeconds,
   generatedViewReason,
@@ -33,19 +35,29 @@ import {
   isLive,
   isWaveRunOver,
   isRoutable,
+  openStoryIds,
   parseChecklistNext,
   parseMergedPrs,
   parseState,
   parseStoriesIndex,
+  percent,
   profileReport,
+  progressBar,
   shortAgentType,
   splitArgs,
   storySuggestions,
+  storyTotal,
   stripAnsi,
   stripRouting,
   zeroTokens,
 } from "./logic";
-import type { ProjectKind, StoryRow, Tokens, TurnRecord } from "./logic";
+import type {
+  Progress,
+  ProjectKind,
+  StoryRow,
+  Tokens,
+  TurnRecord,
+} from "./logic";
 
 const band = atom({ plugin: "ck-code", key: "band" } as const, null);
 const bandHidden = atom(
@@ -68,6 +80,7 @@ let compactOn = true;
 let builders = 0;
 let routingCache: string | undefined;
 let stories: StoryRow[] = [];
+let progress: Progress | undefined;
 let isRefreshing = false;
 let lastCommand: string | undefined;
 let cwdCache = "";
@@ -163,9 +176,17 @@ async function refreshBand($: EngineInterface): Promise<void> {
       },
     );
     stories = await loadStories($);
+    const done = state.counts.done ?? 0;
+    const total = storyTotal(state.counts);
+    const now: Progress = { done, total, open: openStoryIds(stories) };
+    const cheer = celebration(progress, now, "stories");
+    progress = now;
+    if (cheer) $.ui.toast(`ck-code: ${cheer}`);
     await update($, band, (old) => ({
       story: stripAnsi(line.stdout.split("\n")[0] ?? ""),
       counts: countsLine(state.counts),
+      done,
+      total,
       recommend: state.recommend,
       why: state.why,
       notes: old?.notes ?? [],
@@ -235,7 +256,7 @@ async function pollMergedPrs($: EngineInterface): Promise<boolean> {
     );
     await addNote(
       $,
-      `PR #${pr.number} merged (${pr.headRefName}) → /ck-code:doctor --fix`,
+      `🔔 PR #${pr.number} merged (${pr.headRefName}) → /ck-code:doctor --fix`,
     );
   }
   return true;
@@ -282,7 +303,9 @@ async function pollAgents($: EngineInterface): Promise<void> {
   ).length;
   if (rows.length > 0) {
     $.ui.toast(
-      `ck-code: agents finished — ${rows.length - failed} completed${failed ? `, ${failed} failed` : ""}`,
+      failed
+        ? `ck-code: agents finished — ${rows.length - failed} completed, ${failed} failed`
+        : `ck-code: 🚀 agents finished — all ${rows.length} completed`,
     );
   }
 }
@@ -397,6 +420,23 @@ async function compactAfterWaves(
   } catch {
     // A turn already running, or a failed probe: the session stays as it is.
   }
+}
+
+// ---- agents pane look ------------------------------------------------------------------
+
+// A live agent's glyph turns a quarter each poll, so a long build visibly moves.
+const SPIN = ["◐", "◓", "◑", "◒"];
+
+function agentGlyph(row: CkAgentRow): string {
+  if (isLive(row.status))
+    return SPIN[Math.floor(row.secs / (AGENT_POLL_MS / 1000)) % SPIN.length]!;
+  return row.status === "completed" ? "✓" : "✗";
+}
+
+function agentColor(status: string): string | undefined {
+  if (isLive(status)) return "claude";
+  if (status === "completed") return "success";
+  return "error";
 }
 
 // ---- commands ------------------------------------------------------------------------
@@ -735,46 +775,67 @@ export const register: Register = (on, options) => {
     if (data === null || e.props.hasSurvey || (await read($, bandHidden)))
       return next(e);
     const { Box, Button, Text } = $.ui.resolve(e);
+    const score = `${data.done}/${data.total}`;
     if (e.props.isWorking) {
       return data.story ? (
-        <Box>
-          <Text dimColor wrap="truncate-end">
-            ck-code · {data.story}
-          </Text>
-        </Box>
+        <Text dimColor wrap="truncate-end">
+          ⚡ ck-code · {data.story} · {score}
+        </Text>
       ) : (
         next(e)
       );
     }
     const command = data.recommend.split(" — ")[0]?.trim() ?? "";
+    const isComplete = data.total > 0 && data.done >= data.total;
+    const header = (
+      <Box key="head" gap={1}>
+        <Text bold color="claude">
+          ◆ ck-code
+        </Text>
+        <Text color="success">{progressBar(data.done, data.total)}</Text>
+        <Text bold>
+          {score} {percent(data.done, data.total)}%
+        </Text>
+        {data.story !== "" && (
+          <Text color="warning" wrap="truncate-end">
+            ⚡ {data.story}
+          </Text>
+        )}
+      </Box>
+    );
+    const actions = (
+      <Box key="next" gap={1}>
+        {command.startsWith("/") && (
+          <Text color="suggestion" wrap="truncate-end">
+            → {command}
+            {data.why ? ` — ${data.why}` : ""}
+          </Text>
+        )}
+        {command.startsWith("/") && (
+          <Button
+            key="fill"
+            label="Use"
+            onPress={() => $.prompt.fill({ text: `${command} ` })}
+          />
+        )}
+        <Button
+          key="hide"
+          label="Hide"
+          onPress={() => update($, bandHidden, () => true)}
+        />
+      </Box>
+    );
+    // Short on rows: the next step matters more than the bar.
+    if (e.props.maxRows < 2) return actions;
     return (
       <Box flexDirection="column">
-        <Box gap={1}>
-          <Text wrap="truncate-end">
-            <Text bold>ck-code</Text>
-            {data.story ? ` · ${data.story}` : ""} · {data.counts}
-          </Text>
-        </Box>
-        {command.startsWith("/") && (
-          <Box gap={1}>
-            <Text dimColor wrap="truncate-end">
-              next: {command}
-              {data.why ? ` — ${data.why}` : ""}
-            </Text>
-            <Button
-              key="fill"
-              label="Use"
-              onPress={() => $.prompt.fill({ text: `${command} ` })}
-            />
-            <Button
-              key="hide"
-              label="Hide"
-              onPress={() => update($, bandHidden, () => true)}
-            />
-          </Box>
-        )}
+        {header}
+        <Text key="counts" dimColor wrap="truncate-end">
+          {isComplete ? "🎉 every story done" : data.counts}
+        </Text>
+        {actions}
         {data.notes.map((note) => (
-          <Text color="yellow" wrap="truncate-end">
+          <Text color="warning" wrap="truncate-end">
             {note}
           </Text>
         ))}
@@ -790,18 +851,26 @@ export const register: Register = (on, options) => {
       const rows = await read($, agents);
       if (rows.length === 0)
         return <Text dimColor>No ck-code agent has run in this session.</Text>;
-      const room = Math.max(1, (e.props.scroll?.bodyRows ?? 20) - 1);
+      const room = Math.max(1, (e.props.scroll?.bodyRows ?? 20) - 2);
+      const running = rows.filter((r) => isLive(r.status)).length;
+      const finished = rows.length - running;
       return (
         <Box flexDirection="column">
+          <Box key="head" gap={1}>
+            <Text bold color="claude">
+              {running} running · {finished} done
+            </Text>
+            <Text color="success">{progressBar(finished, rows.length)}</Text>
+          </Box>
           {rows.slice(-room).map((r) => (
             <Text
               key={r.id}
-              dimColor={!isLive(r.status)}
-              color={r.status === "failed" ? "red" : undefined}
+              color={agentColor(r.status)}
+              dimColor={r.status === "completed"}
               wrap="truncate-end"
             >
-              {isLive(r.status) ? "●" : r.status === "completed" ? "✓" : "✗"}{" "}
-              {r.kind.padEnd(5)} {fmtSeconds(r.secs).padStart(6)} {r.label}
+              {agentGlyph(r)} {r.kind.padEnd(5)}{" "}
+              {fmtSeconds(r.secs).padStart(6)} {r.label}
             </Text>
           ))}
         </Box>

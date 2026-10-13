@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
+  celebration,
   isWaveRunOver,
+  openStoryIds,
+  storyTotal,
   countsLine,
   generatedViewReason,
   gitCleanReason,
@@ -127,5 +130,22 @@ describe('compaction after a wave run', () => {
     expect(isWaveRunOver({ reason: 'aborted', builders: 3, inProgress: 0 })).toBe(false)
     expect(isWaveRunOver({ reason: 'error', builders: 3, inProgress: 0 })).toBe(false)
     expect(isWaveRunOver({ reason: 'answer', builders: 3, inProgress: 1 })).toBe(false)
+  })
+})
+
+describe('progress and celebrations', () => {
+  test('the total counts every story but skipped ones', async () => {
+    expect(storyTotal({ ready: 4, bug: 0, blocked: 13, in_progress: 1, done: 42, unshipped: 3, merged: 30 })).toBe(60)
+    expect(openStoryIds([
+      { id: '01-01', title: 'a', status: 'DONE' },
+      { id: '01-02', title: 'b', status: 'SKIP' },
+      { id: '01-03', title: 'c', status: 'TODO' },
+    ])).toEqual(['01-03'])
+  })
+  test('a done story is named; an unnamed jump is counted', async () => {
+    const before = { done: 42, total: 60, open: ['02-05', '02-06'] }
+    expect(celebration(before, { done: 43, total: 60, open: ['02-06'] }, 'stories')).toBe('✨ 02-05 done — 43/60 (71%)')
+    expect(celebration({ ...before, open: [] }, { done: 44, total: 60, open: [] }, 'stories')).toBe('✨ 2 more done — 44/60 (73%)')
+    expect(celebration(before, { done: 60, total: 60, open: [] }, 'stories')).toBe('🎉 Plan complete — 60/60 stories done!')
   })
 })

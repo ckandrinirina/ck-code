@@ -80,6 +80,21 @@ export function countsLine(counts: Record<string, number>): string {
   return parts.join(" · ");
 }
 
+// Every story ck-view counts, skipped ones aside: the progress bar's whole.
+export function storyTotal(counts: Record<string, number>): number {
+  return ["ready", "bug", "blocked", "in_progress", "done"].reduce(
+    (sum, key) => sum + (counts[key] ?? 0),
+    0,
+  );
+}
+
+// The IDs a story-done cheer compares between two refreshes.
+export function openStoryIds(rows: readonly StoryRow[]): string[] {
+  return rows
+    .filter((r) => r.status !== "DONE" && r.status !== "SKIP")
+    .map((r) => r.id);
+}
+
 // The status-line script may color its segment.
 export function stripAnsi(text: string): string {
   return text.replace(/\u001b\[[0-9;]*[A-Za-z]/g, "").trim();
@@ -399,3 +414,41 @@ export const COMPACT_INSTRUCTIONS =
   "final status, every branch and PR named, the manual test checklist and any deferred " +
   "manual tests word for word, and the next command the run recommended. Drop per-wave " +
   "agent reports, QA output and diffs: the story files and git hold them.";
+
+// ---- progress bar and celebrations ----------------------------------------------------
+
+// Kept word for word in both plugins' mods, so the two bands look like one family.
+
+export function progressBar(done: number, total: number, width = 10): string {
+  const filled =
+    total > 0 ? Math.round((Math.min(done, total) / total) * width) : 0;
+  return "▰".repeat(filled) + "▱".repeat(width - filled);
+}
+
+// Floored, so 100% means every item is done, never 199 of 200.
+export function percent(done: number, total: number): number {
+  return total > 0 ? Math.floor((Math.min(done, total) / total) * 100) : 0;
+}
+
+// `open` lists the IDs not done yet; a refresh compares it with the one before.
+export type Progress = { done: number; total: number; open: readonly string[] };
+
+// The toast for work finished between two refreshes. None on the first look (a session
+// start or a mod reload), and none when nothing new is done.
+export function celebration(
+  before: Progress | undefined,
+  after: Progress,
+  nouns: string,
+): string | undefined {
+  if (!before || after.total === 0 || after.done <= before.done)
+    return undefined;
+  const score = `${after.done}/${after.total}`;
+  if (after.done >= after.total)
+    return `🎉 Plan complete — ${score} ${nouns} done!`;
+  const finished = before.open.filter((id) => !after.open.includes(id));
+  const what =
+    finished.length > 0 && finished.length <= 3
+      ? finished.join(", ")
+      : `${after.done - before.done} more`;
+  return `✨ ${what} done — ${score} (${percent(after.done, after.total)}%)`;
+}
