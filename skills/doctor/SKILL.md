@@ -169,6 +169,10 @@ Report each script's own summary line. A failure in one is **never** fatal to th
 the failure and carry on. Relay every `WARN` — each names a file or issue the pass could
 not fix.
 
+A `ck-<name>: command not found` from any of the three is a stale `PATH`: re-run it as
+`"${CLAUDE_PLUGIN_ROOT}"/bin/ck-<name>` with the same arguments, never skip it
+([`stories-index.md`](../../references/stories-index.md#a-ck--command-not-found)).
+
 ### 3.3 Review the unproven landings (ONE multi-select)
 
 ```bash

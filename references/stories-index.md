@@ -29,10 +29,18 @@ Invoke the generator as the bare command **`ck-index`**, never by path. ck-code 
 plugin is enabled. This matters beyond brevity: `$CLAUDE_PLUGIN_ROOT` is **empty** inside a
 `Workflow` script's subagents ([`dynamic-workflows.md`](dynamic-workflows.md)), so a
 `"${CLAUDE_PLUGIN_ROOT}"/scripts/…` invocation silently resolves to nothing there while
-`ck-index` keeps working. The same holds for `ck-doctor`.
+`ck-index` keeps working. The same holds for every `bin/` command (`ck-epic`, `ck-story`,
+`ck-view`, `ck-doctor`, …).
 
-If `ck-index: command not found` ever appears, the plugin is disabled or predates `bin/`;
-fall back to `"${CLAUDE_PLUGIN_ROOT}"/scripts/ck-index.sh` and say so in one line.
+### A `ck-*` command not found
+
+If any `ck-<name>: command not found` appears, the session's `PATH` holds a stale `bin/` —
+it started on an older ck-code, or the plugin updated under it (`session-start.sh`
+re-exports the current one, but only from the next session start). Re-run the same command
+with the same arguments as `"${CLAUDE_PLUGIN_ROOT}"/bin/ck-<name>`, say so in one line, and
+carry on. **Never skip the step**: a skipped `ck-epic resolve` leaves an epic-number clash
+unsettled. Only when that path fails too is the plugin really absent — then say so and stop
+the step that needs it.
 
 ## Read protocol
 

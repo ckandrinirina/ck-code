@@ -531,6 +531,11 @@ assert_contains "session-start.sh: summarises the plan" "$SESSION_OUT" "TODO"
 if [ "$HAVE_JQ" -eq 1 ]; then
   assert_true "session-start.sh: output is valid JSON" "$(printf '%s' "$SESSION_OUT" | jq -e . >/dev/null 2>&1; echo $?)"
 fi
+ENV_F="$(mktemp)"
+printf '%s' "$STATUSLINE_JSON" | CLAUDE_ENV_FILE="$ENV_F" "$PLUGIN_ROOT/scripts/session-start.sh" >/dev/null 2>&1
+assert_eq "session-start.sh: CLAUDE_ENV_FILE puts this plugin's bin/ first on PATH (a stale session PATH still finds ck-epic)" \
+  "$(CDPATH= cd -- "$PLUGIN_ROOT/bin" && pwd -P)/ck-epic" "$(PATH=/usr/bin:/bin; . "$ENV_F"; command -v ck-epic)"
+rm -f "$ENV_F"
 
 echo
 echo "=== views out of git, regenerated at session start ==="

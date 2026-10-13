@@ -113,6 +113,10 @@ run reads a single epic folder ([`data-model.md`](../../references/data-model.md
 each `ck-epic: renumbered …` and `WARN` line; silence means no clash. Never ask about it
 and never stop over it — the run continues either way.
 
+`ck-epic: command not found` here or at any later `ck-epic` call (3.1, 5.1, Q.1, Q.4) means
+a stale `PATH`, not a missing step: re-run it as `"${CLAUDE_PLUGIN_ROOT}"/bin/ck-epic` with
+the same arguments ([`stories-index.md`](../../references/stories-index.md#a-ck--command-not-found)).
+
 ### 1.1 Route quick, publish or full
 
 - `$ARGUMENTS` contains `--quick` → **QUICK MODE**: go to [PHASE Q](#phase-q-quick-single-story-mode).
@@ -770,6 +774,7 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 - **Never number an epic or a `--quick` story from the working tree alone** (3.1, Q.1) — `ck-epic next`/`next-story` see every branch and the remote's reservations; a local `find … | tail -1` misses any plan still in a PR or on a teammate's machine, which is how two plans both mint epic 37.
 - **Never write an epic folder or a `--quick` story before `ck-epic reserve`/`reserve-story`** (5.1, Q.4), and never under a number it did not print — reserving after Proceed is what makes a concurrent plan pick another number instead of the same one.
 - **Never skip 1.0** — `ck-epic resolve` is what turns a clash that still slipped through (an offline plan, one made before 7.9.0) into a renumber instead of two epics sharing a number.
+- **Never skip a `ck-epic` call because the command is not found** (1.0) — re-run it by its full `"${CLAUDE_PLUGIN_ROOT}"/bin/ck-epic` path; a skipped call numbers from the working tree alone or leaves a clash unsettled.
 - **Never block on the remote** — a `ck-epic: WARN` (offline, no remote, refs refused) still yields a number; relay it and continue.
 - **Never store the next epic number in a file** — derive it each run (3.1); the remote's `refs/ck-code/*` reservations are the only shared record.
 - **Never ask which plan an `--epic NN` belongs to** (Q.1) — the number is unique project-wide; more than one match is a collision to migrate, not a question to ask.

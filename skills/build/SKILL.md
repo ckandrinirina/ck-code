@@ -129,7 +129,8 @@ A `moved <old> <new>` line whose `<old>` prefixes `$ARGUMENTS` means the story m
 the path under `<new>` from here on, and an `EE` in a story id or `--epic NN` given as
 `<old>`'s number now reads as the new one. The renumbered files stay uncommitted under
 `tasks/` — S1 allows that, and they are committed with the story. Never stop over a
-`WARN`.
+`WARN`. `ck-epic: command not found` is a stale `PATH`, never a reason to skip this step:
+re-run it as `"${CLAUDE_PLUGIN_ROOT}"/bin/ck-epic resolve` ([`stories-index.md`](../../references/stories-index.md#a-ck--command-not-found)).
 
 ### 1.1 If Story Path Provided
 
@@ -533,6 +534,7 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
 
 ## RULES
 
+- **Never skip 1.0 because `ck-epic` is not found** — re-run it as `"${CLAUDE_PLUGIN_ROOT}"/bin/ck-epic resolve`; a skipped resolve builds on an epic number another plan already owns.
 - **Never store status anywhere but story frontmatter**, and never hand-edit `STORIES_INDEX.md`
   or `EPICS_INDEX.md` — run `ck-story set <story-path> status=<value>`, which writes the field and regenerates
   in the same phase (one atomic mutation; [`github-projects.md`](../../references/github-projects.md)).

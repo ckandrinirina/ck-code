@@ -27,6 +27,18 @@ CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 
 json_escape() { ck_json_escape "$1"; }
 
+# ---- this plugin's bin/ first on PATH ----------------------------------------
+# Skills call the bin/ wrappers bare (`ck-epic resolve`). Claude Code puts a plugin's
+# bin/ on PATH when the session starts, so a session begun on an older ck-code, or one
+# the plugin updated under, keeps the old bin/ -- a wrapper added since is "not found"
+# while "${CLAUDE_PLUGIN_ROOT}" calls already hit the new version. CLAUDE_ENV_FILE
+# (SessionStart only) exports into every later Bash call, so the running version's bin/
+# wins. Absent or unwritable file: skills fall back by full path (stories-index.md).
+if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -d "$CK_HERE/../bin" ]; then
+  ck_bin="$(CDPATH= cd -- "$CK_HERE/../bin" && pwd -P)"
+  printf 'export PATH=%q:"$PATH"\n' "$ck_bin" >> "$CLAUDE_ENV_FILE" 2>/dev/null || true
+fi
+
 emit() { # emit CONTEXT_STRING
   local esc; esc=$(json_escape "$1")
   printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","reloadSkills":true,"additionalContext":"%s"}}\n' "$esc"
