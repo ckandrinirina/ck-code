@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.15.0] — 2026-10-13
+
+### Added
+- **ck-affected**: a new script computes which areas and tests a diff can reach, using `git` and `grep` alone at no token cost. It follows imports transitively, so a changed service runs its own test, the test of the controller that uses it, and on up the chain. JS/TS and Python imports resolve to the file: relative paths, `@/` aliases, workspace package names, dotted and relative modules. Ruby, PHP and Go match by name. An **area** is a workspace package or a name declared in `.ck-test-areas`, which splits one app into, say, a backoffice and a client, and ties e2e specs to the code they drive. It prints FULL for repo-root config, a lockfile alone, migrations, schema, seeds, fixtures and env files; NONE for docs alone.
+
+### Changed
+- **build**: the full-suite backstop is now **area scope**: every test of each area the diff reaches, never an area it does not. It runs at P8 per wave, on the story that completes its epic (scoped to the epic's whole diff), and on every story at level `story`. A backoffice change no longer runs the client's suite. The whole repo runs only when `ck-affected` prints FULL.
+- **build**: story-scope QA now scopes every runner, not just vitest, jest, Playwright and go. pytest, rspec, phpunit, mocha and `node --test` get their affected test files through `ck-affected --command` (`{files}`, `{dirs}` for `go test`); cargo and CMake fall back to the crate's own command. Re-runs for those runners narrow to the failed files plus what was affected since.
+
 ## [7.14.3] — 2026-10-13
 
 ### Fixed
