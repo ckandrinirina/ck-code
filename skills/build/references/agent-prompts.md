@@ -168,7 +168,7 @@ prompt: |
   <branch>. Run these stack commands exactly, in one call, WITHOUT --reuse:
     ck-qa run EE-SS [--parallel] test='<affected-tests command against the Base SHA>' lint='<changed-file lint>' <label>='<command>' …
     <concrete commands from qa-scope.md at story scope (§ Affected tests) — the
-     full rows when that section's fallback applies; typecheck/build are always full rows>
+     full rows when `ck-affected` prints FULL; typecheck/build are always full rows>
   Take the first failure's short excerpt (failing test names / lint / type errors) from the
   tail it prints or from its log, and never re-run a command to see more of its output.
   Use a 600000 ms Bash timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the
@@ -184,9 +184,9 @@ worktree — the wave's stories must sit together to surface integration failure
 on `git rev-parse --abbrev-ref HEAD == $TARGET`, runs the de-duplicated union of the wave's
 stories' commands **with `--reuse`** (`ck-qa run wave-N --reuse …`, then `ck-qa wait wave-N`
 while it prints `RUNNING`), and returns the same verdict line. Its `test=` and lint labels are
-always the **full** rows, never a story-scope command: this is the wave's one full-scope run.
-On a solo wave where nothing moved since P7, typecheck and build report `REUSED`, and the full
-suite and lint run. After a fan-out merge a `QA: FAIL` there
+always **area scope** against the wave's `Base SHA` (`ck-affected <base> --area`), never a
+story-scope command: this is the wave's one area-scope run. On a solo wave where nothing moved
+since P7, typecheck and build report `REUSED`, and the area's suite and lint run. After a fan-out merge a `QA: FAIL` there
 is a cross-branch integration failure by construction — each branch already passed in
 isolation. After a solo wave it means the target's own moving state broke what P7 had
 green.
@@ -214,7 +214,8 @@ prompt: |
   this exact tree — 6.3, or the agent's story-scope run — reports REUSED; everything else runs):
     ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, or the single-story scope's>' <label>='<command>' …
     <this story's stack commands from qa-scope.md, at the scope 6.3 resolved:
-     story scope lints the changed files, full scope the full row; typecheck/build full>
+     story scope lints the changed files, area scope each reached component's full row;
+     typecheck/build full>
   Take a short excerpt of each failure (failing test names, lint or type errors) from the
   tail it prints or from its log, never by re-running the command. Use a 600000 ms Bash
   timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the result prints, and never

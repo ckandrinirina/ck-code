@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves, optionally unattended. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`, any of them with `--auto`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN [--auto]"
 effort: high
-allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-affected*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -92,7 +92,7 @@ Model round trips are most of a build's wall clock. Batch every independent `Rea
 in one Bash call. Never `find /` or search `$HOME`. A relative link in this skill
 (`references/story-cycle.md`) resolves against the `Base directory for this skill` line
 printed when the skill loaded. The builder's own discipline (the targeted inner loop, the
-run-once `ck-qa` logs, story versus full scope) lives in
+run-once `ck-qa` logs, story versus area scope) lives in
 [story-cycle.md](references/story-cycle.md#tool-call-discipline).
 
 
@@ -559,7 +559,7 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
 - **Never keep work off `<trunk>` by picking a different base** — name
   `/ck-code:config integration tasks/<Plan> <level>` and stop, or `ship` targets `<trunk>` from
   the stored level regardless.
-- **Never run a story-scope pass without a full-scope run after it** — P8 once per wave, the single-story S5 QA on the story that completes its epic and on every story at level `story`. Never scope P8, typecheck or build. Story scope falls back to full when the diff touches config, migrations, fixtures or dependencies ([§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)).
+- **Never run a story-scope pass without an area-scope run after it** — P8 once per wave, the single-story S5 QA on the story that completes its epic and on every story at level `story`. Never narrow P8 below area scope, and never scope typecheck or build. Scope comes from `ck-affected`, never from reading imports; it prints FULL for repo-root config, migrations, fixtures, env files or a bare lockfile ([§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)).
 - **Never `find /` or search outside the repo.**
 - **Never ask under `--auto`, and never ship, promote or push under it** — every question takes its recommended answer, announced; the manual test is deferred to the final checklist and `/ck-code:verify`, never dropped. Hard stops still stop the run; they are reported, not asked ([parallel-mode.md § Auto mode](references/parallel-mode.md#auto-mode----auto)).
 - **Never hand a builder this skill** — every dispatch names [story-cycle.md](references/story-cycle.md) by absolute path, and the builder's rules live there.

@@ -75,7 +75,7 @@ takes its row here, announced in one line (`Auto: <decision>`) where it would ha
 | P9 hand-off | **Not yet**: nothing is promoted, shipped or pushed |
 
 Everything else is unchanged: the integrity gate, `QA: PASS` before any merge, the post-wave
-full-scope QA, held branches never merged. A hard stop (dirty tree, branch drift, a red post-wave
+area-scope QA, held branches never merged. A hard stop (dirty tree, branch drift, a red post-wave
 QA, a resume cap reached on every story) still ends the run. It is reported, never asked. A
 project with no manifest row for its QA commands is refused before P1 writes anything
 (`--auto needs QA commands`).
@@ -511,7 +511,7 @@ the main checkout — there is no worktree to check out and re-install. It stays
 it cannot disturb the checkout.
 
 Resolve each story's commands, its scope and any re-run from [qa-scope.md](qa-scope.md): the
-per-stack command table, story versus full scope, and how a check is re-run after a failure.
+per-stack command table, story versus area scope, and how a check is re-run after a failure.
 
 **P7 never passes `--reuse`**, so its run is always
 fresh against the committed branch. That fresh run is the whole point of P7. Mark any QA-failing story **BLOCKED** — from merge in
@@ -581,12 +581,14 @@ state, in this checkout, reports `REUSED` instead of running again. After a fan-
 state is new, so everything runs. The P7 runs happened in other worktrees, so they never
 count here.
 
-**The post-wave QA runs the full test and lint rows**, never a story-scope command
+**The post-wave QA runs at area scope** against the wave's `Base SHA` — every test and the
+full lint of each area the wave reaches, the whole repo only when `ck-affected` prints FULL —
+never a story-scope command
 ([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command)). It is the wave's only
-full-scope run.
+area-scope run.
 
 **Solo wave:** dispatch this post-wave QA too, even though P7 just passed on the same branch.
-P7 ran only the story scope, so the full suite and the full lint always run here. Typecheck
+P7 ran only the story scope, so the area's suite and full lint always run here. Typecheck
 and build report `REUSED` when nothing moved since P7, because P7 already checked exactly this
 tree in this checkout.
 Its failure is not a cross-branch integration failure (there was no merge); recover with a

@@ -694,6 +694,113 @@ assert_contains "ck-qa run --rerun: the full command is stamped on the new state
 assert_eq "ck-qa since: the record moves to the latest run" "$(QA state)" "$(git -C "$QA_REPO" rev-parse "$(QA since 01-04 test)^{tree}")"
 rm -rf "$QA_REPO" "$QA_TMP"
 
+echo "=== ck-affected: only the tests a change can reach ==="
+# A workspace monorepo: backoffice and client both use a shared ui package; marketing uses nothing.
+AF="$(mktemp -d)"
+afw() { mkdir -p "$AF/$(dirname "$1")"; printf '%s\n' "$2" >"$AF/$1"; }
+afw package.json '{"name":"root","private":true,"workspaces":["apps/*","packages/*"]}'
+afw pnpm-lock.yaml 'lockfileVersion: 9'
+afw README.md 'demo'
+afw apps/backoffice/package.json '{"name":"backoffice","dependencies":{"@acme/ui":"workspace:*"}}'
+afw apps/backoffice/src/orders/orders.service.ts 'export const total = () => 1'
+afw apps/backoffice/src/orders/orders.service.test.ts "import { total } from './orders.service'"
+afw apps/backoffice/src/orders/orders.controller.ts "import { total } from './orders.service'"
+afw apps/backoffice/src/orders/orders.controller.test.ts "import { c } from './orders.controller'"
+afw apps/backoffice/src/routes.ts "import { c } from '@/orders/orders.controller'"
+afw apps/backoffice/src/routes.test.ts "import { r } from './routes'"
+afw apps/backoffice/src/users/users.service.ts 'export const u = 1'
+afw apps/backoffice/src/users/users.test.ts "import { u } from './users.service'"
+afw apps/client/package.json '{"name":"client","dependencies":{"@acme/ui":"workspace:*"}}'
+afw apps/client/src/cart.ts "import { Button } from '@acme/ui'"
+afw apps/client/src/cart.test.ts "import { cart } from './cart'"
+afw apps/client/src/orders.service.ts 'export const o = 1'
+afw apps/client/src/orders.test.ts "import { o } from './orders.service'"
+afw packages/ui/package.json '{"name":"@acme/ui"}'
+afw packages/ui/src/index.ts "export * from './button'"
+afw packages/ui/src/button.ts 'export const Button = 1'
+afw packages/ui/src/button.test.ts "import { Button } from './button'"
+afw apps/marketing/package.json '{"name":"marketing"}'
+afw apps/marketing/src/home.test.ts 'x'
+( cd "$AF" && git init -q && git add -A && git -c user.email=s@s -c user.name=s commit -qm init )
+AFF() { ( cd "$AF" && ck-affected "$@" 2>&1 ); }
+AFR() { git -C "$AF" checkout -q -- . && git -C "$AF" clean -qfd; }
+
+echo '//' >>"$AF/apps/backoffice/src/orders/orders.service.ts"
+AF_T=$(AFF HEAD --tests)
+assert_contains "ck-affected: a changed service runs its own test" "$AF_T" "orders/orders.service.test.ts"
+assert_contains "ck-affected: and the test of the controller that uses it" "$AF_T" "orders/orders.controller.test.ts"
+assert_contains "ck-affected: and on up the import chain, through an @/ alias" "$AF_T" "apps/backoffice/src/routes.test.ts"
+assert_not_contains "ck-affected: a test that imports nothing changed is skipped" "$AF_T" "users.test.ts"
+assert_not_contains "ck-affected: a same-named file in another area is not an importer" "$AF_T" "apps/client"
+AF_S=$(AFF HEAD)
+assert_contains "ck-affected: the summary runs the backoffice" "$AF_S" "run   apps/backoffice"
+assert_contains "ck-affected: and skips the client" "$AF_S" "skip  apps/client"
+assert_eq "ck-affected --tests: paths are relative to the caller's directory" "src/orders/orders.controller.test.ts" "$( cd "$AF/apps/backoffice" && ck-affected HEAD --tests | head -1 )"
+assert_contains "ck-affected --area: the whole backoffice, never the client" "$(AFF HEAD --area --tests)" "users.test.ts"
+assert_not_contains "ck-affected --area: an untouched area stays out" "$(AFF HEAD --area --tests)" "apps/client"
+assert_eq "ck-affected --command: the one-file command names the tests" \
+  "one apps/backoffice/src/orders/orders.controller.test.ts apps/backoffice/src/orders/orders.service.test.ts apps/backoffice/src/routes.test.ts" \
+  "$(AFF HEAD --command full 'one {files}')"
+AFR
+
+echo '//' >>"$AF/packages/ui/src/button.ts"
+AF_T=$(AFF HEAD --tests)
+assert_contains "ck-affected: a shared package reaches the area importing it by name" "$AF_T" "apps/client/src/cart.test.ts"
+AF_A=$(AFF HEAD --area)
+assert_contains "ck-affected --area: a package depending on a changed one runs" "$AF_A" "depends on packages/ui"
+assert_contains "ck-affected --area: an unrelated package is skipped" "$AF_A" "skip  apps/marketing"
+AFR
+
+echo x >>"$AF/README.md"
+assert_contains "ck-affected: docs alone change no code" "$(AFF HEAD)" "ck-affected: NONE"
+assert_eq "ck-affected --command: no code, no test run" ": no code changed" "$(AFF HEAD --command full 'one {files}')"
+AFR
+echo ' ' >>"$AF/package.json"
+assert_contains "ck-affected: root config is FULL" "$(AFF HEAD)" "ck-affected: FULL — package.json"
+assert_eq "ck-affected --command: FULL prints the full command" "full" "$(AFF HEAD --command full 'one {files}')"
+AFR
+echo '#' >>"$AF/pnpm-lock.yaml"
+assert_contains "ck-affected: a lockfile with no manifest change is FULL" "$(AFF HEAD)" "ck-affected: FULL"
+echo ' ' >>"$AF/apps/client/package.json"
+AF_S=$(AFF HEAD)
+assert_contains "ck-affected: a workspace manifest runs its own area whole" "$AF_S" "changed apps/client/package.json"
+assert_contains "ck-affected: and nothing else" "$AF_S" "skip  apps/backoffice"
+AFR
+mkdir -p "$AF/apps/backoffice/migrations"; echo x >"$AF/apps/backoffice/migrations/0002.sql"
+assert_contains "ck-affected: a migration is shared data, FULL" "$(AFF HEAD)" "is shared data"
+AFR
+assert_contains "ck-affected: an unknown base falls back to FULL" "$(AFF nope)" "base nope not found"
+rm -rf "$AF"
+
+# One Python package split into declared areas, e2e specs tied to the code they drive.
+AF="$(mktemp -d)"
+afw pyproject.toml '[project]
+name = "shop"'
+afw app/admin/__init__.py ''
+afw app/admin/orders_service.py 'X = 1'
+afw app/admin/orders_view.py 'from app.admin.orders_service import X'
+afw app/client/cart.py 'Y = 1'
+afw tests/admin/test_orders_view.py 'from app.admin import orders_view'
+afw tests/admin/test_service.py 'from .helpers import h
+from app.admin.orders_service import (
+    X,
+)'
+afw tests/admin/test_other.py 'from app.client import cart'
+afw tests/client/test_cart.py 'from app.client.cart import Y'
+afw e2e/admin/test_admin_flow.py 'import requests'
+afw e2e/client/test_shop_flow.py 'import requests'
+printf 'admin: app/admin/* tests/admin/* e2e/admin/*\nclient: app/client/* tests/client/* e2e/client/*\n' >"$AF/.ck-test-areas"
+( cd "$AF" && git init -q && git add -A && git -c user.email=s@s -c user.name=s commit -qm init )
+echo '#' >>"$AF/app/admin/orders_service.py"
+AF_T=$(AFF HEAD --tests)
+assert_contains "ck-affected: Python — a parenthesised from-import is traced" "$AF_T" "tests/admin/test_service.py"
+assert_contains "ck-affected: Python — from package import module is traced" "$AF_T" "tests/admin/test_orders_view.py"
+assert_not_contains "ck-affected: Python — a test importing another module is skipped" "$AF_T" "test_other.py"
+assert_contains "ck-affected --area: a declared area runs its e2e specs" "$(AFF HEAD --area --tests)" "e2e/admin/test_admin_flow.py"
+assert_not_contains "ck-affected --area: and never the other declared area" "$(AFF HEAD --area --tests)" "e2e/client"
+rm -rf "$AF"
+
+
 echo
 echo "=== ck-project against a fake gh ==="
 if [ "$HAVE_JQ" -eq 1 ]; then

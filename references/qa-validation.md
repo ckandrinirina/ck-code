@@ -36,9 +36,10 @@ ones — the fix may have side effects on previously-passing criteria.
 ## Step 2 — Run the test suite at the caller's scope
 
 Run the tests the caller's scope names, not just the new ones, and watch for regressions in
-previously-green tests. **Story scope** is every test the diff can affect. **Full scope** is
-the whole suite. `build` resolves which one applies, and a full-scope run always follows a
-story-scope one
+previously-green tests. **Story scope** is every test the diff can affect. **Area scope** is
+every test of each area the diff reaches (the whole suite only when `ck-affected` prints
+FULL). `build` resolves which one applies, and an area-scope run always follows a story-scope
+one
 ([`qa-scope.md` § Affected tests](../skills/build/references/qa-scope.md#affected-tests--the-story-level-test-command)). The suite and the Step 3 checks run together in one
 `ck-qa run <id> --reuse [--parallel] …` call
 ([`rtk.md` § QA runs go through `ck-qa`](rtk.md#qa-runs-go-through-ck-qa)). A suite that

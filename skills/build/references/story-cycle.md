@@ -66,8 +66,9 @@ commands, never from skipping a check:
   lint, typecheck and build run once through `ck-qa`, at 6.3 and in QA (7), where regressions
   are caught. A linter that takes no file paths waits for 6.3/7 too.
 - **Check the story's scope, then only what is left.** The 6.3/7 suite and lint run at
-  **story scope**: the affected tests and the changed files. The one exception is a
-  **full-scope** backstop, which runs where the regression outside the story's reach is
+  **story scope**: the affected tests and the changed files, resolved by `ck-affected`. The
+  one exception is the **area-scope** backstop, every test of each area the diff reaches
+  (never an area it does not), which runs where the regression outside the story's reach is
   caught: P8 once per wave, and the single-story QA (S5) on the story that completes its epic
   and on every story at level `story`. A re-run after a red check or a NEEDS FIXES round runs only the
   failed tests plus those affected since the last run (`ck-qa run <id> --rerun`). Typecheck
@@ -256,11 +257,11 @@ also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format 
 
 **6.3 Final green check.** Resolve the scope first
 ([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command)).
-It is **story scope** at level `epic`/`plan`, and **full scope** at level `story` or on the
+It is **story scope** at level `epic`/`plan`, and **area scope** at level `story` or on the
 story that completes its epic. Then run the suite once through `ck-qa`, using the **same
 `test=` command string** Phase 7 will hand the validator. For example, story scope is
-`ck-qa run EE-SS test='npx vitest run --changed <base> --passWithNoTests'`, and full scope is
-`ck-qa run EE-SS test='npm run test'`. Report REFACTOR as **one line** (output-blocks). This
+`ck-qa run EE-SS test='npx vitest run --changed <base> --passWithNoTests'`, and area scope is
+`ck-qa run EE-SS test="$(ck-affected <base> --area --command 'npx vitest run' 'npx vitest run {files}')"`. Report REFACTOR as **one line** (output-blocks). This
 is where a regression the targeted runs could not see surfaces. On red, fix it and re-run
 only what is left: `ck-qa run EE-SS --rerun test='<failed files + affected since ck-qa since
 EE-SS test>'` ([§ Re-runs after a failure](qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
@@ -297,13 +298,13 @@ command is skipped, never the judgement.
 
 **Delegated, 6.3 and 7 are one run.** Phase 7's command set is the final green check, at
 **story scope** against the prompt's `Base SHA`: the affected-tests `test=` and the
-changed-file lint, or the full rows when a fallback applies
+changed-file lint, or the full rows when `ck-affected` prints FULL
 ([qa-scope.md](qa-scope.md#affected-tests--the-story-level-test-command)). Typecheck and build
 stay full. Run it with `ck-qa run <id> --parallel …` (no `--reuse`, and no `--parallel` for a
 shared build lock). A failing run is followed by a `--rerun` of only what is left
 ([§ Re-runs](qa-scope.md#re-runs-after-a-failure--only-what-is-left)). Never run the suite at
 6.3 and again at 7 on the same tree, because back to back, in one agent, they measure the same
-state. Every other check in `qa-validation.md` still runs here. The full scope runs later in
+state. Every other check in `qa-validation.md` still runs here. The area scope runs later in
 the orchestrator: P8 once per wave, or the scope S5 gives a single story.
 
 **A delegated `QA: FAIL` is a `NEEDS FIXES` verdict** — the agent's verdict line replaces the
