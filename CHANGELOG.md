@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.14.3] — 2026-10-13
+
+### Fixed
+- **session-start**: exports the running version's `bin/` first on `PATH` through `CLAUDE_ENV_FILE`, so a session that began on an older ck-code (or that the plugin updated under) no longer reports `ck-epic: command not found` while full-path calls work.
+- **plan / build / doctor**: a `ck-*: command not found` now re-runs the same command as `"${CLAUDE_PLUGIN_ROOT}"/bin/ck-<name>` instead of skipping the step — `build` had skipped the `ck-epic resolve` clash check. One shared rule in `stories-index.md` covers every `bin/` command.
+
 ## [7.14.2] — 2026-10-13
 
 ### Fixed
