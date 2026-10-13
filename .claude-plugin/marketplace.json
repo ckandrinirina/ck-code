@@ -4,7 +4,7 @@
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
   },
-  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides), ck-code-lite (the same workflow trimmed to three skills and two files) and ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers).",
+  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides), ck-code-lite (the same workflow trimmed to four skills and two files) and ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers).",
   "plugins": [
     {
       "name": "ck-code",
@@ -16,16 +16,16 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-code-lite",
-        "ref": "v1.4.1"
+        "ref": "v1.4.2"
       },
-      "description": "Minimal three-skill workflow: start (architecture + flat plan), build (failing test first, isolated QA, manual sign-off), ship (commit + PR). The ck-code guarantees without the ceremony. An alternative to ck-code, not a companion."
+      "description": "Minimal four-skill workflow: start (architecture + flat plan), build (failing test first, isolated QA, manual sign-off), ship (commit + PR), design (optional Claude Design hand-off). The ck-code guarantees without the ceremony. An alternative to ck-code, not a companion."
     },
     {
       "name": "ck-tools",
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-tools",
-        "ref": "v2.3.0"
+        "ref": "v2.3.1"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores. Coexists with ck-code."
     }
