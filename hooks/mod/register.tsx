@@ -872,13 +872,25 @@ export const register: Register = (on, options) => {
       return next(e);
     const { Box, Button, Text } = $.ui.resolve(e);
     const score = `${data.done}/${data.total}`;
+    // The mods after this one (ck-tools' plan-limit rows) draw under ours, in the rows we
+    // leave; a tree that ignored next(e) would hide them. Kept word for word in both mods.
+    const below = async (rows: number) =>
+      e.props.maxRows > rows
+        ? await next({
+            ...e,
+            props: { ...e.props, maxRows: e.props.maxRows - rows },
+          })
+        : null;
     if (e.props.isWorking) {
-      return data.story ? (
-        <Text dimColor wrap="truncate-end">
-          ⚡ ck-code · {data.story} · {score}
-        </Text>
-      ) : (
-        next(e)
+      if (!data.story) return next(e);
+      const rest = await below(1);
+      return (
+        <Box flexDirection="column">
+          <Text dimColor wrap="truncate-end">
+            ⚡ ck-code · {data.story} · {score}
+          </Text>
+          {rest}
+        </Box>
       );
     }
     const command = data.recommend.split(" — ")[0]?.trim() ?? "";
@@ -926,6 +938,7 @@ export const register: Register = (on, options) => {
     );
     // Short on rows: the next step matters more than the bar.
     if (e.props.maxRows < 2) return actions;
+    const rest = await below(3 + data.notes.length);
     return (
       <Box flexDirection="column">
         {header}
@@ -938,6 +951,7 @@ export const register: Register = (on, options) => {
             {note}
           </Text>
         ))}
+        {rest}
       </Box>
     );
   });

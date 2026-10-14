@@ -12,6 +12,8 @@ const state = () => [
 
 function project(on: On, filled: string[]) {
   mock.store(on)
+  // What the mods after ck-code draw in the band, such as ck-tools' plan-limit rows.
+  on('ui.render', () => ({ type: 'Text', props: {}, children: ['below the band'] }))
   on('session.cwd', () => ({ value: '/p' }))
   on('fs.exists', (_$, e) => ({ value: e.path === '/p/docs/architecture' || e.path === '/p/tasks' }))
   on('fs.list', () => ({ value: [] }))
@@ -52,6 +54,7 @@ test('the band shows the story, the counts and fills the next command', async ($
     expect(await ui.find({ text: /⚡ 01-02 Story 2/ })).toBeDefined()
     expect(await ui.find({ text: /epic 01 core/ })).toBe(undefined)
     expect(await ui.find({ text: /42\/60 70%/ })).toBeDefined()
+    expect(await ui.find({ text: 'below the band' })).toBeDefined()
     await ui.press({ key: 'fill' })
     await ui.unmount()
   }
