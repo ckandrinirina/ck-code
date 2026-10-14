@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.17.0] — 2026-10-14
+
+### Added
+- **mod**: the ck look — in a ck-code project the terminal's tool rows draw with flat one-cell glyphs (`⌕` searches, `≡` reads, `✎` writes, `±` edits, `❯` shell, `⇣` fetches, `◈` agents, `✦` skills, `☐`/`▣` tasks, `⌁` MCP) plus each call's subject and state, a folded run of reads and searches is one line (`✓ ≡ 3 · ⌕ 2`), and the spinner and closing line use workflow words. New `theme` setting, on by default.
+- **mod**: task board — a story builder's own TaskCreate/TaskUpdate/TodoWrite list is mirrored onto the band while it runs (`◈ Build 03-02 ▰▰▱▱ 2/4 ▸ Running the failing test`); a sub-agent's list never reaches the session's own, which is why builds stopped showing tasks after 7.8.0.
+
+### Changed
+- **mod**: the band's action row (next command, **Use**, **Hide**) folds away 8 s after a turn ends, leaving the progress line; the band, the cheers and the agents toast use flat glyphs (`▸`, `✦`, `★`) instead of emoji.
+
+### Fixed
+- **build**, **design**, **fix**, **init**, **migrate**, **plan**, **ship**, **spec**, **team**: the Phase 0 progress list named `TodoWrite`, which current Claude Code replaces with `TaskCreate`/`TaskUpdate`, so the list was silently skipped. It now names `TaskCreate`, with `TodoWrite` only as the fallback.
+
 ## [7.16.2] — 2026-10-14
 
 ### Fixed
