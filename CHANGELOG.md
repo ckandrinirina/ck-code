@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.16.1] — 2026-10-14
+
+### Fixed
+- **mod**: the band above the prompt draws the mods that come after it (such as ck-tools' plan-limit rows) under its own rows, in the rows it leaves, instead of hiding them.
+
+### Changed
+- **marketplace**: ck-code-lite at v1.6.1, ck-tools at v2.4.0.
+
 ## [7.16.0] — 2026-10-14
 
 ### Added
