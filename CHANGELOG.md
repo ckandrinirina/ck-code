@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.16.0] — 2026-10-14
+
+### Added
+- **mod**: cost guard, active in every project. It caps every model request and subagent dispatch at `high` effort (`xhigh`/`max` become `high`), refuses a `fable` dispatch until the user approves it, and gives an `Explore`/`claude-code-guide` dispatch with no `model:` `haiku` and a `general-purpose` one `sonnet`, instead of the session model. Turn it off with the `cost_guard` setting.
+- **context-scout** agent (haiku, low effort): finds the files, symbols, tests and conventions a story or bug touches and returns a `file:line` brief. `fix` and `init` send their code search to it.
+- **researcher** agent (haiku, low effort): looks up versions, idioms and docs and returns sourced answers. `design` and `plan` send their technology research to it.
+
+### Changed
+- **build**, **init**, **team**: effort lowered from `high` to `medium`, because their heavy work already runs in sub-agents.
+- **subagent-fanout**: new "cheap delegates" rule: the main agent never explores or researches. Effort is capped at `high`, and `fable` is removed from the model tiers and the `model_*` settings (it now needs the user's approval).
+
 ## [7.15.2] — 2026-10-13
 
 ### Fixed
