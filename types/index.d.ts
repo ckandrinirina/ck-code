@@ -23,6 +23,14 @@ export type CkAgentRow = {
   secs: number;
 };
 
+// One builder's mirrored task list (hooks/mod/theme.ts BoardEntry): its TaskCreate,
+// TaskUpdate and TodoWrite calls, which never reach the session's own task list.
+export type CkBoard = {
+  agent: string;
+  label: string;
+  tasks: { id: string; subject: string; active: string; status: string }[];
+};
+
 export type CkVerify = {
   plan: string;
   header: string;
@@ -38,6 +46,8 @@ declare module "claude-code" {
       bandHidden: boolean;
       agents: CkAgentRow[];
       verify: CkVerify | null;
+      board: CkBoard[];
+      bandQuiet: boolean;
     };
   }
 }

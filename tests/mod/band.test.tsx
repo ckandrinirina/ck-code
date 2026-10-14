@@ -51,7 +51,7 @@ test('the band shows the story, the counts and fills the next command', async ($
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'ck-code', surface, component: 'AbovePrompt', props: PROPS as never })
     expect(await ui.find({ text: /4 ready · 1 in progress · 13 blocked · 42 done/ })).toBeDefined()
-    expect(await ui.find({ text: /⚡ 01-02 Story 2/ })).toBeDefined()
+    expect(await ui.find({ text: /▸ 01-02 Story 2/ })).toBeDefined()
     expect(await ui.find({ text: /epic 01 core/ })).toBe(undefined)
     expect(await ui.find({ text: /42\/60 70%/ })).toBeDefined()
     expect(await ui.find({ text: 'below the band' })).toBeDefined()
@@ -74,7 +74,7 @@ test('a story finished between two refreshes raises a toast', async ($, on) => {
   counts = 'ready=4 bug=0 blocked=13 in_progress=0 done=43'
   await $.command.run(RUN)
   await $.command.run(RUN)
-  expect(toasts).toEqual(['ck-code: ✨ 1 more done — 43/60 (71%)'])
+  expect(toasts).toEqual(['ck-code: ✦ 1 more done — 43/60 (71%)'])
 })
 
 test('with no story the band shows none', async ($, on) => {
@@ -83,7 +83,7 @@ test('with no story the band shows none', async ($, on) => {
   await $.command.run(RUN)
   await $.command.run(RUN)
   const ui = await $.ui.mount({ plugin: 'ck-code', surface: 'terminal', component: 'AbovePrompt', props: PROPS as never })
-  expect(await ui.find({ text: /⚡/ })).toBe(undefined)
+  expect(await ui.find({ text: /▸/ })).toBe(undefined)
   await ui.unmount()
 })
 

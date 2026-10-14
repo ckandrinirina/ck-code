@@ -42,7 +42,8 @@ not show. Both are **merge-safe** (see
 
 ## PROGRESS TRACKING
 
-Open a `TodoWrite` list as the **first action of Phase 0** — one todo per phase this run will
+Open a task list as the **first action of Phase 0** — one task per phase (`TaskCreate`;
+`TodoWrite` only where the session has no `TaskCreate`) this run will
 actually execute — then flip each to `in_progress` when it starts and `completed` when its
 gate passes. Drop a phase that mode routing skips; never leave it pending. A long run's only
 view into where it is comes from this list, so update it as you go and never batch the

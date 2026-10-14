@@ -39,7 +39,8 @@ Full matrix: [`workflow-map.md`](../../references/workflow-map.md#misuse-redirec
 
 ## PROGRESS TRACKING
 
-Open a `TodoWrite` list as the first action of Phase 0, one todo per phase this run will
+Open a task list as the first action of Phase 0, one task per phase (`TaskCreate`;
+`TodoWrite` only where the session has no `TaskCreate`) this run will
 execute. Flip each to `in_progress` when it starts and `completed` when its gate passes,
 and drop a phase the mode skips. Never batch the updates to the end.
 

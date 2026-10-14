@@ -14,13 +14,17 @@
 //   turn.*             per-skill time and token profile (/ck-profile)
 //   cost guard         caps effort at high, gates Fable on the user, cheap default subagent model
 //   session.compact    compacts the session once a wave run of builders has finished
+//   look               flat-glyph tool rows and groups, workflow words (look.tsx, theme.ts)
+//   task board         the builders' own task lists, mirrored into the band
 //
 // Pure rules live in logic.ts. `$` never leaves this file except into the state helpers.
 
 import { atom, read, update } from "claude-code";
 import type { EngineInterface, Register } from "claude-code";
 
-import type { CkAgentRow, CkBand, CkVerify } from "../../types";
+import type { CkAgentRow, CkBand, CkBoard, CkVerify } from "../../types";
+import { registerLook } from "./look";
+import { boardLine, taskCreated, taskUpdated, todosWritten } from "./theme";
 import {
   COMPACT_INSTRUCTIONS,
   HANDOFF_TTL_MS,
@@ -73,11 +77,16 @@ const bandHidden = atom(
 );
 const agents = atom({ plugin: "ck-code", key: "agents" } as const, []);
 const verify = atom({ plugin: "ck-code", key: "verify" } as const, null);
+const board = atom({ plugin: "ck-code", key: "board" } as const, []);
+// True once the band's action row has been up for BAND_ACTIONS_MS: the band folds to its
+// progress line until the next turn ends.
+const bandQuiet = atom({ plugin: "ck-code", key: "bandQuiet" } as const, false);
 
 const AGENTS_PANE = "ck-agents";
 const VERIFY_PANE = "ck-verify";
 const PR_POLL_MS = 5 * 60 * 1000;
 const AGENT_POLL_MS = 3000;
+const BAND_ACTIONS_MS = 8000;
 
 // Module variables start over on a reload; what must outlive one is in $.state or $.store.
 let guardsOn = true;
@@ -85,6 +94,11 @@ let bandOn = true;
 let prWatchOn = true;
 let compactOn = true;
 let costGuardOn = true;
+let themeOn = true;
+let lookRoot = "";
+let quietTimer: { cancel: () => void } | undefined;
+// A builder's label on the task board, by agent id: its Agent call's description.
+const boardLabels = new Map<string, string>();
 // Story builders dispatched from the main loop since the last compaction. Not reset per turn:
 // background builders end in later notification turns, which dispatch none themselves.
 let builders = 0;
@@ -199,6 +213,7 @@ async function refreshBand($: EngineInterface): Promise<void> {
     if (lastKind !== undefined && kind !== lastKind)
       $.ui.invalidate("command.describe");
     lastKind = kind;
+    lookRoot = await projectRoot($);
     if (kind !== "code") {
       stories = [];
       if (bandOn) await update($, band, () => null);
@@ -356,9 +371,43 @@ async function pollAgents($: EngineInterface): Promise<void> {
     $.ui.toast(
       failed
         ? `ck-code: agents finished — ${ran.length - failed} completed, ${failed} failed`
-        : `ck-code: 🚀 agents finished — all ${ran.length} completed`,
+        : `ck-code: ✦ agents finished — all ${ran.length} completed`,
     );
   }
+}
+
+// ---- band timing and the builders' task board ------------------------------------------
+
+// The action row (next command, Use, Hide) comes up when a turn ends and folds away after
+// BAND_ACTIONS_MS, leaving the progress line; the next turn's end brings it back.
+async function wakeBand($: EngineInterface): Promise<void> {
+  try {
+    quietTimer?.cancel();
+    await update($, bandQuiet, () => false);
+    quietTimer = $.clock.after(BAND_ACTIONS_MS, () => void update($, bandQuiet, () => true));
+  } catch {
+    // No clock: the action row simply stays up.
+  }
+}
+
+async function boardLabel($: EngineInterface, agent: string): Promise<string> {
+  const known = boardLabels.get(agent);
+  if (known !== undefined) return known;
+  const info = (await $.agent.list()).find((a) => a.id === agent);
+  const label = info?.name ?? info?.description ?? "agent";
+  boardLabels.set(agent, label);
+  return label;
+}
+
+// Builders that ended leave the board once the main loop's turn ends.
+async function pruneBoard($: EngineInterface): Promise<void> {
+  const rows = await read($, board);
+  if (rows.length === 0) return;
+  const live = new Set(
+    (await $.agent.list()).filter((a) => isLive(a.status)).map((a) => a.id),
+  );
+  if (rows.every((b) => live.has(b.agent))) return;
+  await update($, board, (old) => (old ?? []).filter((b) => live.has(b.agent)));
 }
 
 // ---- verify checklist ----------------------------------------------------------------
@@ -538,6 +587,12 @@ export const register: Register = (on, options) => {
   prWatchOn = options.pr_watch !== false;
   compactOn = options.compact_after_waves !== false;
   costGuardOn = options.cost_guard !== false;
+  themeOn = options.theme !== false;
+
+  registerLook(on, {
+    isOurs: () => themeOn && lastKind === "code",
+    root: () => lookRoot,
+  });
 
   on("session.start", async ($, e, next) => {
     rootCache = (await $.session.root()) || (await $.session.cwd());
@@ -579,6 +634,7 @@ export const register: Register = (on, options) => {
     const hidden = await $.store.get("bandHidden");
     if (hidden === true) await update($, bandHidden, () => true);
     $.clock.after(50, () => void refreshBand($));
+    await wakeBand($);
     if (prWatchOn) {
       $.clock.after(20_000, async () => {
         if (!(await pollMergedPrs($))) return;
@@ -725,6 +781,36 @@ export const register: Register = (on, options) => {
     return next(e);
   });
 
+  // ---- task board: a subagent's task list, mirrored (its own never reaches the session's) ----
+
+  on("tool.call", { tool: "TaskCreate" }, async ($, e, next) => {
+    const out = await next(e);
+    if (e.agentId === undefined || lastKind !== "code" || !("result" in out) || out.isError)
+      return out;
+    const id = out.result?.task?.id;
+    if (!id) return out;
+    const label = await boardLabel($, e.agentId);
+    await update($, board, (old) =>
+      taskCreated(old ?? [], e.agentId!, label, { id, subject: e.subject, activeForm: e.activeForm }),
+    );
+    return out;
+  }).catch(($, e, next) => next(e));
+
+  on("tool.call", { tool: "TaskUpdate" }, async ($, e, next) => {
+    const out = await next(e);
+    if (e.agentId === undefined || lastKind !== "code") return out;
+    await update($, board, (old) => taskUpdated(old ?? [], e.agentId!, e));
+    return out;
+  }).catch(($, e, next) => next(e));
+
+  on("tool.call", { tool: "TodoWrite" }, async ($, e, next) => {
+    const out = await next(e);
+    if (e.agentId === undefined || lastKind !== "code") return out;
+    const label = await boardLabel($, e.agentId);
+    await update($, board, (old) => todosWritten(old ?? [], e.agentId!, label, e.todos));
+    return out;
+  }).catch(($, e, next) => next(e));
+
   // ---- profiler ----
 
   on("turn.start", async ($, e, next) => {
@@ -779,6 +865,8 @@ export const register: Register = (on, options) => {
       });
     }
     $.clock.after(50, () => void refreshBand($));
+    await wakeBand($);
+    void pruneBoard($);
     if (compactOn && builders >= 2 && e.reason === "answer")
       $.clock.after(500, () => void compactAfterWaves($, e.reason));
     return out;
@@ -849,6 +937,7 @@ export const register: Register = (on, options) => {
     await update($, bandHidden, () => hidden);
     await $.store.set("bandHidden", hidden);
     if (!hidden) await refreshBand($);
+    if (!hidden) await wakeBand($);
     return {
       text: hidden
         ? "ck-code band hidden (/ck-band shows it again)."
@@ -887,14 +976,30 @@ export const register: Register = (on, options) => {
             props: { ...e.props, maxRows: e.props.maxRows - rows },
           })
         : null;
+    // The builders' task lists, one line each, in the rows the band can spare.
+    const tasks: CkBoard[] = (await read($, board)).filter((b) => b.tasks.length > 0);
+    const boardRows = (room: number) =>
+      tasks.slice(0, Math.max(0, room)).map((b) => (
+        <Text key={`board-${b.agent}`} color="claude" wrap="truncate-end">
+          ◈ {boardLine(b)}
+        </Text>
+      ));
     if (e.props.isWorking) {
-      if (!data.story) return next(e);
-      const rest = await below(1);
+      if (!data.story && tasks.length === 0) return next(e);
+      const lines = [
+        ...(data.story
+          ? [
+              <Text key="story" dimColor wrap="truncate-end">
+                ▸ ck-code · {data.story} · {score}
+              </Text>,
+            ]
+          : []),
+        ...boardRows(e.props.maxRows - (data.story ? 1 : 0)),
+      ];
+      const rest = await below(lines.length);
       return (
         <Box flexDirection="column">
-          <Text dimColor wrap="truncate-end">
-            ⚡ ck-code · {data.story} · {score}
-          </Text>
+          {lines}
           {rest}
         </Box>
       );
@@ -915,11 +1020,29 @@ export const register: Register = (on, options) => {
         </Text>
         {data.story !== "" && (
           <Text color="warning" wrap="truncate-end">
-            ⚡ {data.story}
+            ▸ {data.story}
           </Text>
         )}
+        {isComplete && <Text color="success">★ every story done</Text>}
       </Box>
     );
+    // Folded: the action row has had its seconds; the progress line and the board stay.
+    if (await read($, bandQuiet)) {
+      const boardEls = boardRows(e.props.maxRows - 1 - data.notes.length);
+      const rest = await below(1 + boardEls.length + data.notes.length);
+      return (
+        <Box flexDirection="column">
+          {header}
+          {boardEls}
+          {data.notes.map((note) => (
+            <Text color="warning" wrap="truncate-end">
+              {note}
+            </Text>
+          ))}
+          {rest}
+        </Box>
+      );
+    }
     const actions = (
       <Box key="next" gap={1}>
         {command.startsWith("/") && (
@@ -956,13 +1079,18 @@ export const register: Register = (on, options) => {
     );
     // Short on rows: the next step matters more than the bar.
     if (e.props.maxRows < 2) return actions;
-    const rest = await below(3 + data.notes.length);
+    const counts = isComplete ? 0 : 1;
+    const boardEls = boardRows(e.props.maxRows - 2 - counts - data.notes.length);
+    const rest = await below(2 + counts + boardEls.length + data.notes.length);
     return (
       <Box flexDirection="column">
         {header}
-        <Text key="counts" dimColor wrap="truncate-end">
-          {isComplete ? "🎉 every story done" : data.counts}
-        </Text>
+        {counts === 1 && (
+          <Text key="counts" dimColor wrap="truncate-end">
+            {data.counts}
+          </Text>
+        )}
+        {boardEls}
         {actions}
         {data.notes.map((note) => (
           <Text color="warning" wrap="truncate-end">

@@ -177,9 +177,9 @@ describe('progress and celebrations', () => {
   })
   test('a done story is named; an unnamed jump is counted', async () => {
     const before = { done: 42, total: 60, open: ['02-05', '02-06'] }
-    expect(celebration(before, { done: 43, total: 60, open: ['02-06'] }, 'stories')).toBe('✨ 02-05 done — 43/60 (71%)')
-    expect(celebration({ ...before, open: [] }, { done: 44, total: 60, open: [] }, 'stories')).toBe('✨ 2 more done — 44/60 (73%)')
-    expect(celebration(before, { done: 60, total: 60, open: [] }, 'stories')).toBe('🎉 Plan complete — 60/60 stories done!')
+    expect(celebration(before, { done: 43, total: 60, open: ['02-06'] }, 'stories')).toBe('✦ 02-05 done — 43/60 (71%)')
+    expect(celebration({ ...before, open: [] }, { done: 44, total: 60, open: [] }, 'stories')).toBe('✦ 2 more done — 44/60 (73%)')
+    expect(celebration(before, { done: 60, total: 60, open: [] }, 'stories')).toBe('★ Plan complete — 60/60 stories done!')
   })
 })
 
