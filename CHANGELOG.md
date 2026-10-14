@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.16.2] — 2026-10-14
+
+### Fixed
+- **mod**: every mod control now works in the default TUI (`/tui default`), not only fullscreen. The band's **Use**/**Hide** take **u**/**h** after **ctrl+x tab** and show those keys off the fullscreen layout. The verify pane opens with the keyboard on it (Tab walks the buttons; **p**/**s**/**f**/**t** press the first item's). The agents pane no longer opens by itself on the main screen, where it would sit inline above the prompt.
+
+### Changed
+- **marketplace**: ck-code-lite at v1.6.2.
+
 ## [7.16.1] — 2026-10-14
 
 ### Fixed
