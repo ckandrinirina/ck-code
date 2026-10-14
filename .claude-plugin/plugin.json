@@ -3,7 +3,7 @@
   "name": "ck-code",
   "displayName": "CK Code",
   "description": "Spec-driven workflow plugin: design -> plan -> build -> ship. Transforms specs into architecture docs, epics/stories, and auto-generated expert and language-guide skills tailored to your tech stack. Story state lives in frontmatter; indexes are generated.",
-  "version": "7.15.2",
+  "version": "7.16.0",
   "author": {
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
@@ -29,7 +29,6 @@
       "default": "haiku",
       "options": [
         "haiku",
-        "fable",
         "sonnet",
         "opus"
       ]
@@ -41,7 +40,6 @@
       "default": "sonnet",
       "options": [
         "haiku",
-        "fable",
         "sonnet",
         "opus"
       ]
@@ -53,7 +51,6 @@
       "default": "opus",
       "options": [
         "haiku",
-        "fable",
         "sonnet",
         "opus"
       ]
@@ -80,6 +77,12 @@
       "type": "boolean",
       "title": "Compact after a wave run",
       "description": "Compact the session once a /ck-code:build wave run finishes with nothing left in progress.",
+      "default": true
+    },
+    "cost_guard": {
+      "type": "boolean",
+      "title": "Cost guard",
+      "description": "Cap every request and subagent at high effort, ask before any Fable dispatch, and give built-in subagents a cheap model when none is named.",
       "default": true
     }
   },
