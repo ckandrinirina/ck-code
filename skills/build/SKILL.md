@@ -2,7 +2,7 @@
 name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves, optionally unattended. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`, any of them with `--auto`; with no argument, picks interactively.
 argument-hint: "[story-path] | [story-ids...] | --epic NN [--auto]"
-effort: high
+effort: medium
 allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-affected*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:

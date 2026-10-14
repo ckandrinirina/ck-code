@@ -2,7 +2,7 @@
 name: init
 description: Use when bringing ck-code into a project for the first time — especially an existing codebase that already has source and maybe its own docs but no spec, no docs/architecture/ and no tasks/ — or when checking that a project has everything ck-code needs installed and wired. Argument is optional `--deps-only`.
 argument-hint: "[--deps-only]"
-effort: high
+effort: medium
 allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(command -v*) Bash(gh auth status*) Bash(git status*) Bash(git rev-parse*) Bash(git ls-files*) Bash(git mv*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(head*) Bash(mkdir*) Bash(date*) Skill
 ---
 
@@ -126,8 +126,9 @@ Phase 6.
 ## PHASE 3: DISCOVER (EXISTING, read-only)
 
 Follow [references/as-built.md § Discovery](references/as-built.md#discovery): the
-existing-docs inventory, the repo shape, the manifests and the stack. **Orchestrator cap:
-15 file reads in this phase.** Depth belongs to Phase 5's per-feature pass, never here.
+existing-docs inventory, the repo shape, the manifests and the stack. Hand the repo-shape
+survey to `ck-code:context-scout` ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)) and keep only its brief.
+**Orchestrator cap: 15 file reads in this phase.** Depth belongs to Phase 5's per-feature pass, never here.
 
 Record the commit with `git rev-parse --short HEAD`. Every generated doc cites it.
 
@@ -199,6 +200,7 @@ one question):
 
 ## RULES
 
+- **Never search the codebase or research a technology in this context** — `ck-code:context-scout` and `ck-code:researcher` (haiku, low effort) do it and return a compact brief ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 - **Never write a spec** — no `docs/specs/` file and no spec Q&A. The code is the input; a
   gap is `[TO BE DEFINED]`.
 - **Never invent architecture** — every component, endpoint, table and flow names the

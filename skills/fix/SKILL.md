@@ -182,7 +182,7 @@ line). Do the steps below inline **only** when that subagent_type is unregistere
 
 ### 4.1 Locate the Buggy Code
 
-Identify likely source files (Grep + the story's `files` list), read source + existing tests, trace the execution path that triggers the bug.
+Dispatch `ck-code:context-scout` with the bug symptom and the story's `files` list as hints; it returns the suspect files, the execution path and the existing tests as `file:line` citations ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)). Read only the line ranges it cites — never grep or trace the codebase in this context.
 
 ### 4.1.5 Parallel hypothesis investigation (fan-out decision — take it before tracing)
 
@@ -306,6 +306,7 @@ Each gate is enforced inside its phase; this is the checklist.
 - **Always change frontmatter through `ck-story set`** — it regenerates the local views (`ck-index`) and syncs the board (`ck-project sync`) in the one call ([`github-projects.md`](../../references/github-projects.md)). Never commit a view.
 - **Always treat the frontmatter `prior_status` as authoritative** — the Bug Report's `Prior status:` line is informational only.
 - **Always output in English.**
+- **Never search the codebase or research a technology in this context** — `ck-code:context-scout` and `ck-code:researcher` (haiku, low effort) do it and return a compact brief ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 
 ---
 

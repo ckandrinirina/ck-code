@@ -405,11 +405,10 @@ expected cost, not a stall.
 Default every story to **balanced → `model: sonnet`**. Escalate to **advanced → `model: opus`**
 only on a clear high-reasoning signal (novel algorithm, concurrency/distributed correctness,
 intricate state machine, security- or perf-critical path, non-obvious architecture); use
-**fast → `model: haiku`** (or `fable` when `haiku` drops instructions) only for trivial
-mechanical changes. `size` reflects scope, not difficulty, so it never escalates on its own.
+**fast → `model: haiku`** only for trivial mechanical changes. `size` reflects scope, not difficulty, so it never escalates on its own.
 
-**Dispatch the alias, never the tier name** — `model:` accepts only `haiku`, `fable`,
-`sonnet`, `opus`; `balanced`/`advanced`/`fast` are rejected. Full map:
+**Dispatch the alias, never the tier name** — `model:` takes only `haiku`,
+`sonnet`, `opus` (`fable` needs the user's approval); `balanced`/`advanced`/`fast` are rejected. Full map:
 [agent-prompts.md](agent-prompts.md#tier-map--write-the-alias-never-the-tier-name).
 
 The operator can repoint any tier in `/plugin` → ck-code (`userConfig`); the resolved values

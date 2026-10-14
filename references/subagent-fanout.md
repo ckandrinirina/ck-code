@@ -63,27 +63,54 @@ schema. This applies to every registered ck-code agent too — `story-implemente
 
 ## Model tier (pass `model:` on every dispatch)
 
-Match the model to the *reasoning* the unit needs, never to the unit's size. `model:` accepts
-only these four literal aliases — a tier name like `balanced` is an invalid value:
+Match the model to the *reasoning* the unit needs, never to the unit's size. `model:` takes a
+literal alias — a tier name like `balanced` is an invalid value:
 
-- **`haiku`** — mechanical work: grep/trace/count, path extraction, token measurement,
-  classifying output against fixed criteria. No design judgment.
-- **`fable`** — the same mechanical shape, when the unit has enough steps or enough
-  formatting constraints that `haiku` starts dropping them. Cheaper than `sonnet`.
-- **`sonnet`** — filling a frozen template from an already-resolved slice of context.
-  Fidelity to the input matters; the structure is given.
+- **`haiku`** — mechanical work: grep/trace/count, path extraction, context gathering,
+  research lookups, classifying output against fixed criteria. No design judgment.
+- **`sonnet`** — filling a frozen template from an already-resolved slice of context, or
+  implementing a resolved story. Fidelity to the input matters; the structure is given.
 - **`opus`** — escalate here only when the unit itself must *decide* something the
   orchestrator could not pre-resolve: a novel algorithm, a security-sensitive trade-off, an
   ambiguous requirement. Escalation is the exception; state why in the dispatch prompt.
 
+**Never dispatch `fable`** without the user's approval: ask first (AskUserQuestion). The
+ck-code mod's cost guard refuses an unapproved Fable dispatch.
+
 Omitting `model:` makes the subagent inherit the orchestrator's tier — the most expensive
-model in play — for work that rarely needs it. Never omit it.
+model in play — for work that rarely needs it. Never omit it. (The cost guard backstops a
+missed `model:` on `Explore` → `haiku` and `general-purpose` → `sonnet`.)
+
+**Effort:** never above `high`. Mechanical units run at `low`, template fills at `medium`,
+implementation at `high`; never pass `xhigh` or `max` (the cost guard caps both to `high`).
 
 **Precedence, highest first:** the `model:` passed on the dispatch call → the registered agent's
 own `model:` frontmatter → `CLAUDE_CODE_SUBAGENT_MODEL` → the session model. The env var is a
 *default*, not an override, so a registered agent (`story-implementer`, `qa-validator`,
 `conflict-analyzer`) keeps its declared tier even when the var is set. Verify a wave's real tiers
 in `/tasks`, which reports the model **and** effort level each subagent ran on.
+
+## Cheap delegates — the main agent never explores or researches
+
+Context gathering and research are the most token-hungry work a skill does, and they need no
+judgment — so the orchestrator (the main agent, on the session's expensive model) never does
+them itself. It delegates, and reads back only a compact typed brief:
+
+| Need | Dispatch | Returns |
+|---|---|---|
+| Which files, symbols, tests and conventions a story, bug or question touches | `ck-code:context-scout` (haiku, low) | `SCOUT:` block with `file:line` citations |
+| A version, an API idiom, a migration note, a known issue | `ck-code:researcher` (haiku, low) | `RESEARCH:` block, one sourced answer per question |
+
+- **Threshold:** opening a file the orchestrator already knows it needs is fine inline; a
+  *search* — not knowing yet which files matter, or reading more than 3 files to find out —
+  goes to `context-scout`. Every external lookup goes to `researcher`, batched into one
+  dispatch with numbered questions.
+- **Parallel:** independent scouts (one per feature, story or suspect subsystem) and the
+  researcher dispatch in one message.
+- **Fallback:** only when the agent type is unregistered, dispatch `Explore` with
+  `model: haiku` for context, or `general-purpose` with `model: haiku` for research.
+- These delegates are read-only, so the fan-out threshold (3 units) does not apply: one
+  dispatch already pays for itself in the orchestrator's saved context.
 
 ## The orchestrator-owns-shared-writes rule (non-negotiable)
 

@@ -111,22 +111,22 @@ like the resume below with the failing criteria or the user's report in place of
 
 ### Tier map — write the alias, never the tier name
 
-The `Agent` tool's `model` parameter accepts **only** `haiku`, `fable`, `sonnet`, `opus`.
-ck-code's tier names are prose for choosing among them; emitting one as the value is an
+The `Agent` tool's `model` parameter takes a literal alias; ck-code dispatches only `haiku`,
+`sonnet` or `opus` (never `fable` without the user's approval). ck-code's tier names are prose
+for choosing among them; emitting one as the value is an
 invalid call. Translate before dispatch:
 
 | ck-code tier | `model:` value | Use for |
 |---|---|---|
 | fast | `${user_config.model_fast}` (default `haiku`) | trivial mechanical change, QA command runs |
-| fast+ | `fable` | mechanical work needing more instruction-following than `haiku` holds |
 | balanced | `${user_config.model_balanced}` (default `sonnet`) | **the default** for a story implementer |
 | advanced | `${user_config.model_advanced}` (default `opus`) | novel algorithm, concurrency correctness, security/perf-critical path |
 
 Those three placeholders are substituted into this file at load time from the plugin's
 `userConfig`, so the table already shows the operator's real choice. They are configured in
 `/plugin` → ck-code, not by exporting environment variables. A value that is not one of the
-four aliases is invalid — report it rather than dispatching it. On Claude Code ≥ 2.1.271
-`/plugin` offers only those four as fixed choices (`userConfig` `options`), so this case
+three aliases is invalid — report it rather than dispatching it. On Claude Code ≥ 2.1.271
+`/plugin` offers only those three as fixed choices (`userConfig` `options`), so this case
 remains only for a value set before that release.
 
 ## Resume an incomplete story (P5)

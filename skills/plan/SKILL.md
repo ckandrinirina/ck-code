@@ -234,9 +234,10 @@ Either way, **all** cross-domain dependency mapping stays yours in 2.7 — never
 
 ### 2.6 Research tech stack (when beneficial)
 
-Only for unfamiliar or rapidly-evolving frameworks the spec references, use context7
-(MCP, else `npx -y ctx7` CLI) or WebSearch to confirm current best
-practices, version considerations, and standard project structures.
+Only for unfamiliar or rapidly-evolving frameworks the spec references, dispatch one
+`ck-code:researcher` with a numbered question per framework (current best practices, version
+considerations, standard project structure) — never look them up in this context
+([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 
 ### 2.7 Identify dependencies & complexity
 
@@ -770,6 +771,7 @@ epic of independent stories is a natural fit for `/ck-code:build --epic NN`.
 
 ## RULES
 
+- **Never search the codebase or research a technology in this context** — `ck-code:context-scout` and `ck-code:researcher` (haiku, low effort) do it and return a compact brief ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 - **Never restart epic numbering at `01` in a new plan folder** (3.1) — allocate from the project-wide maximum in every mode. Colliding epic numbers make every `EE-SS` ambiguous.
 - **Never number an epic or a `--quick` story from the working tree alone** (3.1, Q.1) — `ck-epic next`/`next-story` see every branch and the remote's reservations; a local `find … | tail -1` misses any plan still in a PR or on a teammate's machine, which is how two plans both mint epic 37.
 - **Never write an epic folder or a `--quick` story before `ck-epic reserve`/`reserve-story`** (5.1, Q.4), and never under a number it did not print — reserving after Proceed is what makes a concurrent plan pick another number instead of the same one.

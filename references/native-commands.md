@@ -32,7 +32,8 @@ cannot enable it for you.** Use it intelligently:
 
 The skill-side lever that *is* automatic is `effort:` frontmatter — every ck-code skill sets
 it: `low` for `track`/`guide`/`explain`/`doctor`/`config`, `medium` for
-`ship`/`migrate`, `high` for `design`/`plan`/`spec`/`build`/`fix`/`team`.
+`ship`/`migrate`/`verify` and for the orchestrators whose heavy work runs in sub-agents
+(`build`/`init`/`team`), `high` for `design`/`plan`/`spec`/`fix`. Nothing runs above `high`.
 The read-only skills additionally pin `model: haiku`, so they cost a cheap model regardless
 of your session model. Neither lever can reach `/fast`, which is a serving path, not a model.
 

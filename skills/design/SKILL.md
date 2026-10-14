@@ -268,8 +268,9 @@ Full wording of every question and the CLEAR/PARTIAL confirmation phrasing:
 
 ### Research During Refinement
 
-When the user names specific technologies, use context7 (MCP, else `npx -y ctx7`
-CLI) or WebSearch to verify current structure conventions and recommended config patterns.
+When the user names specific technologies, dispatch one `ck-code:researcher` with a numbered
+question per technology (current structure conventions, recommended config patterns) and read
+its `RESEARCH:` block — never look them up in this context ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 
 ### Refinement Loop
 
@@ -546,6 +547,7 @@ instead). Every line here is re-read by every story that touches the feature.
 
 ## RULES
 
+- **Never search the codebase or research a technology in this context** — `ck-code:context-scout` and `ck-code:researcher` (haiku, low effort) do it and return a compact brief ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 - **Never modify the original specification file** — it is read-only input.
 - **Never write the feature docs inline when ≥3 features are in scope** (3.8a) — count and
   announce the dispatch decision before the first doc, never after the last. Same rule for

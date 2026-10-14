@@ -2,7 +2,7 @@
 name: team
 description: Use when a project has architecture docs and needs project-tailored expert skills and technology guides generated, refreshed (also after a dependency migration), or audited; when capturing the project's house coding conventions into a guide every expert reads; or when creating or adjusting a custom expert or guide skill. Requires docs/architecture/ to exist already — run design first if it does not. Runs only on an explicit request or a hand-off from another ck-code skill.
 argument-hint: "[--basic|--standard|--max] [--check|--refresh|--regenerate] [--conventions] [--new expert|guide <slug>] [--adjust <slug>] [--workflow]"
-effort: high
+effort: medium
 allowed-tools: Bash(ck-bootstrap*) Bash(ck-team*) Bash(ls*) Bash(mkdir*) Bash(rm*) Bash(git status*) Bash(git ls-files*) Bash(find*) Bash(grep*) Bash(awk*) Bash(wc*) Bash(npx*) Skill
 ---
 
