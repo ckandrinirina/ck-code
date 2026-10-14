@@ -86,3 +86,16 @@ test('with no story the band shows none', async ($, on) => {
   expect(await ui.find({ text: /⚡/ })).toBe(undefined)
   await ui.unmount()
 })
+
+test('off the fullscreen layout the band names its hotkeys and the focus chord', async ($, on) => {
+  project(on, [])
+  await $.command.run(RUN)
+  await $.command.run(RUN)
+  const view = (isFullscreen: boolean) => ({ columns: 120, rows: 40, isFullscreen })
+  const main = await $.ui.mount({ plugin: 'ck-code', surface: 'terminal', component: 'AbovePrompt', props: PROPS as never, viewport: view(false) as never })
+  expect(await main.find({ text: /ctrl\+x tab/ })).toBeDefined()
+  await main.unmount()
+  const full = await $.ui.mount({ plugin: 'ck-code', surface: 'terminal', component: 'AbovePrompt', props: PROPS as never, viewport: view(true) as never })
+  expect(await full.find({ text: /ctrl\+x tab/ })).toBe(undefined)
+  await full.unmount()
+})

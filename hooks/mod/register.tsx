@@ -99,6 +99,9 @@ let agentPoll: { cancel: () => void } | undefined;
 // When the running agent poll started: its end-of-run toast counts only agents seen since.
 let pollStart = 0;
 let autoOpenAgents = true;
+// Whether the terminal last drew the fullscreen layout, the one that docks a pane beside the
+// transcript. The main screen would place it inline above the prompt, so it never opens unasked there.
+let isFullscreen = false;
 const firstSeen = new Map<string, number>();
 const endedAt = new Map<string, number>();
 
@@ -329,7 +332,7 @@ async function pollAgents($: EngineInterface): Promise<void> {
   await update($, agents, () => rows);
   const running = rows.filter((r) => isLive(r.status));
   const builders = running.filter((r) => r.kind === "build").length;
-  if (builders >= 2 && autoOpenAgents) {
+  if (builders >= 2 && autoOpenAgents && isFullscreen) {
     autoOpenAgents = false;
     void $.ui.open({ id: AGENTS_PANE, title: "ck-code agents" });
   }
@@ -831,6 +834,8 @@ export const register: Register = (on, options) => {
       id: VERIFY_PANE,
       title: `Verify ${plan.replace(/^tasks\//, "")}`,
       rows: 18,
+      // The keys, not only a click: Tab walks the buttons and the first item's hotkeys press.
+      focus: true,
     });
     return opened.isPlaced
       ? {}
@@ -867,6 +872,7 @@ export const register: Register = (on, options) => {
   // ---- drawing ----
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    if (e.surface === "terminal") isFullscreen = e.viewport?.isFullscreen === true;
     const data: CkBand | null = await read($, band);
     if (data === null || e.props.hasSurvey || (await read($, bandHidden)))
       return next(e);
@@ -895,6 +901,9 @@ export const register: Register = (on, options) => {
     }
     const command = data.recommend.split(" — ")[0]?.trim() ?? "";
     const isComplete = data.total > 0 && data.done >= data.total;
+    // Off the fullscreen layout no click reaches a Button: name its hotkey and the chord that
+    // focuses the band (ctrl+x tab). Kept word for word in both mods.
+    const keys = e.surface === "terminal" && e.viewport?.isFullscreen !== true ? true : undefined;
     const header = (
       <Box key="head" gap={1}>
         <Text bold color="claude">
@@ -923,17 +932,26 @@ export const register: Register = (on, options) => {
           <Button
             key="fill"
             label="Use"
+            hotkey="u"
+            plain={keys}
             onPress={() => $.prompt.fill({ text: fillText(command) })}
           />
         )}
         <Button
           key="hide"
           label="Hide"
+          hotkey="h"
+          plain={keys}
           onPress={async () => {
             await update($, bandHidden, () => true);
             await $.store.set("bandHidden", true);
           }}
         />
+        {keys && (
+          <Text key="keys" dimColor>
+            (ctrl+x tab)
+          </Text>
+        )}
       </Box>
     );
     // Short on rows: the next step matters more than the bar.
@@ -1006,29 +1024,39 @@ export const register: Register = (on, options) => {
             {data.header}
           </Text>
           {data.message !== "" && <Text color="green">{data.message}</Text>}
+          {e.surface === "terminal" && e.viewport?.isFullscreen !== true && data.items.length > 0 && (
+            <Text dimColor wrap="truncate-end">
+              p pass · s skip · f fail · t steps (first item) · Tab walks · ctrl+x tab refocuses
+            </Text>
+          )}
           {data.items.length === 0 && (
             <Text>
               Nothing left to test in this session. Close it with
               /ck-code:verify.
             </Text>
           )}
-          {data.items.map((item) => (
+          {data.items.map((item, i) => {
+            const first = i === 0;
+            return (
             <Box key={item.id} flexDirection="column">
               <Text wrap="wrap">{item.line}</Text>
               <Box gap={1}>
                 <Button
                   key={`pass-${item.id}`}
+                  hotkey={first ? "p" : undefined}
                   label="Pass"
                   variant="primary"
                   onPress={() => recordItem($, plan, item.id, "pass")}
                 />
                 <Button
                   key={`skip-${item.id}`}
+                  hotkey={first ? "s" : undefined}
                   label="Skip"
                   onPress={() => recordItem($, plan, item.id, "skip")}
                 />
                 <Button
                   key={`fail-${item.id}`}
+                  hotkey={first ? "f" : undefined}
                   label="Fail…"
                   onPress={() =>
                     $.prompt.fill({
@@ -1038,12 +1066,14 @@ export const register: Register = (on, options) => {
                 />
                 <Button
                   key={`steps-${item.id}`}
+                  hotkey={first ? "t" : undefined}
                   label="Steps"
                   onPress={() => showSteps($, plan, item.id)}
                 />
               </Box>
             </Box>
-          ))}
+            );
+          })}
           {data.steps !== null && <Markdown text={data.steps.text} />}
         </Box>
       );
