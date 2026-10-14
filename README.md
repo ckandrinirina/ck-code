@@ -278,6 +278,11 @@ variables.
 
 ### Model tiers
 
+Context gathering and research never run in the main agent: `fix`, `design`, `plan` and
+`init` hand them to the `context-scout` and `researcher` agents (haiku, low effort), which
+return a compact brief ([subagent-fanout.md](references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
+No skill or agent runs above `high` effort.
+
 The three keys below live in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json)'s
 `userConfig`, so they show up as plugin settings rather than needing an env var.
 
@@ -287,7 +292,7 @@ The three keys below live in [`.claude-plugin/plugin.json`](.claude-plugin/plugi
 | **Balanced tier model** | `model_balanced` | `sonnet` | default model for a story implementer in `build` PARALLEL MODE |
 | **Advanced tier model** | `model_advanced` | `opus` | model for stories with a high-reasoning signal (novel algorithm, concurrency, security- or perf-critical path) |
 
-Each accepts one of `haiku`, `fable`, `sonnet`, `opus`, offered as fixed choices in `/plugin`
+Each accepts one of `haiku`, `sonnet`, `opus`, offered as fixed choices in `/plugin`
 (Claude Code ≥ 2.1.271). Raise the balanced tier for a codebase
 where Sonnet consistently underperforms; lower the advanced tier to cap spend on a large epic.
 
@@ -339,7 +344,8 @@ has opted in (a prettier config file or `package.json` key; a `pyproject.toml`/`
 silently rewritten. Always exits 0 — a missing formatter or an unformattable file never
 fails the turn.
 
-**Dispatched subagents** — `story-implementer`, `qa-validator`, `conflict-analyzer` — run
+**Dispatched subagents** — `story-implementer`, `qa-validator`, `conflict-analyzer`,
+`context-scout`, `researcher` — run
 with the full tool set, not a narrowed `allowed-tools` list. Their "never commit, never
 push" boundary is a stated constraint in the dispatch prompt, verified by the orchestrator
 afterward, not a permission the tool layer enforces for them.
@@ -390,8 +396,8 @@ than one `tasks/` directory in the same repository (a multi-repo project with co
 ## The ck-code mod
 
 ck-code ships a **mod** — an in-process hooks module (`hooks/mod/register.tsx`, Claude Code
-≥ 2.1.287) beside its shell hooks. It runs in every session that loads the plugin and acts
-only in a ck-code project (the prompt router's adoption markers), found from the session's folder up to the repository's top, so a shell `cd` into a subfolder keeps it. Nothing in it is
+≥ 2.1.287) beside its shell hooks. It runs in every session that loads the plugin and, apart
+from the cost guard, acts only in a ck-code project (the prompt router's adoption markers), found from the session's folder up to the repository's top, so a shell `cd` into a subfolder keeps it. Nothing in it is
 load-bearing: it calls the same scripts the skills call, so under `--bare`, `--safe-mode`
 or `disableAllHooks`, or on an older Claude Code, every skill still does the whole job.
 
@@ -403,6 +409,7 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **Agents pane** | terminal, Desktop | A progress header (`2 running · 3 done ▰▰▰▰▰▰▱▱▱▱`), then a live row per ck-code agent (build · qa · merge) with its elapsed time: a turning `◐` while it runs, a green `✓` or a red `✗` once it ends. Opens by itself when two story builders run at once on a wide terminal (≥ 144 columns), never again once you close it; `/ck-agents` opens it, or prints the rows where nothing draws. A status-line entry counts running and done agents |
 | **Verify pane** | terminal, Desktop | `/ck-verify-pane [tasks/<plan>]`: the next three checklist items with **Pass**, **Skip**, **Steps** (shows the item's steps) and **Fail…** (fills `/ck-code:verify … failed:` so the skill takes your words and the fix hand-off). Records through `ck-checklist.sh`; commit with `/ck-code:verify` or `/ck-code:ship` |
 | **Profile** | everywhere | `/ck-profile`: per ck-code skill, turns, wall time, tool calls, agents dispatched, the main loop's tokens (output and cache read) and the agents' tokens, over this project's last 200 turns. `/ck-profile reset` clears it |
+| **Cost guard** | every project | Caps every model request and every subagent dispatch at `high` effort (`xhigh`/`max` become `high`); refuses a `fable` dispatch until you approve it in an `AskUserQuestion`; gives an `Explore` or `claude-code-guide` dispatch with no `model:` `haiku`, and a `general-purpose` one `sonnet`, instead of your session model. Registered agents keep their own tier. The only part active outside a ck-code project — it is a spending rule, not a workflow rule |
 | **Guards** | everywhere | Refuses a hand edit of `STORIES_INDEX.md`/`EPICS_INDEX.md` (generated views) and a model-run `git clean -x`/`-X` (it deletes `.env` and every gitignored file; `ck-reclaim` frees a worktree's build output safely). `! git clean …` typed by you is never refused. Fails open |
 | **No AI attribution** | everywhere | The engine's commit and PR attribution text is dropped in a ck-code project ([`no-ai-references.md`](references/no-ai-references.md)), so there is nothing left for `no-ai-guard.sh` to catch |
 | **Merged-PR watch** | toast + band | Every 5 minutes, `gh pr list --author @me --state merged`; a PR merged since the last look gets a toast and a band line pointing at `/ck-code:doctor --fix`. Silent without `gh` or a GitHub remote |
@@ -411,8 +418,8 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **Hand-off across `/clear`** | everywhere | The last `/ck-code:*` command run before a `/clear` is given to the next conversation once, within 6 hours |
 | **Compact after a wave run** | everywhere | Once two or more story builders have been dispatched since the last compaction, the first turn that ends cleanly with no builder still running and no story left `in-progress` compacts the session — background builders included, whose run ends in a later turn — between turns (same as `/compact`, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command). Skipped after an interrupt or an error, while a story is held, or once you have typed the next prompt. A toast says it happened |
 
-Four settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
-parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, all on by default. The rest costs nothing until
+Five settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
+parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, `cost_guard`, all on by default. The rest costs nothing until
 you use it. `--safe-mode` starts a session with no mod at all (and none of your other
 customizations).
 
@@ -652,6 +659,8 @@ ck-code/
 ├── agents/                        # ck-code-specific subagents
 │   ├── qa-validator.md
 │   ├── conflict-analyzer.md
+│   ├── context-scout.md           # haiku: finds the code a task touches, returns file:line
+│   ├── researcher.md              # haiku: versions, idioms, docs — sourced answers
 │   └── story-implementer.md
 ├── references/                    # cross-skill shared contracts (version gate, data model,
 │                                  # skill detection, subagent fan-out, QA, workflow map, …)
@@ -756,12 +765,13 @@ file that has drifted from it.
 > `.claude/skills/expert-*/` and `guide-*/` folders; **v4** moved story state into
 > frontmatter. The details are in `CHANGELOG.md`.
 
-- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.13.0 is built
-  and tested against Claude Code 2.1.296** (checked 2026-10-13). Its newest version-gated
+- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.16.0 is built
+  and tested against Claude Code 2.1.299** (checked 2026-10-14). Its newest version-gated
   features, and the release each first appeared in:
 
   | Feature | Used by | Claude Code |
   |---|---|---|
+  | Mod `turn.step` effort rewrite | the cost guard's effort cap | 2.1.299 or earlier |
   | Mods (`modules` in `hooks/hooks.json`) | the ck-code mod: prompt router, band, panes, commands, guards | 2.1.287 |
   | `omitClaudeMd` agent field | `conflict-analyzer` | 2.1.271 |
   | `AGENTS.md` as the project instructions file | `spec`, `team` | 2.1.277 |
