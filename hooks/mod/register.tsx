@@ -23,6 +23,7 @@ import { atom, read, update } from "claude-code";
 import type { EngineInterface, Register } from "claude-code";
 
 import type { CkAgentRow, CkBand, CkBoard, CkVerify } from "../../types";
+import { registerUpdateCheck, startUpdateCheck } from "./update";
 import { registerLook } from "./look";
 import { boardLine, taskCreated, taskUpdated, todosWritten } from "./theme";
 import {
@@ -89,6 +90,7 @@ const AGENT_POLL_MS = 3000;
 const BAND_ACTIONS_MS = 8000;
 
 // Module variables start over on a reload; what must outlive one is in $.state or $.store.
+let updateOn = true;
 let guardsOn = true;
 let bandOn = true;
 let prWatchOn = true;
@@ -588,6 +590,8 @@ export const register: Register = (on, options) => {
   compactOn = options.compact_after_waves !== false;
   costGuardOn = options.cost_guard !== false;
   themeOn = options.theme !== false;
+  updateOn = options.update_check !== false;
+  registerUpdateCheck(on);
 
   registerLook(on, {
     isOurs: () => themeOn && lastKind === "code",
@@ -595,6 +599,7 @@ export const register: Register = (on, options) => {
   });
 
   on("session.start", async ($, e, next) => {
+    await startUpdateCheck($, updateOn);
     rootCache = (await $.session.root()) || (await $.session.cwd());
     await $.command.register({ name: 'ck-status', description: 'ck-code dashboard, printed at once with no model turn', argumentHint: '[tasks/<plan>]', immediate: true })
     await $.command.register({ name: 'ck-next', description: 'Next ready ck-code story, printed at once with no model turn', argumentHint: '[tasks/<plan>]', immediate: true })
