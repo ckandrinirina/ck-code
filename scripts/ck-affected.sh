@@ -78,7 +78,9 @@ else full "base $BASE not found"; BASE=HEAD; fi
 
 # ---- inputs -------------------------------------------------------------------------------
 git ls-files --cached --others --exclude-standard | sort -u >"$W/all"
-{ git diff --name-only --diff-filter=d "$BASE" -- 2>/dev/null
+# Deleted paths (and the old name of a rename) count: their importers now break, so a
+# delete-only change is never NONE. --no-renames lists both sides of a rename.
+{ git diff --name-only --no-renames "$BASE" -- 2>/dev/null
   git ls-files --others --exclude-standard; } | sort -u >"$W/changed"
 
 # Declared areas: "name<TAB>glob" lines.
@@ -201,7 +203,8 @@ while read -r f; do
     [ "$a" = . ] && { full "$f configures the whole repo"; continue; }
     echo "$a" >>"$W/allareas"; echo "$a	$f" >>"$W/why"; continue
   fi
-  is_test "$f" && echo "$f" >>"$W/tests"
+  # A deleted test has nothing left to run.
+  is_test "$f" && [ -e "$f" ] && echo "$f" >>"$W/tests"
   if [ "$(family "$f")" = none ]; then
     echo "$a" >>"$W/allareas"; echo "$a	$f" >>"$W/why"; continue
   fi
