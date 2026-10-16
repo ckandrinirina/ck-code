@@ -239,6 +239,7 @@ render_next() {
 $CK_AWK_MET
 $AWK_COMMON
 "'
+  function nz(s) { return s == "" ? "-" : s }
   END {
     best=0
     for (i=1;i<=N;i++) {
@@ -250,8 +251,9 @@ $AWK_COMMON
       cand[++nc]=i
     }
     if (best==0) { print "NONE"; exit }
+    # tab is IFS-whitespace in the bash read below, so an empty field would collapse: emit "-"
     printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\n", \
-      plan[best], id[best], ttl[best], edisp[best], sz[best], stt[best], \
+      nz(plan[best]), nz(id[best]), nz(ttl[best]), nz(edisp[best]), nz(sz[best]), nz(stt[best]), \
       plan[best] "/" rel[best], blocks[id[best]]+0
     for (j=1;j<=nc;j++) if (cand[j]!=best) \
       printf "ALSO\t%s\t%s\t%s\t%s\n", id[cand[j]], ttl[cand[j]], sz[cand[j]], stt[cand[j]]
@@ -285,6 +287,7 @@ $AWK_COMMON
 
   local plan id title epic size status path unblocks
   IFS=$'\t' read -r plan id title epic size status path unblocks <<<"$(printf '%s' "$pick" | head -1)"
+  [ "$size" = "-" ] && size="?"
 
   local why
   if [ "$status" = "BUG" ]; then
