@@ -595,12 +595,30 @@ exists. On a repo with no code yet, `init` only sets up the dependencies and han
 | `/ck-code:fix` | Diagnose a bug tied to a story, write a failing test + Fix Plan, flip it to `bug` — then auto-run `build` for an easy fix or hand off when complex. Never writes the source fix itself | story file (optional) | failing test + Bug Report + `bug` status → `build` |
 | `/ck-code:verify` | Whole-feature manual testing: builds one checklist from every story's human check plus the feature doc's cross-story flows, walks you through it a few items at a time, and records each result. A pass ticks the story's human-check box; an issue is recorded in your words and handed to `fix` with the right story. The checklist is optional and lives beside the stories, each item a file with YAML frontmatter written only by `ck-checklist`, grouped in a folder per epic like the stories; the session is saved, so re-running — even in a new chat — resumes at the next item; `--all` retests every item, passed ones included; `--recheck` resets the whole checklist (passes inherited from ticked story checks too) so you retest from step 1, previous results kept as history; and `ship --promote` warns while items are open | `[tasks/<plan>]` / `--epic NN` / `<feature name>`, plus `--all` or `--recheck` | `tasks/<plan>/CHECKLIST.md` + `checklist/` (committed), ticked human checks |
 | `/ck-code:ship` | Commit, PR, update GitHub Issues, after one confirmation that shows the files, the message and the PR target together (likely secrets are never staged). Honours the plan's integration level — a PR per story, per epic, or one for the plan — and `--promote` opens the epic or plan PR when a rollup completes (a plan PR stays a draft until every epic is merged). Reconciles merged PRs before staging and generates the `Closes` footer from frontmatter | story file (optional) | commit + PR + issue updates |
+| `/ck-code:release` | Publish a new version the way the project does it: follows `docs/RELEASE.md` (drafted from the project's facts on the first run), bumps every version file and the changelog in a release PR, merges it or asks you to, tags the merge commit, starts the build where it really runs (on the tag, or a dispatch in a public build repo) and watches it in the background. Lessons from other projects on this machine (`~/.claude/ck-lessons.md`) are applied when they match | `X.Y.Z` or `patch`/`minor`/`major` (optional) | release PR + tag + verified release |
 | `/ck-code:track` | Progress dashboard + `next` ready-story finder (reads the generated indexes) | — | status, next story, completion % |
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
 | `/ck-code:migrate` | Upgrade a v6, older (v3–v5) **or ck-code-lite** project to the v7 layout: previews the tested `ck-migrate` conversion, asks once, lands one revertable commit | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps; a free-text feature request explains that feature and gives a full manual test guide; `--epic NN` explains that epic's goal and the goal of every story in it | `[file-or-concept]` / `<feature description>` / `--epic NN` | walkthrough + verification steps, feature + test guide, or epic + story goals |
 | `/ck-code:doctor` | Health report — layout stamp (older, newer, or an unmet `requires:`), story frontmatter that will not parse, committed or stale views, unresolvable `blocked_by` ids, feature-doc slug drift, stale or invalid team skills, orphan epic branches, board mapping, the ck-code-required guard. `--fix` reconciles delivery, the board and GitHub Issues in one pass (with or without a board), confirms any unproven direct merge, and commits the story files | `[tasks/<slug>] [--quiet] [--fix]` | findings + fixes; with `--fix`, one bookkeeping commit |
 | `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — GitHub issue tracking on or off, the trunk branch every PR targets, the GitHub Projects board (create, adopt, re-map, reorder), a plan's integration level, and whether build asks about expert skills | `show` / `board` / `trunk <branch>` / `integration <plan> <level>` / `experts ask\|none` / `on` / `off` | `tasks/SETTINGS.md`, the plan record, board mapping |
+
+### Releases that follow the project's own process
+
+`release` publishes a version the way **this project** does it. The steps are written once in
+`docs/RELEASE.md`: which files carry the version, how the release PR merges, where the build
+runs, and how to check what was published. The first run drafts that recipe from facts it
+gathers in one call and shows it for approval. Every later release follows it without asking,
+except for one version question. A step only you can do, such as a merge, a secret or a store
+upload, is asked and then checked, never waited on in silence. Running `release` again resumes
+a release that stopped half way.
+
+A project whose private repo has run out of Actions minutes, with installers built in a public
+repo started by hand, is handled: the tag is pushed, the public workflow is dispatched, and its
+build is watched in the background down to one result line. What one project learns is kept as a
+one-line lesson in `~/.claude/ck-lessons.md`, which every project on the machine and both ck
+plugins read. A lesson is printed only when it matches the project's facts or the error at hand,
+so it costs nothing until it applies.
 
 ## Hand-offs — one click, never a retype
 
