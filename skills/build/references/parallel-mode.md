@@ -37,7 +37,7 @@ detailed in its section below.
 
 | Step | What this context does | Non-negotiable |
 |---|---|---|
-| **P1** | Resolve `$TARGET` from the plan's `integration:` level (`ck-plan get`; dirty tree or detached HEAD stops the run), **check it out — creating it if absent — and verify HEAD**, announce it with its reason and staleness, and resolve the story set from `STORIES_INDEX.md` | Never `Read` a story body; never dispatch before HEAD is on `$TARGET`; never merge into a hardcoded `main`, into whatever branch happened to be checked out, or into the trunk (level `story` → switch to `epic` or cancel at P3) |
+| **P1** | Resolve `$TARGET` from the plan's `integration:` level (`ck-plan get`; dirty tree or detached HEAD stops the run), **check it out — creating it if absent — and verify HEAD**, announce it with its reason and staleness, resolve the story set from `STORIES_INDEX.md`, then `ck-headless` — any `FOREGROUND` hit is converted on `$TARGET` by one agent before P4 | Never `Read` a story body; never dispatch before HEAD is on `$TARGET`; never merge into a hardcoded `main`, into whatever branch happened to be checked out, or into the trunk (level `story` → switch to `epic` or cancel at P3) |
 | **P2** | Order the scope into waves by `Blocked by`, then split each wave so no two stories share a declared `files:` path | Print every excluded story with its reason |
 | **P3** | Team gate (see § P3) + criteria ambiguity + the level-`story` switch when P1 raised it, folded into **one `AskUserQuestion`, ≤ 4 questions** — asked only when one of them is needed; the wave plan alone is printed, not asked. `--auto`: no question | Never dispatch with zero project skills without asking (unless `experts: none`) — agents cannot prompt |
 | **P4** | Dispatch the wave: **fan-out** (≥ 2) = one worktree `Agent` per story in a single message; **solo** (= 1) = one `Agent` on `$WORKBRANCH`, no worktree. Both `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` | Every story goes to an agent; a worktree only when a peer runs beside it. Tier the model by reasoning complexity, never `size` |
@@ -191,6 +191,14 @@ branch, so the plan's level is never switched for it).
 **`--epic NN` always orchestrates**, even when one story remains: it dispatches that story
 solo at P4 (no worktree), because an epic run keeps the orchestrator's context clean and lands
 every story the same way on `$TARGET`.
+
+**Background check, last.** With `$TARGET` checked out, run `ck-headless`. `ck-headless: OK` →
+go on. `FOREGROUND` lines → before any wave, dispatch the one
+[Background conversion](agent-prompts.md#background-conversion-p1) agent on `$TARGET`, then
+verify from git: one new commit, a clean tree, and `ck-headless: OK` on a re-run. A wave never
+starts on a foreground suite: every peer's QA would open the window. A conversion that returns
+`blocked` stops the run with its reason. Under `--auto` the conversion still runs, with no
+question ([background-tests.md](../../../references/background-tests.md)).
 
 ## P2 — Plan the waves
 

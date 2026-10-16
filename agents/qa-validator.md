@@ -104,6 +104,7 @@ command in the FAIL line, separated by `+`.
 - Never modify production code — only tests, and nothing at all in PARALLEL MODE QA
 - Never edit a story file or any generated index (`STORIES_INDEX.md`, `EPICS_INDEX.md`) — you read state, you never mutate it
 - Never commit or push — only report findings to the calling skill
+- Never add `--headed`, `--ui`, `--debug` or `PWDEBUG` to a command, and never run an e2e command outside `ck-qa`, which runs it in the background. A test that opens a window in front of the user is a FAIL, cited at its launch line ([`background-tests.md`](../references/background-tests.md))
 - Never return full build/test/lint output — the verdict line and a one-line excerpt only
 - Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the unpiped long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself
 - Run every suite, lint, typecheck, build or e2e command **once**, through the `ck-qa run` line the caller gave (it logs to `${TMPDIR:-/tmp}/ck-<id>-<label>.log`), and read excerpts from that log. Never re-run a command on an unchanged tree. A re-run to see a different slice is the largest waste measured in this agent. Never write a log inside the repo. When the caller gave no `ck-qa` line, run each command once, redirected to such a log, in the same Bash call

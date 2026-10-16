@@ -26,6 +26,7 @@ guard first. The branch is not this run's to choose, and there is no user to ask
 | 6.3 + 7 | **One run**, as Phase 7 says below. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
 | 8.5 | Skipped. The orchestrator runs manual sign-off: once per wave after it lands, or at S6 for a single story. A resume carrying a manual-test or QA report runs the 8.5.3 Bug-Fix Sub-Loop ([completion.md](completion.md)) or the QA fixes on the same branch, commits, and returns the verdict again. |
 | 8.7 | No ship. Commit after **every** TDD cycle, so an early stop still leaves resumable work, then return the [verdict](#return). |
+| `Background:` | One line per foreground e2e setup. Before RED, convert each per [`background-tests.md`](../../../references/background-tests.md), confirm `ck-headless` prints OK, and commit it alone as `test(e2e): run e2e suites in the background`. It is not story scope: log it under `## Unplanned Changes`, and leave it out of QUICK's step-up count. |
 
 Uncommitted work cannot be merged or resumed, and on a solo run it leaves the shared branch
 dirty for the orchestrator. Commit messages are conventional (`test(EE-SS):`, `feat(EE-SS):`)
@@ -82,22 +83,49 @@ commands, never from skipping a check:
 
 ## 1.7 EFFORT ROUTE (from frontmatter `size:`)
 
-Fixed by the run that builds the story — the dispatched agent, never the orchestrator.
+LEAN or FULL is fixed by the run that builds the story, never the orchestrator. QUICK is the one
+route the orchestrator sets, through the prompt's `Route: QUICK` line.
 Scale the *ceremony* to the story, never the guarantees. Read `size:` and fix the route now
-— it governs Phases 3.3, 3.4, and 6.1 only:
+— LEAN and FULL govern Phases 3.3, 3.4 and 6.1 only, QUICK the four phases below the table:
 
 | `size:` | Route | 3.3 SOLID | 3.4 Subtasks | 6.1 SOLID review |
 |---|---|---|---|---|
 | `S` | **LEAN** | 2–4 line note, only the principles actually in play | 3-task chain: tests → implement → QA | targeted spot-check of the principles named in 3.3 |
 | `M` (or absent) | **FULL** | full SOLID Analysis template | full 6-task breakdown | full SOLID Compliance Check template |
+| `S`, prompt says `Route: QUICK` | **QUICK** | none | 2-task chain: change → check | none |
+
+**QUICK** is decided by the orchestrator, never here: the dispatch prompt's `Route: QUICK`
+line, set for a cosmetic `S` story ([SKILL.md § QUICK ROUTE](../SKILL.md#quick-route)). It
+changes four phases and nothing else:
+
+- **2** loads `guide-conventions` alone when present. No arch-doc reads, no expert skills, no
+  "Skills loaded" block beyond that one line.
+- **3** is one line: the change, file by file. No research, no SOLID note.
+- **4–5** — when a test asserts the value being changed, edit that test to the new value
+  first, see it fail, then change the code. When no test asserts it, write none: a test that
+  pins a label catches no bug ([`test-craft.md`](../../../references/test-craft.md)), and the
+  change is made directly. A criterion that turns out to change behaviour gets a real RED test
+  and ends QUICK.
+- **6.1** is skipped, and the three scan references are not loaded. Read the diff once for a
+  restating comment or dead code.
+
+6.3 + 7 run unchanged, as the delegated single run at story scope, and the orchestrator
+re-checks it at S5.
+
+**QUICK steps up to LEAN by itself** the moment the change outgrows it: the diff (`tasks/` and
+a `Background:` commit excluded) reaches more than 3 files or 40 changed lines, adds a file,
+touches a manifest, lockfile, config or migration, or needs a behaviour test. Say
+`Route: QUICK → LEAN — <reason>`, run Phase 2 in full now, then 6.1 at LEAN, and return
+`route: LEAN` so the orchestrator dispatches its QA agent.
 
 **Bug-Fix Mode always uses LEAN** — its scope is the recorded Fix Plan, which is already
 narrow. Announce the route in one line (`Route: LEAN (size S)`) so the user can override by
 saying so; an explicit user request for a full pass wins over the table.
 
-**The route NEVER skips:** the version gate (0), skill detection + report (2), the
-plan+branch gate (3.5), failing-tests-before-implementation (4), the `## Unplanned Changes`
-log (5.2/6.2), QA delegation and its cap (7), or the manual-test gate (8.5). A LEAN story
+**The route NEVER skips:** the version gate (0), skill detection + report (2; QUICK reports its
+one line), the plan+branch gate (3.5), failing-tests-before-implementation (4; QUICK as above),
+the `## Unplanned Changes` log (5.2/6.2), the 6.3 + 7 run and its cap (7), or the manual-test
+gate (8.5). A LEAN story
 that grows past its `size:` during Phase 5 switches to FULL for 6.1 — say so when it happens.
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING (BLOCKING GATE)
@@ -182,7 +210,8 @@ only the tests a real regression would need.
 **4.2 Determine test structure** (first cycle only). Read existing test files to learn
 conventions: naming (`.test.ts`, `_test.rs`, `test_*.py`), location (co-located,
 `__tests__/`, `tests/`), framework, assertion style, mock/stub patterns. Follow loaded guide
-skills.
+skills. An e2e test launches its browser or app in the background, never in front of the user
+([`background-tests.md`](../../../references/background-tests.md)).
 
 **4.3 Write the next test.** Pick the next acceptance criterion (worked mapping in
 [tdd-walkthrough.md](tdd-walkthrough.md)) and write **one** test for its
@@ -407,6 +436,7 @@ branch:       <git rev-parse --abbrev-ref HEAD>
 commits:      <commits made>
 remaining:    [<unmet acceptance criterion>, …]   # [] when status: done
 criteria_met: <checked>/<total>
+route:        QUICK | LEAN | FULL     # the route the story finished on, after any step-up
 ```
 
 `done` only when every acceptance criterion is checked and the 6.3 + 7 run is green. A run that
@@ -415,10 +445,12 @@ read as `partial`, and the orchestrator verifies from git either way.
 
 ## RULES
 
-- **Never write an implementation file before its behaviour's test was observed failing** (4.4). Trivial boilerplate is exempt.
+- **Never write an implementation file before its behaviour's test was observed failing** (4.4). Trivial boilerplate is exempt, and so is a QUICK value change that no test asserts.
+- **Never stay QUICK past a step-up condition**, and never pick QUICK without the prompt's `Route: QUICK` line.
+- **Never write an e2e test that opens a window in front of the user**, and never start story code before every `Background:` hit is converted and committed ([`background-tests.md`](../../../references/background-tests.md)).
 - **Never edit a test to force GREEN.** Pruning at 6.1/6.2 is not that: it runs on a green suite, only on tests this story added, and never removes the sole test of an acceptance criterion or a bug's reproduction/regression test ([`test-craft.md`](../../../references/test-craft.md#test-prune-scan-implementation)).
 - **Never keep a test that would catch no bug another test misses** — duplicates, scaffolding a behaviour test now covers, tests of internals or the framework, and speculative edge cases are pruned at 6.2.
-- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy, comment and test-prune scans run in full at both routes.
+- **Never let the 1.7 effort route skip a guarantee** — it shortens the SOLID write-up, the subtask chain, and the SOLID re-review, and nothing else. The 6.1 redundancy, comment and test-prune scans run in full at LEAN and FULL; QUICK replaces them with one read of its few-line diff, and steps up the moment the diff stops being few-line.
 - **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../../references/reuse-first.md#redundancy-scan-implementation)).
 - **Never ship a comment that restates the code or runs longer than it needs, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../../references/code-craft.md#comment--readability-scan-implementation)).
 - **Never touch a file outside the story's `files:` without logging it** to `## Unplanned Changes` in the same Edit pass (5.2/6.2).

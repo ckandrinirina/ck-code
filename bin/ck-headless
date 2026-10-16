@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-headless — see scripts/ck-headless.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-headless.sh" "$@"

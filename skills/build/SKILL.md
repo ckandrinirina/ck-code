@@ -1,9 +1,9 @@
 ---
 name: build
-description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves, optionally unattended. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path, space-separated story IDs, or `--epic NN`, any of them with `--auto`; with no argument, picks interactively.
-argument-hint: "[story-path] | [story-ids...] | --epic NN [--auto]"
+description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves, optionally unattended. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path (with `--quick` or `--full`), space-separated story IDs, or `--epic NN`, any of them with `--auto`; with no argument, picks interactively.
+argument-hint: "[story-path [--quick|--full]] | [story-ids...] | --epic NN [--auto]"
 effort: medium
-allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-affected*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-affected*) Bash(ck-headless*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -23,7 +23,9 @@ an explicit path, a single menu pick, or a hand-off from `/ck-code:fix` or
 hands the [story cycle](#the-story-cycle-phases-1786) to one solo agent on its own branch;
 **more than one** runs through [PARALLEL MODE](#parallel-mode) (one worktree agent per story,
 dependency-ordered waves). Every gate below still applies. `--auto` runs either to the end
-with no question ([INPUT](#input)). A `status: bug` story runs in **Bug-Fix Mode** (Phase 1.3.5)
+with no question ([INPUT](#input)). A cosmetic `S` story takes the [QUICK ROUTE](#quick-route),
+which skips the ceremony a label change does not need and none of the checks. No test run ever
+opens a window in front of the user ([background-tests.md](../../references/background-tests.md)). A `status: bug` story runs in **Bug-Fix Mode** (Phase 1.3.5)
 inside whichever agent builds it. Argument shapes: [INPUT](#input).
 
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
@@ -71,6 +73,8 @@ optionally with `--auto`:
   ready story, announced. With a story path it is a SINGLE-STORY DISPATCH whose S2 and S6 take
   their auto defaults. The manual test is **deferred, never dropped**: the run ends with the
   checklist and `/ck-code:verify`. Nothing is shipped or promoted under `--auto`.
+- **`--quick` / `--full`** (story path only) — `--quick` asks for the [QUICK ROUTE](#quick-route),
+  still subject to its eligibility check; `--full` never takes it. Without either, S2 decides.
 
 A dispatch prompt beginning `MODE: delegated` means this run **is** the agent another
 `build` run dispatched — read [DELEGATED MODE](#delegated-mode) and nothing else.
@@ -110,7 +114,7 @@ this PASSes.
 
 `LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout:
 [redirect to ck-code-lite](../../references/version-gate.md#lite--redirect-to-ck-code-lite) —
-print its `↪` line, run `ck-code-lite:build` with only the `T-NN`, `--waves` and `--auto` arguments, and **stop**. Never offer to run `/ck-code:migrate` for it.
+print its `↪` line, run `ck-code-lite:build` with only the `T-NN`, `--waves`, `--auto`, `--quick` and `--full` arguments, and **stop**. Never offer to run `/ck-code:migrate` for it.
 
 ---
 
@@ -283,14 +287,19 @@ never commits) and, in Bug-Fix Mode, the reproduction test the Bug Report names 
 it for build to commit). Any other dirty path stops the run — list the paths and ask the user
 to commit or stash them; the integrity gate (S5) needs a tree only the agent changes.
 
-**S2 — One question.** Resolve the base exactly as Phase 3.5 does (same batched call,
+In the same call, `ck-headless`. Its `FOREGROUND` lines go into the dispatch prompt as
+`Background:`, and the builder converts them first, without asking
+([background-tests.md](../../references/background-tests.md)). `ck-headless: OK` adds nothing.
+
+**S2 — Route, then one question.** Fix the route first ([QUICK ROUTE](#quick-route)) and
+announce it in one line. Then resolve the base exactly as Phase 3.5 does (same batched call,
 `resolve_base`, same four signals, same level rule — an objection to the derived base is a
 level change: name `/ck-code:config integration` and stop). Then **one `AskUserQuestion`, at
 most 4 questions** — the agent cannot ask anything, so everything is settled here:
 
 - **Where the work lands** — the 3.5 option table, with **Cancel** in place of *Adjust plan*.
   There is no plan to confirm: the agent plans at Phase 3 itself, as in PARALLEL MODE.
-- **Team gate** — when no `expert-*`/`guide-*` skill exists and `tasks/SETTINGS.md` does not say
+- **Team gate** — QUICK never asks it. Otherwise, when no `expert-*`/`guide-*` skill exists and `tasks/SETTINGS.md` does not say
   `experts: none` (the three options of [parallel-mode.md § P3](references/parallel-mode.md#p3--team-gate-and-confirmation)).
 - **Criteria ambiguity** (Story Mode) — only a genuinely vague acceptance criterion; the
   answer goes into the dispatch prompt.
@@ -317,14 +326,16 @@ git rev-parse --abbrev-ref HEAD && git rev-parse HEAD   # the branch, then the B
 
 **S4 — Dispatch.** Announce `Single: EE-SS → dispatching 1 agent on <branch>.`, then one
 `Agent` call per [agent-prompts.md § Single-story dispatch](references/agent-prompts.md#single-story-dispatch)
-— model tier per [parallel-mode.md § Model tier](references/parallel-mode.md#model-tier--by-reasoning-complexity-never-size).
+— model tier per [parallel-mode.md § Model tier](references/parallel-mode.md#model-tier--by-reasoning-complexity-never-size)
+(QUICK takes the fast tier), plus the `Route:` line and any `Background:` lines.
 Never edit a file in this context while it runs.
 
 **S5 — Verify, then QA.** Run the solo integrity gate of
 [parallel-mode.md § P5](references/parallel-mode.md#p5--integrity-and-resume) against the S3
 Base SHA, with the branch from S3 as `$WORKBRANCH` (Bug-Fix Mode: the Bug Report's `**Status:** FIXED`
 line replaces the unchecked-criteria grep). Its classes and the 2-round resume cap
-apply unchanged; branch drift is a hard stop. On ✓ complete, dispatch `ck-code:qa-validator`
+apply unchanged; branch drift is a hard stop. On ✓ complete with `route: QUICK`, verify here
+instead of dispatching ([QUICK ROUTE](#quick-route) S5). Otherwise dispatch `ck-code:qa-validator`
 per [agent-prompts.md § Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch), at
 the single-story scope of
 [§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)
@@ -338,7 +349,8 @@ prior_status=<prior_status>`) and commit it on the branch as `chore(tasks): EE-S
 in-progress — QA failed` — and the report says why.
 
 **S6 — Manual gate and hand-off, here.** Run Phase 8.5 in this context (both questions, one
-call). **PASS** — the agent already wrote `done` (or the restored `prior_status`) and `files:`
+call). On QUICK the prompt is one or two steps that show the change, such as the screen and
+the label it should now read. **PASS** — the agent already wrote `done` (or the restored `prior_status`) and `files:`
 with `--no-sync` and committed them, so only regenerate and sync, then apply the 8.7 answer:
 
 ```bash
@@ -352,6 +364,42 @@ already-committed branch — it has nothing left to stage.
 **`--auto`:** the gate is deferred, never dropped. Regenerate and sync as on PASS, print the
 8.5.1 manual-testing steps as the run's checklist, and end with `/ck-code:ship <story-path>` as
 the next step. The ship answer is always SKIP, and nothing is pushed.
+
+---
+
+## QUICK ROUTE
+
+For a story whose whole change is cosmetic: a label, copy, a style or token, an icon, a
+constant. It keeps every check that can catch a broken change and drops the ceremony that
+cannot. It runs only through SINGLE-STORY DISPATCH, never in PARALLEL MODE.
+
+**Eligible only when all of these hold**, read from the 1.3 load (no extra read):
+
+- `size: S`, Story Mode. A bug story is never QUICK.
+- Every acceptance criterion changes a literal or presentational value: text, a label, a
+  class, a style, a token, an icon, a constant. None adds behaviour, a branch, state, an API
+  or data shape, persistence, an auth or permission rule, a dependency or a migration.
+- `files:` names at most 3 paths, and none is a manifest, lockfile, CI, test-runner config
+  or migration.
+- Not a UI story whose design link is pending (S2 still has to ask about it).
+
+**Who decides.** `--full` → never QUICK. `--quick` on a story that fails a condition →
+`Route: FULL — --quick refused: <condition>`. Otherwise an eligible story takes it unasked:
+`Route: QUICK — <what changes>, size S, N files (pass --full to override).` `--auto` changes
+nothing here.
+
+**S2 – S4.** The team gate is never asked. The dispatch carries `Route: QUICK`, on the fast
+tier. The builder's QUICK deltas live in
+[story-cycle.md § 1.7](references/story-cycle.md#17-effort-route-from-frontmatter-size). It
+steps up to LEAN itself when the change grows, and returns its final route.
+
+**S5 — verify here, no QA agent.** When the verdict says `route: QUICK`, run in this context
+the exact command line the [Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch)
+would hand the validator, at the same scope, with `--reuse`:
+`ck-qa run EE-SS --reuse [--parallel] test='…' lint='…' typecheck='…' build='…'`. The builder's
+green run on this exact tree reports `REUSED`. Anything else runs and prints one line. `FAIL`
+is NEEDS FIXES, the same loop and cap as a validator `QA: FAIL`. A verdict with any other route
+gets the `qa-validator` dispatch as usual.
 
 ---
 
@@ -519,6 +567,10 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
 - **SINGLE-STORY DISPATCH** — one story is built by one solo agent on its own branch, never in
   the orchestrating context; S1 clean start, S2 one question, S5 integrity from git + QA, S6
   manual gate here. Inline only when this context has no `Agent` tool.
+- **QUICK ROUTE** — eligibility checked, never assumed; QUICK skips the QA agent, never the
+  QA commands, RED where a test covers the change, or the manual gate.
+- **Background tests** — `ck-headless` runs before dispatch; every `FOREGROUND` hit is
+  converted before story code; every test runs through `ck-qa`.
 - **3.5** — plan and base branch confirmed in one gate before any code (single-story dispatch: base only, at S2); the base is **derived from the plan's `integration:` (`ck-plan get`), resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`. The level is never asked here.
 - **8.5** — manual-test gate; bug-fix loop cap = 3. Under `--auto`, deferred to the final
   checklist, never dropped.
@@ -562,6 +614,12 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
   the stored level regardless.
 - **Never run a story-scope pass without an area-scope run after it** — P8 once per wave, the single-story S5 QA on the story that completes its epic and on every story at level `story`. Never narrow P8 below area scope, and never scope typecheck or build. Scope comes from `ck-affected`, never from reading imports; it prints FULL for repo-root config, migrations, fixtures, env files or a bare lockfile ([§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)).
 - **Never `find /` or search outside the repo.**
+- **Never take the QUICK ROUTE on a story that fails one eligibility condition**, for a bug
+  story, or in PARALLEL MODE, and never skip its S5 `ck-qa` run — QUICK drops ceremony, never
+  a check.
+- **Never let a test open a window in front of the user** — convert every `ck-headless` hit
+  before story code, never ask whether to, and never run an e2e command outside `ck-qa`
+  ([background-tests.md](../../references/background-tests.md)).
 - **Never ask under `--auto`, and never ship, promote or push under it** — every question takes its recommended answer, announced; the manual test is deferred to the final checklist and `/ck-code:verify`, never dropped. Hard stops still stop the run; they are reported, not asked ([parallel-mode.md § Auto mode](references/parallel-mode.md#auto-mode----auto)).
 - **Never hand a builder this skill** — every dispatch names [story-cycle.md](references/story-cycle.md) by absolute path, and the builder's rules live there.
 - **Never implement a story in an orchestrating context** — one story goes to SINGLE-STORY DISPATCH, several to PARALLEL MODE; source reads, the TDD loop and suite output belong to the agent. The only inline path is a context with no `Agent` tool.

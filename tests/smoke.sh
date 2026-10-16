@@ -677,6 +677,8 @@ assert_eq "ck-qa run: the detached command ran exactly once" "1" "$(wc -l <"$QA_
 assert_contains "ck-qa wait: an ended run prints its result again" "$(QA wait 01-02)" "e2e: PASS"
 QA_NONE=$(QA wait 09-09); QA_NONE_RC=$?
 assert_exit "ck-qa wait: an id with no run exits 2" 2 "$QA_NONE_RC"
+assert_contains "ck-qa run: every command runs with E2E_HEADLESS=1 and without PWDEBUG" \
+  "$(PWDEBUG=1 QA run 08-08 bg='test "$E2E_HEADLESS" = 1 && test -z "${PWDEBUG:-}"')" "bg: PASS"
 CK_QA_WAIT=0 QA run 01-03 slow='sleep 30' >/dev/null
 kill "$(cat "$QA_TMP/ck-qa-run/01-03/pid")"; kill_wait=0
 while kill -0 "$(cat "$QA_TMP/ck-qa-run/01-03/pid")" 2>/dev/null && [ "$kill_wait" -lt 20 ]; do sleep 0.1; kill_wait=$((kill_wait+1)); done
@@ -1278,6 +1280,37 @@ else
   log_skip "ck-code-lite not beside ck-code — copy check skipped"
 fi
 
+
+echo
+echo "=== ck-headless: no test opens a window in front ==="
+HL="$(mktemp -d)"; ( cd "$HL" && git init -q )
+HLW() { mkdir -p "$HL/$(dirname "$1")"; printf '%s\n' "$2" >"$HL/$1"; }
+HLR() { ( cd "$HL" && ck-headless 2>&1 ); }
+assert_contains "ck-headless: a repo with no e2e is OK" "$(HLR)" "ck-headless: OK"
+HLW playwright.config.ts "export default { use: { headless: false } }
+// headless: false
+const keep = { headless: false } // ck-headless: allow"
+HLW package.json '{"scripts":{"e2e":"playwright test --headed","cy":"cypress open"}}'
+HLW tests/e2e/t.py 'b = p.chromium.launch(headless=False)'
+HL_OUT=$(HLR); HL_RC=$?
+assert_exit "ck-headless: a foreground setup exits 1" 1 "$HL_RC"
+assert_contains "ck-headless: flags headless: false" "$HL_OUT" "playwright.config.ts:1 headed-browser"
+assert_contains "ck-headless: flags Python headless=False" "$HL_OUT" "tests/e2e/t.py:1 headed-browser"
+assert_contains "ck-headless: flags a headed test command" "$HL_OUT" "package.json:1 headed-command"
+assert_not_contains "ck-headless: skips a commented line" "$HL_OUT" "playwright.config.ts:2"
+assert_not_contains "ck-headless: keeps a line marked allow" "$HL_OUT" "playwright.config.ts:3"
+rm -f "$HL/package.json" "$HL/tests/e2e/t.py"
+HLW playwright.config.ts "export default {}"
+HLW tests/e2e/app.spec.ts "import { _electron as electron } from 'playwright'
+const app = await electron.launch({ args: ['out/main/index.js'] })"
+HL_OUT=$(HLR)
+assert_contains "ck-headless: an Electron app that never hides is flagged at its launch" "$HL_OUT" "tests/e2e/app.spec.ts:2 electron-window"
+assert_contains "ck-headless: an Electron launch that never sets E2E_HEADLESS is flagged" "$HL_OUT" "electron-launch"
+HLW playwright.config.ts "process.env.E2E_HEADLESS ??= '1'"
+assert_not_contains "ck-headless: a config that sets E2E_HEADLESS clears electron-launch" "$(HLR)" "electron-launch"
+HLW src/main/index.ts "const background = process.env.E2E_HEADLESS === '1'"
+assert_contains "ck-headless: both halves converted is OK" "$(HLR)" "ck-headless: OK"
+rm -rf "$HL"
 if command -v shellcheck >/dev/null 2>&1; then
   SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/* tests/fake-gh/gh 2>&1); SC_RC=$?
   if [ "$SC_RC" -eq 0 ]; then

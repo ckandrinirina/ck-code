@@ -16,7 +16,8 @@ greps prose:
   "branch": "<the git branch the work is committed on>",
   "commits": <number of commits made>,
   "remaining": ["<unfinished acceptance criterion>", "…"],
-  "criteria_met": "<checked>/<total>"
+  "criteria_met": "<checked>/<total>",
+  "route": "QUICK | LEAN | FULL"
 }
 ```
 
@@ -104,6 +105,11 @@ return object and the resume below are unchanged:
    `You are the only agent running. Your orchestrator owns QA sign-off, the manual test and shipping.`
 3. **Put the S2 answers in `Settled:`** — each acceptance criterion the user clarified and their
    reading of it (or the `--auto` assumption). The agent cannot ask; this is all it gets.
+4. **Add the route and any foreground hits** after `Settled:`:
+   `Route: QUICK` (or `LEAN`/`FULL`, the route S2 announced), then one
+   `Background: FOREGROUND <file>:<line> <kind> — <text>` line per S1 `ck-headless` hit. With
+   hits, add: `Convert each Background hit first, per <absolute path of
+   ../../references/background-tests.md>, and commit it as its own commit before RED.`
 
 A QA failure or a manual-test report goes back to the **same agent** by `SendMessage`, worded
 like the resume below with the failing criteria or the user's report in place of
@@ -128,6 +134,35 @@ Those three placeholders are substituted into this file at load time from the pl
 three aliases is invalid — report it rather than dispatching it. On Claude Code ≥ 2.1.271
 `/plugin` offers only those three as fixed choices (`userConfig` `options`), so this case
 remains only for a value set before that release.
+
+## Background conversion (P1)
+
+PARALLEL MODE P1 dispatches this once, when `ck-headless` printed `FOREGROUND` lines, before any
+wave. It runs solo on `$TARGET` in the main checkout. There is no story: the job is the
+conversion and nothing else.
+
+```
+subagent_type: general-purpose
+model: sonnet
+description: "Run e2e suites in the background"
+prompt: |
+  You are in the main checkout on branch <$TARGET>. Before any edit, run
+  `git rev-parse --abbrev-ref HEAD`; if it does not print <$TARGET>, change nothing and
+  return `blocked: on <branch>`. Never create, switch, rebase or reset a branch.
+
+  These setups open a window in front of the user while tests run:
+    <the ck-headless FOREGROUND lines, verbatim>
+
+  Read <absolute path of ck-code/references/background-tests.md> once and apply its
+  conversion for each line, merging into the existing code. Change nothing else, and never
+  write a `ck-headless: allow` marker. Then:
+    1. `ck-headless` must print `ck-headless: OK`.
+    2. Run the e2e suite once: `ck-qa run bg --reuse e2e='<the project's e2e command>'`
+       (600000 ms Bash timeout; on `ck-qa: RUNNING`, `ck-qa wait bg`). It must pass.
+    3. Stage only the files you changed and commit once:
+       `test(e2e): run e2e suites in the background`. No AI references.
+  Return exactly one line: `converted: <files>` or `blocked: <reason>`.
+```
 
 ## Resume an incomplete story (P5)
 
