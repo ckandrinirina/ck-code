@@ -668,6 +668,7 @@ git -C "$QA_REPO" checkout -q -- a.txt
 QA_LONG=$(CK_QA_WAIT=0 QA run 01-02 e2e="sleep 3; echo e2e-ran >>'$QA_TMP/count'"); QA_LONG_RC=$?
 assert_exit "ck-qa run: past the wait budget it exits 3" 3 "$QA_LONG_RC"
 assert_contains "ck-qa run: past the wait budget it prints RUNNING" "$QA_LONG" "ck-qa: RUNNING"
+assert_contains "ck-qa run: the RUNNING line names its checkout" "$QA_LONG" "&& ck-qa wait 01-02' to keep waiting (runs are per checkout)"
 assert_contains "ck-qa run: the same run again attaches, never restarts" \
   "$(CK_QA_WAIT=0 QA run 01-02 e2e="sleep 3; echo e2e-ran >>'$QA_TMP/count'")" "already running"
 QA_DIFF=$(QA run 01-02 e2e='true'); QA_DIFF_RC=$?
@@ -680,8 +681,8 @@ assert_exit "ck-qa wait: an id with no run exits 2" 2 "$QA_NONE_RC"
 assert_contains "ck-qa run: every command runs with E2E_HEADLESS=1 and without PWDEBUG" \
   "$(PWDEBUG=1 QA run 08-08 bg='test "$E2E_HEADLESS" = 1 && test -z "${PWDEBUG:-}"')" "bg: PASS"
 CK_QA_WAIT=0 QA run 01-03 slow='sleep 30' >/dev/null
-kill "$(cat "$QA_TMP/ck-qa-run/01-03/pid")"; kill_wait=0
-while kill -0 "$(cat "$QA_TMP/ck-qa-run/01-03/pid")" 2>/dev/null && [ "$kill_wait" -lt 20 ]; do sleep 0.1; kill_wait=$((kill_wait+1)); done
+kill "$(cat "$QA_TMP"/ck-qa-run/*-01-03/pid)"; kill_wait=0
+while kill -0 "$(cat "$QA_TMP"/ck-qa-run/*-01-03/pid)" 2>/dev/null && [ "$kill_wait" -lt 20 ]; do sleep 0.1; kill_wait=$((kill_wait+1)); done
 assert_contains "ck-qa wait: a run that died without a result says so" "$(QA wait 01-03)" "stopped without a result"
 QA_NORR=$(QA run 01-04 --rerun test='true'); QA_NORR_RC=$?
 assert_exit "ck-qa run --rerun: refused with no recorded run" 2 "$QA_NORR_RC"
@@ -699,7 +700,7 @@ rm -rf "$QA_REPO" "$QA_TMP"
 echo "=== ck-affected: only the tests a change can reach ==="
 # A workspace monorepo: backoffice and client both use a shared ui package; marketing uses nothing.
 AF="$(mktemp -d)"
-afw() { mkdir -p "$AF/$(dirname "$1")"; printf '%s\n' "$2" >"$AF/$1"; }
+afw() { mkdir -p "$AF/$(dirname -- "$1")"; printf '%s\n' "$2" >"$AF/$1"; }
 afw package.json '{"name":"root","private":true,"workspaces":["apps/*","packages/*"]}'
 afw pnpm-lock.yaml 'lockfileVersion: 9'
 afw README.md 'demo'
@@ -1311,6 +1312,105 @@ assert_not_contains "ck-headless: a config that sets E2E_HEADLESS clears electro
 HLW src/main/index.ts "const background = process.env.E2E_HEADLESS === '1'"
 assert_contains "ck-headless: both halves converted is OK" "$(HLR)" "ck-headless: OK"
 rm -rf "$HL"
+echo
+echo "=== audit fixes: empty size column, option without value, backslash criterion, co-author guard ==="
+AF="$(mktemp -d)"
+(
+  cd "$AF" && git init -q . && export CK_TODAY=2026-09-30
+  P=tasks/2026-01-01_af
+  mkdir -p "$P/epics/07_e/stories"
+  printf -- '---\nslug: af\ntitle: Af\nintegration: story\n---\n\n# Af\n' > "$P/OVERVIEW.md"
+  write_epic "$P/epics/07_e/EPIC.md" 07 e E "d"
+  write_story "$P/epics/07_e/stories/01_nosize.md" 07-01 "No size" 07 todo "" "[]" "[]" "" "" "" "" >/dev/null
+  ck-view next "$P" 2>&1 | sed 's/^/next: /'
+  # option flags with no value must fail fast, not spin
+  for c in "ck-issues $P --mode" "ck-project status --pace" "ck-checklist init $P --title"; do
+    ( $c >/dev/null 2>&1 ) & pid=$!
+    i=0; while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+    if kill -0 "$pid" 2>/dev/null; then echo "hang: $c"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; else echo "returns: $c"; fi
+  done
+  # a criterion holding a backslash is really ticked
+  printf -- '---\nid: 07-01\nstatus: done\n---\n- [ ] Human check — match \\d+ here\n' > "$P/epics/07_e/stories/01_nosize.md"
+  ck-checklist init "$P" --feature af >/dev/null
+  ck-checklist new "$P" --title "Bs" --stories 07-01 --source "07-01 human check" --criterion 'Human check — match \d+ here' >/dev/null
+  ck-checklist record "$P" C-01 pass >/dev/null 2>&1
+  echo "bs-tick=$(grep -c -- '- \[x\] Human check' "$P/epics/07_e/stories/01_nosize.md")"
+  echo "bs-crit=$(grep -h '^criterion:' "$P"/checklist/*/C-01_*.md 2>/dev/null)"
+) > "$AF/out" 2>&1
+AFO="$(cat "$AF/out")"; rm -rf "$AF"
+assert_contains "ck-view next: a story with an empty size still resolves its id" "$AFO" "**Recommended:** 07-01"
+assert_contains "ck-view next: an empty size shows as ?" "$AFO" "**Size:** ?"
+assert_contains "ck-view next: run line carries the story path" "$AFO" "Run: /ck-code:build tasks/2026-01-01_af/epics/07_e/stories/01_nosize.md"
+assert_not_contains "ck-view next: no awk errors on an empty size" "$AFO" "awk:"
+assert_contains "ck-issues: --mode with no value returns" "$AFO" "returns: ck-issues"
+assert_contains "ck-project: --pace with no value returns" "$AFO" "returns: ck-project"
+assert_contains "ck-checklist: --title with no value returns" "$AFO" "returns: ck-checklist"
+assert_not_contains "no option parser hangs on a missing value" "$AFO" "hang:"
+assert_contains "ck-checklist record: a criterion with a backslash is really ticked" "$AFO" "bs-tick=1"
+assert_contains "ck-checklist: the backslash is stored once-escaped, not double-escaped by a wrapper" "$AFO" 'criterion: "Human check — match \\d+ here"'
+NAG="$PLUGIN_ROOT/scripts/no-ai-guard.sh"
+nag() { python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]}}))' "$1" | bash "$NAG" >/dev/null 2>&1; echo $?; }
+assert_eq "no-ai-guard: blocks a Claude co-author trailer" 2 "$(nag 'git commit -m "x
+
+Co-Authored-By: Claude <a@b.c>"')"
+assert_eq "no-ai-guard: blocks a noreply@anthropic.com co-author trailer" 2 "$(nag 'git commit -m "x
+
+co-authored-by: Some Bot <noreply@anthropic.com>"')"
+assert_eq "no-ai-guard: allows a human co-author" 0 "$(nag 'git commit -m "x
+
+Co-authored-by: Ann <ann@example.com>"')"
+
+# ---- regression: qa labels/namespacing, affected deletions, release watch -------------------
+echo "=== regression: ck-qa labels and namespacing, ck-affected deletions, ck-release watch ==="
+RG="$(mktemp -d)"; mkdir -p "$RG/tmp" "$RG/a" "$RG/b" "$RG/bin"
+for d in a b; do
+  git -C "$RG/$d" init -q && git -C "$RG/$d" config user.email t@t && git -C "$RG/$d" config user.name t
+  echo x >"$RG/$d/f" && git -C "$RG/$d" add -A && git -C "$RG/$d" commit -qm init
+done
+RQ() { local d="$1"; shift; ( cd "$RG/$d" && TMPDIR="$RG/tmp" ck-qa "$@" 2>&1 ); }
+RQ_OUT="$(RQ a run 01-01 unit-test='exit 1')"; RQ_RC=$?
+assert_contains "qa: a hyphenated label that fails reports FAIL" "$RQ_OUT" "unit-test: FAIL"
+assert_exit "qa: a hyphenated label that fails exits 1" 1 "$RQ_RC"
+assert_contains "qa: a hyphenated label runs its own command" "$(RQ a run 01-01 x-y='echo hyphen-ran'; cat "$RG"/tmp/ck-*-01-01-x-y.log)" "hyphen-ran"
+RQ_OUT="$(RQ a run 01-01 test='')"; RQ_RC=$?
+assert_exit "qa: an empty command exits 2" 2 "$RQ_RC"
+assert_contains "qa: an empty command is refused by label" "$RQ_OUT" "label test has an empty command"
+assert_contains "qa: a whitespace-only command is refused" "$(RQ a run 01-01 test='   ')" "has an empty command"
+assert_contains "qa: labels a-b and a_b collide with a clear error" "$(RQ a run 01-01 a-b=true a_b=true)" "labels collide"
+RQ b run 01-01 t=true >/dev/null; RQ a run 01-01 t=true >/dev/null
+assert_eq "qa: two repos with story 01-01 keep separate run state" "2" "$(ls "$RG/tmp/ck-qa-run" | grep -c -- '-01-01$')"
+assert_eq "qa: two repos with story 01-01 keep separate logs" "2" "$(ls "$RG"/tmp/ck-*-01-01-t.log | wc -l | tr -d ' ')"
+# affected: a deletion
+mkdir -p "$RG/d/src" "$RG/d/docs"
+( cd "$RG/d" && git init -q && git config user.email t@t && git config user.name t
+  echo "export const a = 1" >src/a.ts; echo "import { a } from './a'; test('a', () => a)" >src/a.test.ts
+  echo "export const c = 1" >src/config.ts; echo "export const o = 1" >src/other.ts
+  printf '# Arch\n\n## Areas\n\n| Area | Doc | Prefixes |\n|---|---|---|\n| core | x.md | src/config.ts |\n| rest | y.md | src/other.ts, src/a.ts, src/a.test.ts |\n' >docs/ARCHITECTURE.md
+  git add -A && git commit -qm init && git rm -q src/a.ts )
+DEL_OUT="$(cd "$RG/d" && ck-affected HEAD 2>&1)"
+DEL_T="$(cd "$RG/d" && ck-affected HEAD --tests 2>&1)"
+assert_not_contains "affected: a delete-only change is not NONE" "$DEL_OUT" "NONE"
+assert_contains "affected: the importers of a deleted file are tested" "$DEL_T" "src/a.test.ts"
+# release watch: gh run watch returns early, the run is still going
+printf '%s\n' '#!/bin/sh' \
+  'case "$*" in' \
+  '  "auth status"*) exit 0 ;;' \
+  '  "run list"*) echo 42 ;;' \
+  '  "run watch"*) exit 1 ;;' \
+  '  *"--json url"*) echo https://example.test/run/42 ;;' \
+  '  *"status,conclusion"*) n=$(cat "$FAKE_N" 2>/dev/null || echo 0); echo $((n + 1)) >"$FAKE_N"' \
+  '     if [ "$n" -lt "${FAKE_PENDING:-1}" ]; then echo "in_progress "; else echo "completed success"; fi ;;' \
+  'esac' >"$RG/bin/gh"
+chmod +x "$RG/bin/gh"
+RW() { ( cd "$RG/a" && PATH="$RG/bin:$PATH" FAKE_N="$RG/n" CK_LESSONS="$RG/lessons.md" CK_RELEASE_POLL_SLEEP=0 CK_RELEASE_POLLS=${POLLS:-5} ck-release watch o/r wf.yml 2020-01-01T00:00:00Z 2>&1 ); }
+rm -f "$RG/n"; RW_OUT="$(RW)"; RW_RC=$?
+assert_exit "release watch: an early return is polled to completion, exit 0" 0 "$RW_RC"
+assert_contains "release watch: an early return still reports PASS" "$RW_OUT" "PASS https://example.test/run/42"
+rm -f "$RG/n"; RW_OUT="$(FAKE_PENDING=99 POLLS=3 RW)"; RW_RC=$?
+assert_exit "release watch: still running at the cap exits 3" 3 "$RW_RC"
+assert_contains "release watch: still running at the cap prints RUNNING" "$RW_OUT" "RUNNING"
+rm -rf "$RG"
+
 if command -v shellcheck >/dev/null 2>&1; then
   SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/* tests/fake-gh/gh 2>&1); SC_RC=$?
   if [ "$SC_RC" -eq 0 ]; then
