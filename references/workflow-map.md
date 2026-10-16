@@ -57,6 +57,7 @@ duplicating the workflow graph.
 | `fix` (complex) | `/ck-code:build <story>` or `/ck-code:build <ids>` (Bug-Fix Mode) |
 | `verify` | `/ck-code:fix <story> --report "…"` for an issue; `/ck-code:ship --promote` once nothing is open |
 | `ship` | `/ck-code:track next` (more stories) or `/ck-code:explain` |
+| `release` | `/ck-code:ship` for a recipe it corrected after the merge; otherwise `/ck-code:track next` |
 | `doctor` | the finding's repair command; `/ck-code:doctor --fix` for delivery/board/issue drift |
 | `doctor --fix` | `/ck-code:track` (refreshed picture) |
 
@@ -117,6 +118,7 @@ to this table first.
 | Push the plan to GitHub for tracking | `plan --publish` | `ship` |
 | Deliver code (commit + PR + close issues) | `ship` | `plan --publish` |
 | Open the PR for a finished epic or plan | `ship --promote` | one `ship` per story |
+| Publish a new version (bump, tag, build, release) | `release` | `ship` then a hand-made tag |
 | Change how a plan's work merges (story / epic / plan) | `config integration <tasks/plan> <level>` | editing `OVERVIEW.md` by hand |
 | Hand-test a whole feature and keep the results | `verify` | `explain` (FEATURE MODE — a guide, nothing recorded) |
 | See what is broken, change nothing | `doctor` | `doctor --fix` |

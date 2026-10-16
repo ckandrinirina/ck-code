@@ -1239,6 +1239,45 @@ rm -rf "$RC_DIR"
 
 echo
 echo "=== shellcheck ==="
+echo
+echo "=== ck-release: facts and lessons, offline ==="
+RL="$(mktemp -d)"; mkdir -p "$RL/nogh" "$RL/p/.github/workflows" "$RL/p/public-ci"
+printf '#!/bin/sh\nexit 1\n' >"$RL/nogh/gh"; chmod +x "$RL/nogh/gh"
+REL() { ( cd "$RL/p" && PATH="$RL/nogh:$PATH" CK_LESSONS="$RL/lessons.md" ck-release "$@" 2>&1 ); }
+git -C "$RL/p" init -q && git -C "$RL/p" config user.email t@t && git -C "$RL/p" config user.name t
+printf '{\n  "name": "x",\n  "version": "1.2.3"\n}\n' >"$RL/p/package.json"
+printf 'on:\n  push:\n    tags: ["v*"]\n' >"$RL/p/.github/workflows/ci.yml"
+printf 'on:\n  workflow_dispatch:\n' >"$RL/p/public-ci/release.yml"
+echo '# Changelog' >"$RL/p/CHANGELOG.md"
+git -C "$RL/p" add -A && git -C "$RL/p" commit -qm "chore: init" && git -C "$RL/p" tag v1.2.3
+echo x >"$RL/p/a" && git -C "$RL/p" add a && git -C "$RL/p" commit -qm "feat: a"
+RF="$(REL facts)"
+assert_contains "ck-release facts: no gh degrades, never fails" "$RF" "repo: unknown"
+assert_contains "ck-release facts: the version and its file" "$RF" "version: 1.2.3 (package.json)"
+assert_contains "ck-release facts: files that pin the version" "$RF" "version-files: package.json"
+assert_contains "ck-release facts: a feat since the tag suggests minor" "$RF" "last-tag: v1.2.3 (1 commits since, suggests minor)"
+assert_contains "ck-release facts: a tag-started workflow" "$RF" "tag-ci: .github/workflows/ci.yml"
+assert_contains "ck-release facts: CI kept outside .github/" "$RF" "ci-outside-github: public-ci/release.yml"
+assert_contains "ck-release facts: no recipe yet" "$RF" "recipe: none"
+assert_not_contains "ck-release facts: no budget lesson for an unblocked repo" "$RF" "lesson:"
+assert_contains "ck-release: the lessons file is seeded" "$(cat "$RL/lessons.md")" "- private,budget-blocked :: "
+assert_contains "ck-release lessons match: a budget error finds its lesson" "$(REL lessons match 'The job was not started because an Actions budget is preventing further use.')" "lesson: private,budget-blocked"
+assert_contains "ck-release lessons tags: all tags present matches" "$(REL lessons tags private,budget-blocked,changelog)" "lesson: private,budget-blocked"
+assert_not_contains "ck-release lessons tags: an on-error lesson never matches by tags" "$(REL lessons tags releases-repo,on-error)" "lesson:"
+assert_contains "ck-release learn: appends with its origin" "$(REL learn tag-ci 'quota exceeded' 'wait for the reset')" "learned"
+assert_contains "ck-release learn: the same regex is kept once" "$(REL learn tag-ci 'quota exceeded' 'other')" "already known"
+assert_contains "ck-release learn: an invalid regex is refused" "$(REL learn tag-ci '(' x)" "not a valid regex"
+assert_contains "ck-release learn: a field with ' :: ' is refused" "$(REL learn 'a :: b' x y)" "cannot contain"
+assert_eq "ck-release learn: one line per lesson" "1" "$(grep -c 'quota exceeded' "$RL/lessons.md")"
+rm -rf "$RL"
+LITE_ROOT="$PLUGIN_ROOT/../ck-code-lite"
+if [ -f "$LITE_ROOT/bin/ck-lite-release" ]; then
+  assert_eq "ck-release: ck-code-lite's copy differs only in its name" "" "$(diff <(sed 1,12d "$PLUGIN_ROOT/scripts/ck-release.sh") <(sed 1,12d "$LITE_ROOT/bin/ck-lite-release"))"
+  assert_eq "release: recipe-format.md is identical in both plugins" "" "$(diff "$PLUGIN_ROOT/skills/release/references/recipe-format.md" "$LITE_ROOT/skills/release/references/recipe-format.md")"
+else
+  log_skip "ck-code-lite not beside ck-code — copy check skipped"
+fi
+
 if command -v shellcheck >/dev/null 2>&1; then
   SC_OUT=$(cd "$PLUGIN_ROOT" && shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/* tests/fake-gh/gh 2>&1); SC_RC=$?
   if [ "$SC_RC" -eq 0 ]; then

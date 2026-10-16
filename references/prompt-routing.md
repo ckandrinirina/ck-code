@@ -10,6 +10,7 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | bug, crash or regression in built code | `fix` |
 | publish the plan to GitHub Issues | `plan --publish` |
 | commit, PR, "ship it", deliver finished work; the PR for a finished epic or plan | `ship` / `ship --promote` |
+| release a new version, tag, publish installers or packages; a release build that failed or never started | `release` |
 | implement or continue an existing story; several ready stories; a whole epic | `build` / `build <ids>` / `build --epic NN` |
 | new functionality no story covers — small (one story) | `plan --quick <brief>` |
 | new functionality no story covers — large, or new work to break into epics, stories, a roadmap | `plan` |

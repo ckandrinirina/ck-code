@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-release — see scripts/ck-release.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-release.sh" "$@"
