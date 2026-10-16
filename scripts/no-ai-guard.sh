@@ -43,7 +43,7 @@ printf '%s' "$cmd" | grep -Eq \
 # many others legitimately discuss Claude Code in a commit message; only authorship
 # attribution is forbidden.
 if printf '%s' "$cmd" | grep -Eiq \
-  'co-?authored-?by:[[:space:]]*[^[:space:]]*claude|assisted-?by:[[:space:]]*[^[:space:]]*claude|generated[[:space:]]+with[[:space:]]+\[?claude|🤖[[:space:]]*generated[[:space:]]+with|https?://claude\.ai/code'
+  'co-?authored-?by:[[:space:]]*[^[:space:]]*claude|co-?authored-?by:.*noreply@anthropic\.com|assisted-?by:[[:space:]]*[^[:space:]]*claude|generated[[:space:]]+with[[:space:]]+\[?claude|🤖[[:space:]]*generated[[:space:]]+with|https?://claude\.ai/code'
 then
   cat >&2 <<'MSG'
 BLOCKED by ck-code (references/no-ai-references.md).
