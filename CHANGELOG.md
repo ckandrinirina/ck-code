@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.20.1] — 2026-10-16
+
+### Fixed
+- **ck-qa**: a label with a hyphen (`unit-test='exit 1'`) reported PASS for a failing command — the label's variable was never set and an empty command ran; hyphens now map to a valid name (and `a-b` / `a_b` collide loudly). An empty or whitespace-only command is refused (exit 2) instead of passing, so `test="$(ck-affected …)"` expanding to nothing can no longer gate a story green. Run state, logs and last-run records are namespaced by project, so two projects with story `01-01` never share a run, and `RUNNING` names the checkout to wait from.
+- **ck-affected**: a change that only deletes files is no longer NONE — deleted paths are traced so their importers' tests run.
+- **ck-release**: `watch` polls `gh run view` to completion when `gh run watch` returns early, instead of reporting `FAIL ()` on a healthy build; still running at the cap prints `RUNNING` and exits 3.
+- **track**: `next` picked a wrong story id (`/ck-code:build 0`) when a story had no `size:` — the empty column shifted the fields; it now shows `Size: ?`.
+- **ck-project**, **ck-issues**, **ck-checklist**: a value-taking option given last (`--owner`, `--mode`, `--title`) failed with an error instead of looping forever.
+- **ck-checklist**, **ck_fm_set**: values reach awk through `ENVIRON`, so a criterion with a backslash is really ticked instead of reported ticked and left unchanged.
+- **no-ai guard**: also blocks a `Co-Authored-By` trailer with `noreply@anthropic.com`.
+- **mod**: an escaped `\|` in a story title no longer shifts the status cell; a failed update check (offline, non-ok, malformed reply) waits 6 hours like a success instead of refetching at every session start.
+- **migrate**: the lite mapping drops every stack stamp lite writes (`· idioms unverified`, `— unverified`), and rewrites the design-system `## Off-ramp` to ck-code's path.
+
 ## [7.20.0] — 2026-10-16
 
 ### Added
