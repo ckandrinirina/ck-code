@@ -187,7 +187,11 @@ export function parseStoriesIndex(md: string): StoryRow[] {
   const rows: StoryRow[] = [];
   for (const line of md.split("\n")) {
     if (!line.startsWith("|")) continue;
-    const cells = line.split("|").map((c) => c.trim());
+    // ck-index writes a literal pipe in a title as `\|`; hide it from the split, restore after.
+    const cells = line
+      .replace(/\\\|/g, "\u0001")
+      .split("|")
+      .map((c) => c.trim().replace(/\u0001/g, "|"));
     const id = cells[2] ?? "";
     if (!/^\d{2}-\d{2}$/.test(id)) continue;
     rows.push({

@@ -103,6 +103,10 @@ describe('stories', () => {
     expect(s.map(x => x.text)).toEqual(['10-01'])
     expect(storySuggestions('1', rows)).toEqual([])
   })
+  test('an escaped pipe in a title stays in the title', async () => {
+    const rows = parseStoriesIndex('| Session | 10-03 | Read a \\| b | TODO | - | M | - | x.md |')
+    expect(rows).toEqual([{ id: '10-03', title: 'Read a | b', status: 'TODO' }])
+  })
 })
 
 describe('misc', () => {
