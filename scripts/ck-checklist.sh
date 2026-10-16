@@ -70,8 +70,6 @@ DIR="$PLAN/checklist"
 q() { printf '"%s"' "$(printf '%s' "$1" | tr '\r\n' '  ' | sed 's/\\/\\\\/g; s/"/\\"/g')"; }
 # fm FILE KEY — one frontmatter value, with q's escapes undone.
 fm() { ck_fm "$1" "$2" | sed 's/\\"/"/g; s/\\\\/\\/g'; }
-# fset FILE KEY VALUE — ck_fm_set, with backslashes doubled because awk -v unescapes them.
-fset() { ck_fm_set "$1" "$2" "$(printf '%s' "$3" | sed 's/\\/\\\\/g')"; }
 
 has_flat() { [ -n "$(find "$DIR" -maxdepth 1 -type f -name 'C-*.md' 2>/dev/null | head -1)" ]; }
 is_v1() { [ -f "$IDX" ] && [ "$(ck_fm "$IDX" format)" != 2 ] && grep -qE '^### C-[0-9]+ ' "$IDX"; }
@@ -140,8 +138,8 @@ cmd_init() {
   local feature="" title=""
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --feature) feature="${2:-}"; shift 2 ;;
-      --title)   title="${2:-}"; shift 2 ;;
+      --feature) [ $# -ge 2 ] || die "$1 needs a value"; feature="$2"; shift 2 ;;
+      --title)   [ $# -ge 2 ] || die "$1 needs a value"; title="$2"; shift 2 ;;
       *) die "init: unknown option $1" ;;
     esac
   done
@@ -161,13 +159,13 @@ cmd_new() {
   local title="" stories="" source="" criterion="" checks="" expected="" after="" rec=0 st=todo res="" s epics="" last n id f g
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --title) title="${2:-}"; shift 2 ;;
-      --stories) stories="${2:-}"; shift 2 ;;
-      --source) source="${2:-}"; shift 2 ;;
-      --criterion) criterion="${2:-}"; shift 2 ;;
-      --checks) checks="${2:-}"; shift 2 ;;
-      --expected) expected="${2:-}"; shift 2 ;;
-      --after) after="$(norm_id "${2:-}")"; shift 2 ;;
+      --title) [ $# -ge 2 ] || die "$1 needs a value"; title="$2"; shift 2 ;;
+      --stories) [ $# -ge 2 ] || die "$1 needs a value"; stories="$2"; shift 2 ;;
+      --source) [ $# -ge 2 ] || die "$1 needs a value"; source="$2"; shift 2 ;;
+      --criterion) [ $# -ge 2 ] || die "$1 needs a value"; criterion="$2"; shift 2 ;;
+      --checks) [ $# -ge 2 ] || die "$1 needs a value"; checks="$2"; shift 2 ;;
+      --expected) [ $# -ge 2 ] || die "$1 needs a value"; expected="$2"; shift 2 ;;
+      --after) [ $# -ge 2 ] || die "$1 needs a value"; after="$(norm_id "$2")"; shift 2 ;;
       --recorded) rec=1; shift ;;
       *) die "new: unknown option $1" ;;
     esac
@@ -254,7 +252,7 @@ cmd_start() {
   local scope=all retest_all=false recheck=0 n
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --epic) printf '%s' "${2:-}" | grep -qE '^[0-9]{2}$' || die "--epic needs a two-digit number"; scope="epic $2"; shift 2 ;;
+      --epic) [ $# -ge 2 ] || die "--epic needs a value"; printf '%s' "${2:-}" | grep -qE '^[0-9]{2}$' || die "--epic needs a two-digit number"; scope="epic $2"; shift 2 ;;
       --all) retest_all=true; shift ;;
       --recheck) recheck=1; retest_all=true; shift ;;
       *) die "start: unknown option $1" ;;
@@ -284,7 +282,7 @@ recheck() {
     [ "$st" = todo ] && [ -z "$res" ] && continue
     was="$(fm "$file" was)"
     [ -n "$res" ] && was="$res${fix:+ → fix $fix}"
-    ck_fm_set "$file" status todo && ck_fm_set "$file" result "" && fset "$file" was "$([ -n "$was" ] && q "$was")" \
+    ck_fm_set "$file" status todo && ck_fm_set "$file" result "" && ck_fm_set "$file" was "$([ -n "$was" ] && q "$was")" \
       && ck_fm_set "$file" fix "" && ck_fm_set "$file" tested_in "" && ck_fm_set "$file" updated "$TODAY" || exit 1
     reset=$((reset + 1))
   done <<EOF
@@ -337,7 +335,7 @@ cmd_record() {
   result="$st $TODAY${words:+ — $words}"
   was="$(fm "$f" was)"
   if [ "$old_st" != todo ] && [ -n "$old_res" ]; then was="$old_res${old_fix:+ → fix $old_fix}"; fi
-  ck_fm_set "$f" status "$st" && fset "$f" result "$(q "$result")" && fset "$f" was "$([ -n "$was" ] && q "$was")" \
+  ck_fm_set "$f" status "$st" && ck_fm_set "$f" result "$(q "$result")" && ck_fm_set "$f" was "$([ -n "$was" ] && q "$was")" \
     && ck_fm_set "$f" fix "" && ck_fm_set "$f" tested_in "$(ck_fm "$IDX" session)" && ck_fm_set "$f" updated "$TODAY" \
     && ck_fm_set "$IDX" session_last "$id" && ck_fm_set "$IDX" updated "$TODAY" || exit 1
   echo "ck-checklist: $id $old_st → $st"
@@ -350,7 +348,7 @@ cmd_record() {
     elif grep -F -- "$crit" "$sfile" | grep -q -- '- \[x\]'; then
       echo "ck-checklist: human check already ticked in $sfile"
     elif grep -F -- "$crit" "$sfile" | grep -q -- '- \[ \]'; then
-      awk -v c="$crit" '!done && index($0, c) && sub(/- \[ \]/, "- [x]") { done=1 } { print }' "$sfile" | ck_write_atomic "$sfile"
+      c="$crit" awk '!done && index($0, ENVIRON["c"]) && sub(/- \[ \]/, "- [x]") { done=1 } { print }' "$sfile" | ck_write_atomic "$sfile"
       echo "ck-checklist: ticked the human check in $sfile"
       changed="$changed $sfile"
     else
@@ -376,7 +374,7 @@ cmd_set() {
       source|title|criterion) [ -z "$v" ] || v="$(q "$v")" ;;
       *) die "\`$k\` is not settable (detail, after, source, title, criterion, fix); status and result go through \`record\`" ;;
     esac
-    fset "$f" "$k" "$v" || exit 1
+    ck_fm_set "$f" "$k" "$v" || exit 1
   done
   ck_fm_set "$f" updated "$TODAY"
   echo "ck-checklist: $id updated"

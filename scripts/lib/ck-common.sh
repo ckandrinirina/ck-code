@@ -78,8 +78,10 @@ ck_fm_set() {
   fi
   tmp="$(mktemp "$f.ck.XXXXXX")" || { echo "ck: cannot create a temp file beside $f" >&2; return 1; }
   cp -p "$f" "$tmp" 2>/dev/null
-  awk -v key="$k" -v val="$v" '
+  # val travels through ENVIRON: awk -v would unescape backslash sequences in it.
+  CK_VAL="$v" awk -v key="$k" '
     function line(s) { return s (crlf ? "\r" : "") }
+    BEGIN { val = ENVIRON["CK_VAL"] }
     { cr = sub(/\r$/,"") }
     FNR==1 { crlf = cr; inb=1; print line($0); next }
     inb && $0=="---" {

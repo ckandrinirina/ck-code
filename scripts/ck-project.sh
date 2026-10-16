@@ -81,11 +81,11 @@ CMD="$1"; shift
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --project)  PROJECT_ARG="${2:-}"; shift 2 ;;
-    --create)   CREATE_TITLE="${2:-}"; shift 2 ;;
-    --owner)    OWNER_ARG="${2:-}"; shift 2 ;;
-    --repo)     REPO_ARG="${2:-}"; shift 2 ;;
-    --pace)     PACE="${2:-}"; shift 2 ;;
+    --project)  [ $# -ge 2 ] || { echo "ck-project: $1 needs a value" >&2; exit 1; }; PROJECT_ARG="$2"; shift 2 ;;
+    --create)   [ $# -ge 2 ] || { echo "ck-project: $1 needs a value" >&2; exit 1; }; CREATE_TITLE="$2"; shift 2 ;;
+    --owner)    [ $# -ge 2 ] || { echo "ck-project: $1 needs a value" >&2; exit 1; }; OWNER_ARG="$2"; shift 2 ;;
+    --repo)     [ $# -ge 2 ] || { echo "ck-project: $1 needs a value" >&2; exit 1; }; REPO_ARG="$2"; shift 2 ;;
+    --pace)     [ $# -ge 2 ] || { echo "ck-project: $1 needs a value" >&2; exit 1; }; PACE="$2"; shift 2 ;;
     --extend)   EXTEND=1; shift ;;
     # Deliberately does NOT imply --extend: ensure_options matches preset NAMES, so on
     # a board spelling them "Backlog"/"On hold" it would add duplicate columns. Reorder

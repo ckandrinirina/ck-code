@@ -53,9 +53,9 @@ usage() {
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --mode)     MODE="${2:-}"; shift 2 ;;
-    --repo)     REPO="${2:-}"; shift 2 ;;
-    --pace)     PACE="${2:-}"; shift 2 ;;
+    --mode)     [ $# -ge 2 ] || { echo "ck-issues: $1 needs a value" >&2; exit 1; }; MODE="$2"; shift 2 ;;
+    --repo)     [ $# -ge 2 ] || { echo "ck-issues: $1 needs a value" >&2; exit 1; }; REPO="$2"; shift 2 ;;
+    --pace)     [ $# -ge 2 ] || { echo "ck-issues: $1 needs a value" >&2; exit 1; }; PACE="$2"; shift 2 ;;
     --dry-run)  DRY=1; shift ;;
     --no-index) RUN_INDEX=0; shift ;;
     -h|--help)  usage 0 ;;
