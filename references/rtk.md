@@ -117,7 +117,7 @@ through `ck-qa`, which applies this rule mechanically and extends it **across** 
 ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx tsc --noEmit'
 ```
 
-- It writes the same `ck-<id>-<label>.log` files, prints one line per command plus the last
+- It writes `ck-<project hash>-<id>-<label>.log` files (a short hash of the repo root keeps two projects apart), prints one line per command plus the last
   40 lines of each failure, and ends with `ck-qa: PASS` or `ck-qa: FAIL — <labels>`. Read
   more of a failure from its log. Those logs are not RTK-filtered, because the commands run
   inside the script, and the 40-line tail is the cap instead.

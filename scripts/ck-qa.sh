@@ -10,7 +10,7 @@
 # state  prints the code-state id: the git tree of the working copy, untracked
 #        (non-ignored) files included, so an uncommitted change is a different state.
 # run    runs each command from the current directory, output to
-#        ${TMPDIR:-/tmp}/ck-<id>-<label>.log, and stamps every pass with
+#        ${TMPDIR:-/tmp}/ck-<project hash>-<id>-<label>.log, and stamps every pass with
 #        (state, directory, command). --reuse reports a command already passed on that
 #        exact triple as REUSED instead of running it. --parallel runs them concurrently
 #        and reports every failure; the default is in order, stopping at the first one.
@@ -37,6 +37,9 @@ die() { echo "ck-qa: ERROR — $*" >&2; exit 2; }
 TMP="${TMPDIR:-/tmp}"; TMP="${TMP%/}"
 STAMPS="$TMP/ck-qa"
 RUNS="$TMP/ck-qa-run"
+# Run state and logs are namespaced by project: two repos can both have a story 01-01.
+PROJ="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
+H="$(printf '%s' "$PROJ" | cksum | cut -d' ' -f1)"
 SELF="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)/$(basename -- "$0")"
 
 # The tree id of the working copy, computed in a throwaway index so the real one is never
@@ -62,7 +65,7 @@ snapshot() {
   fi
 }
 
-last_of() { printf '%s/last-%s-%s' "$STAMPS" "$1" "$2"; }   # id label → last-run record
+last_of() { printf '%s/last-%s-%s-%s' "$STAMPS" "$H" "$1" "$2"; }   # id label → last-run record
 
 # Prints line $3 (1 snapshot, 2 directory, 3 full command) of the last-run record for
 # id $1 label $2, only when that run was in this directory.
@@ -77,7 +80,7 @@ stamp_of() { printf '%s\n%s\n%s\n' "$1" "$(pwd -P)" "$2" | git hash-object --std
 # Waits on the run for $1 for up to CK_QA_WAIT seconds, then prints its result and exits
 # with its code, or prints RUNNING and exits 3 while it is still going.
 await_run() {
-  local d="$RUNS/$1" budget="${CK_QA_WAIT:-540}" t0=$SECONDS
+  local d="$RUNS/$H-$1" budget="${CK_QA_WAIT:-540}" t0=$SECONDS
   [ -f "$d/pid" ] || die "no ck-qa run for $1 — start it with ck-qa run $1 …"
   while [ ! -f "$d/rc" ]; do
     if ! kill -0 "$(cat "$d/pid")" 2>/dev/null; then
@@ -85,7 +88,7 @@ await_run() {
       die "the ck-qa run for $1 stopped without a result — start it again with ck-qa run"
     fi
     if [ $((SECONDS - t0)) -ge "$budget" ]; then
-      echo "ck-qa: RUNNING — $1 has run $(( $(date +%s) - $(cat "$d/start") ))s; run 'ck-qa wait $1' to keep waiting, never start it again"
+      echo "ck-qa: RUNNING — $1 has run $(( $(date +%s) - $(cat "$d/start") ))s; run 'cd $(pwd -P) && ck-qa wait $1' to keep waiting (runs are per checkout), never start it again"
       exit 3
     fi
     sleep 2
@@ -110,7 +113,7 @@ ARGS=("$@")
 ID="${1:-}"; [ -n "$ID" ] || die "run needs an id (the story id, e.g. 02-05)"; shift
 case "$ID" in */*|.|..) die "id must not contain / (got: $ID)" ;; esac
 
-PARALLEL=0; REUSE=0; RERUN=0; LABELS=""
+PARALLEL=0; REUSE=0; RERUN=0; LABELS=""; VARS=" "
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --parallel) PARALLEL=1 ;;
@@ -118,7 +121,11 @@ while [ "$#" -gt 0 ]; do
     --rerun) RERUN=1 ;;
     *=*) l="${1%%=*}"
          case "$l" in ""|*[!A-Za-z0-9_-]*) die "label must be [A-Za-z0-9_-]+ (got: $l)" ;; esac
-         LABELS="$LABELS $l"; eval "CMD_$l=\"\${1#*=}\"" ;;
+         v="${l//-/_}"   # the variable suffix: a hyphen is not valid in a name
+         case "$VARS" in *" $v "*) die "labels collide: $l maps to the same variable as an earlier label (- and _ are the same)" ;; esac
+         VARS="$VARS$v "
+         case "${1#*=}" in *[![:space:]]*) ;; *) die "label $l has an empty command" ;; esac
+         LABELS="$LABELS $l"; eval "CMD_$v=\"\${1#*=}\"" ;;
     *) die "expected <label>=<command>, got: $1" ;;
   esac
   shift
@@ -126,7 +133,7 @@ done
 [ -n "$LABELS" ] || die "no <label>=<command> given"
 mkdir -p "$STAMPS" "$RUNS" || die "cannot create $STAMPS"
 
-cmd_of() { eval "printf '%s' \"\$CMD_$1\""; }
+cmd_of() { local v="${1//-/_}"; eval "printf '%s' \"\$CMD_$v\""; }
 
 # The full command a label stands for: the recorded one on a --rerun, else its own. Read
 # once here, before this run overwrites the record.
@@ -137,14 +144,14 @@ for l in $LABELS; do
   else
     f="$(cmd_of "$l")"
   fi
-  eval "FULL_$l=\"\$f\""
+  eval "FULL_${l//-/_}=\"\$f\""
 done
-full_of() { eval "printf '%s' \"\$FULL_$1\""; }
+full_of() { local v="${1//-/_}"; eval "printf '%s' \"\$FULL_$v\""; }
 
 # run: start the commands detached, so a run longer than one Bash call survives it, and
 # wait on it. An identical run already going is waited on, never started a second time.
 if [ "$CMD" = run ]; then
-  D="$RUNS/$ID"
+  D="$RUNS/$H-$ID"
   KEY="$( { pwd -P; echo "$PARALLEL $REUSE $RERUN"; for l in $LABELS; do echo "$l=$(cmd_of "$l")"; done; } | git hash-object --stdin)"
   if [ -f "$D/pid" ] && [ ! -f "$D/rc" ] && kill -0 "$(cat "$D/pid")" 2>/dev/null; then
     [ "$(cat "$D/key" 2>/dev/null)" = "$KEY" ] \
@@ -160,7 +167,7 @@ if [ "$CMD" = run ]; then
   await_run "$ID"
 fi
 
-log_of() { printf '%s/ck-%s-%s.log' "$TMP" "$ID" "$1"; }
+log_of() { printf '%s/ck-%s-%s-%s.log' "$TMP" "$H" "$ID" "$1"; }
 
 S0="$(state)"
 RESULT=""   # "<label>:<PASS|FAIL|REUSED|SKIPPED>" words
