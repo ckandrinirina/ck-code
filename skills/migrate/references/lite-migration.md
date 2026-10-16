@@ -191,7 +191,7 @@ Every target file comes from
 | lite section | v7 destination |
 |---|---|
 | intro paragraph | `overview.md` → `## Vision` |
-| `## Stack` | `tech-stack.md` → `## Overview` table (version into `Version`; the `— verified <date>` stamp dropped). Idiom bullets under a line (ck-code-lite 1.1.1+) → that technology's entry under `## [Component/Layer Name]`, verbatim, as sub-bullets |
+| `## Stack` | `tech-stack.md` → `## Overview` table (version into `Version`; every stamp lite writes is dropped: `— verified <date>`, a trailing `· idioms unverified`, and `— unverified` on a line with no version — an unversioned line keeps its name and gets `Version` = `-`). Idiom bullets under a line (ck-code-lite 1.1.1+) → that technology's entry under `## [Component/Layer Name]`, verbatim, as sub-bullets |
 | `## Commands` | `dev-guide.md` → `## Setup` / `## Running` / `## Testing`; `test-one` is the "run a subset" line under `## Testing` |
 | `## Folder structure` | `folder-structure.md` → `## Directory Tree` |
 | `## Decisions` | `overview.md` → `## Key Design Decisions` |
@@ -203,8 +203,15 @@ Every target file comes from
 
 | lite path | v7 destination |
 |---|---|
-| `docs/design-system/` (`index.md`, `manifest.json`, `cards/`) | `git mv` to `docs/architecture/design-system/` unchanged — the cache format is identical by contract ([`design-system.md`](../../../references/design-system.md) § Cache layout). `manifest.json` `tokensPath` already names the repo-relative token file, so it carries over as-is |
+| `docs/design-system/` (`index.md`, `manifest.json`, `cards/`) | `git mv` to `docs/architecture/design-system/` — the cache format is identical by contract ([`design-system.md`](../../../references/design-system.md) § Cache layout), with one edit: `index.md`'s `## Off-ramp` is rewritten (see below). `manifest.json` `tokensPath` already names the repo-relative token file, so it carries over as-is |
 | `docs/design-brief.md` | stays where it is. With no `docs/architecture/design-system/`, it is ck-code's no-spec pending marker ([§ Pending link](../../../references/design-system.md#pending-link)) |
+
+After the `git mv`, rewrite the `## Off-ramp` section of `docs/architecture/design-system/index.md`:
+lite's text points at `docs/design-system/` and a `## Design` line that no longer exist. Replace
+its body with ck-code's wording — "Delete `docs/architecture/design-system/` and run
+`/ck-code:team --regenerate`. Nothing else in the project references the design system." —
+the same text [`architecture-templates.md`](../../design/references/architecture-templates.md)
+§ `design-system/index.md` generates. No other line of `index.md` changes.
 
 After the move, the report names `/ck-code:team --regenerate` when a design system came across —
 that generates `guide-design-system`, which is how UI stories pick up the fidelity rules.
