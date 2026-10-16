@@ -420,10 +420,11 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **Story-id completion** | terminal | Typing `10-` in the prompt offers the plan's unfinished stories `10-01 Session assembler …` |
 | **One command list** | everywhere | With ck-code-lite installed too, a ck-code project hides `ck-code-lite:*` from the typeahead, and a lite project hides `ck-code:*` but `migrate`, `guide` and `init`. A hidden command still runs when typed; the list follows a `migrate` or `design` that changes the project's kind |
 | **Hand-off across `/clear`** | everywhere | The last `/ck-code:*` command run before a `/clear` is given to the next conversation once, within 6 hours |
+| **Update check** | toast + band | When the marketplace serves a newer ck-code than the one loaded, one toast per new version and a band row until you update: `▸ ck-code 7.20.0 is out (you have 7.17.0) · /plugin update ck-code@ck-marketplace, then restart`. Checked at most every 6 hours (the answer is cached), never for a `--plugin-dir` checkout, and never under `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` or `CK_UPDATE_CHECK=off` |
 | **Compact after a wave run** | everywhere | Once two or more story builders have been dispatched since the last compaction, the first turn that ends cleanly with no builder still running and no story left `in-progress` compacts the session — background builders included, whose run ends in a later turn — between turns (same as `/compact`, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command). Skipped after an interrupt or an error, while a story is held, or once you have typed the next prompt. A toast says it happened |
 
-Six settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
-parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, `cost_guard`, `theme`, all on by default. The rest costs nothing until
+Seven settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
+parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, `cost_guard`, `theme`, `update_check`, all on by default. The rest costs nothing until
 you use it. `--safe-mode` starts a session with no mod at all (and none of your other
 customizations).
 
