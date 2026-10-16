@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.19.0] — 2026-10-16
+
+### Added
+- **build**: QUICK route — a cosmetic `S` story (a label, copy, style, token, icon or constant in at most three named files, no new behaviour) is dispatched with `Route: QUICK` on the fast tier; the builder skips the expert skills, the SOLID write-up and the refactor scans, the team gate is not asked, and S5 verifies with one `ck-qa --reuse` line in place of the QA agent. A test asserting the old value still goes red first, every QA command still runs, the manual gate is one or two steps, and the builder steps up to LEAN by itself (returning `route: LEAN`) when the diff passes three files or 40 lines or needs a behaviour test. `--quick` asks for it (still checked), `--full` refuses it; never in PARALLEL MODE or Bug-Fix Mode.
+- **ck-headless**: lists the e2e setups that open a window in front of the user (`headless: false`, `devtools: true`, `--headed`/`--ui`/`--debug`, `PWDEBUG=1`, `cypress open`, an Electron suite whose app or launch ignores `E2E_HEADLESS`). `build` runs it before dispatch and converts every hit without asking — the single-story builder in its own `test(e2e)` commit before RED, PARALLEL MODE through one conversion agent on `$TARGET` before the first wave. Recipes in `references/background-tests.md`; `ck-headless: allow` opts a line out.
+
+### Changed
+- **ck-qa**: every command runs with `E2E_HEADLESS=1` and without `PWDEBUG`.
+- **qa-validator**, **story-cycle**: a test that opens a window in front of the user is a QA failure; new e2e tests are written background-first.
+- **ck-code → ck-code-lite redirect**: carries `--quick` and `--full` with the `T-NN`.
+
 ## [7.18.0] — 2026-10-16
 
 ### Added
