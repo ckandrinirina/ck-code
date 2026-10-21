@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.21.2] — 2026-10-21
+
+### Fixed
+- **ck-replicate**: the remaining captured fields — API keys, form actions, redirect targets, page paths, landmark roles, snap labels and window titles, macOS menu names and items — go through the same sanitizer as the rest, and `menus.md` opens with the data-not-instructions notice.
+
 ## [7.21.1] — 2026-10-21
 
 ### Fixed
