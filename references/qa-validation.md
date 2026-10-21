@@ -158,6 +158,14 @@ existing iteration cap of 3, never a new gate type:
 
 Rules and lookup order: [`design-system.md`](design-system.md) § Fidelity rules.
 
+## Replica fidelity (conditional)
+
+**Skip entirely** unless the story's acceptance criteria cite an `S-NN` from a
+`docs/replica/<slug>/REPLICA.md`. Then one ordinary finding when the story's
+`## Implementation Summary` carries no `Fidelity S-NN:` line — the
+[fidelity loop](replicate.md#fidelity-loop) never ran — and one per difference that line
+lists as remaining where a replica token or component would have fixed it.
+
 ## Rules
 
 - **Iteration cap is 3.** Never silently continue past iteration 3 —

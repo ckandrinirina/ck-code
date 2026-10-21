@@ -343,6 +343,12 @@ either the surface that exercises it belongs in an earlier epic, or the check be
 story's automated tests, which may hit the API directly. Manual verification is
 click-and-look; only the test suite talks to the API by hand.
 
+**Replicated screens.** When a feature doc lists `S-NN` screens from a
+`docs/replica/<slug>/REPLICA.md`, every screen gets at least one story whose acceptance
+criteria cite it, and the first UI story materializes the replica's `## Tokens`
+([`replicate.md` § Planning from a replica](../../references/replicate.md#planning-from-a-replica)).
+A screen left without a story is named in the Phase 6 summary.
+
 **Sizing rubric (S or M only, single-dispatch):**
 
 - **M** — a self-contained concern (one feature, component, or vertical slice with real logic). The default.

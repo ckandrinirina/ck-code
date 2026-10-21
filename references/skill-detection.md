@@ -30,7 +30,10 @@ largest avoidable latency in `build`/`fix` Phase 2):
 `ci/`, `deploy/`; `configuration.md` for config-file changes;
 `design-system/index.md` for stories touching UI files (components, styles, themes,
 layout) — when that file is absent the project has no design system and nothing is read,
-see [`design-system.md`](design-system.md).
+see [`design-system.md`](design-system.md); `docs/replica/<slug>/REPLICA.md` (its `## Tokens`,
+`## Components` and the cited rows of `## Screens`) plus the cited screens' reference
+screenshots, for a story whose acceptance criteria cite an `S-NN` — see
+[`replicate.md`](replicate.md).
 
 **Fallback when the feature doc is unavailable** — the `Docs` cell is `—` or the file
 is missing: read `folder-structure.md` + `_shared.md` only, and tell the user to run

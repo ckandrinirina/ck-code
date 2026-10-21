@@ -298,6 +298,14 @@ A green 6.3, including a green `--rerun`, is stamped on the code state under the
 `test=` command, so Phase 7 reads it instead of running the suite again on the same tree. **Delegated, 6.3 folds
 into Phase 7** (see there).
 
+### 6.4 Replica fidelity (UI stories citing an `S-NN` only)
+
+When the acceptance criteria cite a screen of a `docs/replica/<slug>/REPLICA.md`, run
+[`replicate.md` § Fidelity loop](../../../references/replicate.md#fidelity-loop) now — shoot,
+diff, compare, one fix pass, record the `Fidelity S-NN:` line. Its fix pass changes code after
+6.3's green, so re-run the same 6.3 command through `ck-qa run EE-SS --rerun` before Phase 7.
+No cited screen → skip, silently.
+
 ---
 
 ## PHASE 7: QA VALIDATION

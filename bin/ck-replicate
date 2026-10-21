@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-replicate — see scripts/ck-replicate.mjs.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec node "$here/../scripts/ck-replicate.mjs" "$@"

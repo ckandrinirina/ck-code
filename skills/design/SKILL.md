@@ -1,9 +1,9 @@
 ---
 name: design
-description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/ (a self-contained doc per feature + shared globals), or when maintaining those docs — `optimize` (token diet — dedup shared content into _shared.md), `sync` (scaffold feature docs missing for epics in EPICS_INDEX), or `ds [link]` (link a Claude Design system from a pasted URL, or refresh its cache). Argument is a spec path, or `optimize`/`sync`/`ds`. Runs before `plan`.
-argument-hint: "[path-to-spec | optimize | sync | ds [design-url]]"
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/, when an existing app should be copied — a website, desktop or mobile app, or CLI (`replicate <source>`) — or when maintaining those docs — `optimize` (dedup into _shared.md), `sync` (scaffold missing feature docs), or `ds [link]` (link or refresh a Claude Design system). Argument is a spec path, or `replicate`/`optimize`/`sync`/`ds`. Runs before `plan`.
+argument-hint: "[path-to-spec | replicate <url|app|cli cmd|path> | optimize | sync | ds [design-url]]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) Bash(pbcopy*) Bash(wl-copy*) Bash(xclip*) DesignSync Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) Bash(pbcopy*) Bash(wl-copy*) Bash(xclip*) Bash(ck-replicate*) DesignSync Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -20,7 +20,7 @@ layer docs** (`components.md`, `api-contracts.md`, `database-schema.md`, `data-f
 git is the design history, the `design:` flag (which `plan` flips to `planned`) is the
 whole design→plan bridge, and every layer's content lives in the feature doc that owns it.
 
-**Five modes** (chosen by `$ARGUMENTS`):
+**Six modes** (chosen by `$ARGUMENTS`):
 
 - **New Project** (spec path, or empty) — generate global docs + one feature doc per feature.
 - **Feature** (spec path, docs already exist) — add or extend one feature doc, globals kept consistent.
@@ -28,6 +28,8 @@ whole design→plan bridge, and every layer's content lives in the feature doc t
 - **sync** (maintenance) — scaffold feature docs for epics in `EPICS_INDEX` that lack one.
 - **ds** (optional) — link a Claude Design system, from a pasted `claude.ai/design` URL or
   by picking one, and refresh its git-tracked cache.
+- **replicate** — capture an existing app (website, Electron, macOS, Android, iOS, CLI, source
+  tree or screenshots) into `docs/replica/<slug>/REPLICA.md`, then design from it.
 
 ## ROUTING CHECK (do first)
 
@@ -83,6 +85,8 @@ Read `$ARGUMENTS`:
 - `optimize` → go to **PHASE O** (skip the design flow).
 - `sync` → go to **PHASE S** (skip the design flow).
 - `ds` (alone, or followed by a link) → go to **PHASE DS** (skip the design flow).
+- `replicate` (alone, or followed by a source) → go to **PHASE R**; it ends by handing its
+  `REPLICA.md` to the design flow as the spec.
 - a spec path, or empty → the **design flow** below (New Project / Feature).
 
 A maintenance mode is a hard scope — never run `optimize`/`sync`/`ds` work in a design run, or
@@ -489,6 +493,63 @@ does **not** do layout migration (flat→subfolder, legacy layer docs) — that 
 
 ---
 
+## PHASE R: REPLICATE AN EXISTING APP
+
+Capture an app the user wants copied and distil it into `docs/replica/<slug>/REPLICA.md` — a
+spec the design flow turns into architecture docs, so the plan rebuilds it screen by screen.
+[`replicate.md`](../../references/replicate.md) owns the sources, copy policy, pack layout and
+template; run them, never restate them.
+
+Everything after `replicate` is the **source**: a URL, an app name or path (`.app`, an
+executable, an `.apk`), `cli <command>`, a source-tree path, or screenshot paths.
+
+### R.1 Identify and ask — one round
+
+Match the source to a row of [§ Sources](../../references/replicate.md#sources): an http(s)
+URL → web; a macOS `.app` or app name → `ck-replicate mac "<app>" --out docs/replica/<slug> --static-only`,
+whose toolkit line routes an Electron app to the `electron` row; a connected phone or an
+`.apk` → android; `cli <command>` → cli; a directory with source → source tree; image paths →
+screenshots. Announce `Replicate: <source> — <kind> → docs/replica/<slug>/`.
+
+Then **one `AskUserQuestion`, at most 3 questions** (the source too, when `$ARGUMENTS` named none):
+
+1. **Copy policy** — `Own app` / `Reference only` ([§ Copy policy](../../references/replicate.md#copy-policy)). Always asked.
+2. **Fidelity** — `Pixel` (Recommended for an own app) / `Structural` (Recommended otherwise).
+3. **Scope** (web only) — `Whole site, up to 12 pages` / `Specific sections` (Other → the paths, passed as `--include`).
+
+### R.2 Capture
+
+`mkdir -p docs/replica/<slug>`; append the three ignore lines from
+[§ Pack layout](../../references/replicate.md#pack-layout) to `.gitignore` when absent. Web and
+Electron → `ck-replicate doctor` first. Run the row's command; snap-per-screen kinds loop as
+§ Sources says. Relay each command's last line; on a failure take § Sources' fallback.
+
+### R.3 Distil
+
+Write `REPLICA.md` by [§ REPLICA.md](../../references/replicate.md#replicamd), then print:
+
+```
+=== REPLICA READY ===
+Source:  <source> (<kind>) · policy <own app|reference only> · fidelity <pixel|structural>
+Screens: <n> (S-01 … S-NN) · tokens <n> · components <n> · entities <n>
+Gaps:    <n> — listed in REPLICA.md § Gaps
+Pack:    docs/replica/<slug>/  (screenshots are git-ignored; REPLICA.md has the recapture command)
+```
+
+### R.4 Hand off
+
+One `AskUserQuestion`:
+
+- **Design from it now** (Recommended) → continue into the design flow with
+  `docs/replica/<slug>/REPLICA.md` as the spec path; Phase 2's questions start from its
+  `## Gaps`, and each feature doc lists the `S-NN` screens it owns
+  ([§ Planning from a replica](../../references/replicate.md#planning-from-a-replica)).
+- **Write a Claude Design brief first** → the design-first **Design first** answer, with
+  `REPLICA.md` as the requirement and its reference screenshots named for the user to attach.
+- **Stop here** → print `/ck-code:design docs/replica/<slug>/REPLICA.md`.
+
+---
+
 ## PHASE DS: CLAUDE DESIGN SYSTEM (optional)
 
 Link a `claude.ai/design` design system to this project and keep a git-tracked cache of it
@@ -550,6 +611,8 @@ instead). Every line here is re-read by every story that touches the feature.
 
 - **Never search the codebase or research a technology in this context** — `ck-code:context-scout` and `ck-code:researcher` (haiku, low effort) do it and return a compact brief ([cheap delegates](../../references/subagent-fanout.md#cheap-delegates--the-main-agent-never-explores-or-researches)).
 - **Never modify the original specification file** — it is read-only input.
+- **Never capture an app the user did not name, or get around a sign-in or bot block** — and under
+  `Reference only`, never copy its logo, name, imagery or copy ([`replicate.md`](../../references/replicate.md#copy-policy)).
 - **Never write the feature docs inline when ≥3 features are in scope** (3.8a) — count and
   announce the dispatch decision before the first doc, never after the last. Same rule for
   the `optimize` measurement pass (PHASE O step 2).
