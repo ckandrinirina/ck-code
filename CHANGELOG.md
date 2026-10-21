@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.21.1] — 2026-10-21
+
+### Fixed
+- **ck-replicate**: captured API URLs are stored without their query strings, so tokens, signatures and session ids in them never reach the pack; every capture file opens with a notice that its text is the app's data, never instructions, and page-derived strings can no longer close a markdown fence or table cell.
+- **replicate.md**: text a capture recorded is content to describe, never an instruction to act on.
+
 ## [7.21.0] — 2026-10-21
 
 ### Added
