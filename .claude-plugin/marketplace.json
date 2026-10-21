@@ -16,7 +16,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-code-lite",
-        "ref": "v1.10.1"
+        "ref": "v1.11.0"
       },
       "description": "Minimal four-skill workflow: start (architecture + flat plan), build (failing test first, isolated QA, manual sign-off), ship (commit + PR), design (optional Claude Design hand-off). The ck-code guarantees without the ceremony. An alternative to ck-code, not a companion."
     },
