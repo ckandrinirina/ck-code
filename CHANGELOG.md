@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.21.0] — 2026-10-21
+
+### Added
+- **design**: `replicate <source>` copies an existing app — a website or web app (even behind a sign-in), an Electron or native macOS app, an Android or iOS Simulator screen, a CLI, a source tree or plain screenshots — into `docs/replica/<slug>/REPLICA.md`: screens, flows, captured tokens, components, data and gaps, under an own-app or reference-only copy policy. It then hands `REPLICA.md` to the design flow as the spec.
+- **ck-replicate**: a zero-dependency capture engine (Node ≥ 22 + an installed Chrome over the DevTools Protocol; osascript/adb/simctl for native) — screenshots, computed tokens, page outlines and API shapes, plus `shot` and `diff` for the fidelity loop. Byte-identical to ck-code-lite's `ck-lite-replicate`; `plugin-doctor` fails a drift.
+- **plan / build**: every replicated screen gets a story citing its `S-NN`; such a story builds to the reference and runs the fidelity loop once (story-cycle 6.4) — shoot, diff, one fix pass, a `Fidelity S-NN:` line in its summary. QA flags a cited screen never compared.
+
+### Changed
+- **migrate**: `lite-migration.md` maps ck-code-lite 1.11.0's `docs/replica/` — it stays in place, same pack.
+
 ## [7.20.1] — 2026-10-16
 
 ### Fixed
