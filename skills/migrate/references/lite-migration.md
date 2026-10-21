@@ -205,6 +205,7 @@ Every target file comes from
 |---|---|
 | `docs/design-system/` (`index.md`, `manifest.json`, `cards/`) | `git mv` to `docs/architecture/design-system/` — the cache format is identical by contract ([`design-system.md`](../../../references/design-system.md) § Cache layout), with one edit: `index.md`'s `## Off-ramp` is rewritten (see below). `manifest.json` `tokensPath` already names the repo-relative token file, so it carries over as-is |
 | `docs/design-brief.md` | stays where it is. With no `docs/architecture/design-system/`, it is ck-code's no-spec pending marker ([§ Pending link](../../../references/design-system.md#pending-link)) |
+| `docs/replica/<slug>/` (ck-code-lite 1.11.0+) | stays where it is — ck-code reads the same path and pack ([`replicate.md`](../../../references/replicate.md) § Pack layout). Its `.gitignore` lines carry over. Task criteria citing `S-NN` move verbatim into story criteria, which is how ck-code finds the pack; the `- Replica:` line under lite's `## Design` is not copied |
 
 After the `git mv`, rewrite the `## Off-ramp` section of `docs/architecture/design-system/index.md`:
 lite's text points at `docs/design-system/` and a `## Design` line that no longer exist. Replace
