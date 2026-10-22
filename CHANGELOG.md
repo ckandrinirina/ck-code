@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.23.0] — 2026-10-22
+
+### Changed
+- **build**: CMake QA runs `ctest -j "${CK_QA_JOBS:-4}"` once a parallel run has passed like a serial one, recorded once per project in `dev-guide.md` `## Testing` (82 s → 10 s on a 590-test suite).
+- **migrate**: `lite-migration.md` maps ck-code-lite's `test-e2e` lines to `dev-guide.md` `## Testing`.
+
+### Added
+- **ck-qa**: exports `CK_QA_JOBS`, the run's share of the cores, for a command that asks for it.
+
 ## [7.22.0] — 2026-10-22
 
 ### Added
