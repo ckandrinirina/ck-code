@@ -18,10 +18,20 @@ single-story QA uses it too:
 | `package.json` | the declared `test`, `lint`, and typecheck scripts — typically `npm run test`, `npx eslint .`, `npx tsc --noEmit`, `npx prettier --check .` |
 | `pyproject.toml` | `pytest`, plus the declared lint/format/type checks — typically `ruff check .`, `black --check .`, `mypy .` |
 | `go.mod` | `go test ./... && go vet ./...` |
-| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)) |
+| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)); with registered tests, `ctest --test-dir build --output-on-failure -j "${CK_QA_JOBS:-4}"` ([§ Parallel ctest](#parallel-ctest)) |
 
 A project's `guide-conventions` skill overrides this table when it names canonical commands.
 No manifest match → ask once and reuse.
+
+### Parallel ctest
+
+`ctest` runs one test at a time unless given `-j`, and a Catch2 or GoogleTest suite registers
+hundreds of small tests: measured on a 590-test suite, 82 s serial against 10 s with `-j 8`,
+same result. `CK_QA_JOBS` is the run's share of the cores, set by `ck-qa`. Once per project,
+when `docs/architecture/dev-guide.md` `## Testing` names no `ctest` line yet, run the suite once
+with `-j` and once without: record the `-j` command there only when both pass, otherwise the
+serial one with the reason (tests sharing a file, port or directory). Later stories use the
+recorded line. Never weaken a test to make it parallel.
 
 ## Affected tests — the story-level test command
 

@@ -192,7 +192,7 @@ Every target file comes from
 |---|---|
 | intro paragraph | `overview.md` → `## Vision` |
 | `## Stack` | `tech-stack.md` → `## Overview` table (version into `Version`; every stamp lite writes is dropped: `— verified <date>`, a trailing `· idioms unverified`, and `— unverified` on a line with no version — an unversioned line keeps its name and gets `Version` = `-`). Idiom bullets under a line (ck-code-lite 1.1.1+) → that technology's entry under `## [Component/Layer Name]`, verbatim, as sub-bullets |
-| `## Commands` | `dev-guide.md` → `## Setup` / `## Running` / `## Testing`; `test-one` is the "run a subset" line under `## Testing` |
+| `## Commands` | `dev-guide.md` → `## Setup` / `## Running` / `## Testing`; `test-one` is the "run a subset" line and each `test-e2e` line the end-to-end line under `## Testing` |
 | `## Folder structure` | `folder-structure.md` → `## Directory Tree` |
 | `## Decisions` | `overview.md` → `## Key Design Decisions` |
 | `## Conventions` | `_shared.md` → `## Conventions` |

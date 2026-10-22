@@ -696,13 +696,13 @@ assert_contains "ck-qa run --rerun: the full command is stamped on the new state
   "$(QA run 01-04 --reuse test='echo full; false')" "test: REUSED"
 assert_eq "ck-qa since: the record moves to the latest run" "$(QA state)" "$(git -C "$QA_REPO" rev-parse "$(QA since 01-04 test)^{tree}")"
 QSL="$QA_TMP/ck-cpu-slots"; mkdir -p "$QSL/1"; sleep 4 & QHOLD=$!; echo "$QHOLD" >"$QSL/1/pid"
-QA_Q="$(CK_QA_SLOTS=1 CK_QA_WAIT=1 QA run 01-05 b='echo "$CMAKE_BUILD_PARALLEL_LEVEL" >"'"$QA_TMP"'/share"')"
+QA_Q="$(CK_QA_SLOTS=1 CK_QA_WAIT=1 QA run 01-05 b='echo "$CMAKE_BUILD_PARALLEL_LEVEL $CK_QA_JOBS" >"'"$QA_TMP"'/share"')"
 assert_contains "ck-qa slots: a run waits while every CPU slot is held" "$QA_Q" "queued for a CPU slot"
 assert_contains "ck-qa slots: a reused command needs no slot" \
   "$(CK_QA_SLOTS=1 CK_QA_WAIT=1 QA run 01-04 --reuse test='echo full; false')" "test: REUSED"
 wait "$QHOLD"
 assert_contains "ck-qa slots: the queued run reports its wait" "$(CK_QA_WAIT=20 QA wait 01-05)" "for a CPU slot"
-assert_eq "ck-qa slots: a build tool gets the slot's share of the cores" "$(getconf _NPROCESSORS_ONLN)" "$(cat "$QA_TMP/share")"
+assert_eq "ck-qa slots: a build tool gets the slot's share of the cores" "$(getconf _NPROCESSORS_ONLN) $(getconf _NPROCESSORS_ONLN)" "$(cat "$QA_TMP/share")"
 mkdir -p "$QSL/1"; echo 999999 >"$QSL/1/pid"
 assert_contains "ck-qa slots: a dead holder's slot is taken back" "$(CK_QA_SLOTS=1 CK_QA_WAIT=10 QA run 01-06 t='true')" "ck-qa: PASS"
 assert_contains "ck-qa slots: a nested run uses its parent's slot" \
