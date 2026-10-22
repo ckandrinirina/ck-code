@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.22.0] — 2026-10-22
+
+### Added
+- **ck-qa**: one CPU queue per machine — every run with a command to run takes one of `CK_QA_SLOTS` slots (default cores ÷ 8, at least 1; `0` turns it off), shared with ck-code-lite's `ck-lite-qa` and every worktree, so parallel worktree builds take turns instead of each using every core. Inside a slot `CMAKE_BUILD_PARALLEL_LEVEL`/`CARGO_BUILD_JOBS` (when unset) get the slot's share of the cores, an installed `ccache` serves every worktree's cold C/C++ build (`CCACHE_BASEDIR` at the main checkout), and commands run under `nice -n 10` (`CK_QA_NICE`). A queued run says so in its `RUNNING` line and result; a `REUSED` command takes no slot and a nested run uses its parent's.
+
+### Changed
+- **build**: an inner-loop test run that compiles first (CMake, cargo, Swift, Gradle, Xcode, .NET) and the per-GREEN typecheck go through `ck-qa`, so they wait for a CPU slot too.
+- **plugin-doctor**: fails when the `ck-cpu-slots` block differs between `ck-qa.sh` and `ck-lite-qa`.
+
 ## [7.21.2] — 2026-10-21
 
 ### Fixed
@@ -658,7 +667,6 @@ change — v6 projects need no migration.
 ### Changed
 - Stale "v5" qualifiers describing current behaviour read as v6; duplicated rationale in `version-gate.md`, `migrate`, `spec` templates, `design` and `reuse-first.md` trimmed to one statement each.
 
-
 ## [6.14.1] — 2026-09-14
 
 ### Added
@@ -835,7 +843,6 @@ change — v6 projects need no migration.
 ### Changed
 - **references/native-commands.md**: `/code-review` now documents its effort levels (`low`…`max`, `ultra`), the `/review` alias, `--comment`, and when to reach for each before `ship`; adds `/tasks` as the way to verify a fan-out's real model and effort tiers, `/loop`, `/effort`'s new per-model default, and the built-in "Concise" output style.
 - **references/subagent-fanout.md**: states the model precedence chain — per-spawn `model:` > the registered agent's frontmatter > `CLAUDE_CODE_SUBAGENT_MODEL` > the session model — since the env var is now a default rather than an override, and points at `/tasks` for verifying a wave.
-
 
 ## [6.9.0] — 2026-08-11
 
