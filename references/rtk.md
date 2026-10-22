@@ -106,7 +106,9 @@ read-only QA agent's contract.
 This is RTK-compatible, checked with `rtk hook check`: a redirect is not a pipe, so
 `npm run test > log` becomes `rtk npm run test > log` and the log holds the filtered output,
 while `tail -n 60 <log>` becomes `rtk read <log> --tail-lines 60`. A fast targeted run of the
-story's own test files may run bare. The rule is for the commands that cost minutes.
+story's own test files may run bare — unless it compiles first (CMake, cargo, Swift, Gradle,
+Xcode, .NET) or is a package-wide typecheck: those go through `ck-qa` even in the inner loop,
+so they take a CPU slot (below). The rule is for the commands that cost minutes.
 
 ### QA runs go through `ck-qa`
 
@@ -130,6 +132,17 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   `target/`, one CMake build tree). Those stay one chained `label='a && b'` command.
 - A command that edits the tree (a formatter, a snapshot update) prints a `WARN` and is never
   stamped. Fix the command rather than trusting that pass.
+- **One CPU queue per machine.** Every `ck-qa` and `ck-lite-qa` run that has a command to
+  run takes one of `CK_QA_SLOTS` slots first (default cores ÷ 8, at least 1; `0` turns the
+  queue off), shared by every project and worktree. Three worktrees building at once queue
+  instead of each starting one job per core: a build that saturates the cores finishes no
+  sooner beside two others, and the first agent gets its result about 3× earlier. Inside a
+  slot `CMAKE_BUILD_PARALLEL_LEVEL` and `CARGO_BUILD_JOBS`, when unset, get the slot's share
+  of the cores; an installed `ccache` becomes the CMake compiler launcher with
+  `CCACHE_BASEDIR` at the main checkout, so a worktree's cold C/C++ build reuses what any
+  checkout already compiled; commands run under `nice -n 10` (`CK_QA_NICE`). A `REUSED`
+  command takes no slot, and a run nested in one uses its parent's. A queued run says so in
+  its `RUNNING` line and its result — the wait is expected, never a stall to work around.
 - **A re-run checks only what is left.** Every command that ran on an unchanged tree records
   its last run for (id, label, directory): a snapshot commit of that code state and the full
   command. `ck-qa since <id> <label>` prints the snapshot, which is the ref a runner's

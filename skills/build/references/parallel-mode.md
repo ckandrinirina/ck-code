@@ -394,6 +394,7 @@ changes a dependency must not be able to mutate another worktree mid-run.
 | npm / yarn | pnpm's global store — `pnpm install` links a per-worktree `node_modules` over one immutable content store | One `node_modules` symlinked into every worktree |
 | Rust | `CARGO_TARGET_DIR=<absolute shared path>` — cargo file-locks it, so it is correct; concurrent builds then serialize on that lock, so measure before adopting | — |
 | Python | `UV_CACHE_DIR` / `PIP_CACHE_DIR` pointed at one shared path | One `.venv` shared across worktrees |
+| C / C++ (CMake) | `ccache` when installed — `ck-qa` makes it the compiler launcher with `CCACHE_BASEDIR` at the main checkout, so every worktree's cold build hits one cache; nothing to put in the prompt | One `build/` tree shared across worktrees |
 
 **Gitignored config goes through `.worktreeinclude`.** A worktree also lacks every
 gitignored file the suite reads, such as `.env` or local credentials, so each story's QA fails

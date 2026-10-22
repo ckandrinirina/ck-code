@@ -63,7 +63,10 @@ commands, never from skipping a check:
   by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,
   `ruff check app/x.py`). Never run a package-wide lint and `grep` it for one file: measured
   at 60–120 s a call, it ran up to seven times in one story. A package-wide typecheck runs at
-  most once per GREEN subtask, logged, and the build never runs in the inner loop. The suite,
+  most once per GREEN subtask, through `ck-qa`, and the build never runs in the inner loop. A
+  test run that compiles first (CMake, cargo, Swift, Gradle, Xcode, .NET) goes through `ck-qa`
+  too, so worktrees building at once share the machine's CPU slots instead of each taking every
+  core ([§ QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)). The suite,
   lint, typecheck and build run once through `ck-qa`, at 6.3 and in QA (7), where regressions
   are caught. A linter that takes no file paths waits for 6.3/7 too.
 - **Check the story's scope, then only what is left.** The 6.3/7 suite and lint run at
