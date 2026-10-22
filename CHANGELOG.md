@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.24.1] — 2026-10-22
+
+### Fixed
+- **ck-replicate** 1.1.1: the local card server behind `shot` serves only this run's random token path, checks the `Host` header, serves only asset types, and checks containment on real paths, so a symlink under `--root` can no longer expose a file outside it.
+
 ## [7.24.0] — 2026-10-22
 
 ### Changed
