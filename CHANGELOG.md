@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.24.0] — 2026-10-22
+
+### Changed
+- **build**: a UI story with a linked Claude Design now runs a Design fidelity loop after GREEN (story-cycle 6.4) — the mapped `Screens` card and the built screen are shot at the same viewport, diffed and compared, with up to 3 fix passes; the `Design fidelity` line (mismatch before → after, card map, what remains) goes into the Implementation Summary. Until now the build read a card and nothing checked the rendered result.
+- **design-system**: the fidelity rules now say exactly what "exact" means — the card is the spec (structure, element order, class names, text, icons, every CSS value, every state and breakpoint); a card value with no token is ported verbatim instead of being rounded to a token or replaced by a library default; nothing added, nothing dropped. A design map (screen/component → card) is decided before any UI code. The contract's wording wins over an older copy in `index.md` or `guide-design-system`.
+- **QA**: Design fidelity adds three findings — an off-card value, a loop that never ran, a difference left after the 3 passes.
+- **spec / design brief**: § 8 asks Claude Design for screen cards drawn as the page itself (no frame, sample content, fluid 390–1440 px) so they compare pixel for pixel.
+
+### Added
+- **ck-replicate** 1.1.0: `shot` takes a local HTML file (served from a throwaway 127.0.0.1 server rooted at `--root`, so relative assets and fonts load) and an exact `--viewport <w>x<h>`.
+
 ## [7.23.0] — 2026-10-22
 
 ### Changed
