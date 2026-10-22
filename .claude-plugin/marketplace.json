@@ -25,7 +25,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-tools",
-        "ref": "v2.5.1"
+        "ref": "v2.6.0"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores, plus a band above the prompt with your 5-hour and weekly plan limits and pace. Coexists with ck-code."
     }
