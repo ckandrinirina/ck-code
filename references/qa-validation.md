@@ -151,12 +151,20 @@ existing iteration cap of 3, never a new gate type:
 1. **Hardcoded value** — a literal hex, `rgb()`, `px` font-size, `font-family`, radius, or
    spacing value in a changed UI file where `## Foundations` defines a token. Cite
    `file:line` and the token that should have been used.
-2. **Unread card** — a component implemented in this story that maps to an inventory card
+2. **Off-card value** — a visual value in a changed UI file that differs from the value its
+   mapped card declares for that element (a token rounded to, a library default kept). Cite
+   `file:line`, the card path and the card's value.
+3. **Unread card** — a component implemented in this story that maps to an inventory card
    whose cached source was never read. Its markup is unverified against its source.
-3. **Undeclared new component** — a UI component with no matching card and no line in the
+4. **Undeclared new component** — a UI component with no matching card and no line in the
    story's `## Unplanned Changes` explaining it.
+5. **Loop never ran** — no `Design fidelity` line in the story's `## Implementation Summary`:
+   the [Design fidelity loop](design-system.md#design-fidelity-loop) was skipped.
+6. **Remaining difference** — each difference that line lists as remaining, other than one
+   marked `(content)`. `fidelity: visual review only` is accepted only for a stack the loop
+   cannot shoot (not web, or no dev command).
 
-Rules and lookup order: [`design-system.md`](design-system.md) § Fidelity rules.
+Rules, lookup order and the loop: [`design-system.md`](design-system.md) § Fidelity rules.
 
 ## Replica fidelity (conditional)
 

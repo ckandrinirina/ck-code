@@ -29,8 +29,10 @@ largest avoidable latency in `build`/`fix` Phase 2):
 `dev-guide.md` for setup/build/run changes; `tech-stack.md` for `docker/`, `.github/`,
 `ci/`, `deploy/`; `configuration.md` for config-file changes;
 `design-system/index.md` for stories touching UI files (components, styles, themes,
-layout) — when that file is absent the project has no design system and nothing is read,
-see [`design-system.md`](design-system.md); `docs/replica/<slug>/REPLICA.md` (its `## Tokens`,
+layout), plus [`design-system.md`](design-system.md) § Component lookup order, § Design
+fidelity loop and § Fidelity rules — their wording wins over an older copy in `index.md` or
+`guide-design-system`; when `index.md` is absent the project has no design system and nothing
+is read; `docs/replica/<slug>/REPLICA.md` (its `## Tokens`,
 `## Components` and the cited rows of `## Screens`) plus the cited screens' reference
 screenshots, for a story whose acceptance criteria cite an `S-NN` — see
 [`replicate.md`](replicate.md).

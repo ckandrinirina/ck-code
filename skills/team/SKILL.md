@@ -518,10 +518,14 @@ Cached at `docs/architecture/design-system/`. Refresh with `/ck-code:design ds`.
 [the full ## Components table from index.md, verbatim]
 
 ## Before implementing a component
-[the three numbered steps from design-system.md § Component lookup order, verbatim]
+[the numbered steps from design-system.md § Component lookup order, verbatim]
+
+## After GREEN
+Run the Design fidelity loop of ck-code's `references/design-system.md` — shoot the card and
+the built screen, diff, fix up to 3 passes, record the `Design fidelity` line.
 
 ## Rules
-[the four rules from design-system.md § Fidelity rules, verbatim]
+[the rules from design-system.md § Fidelity rules, verbatim]
 ```
 
 The tables are copied **verbatim**, never summarized: this guide is what sits in context
