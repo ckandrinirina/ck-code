@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.24.2] — 2026-10-27
+
+### Changed
+- **migrate** (lite-migration): a ck-code-lite 1.15 `group:` tag now seeds the epic grouping ahead of the areas, one epic per group, so a lite plan's features migrate as epics. Untagged tasks are grouped as before.
+
 ## [7.24.1] — 2026-10-22
 
 ### Fixed
