@@ -3,7 +3,7 @@
 Field-by-field conversion of a **ck-code-lite** project (`docs/ARCHITECTURE.md`, the area
 docs its `## Areas` table lists under `docs/areas/`, and `tasks/PLAN.md`) into the ck-code
 **v7 layout**, directly. Read by `migrate` PHASE L only. Written against ck-code-lite 1.x;
-0.x projects simply have no `## Areas` and no `test-one`.
+0.x projects simply have no `## Areas` and no `test-one`, and plans before 1.15 no `group:`.
 
 The two plugins are alternatives, not companions — this is the one-way upgrade path.
 Nothing here converts v7 back to lite.
@@ -40,8 +40,10 @@ plan's numbers.
 
 ## Epic grouping
 
-A lite plan is flat; v7 requires epics. **Areas seed the grouping:** each `## Areas` row
-proposes one epic named after the area, holding every task whose `files:` fall under that
+A lite plan is flat; v7 requires epics. **Groups seed the grouping first:** each distinct
+`group:` value on the meta lines proposes one epic named after it, holding every task tagged
+with it, done ones included, in PLAN order. **Areas seed the rest:** for the tasks with no
+`group:`, each `## Areas` row proposes one epic named after the area, holding every task whose `files:` fall under that
 row's paths (a task spanning two areas goes to the one covering most of its files; a tie goes
 to the row listed first). Infer the rest from task titles and `files:` paths (tasks touching
 the same directory usually belong together), then present the
@@ -73,6 +75,7 @@ story key in [`data-model.md`](../../../references/data-model.md#story-file-the-
 | `T-NN` | `id` | `EE-SS` from the grouping. Record every pair in the ID map — `blocked_by` and the report both need it. |
 | Title | `title` | verbatim, no `Story EE-SS:` prefix |
 | (grouping) | `epic` | `EE`, matches the folder |
+| `group: auth` | `epic` | the epic seeded by that group (see Epic grouping); the slug itself becomes the epic slug, not a story key. Absent → the area or inferred grouping |
 | `todo` | `status` | `todo` |
 | `doing` | `status` | `in-progress` |
 | `done` | `status` | `done` |
