@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# ck-reclaim.sh — free the disk a linked worktree's build output holds, keeping its source.
+# ck-reclaim.sh — free the disk a linked worktree's build output and Docker containers hold,
+# keeping its source.
 #
 # A kept PARALLEL MODE worktree (held, conflicted, blocked) must keep its commits and
 # working tree, but its target/, node_modules/ and other rebuildable output can run to
 # several GB each — a Tauri target/ alone is often 5–20 GB. This deletes only directories
 # ck_build_dirs proves rebuildable (gitignored, no tracked file), and prints one line so
-# a caller's context stays small.
+# a caller's context stays small. The worktree's Docker containers and its own compose
+# project's volumes go too (ck-qa docker-free) — run it before removing a worktree as well.
 #
 # Usage:
 #   ck-reclaim.sh <worktree-path>…
@@ -20,7 +22,7 @@ CK_HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 . "$CK_HERE/lib/ck-common.sh"
 
 case "${1:-}" in
-  -h|--help|"") sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help|"") sed -n '4,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 esac
 
 rc=0
@@ -31,6 +33,7 @@ for wt in "$@"; do
     echo "ck-reclaim: $wt — not a linked worktree, refused (the main checkout's build cache is never touched)"
     rc=1; continue
   fi
+  "$CK_HERE/ck-qa.sh" docker-free "$wt"
   dirs=()
   while IFS= read -r d; do [ -n "$d" ] && dirs+=("$d"); done < <(ck_build_dirs "$wt")
   if [ "${#dirs[@]}" -eq 0 ]; then echo "ck-reclaim: nothing to free in $wt"; continue; fi

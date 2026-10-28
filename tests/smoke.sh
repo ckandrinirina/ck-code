@@ -710,6 +710,24 @@ assert_contains "ck-qa slots: a nested run uses its parent's slot" \
 assert_eq "ck-qa slots: every slot is freed after the run" "" "$(ls "$QSL")"
 rm -rf "$QA_REPO" "$QA_TMP"
 
+echo "=== ck-qa: leaves nothing that grows ==="
+QA_REPO="$(mktemp -d)"; QA_TMP="$(mktemp -d)"
+( cd "$QA_REPO" && git init -q && echo a >a.txt && git add a.txt \
+  && git -c user.email=s@s -c user.name=s commit -qm init )
+mkdir -p "$QA_TMP/ck-qa"
+# Old logs and records age out on a run; a fresh log and other tools' files stay.
+touch -t 202001010000 "$QA_TMP/ck-1-old-x.log" "$QA_TMP/ck-qa/oldstamp"
+touch "$QA_TMP/ck-macopt-other.log"; rm -f "$QA_TMP/ck-qa-pruned"
+QA run 09-09 t='true' >/dev/null
+assert_eq "ck-qa run: a log older than CK_QA_KEEP_DAYS is pruned" "no" "$([ -e "$QA_TMP/ck-1-old-x.log" ] && echo yes || echo no)"
+assert_eq "ck-qa run: an old stamp is pruned" "no" "$([ -e "$QA_TMP/ck-qa/oldstamp" ] && echo yes || echo no)"
+assert_eq "ck-qa run: this run's log is kept" "yes" "$(ls "$QA_TMP"/ck-*-09-09-t.log >/dev/null 2>&1 && echo yes || echo no)"
+assert_eq "ck-qa run: another tool's ck-* file is never pruned" "yes" "$([ -e "$QA_TMP/ck-macopt-other.log" ] && echo yes || echo no)"
+assert_contains "ck-qa docker-free: refuses the main checkout" "$(QA docker-free "$QA_REPO")" "not a linked worktree, refused"
+assert_not_contains "ck-qa run: CK_QA_DOCKER=0 prints no Docker line" "$( cd "$QA_REPO" && CK_QA_DOCKER=0 TMPDIR="$QA_TMP" ck-qa run 09-10 t='true' 2>&1 )" "Docker"
+rm -rf "$QA_REPO" "$QA_TMP"
+
+echo
 echo "=== ck-affected: only the tests a change can reach ==="
 # A workspace monorepo: backoffice and client both use a shared ui package; marketing uses nothing.
 AF="$(mktemp -d)"

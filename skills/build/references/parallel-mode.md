@@ -560,11 +560,13 @@ improvise a merge here, and do not write a story-id merge message — the shape 
 one every consumer uses. A fan-out branch is still checked out in its worktree, so remove
 that worktree first — each holds its own build output (a Rust/Tauri `target/` alone runs to
 several GB), and `-d` refuses a branch a worktree still holds. `--merged` is the gate; past
-it, `--force` discards untracked build output and nothing else:
+it, `--force` discards untracked build output and nothing else. `ck-reclaim` first, or the
+worktree's test containers and their volumes outlive it in the Docker VM:
 
 ```bash
 git branch --merged "$TARGET" --format='%(refname:short)' | grep -qx "<branch>" || echo "NOT MERGED — keep"
-git worktree remove --force "<path>"   # <path>: the branch's row in `git worktree list`
+ck-reclaim "<path>"                    # <path>: the branch's row in `git worktree list`
+git worktree remove --force "<path>"
 ```
 
 Then **regenerate the views once** on the target branch — every dispatched agent, worktree
@@ -621,8 +623,8 @@ main worktree and the worktrees of held, blocked or conflicted stories remain. `
 forgets directories already gone — it never deletes one — so a merged story's worktree still
 standing is a missed removal above: remove it now and say so. Each surviving worktree keeps its
 source and commits but not its rebuildable output: `ck-reclaim <path>…` deletes its gitignored
-build directories (`target/`, `node_modules/`, `dist/`, …) and prints one `freed` line to put in
-the report; a resume rebuilds them. Option 2 skips this — the user may want to run those
+build directories (`target/`, `node_modules/`, `dist/`, …) and its Docker containers, and prints
+one `freed` line to put in the report; a resume rebuilds them. Option 2 skips this — the user may want to run those
 branches as they stand. Then confirm no merged story branch is still standing — the merge step deleted
 each with `-d` as it landed, so `git branch --list 'story/*' 'fix/*'` must name only stories
 this report calls held, blocked, or conflicted. That is the only state a resume can read

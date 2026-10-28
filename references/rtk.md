@@ -143,6 +143,12 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   checkout already compiled; commands run under `nice -n 10` (`CK_QA_NICE`). A `REUSED`
   command takes no slot, and a run nested in one uses its parent's. A queued run says so in
   its `RUNNING` line and its result — the wait is expected, never a stall to work around.
+- **A run leaves nothing that grows.** Its logs and records age out after 7 days
+  (`CK_QA_KEEP_DAYS`). The Docker containers its commands created in this checkout, plus a
+  removed worktree's, are removed once stopped, with the volumes only they used; one
+  `Docker — removed …` line says so. One still running is listed in a `NOTE` and left alone.
+  `CK_QA_DOCKER=0` turns this off. `ck-qa docker-free <worktree>` (inside `ck-reclaim`)
+  removes all of a parked or removed worktree's containers.
 - **A re-run checks only what is left.** Every command that ran on an unchanged tree records
   its last run for (id, label, directory): a snapshot commit of that code state and the full
   command. `ck-qa since <id> <label>` prints the snapshot, which is the ref a runner's

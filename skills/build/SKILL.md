@@ -635,7 +635,7 @@ is the rest of this contract; these four are the traps it does not carry.
   branch, so the plan's level is never switched for it. `--epic NN` is the exception: it always
   orchestrates, dispatching even a lone remaining story solo (P4).
 - **Never cut a worktree for a one-story wave** — solo dispatch runs in the main checkout.
-- **Never leave a merged story's worktree standing** — remove it before `git branch -d`; `git worktree prune` deletes nothing. A worktree kept for a held, blocked or conflicted story is passed to `ck-reclaim`, which frees its build output and keeps its source.
+- **Never leave a merged story's worktree standing** — remove it before `git branch -d`, after `ck-reclaim` (or its test containers and volumes outlive it in the Docker VM); `git worktree prune` deletes nothing. A worktree kept for a held, blocked or conflicted story is passed to `ck-reclaim`, which frees its build output and Docker containers and keeps its source.
   Worktrees are for concurrency; without a peer they buy nothing and cost a cold install.
 - **Never build, test, lint, or read source in the orchestrator context** — it sees counts,
   names, statuses, SHAs, and structured returns only. Every implementation is a sub-agent.
