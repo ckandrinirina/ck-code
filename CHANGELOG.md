@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.25.0] — 2026-10-28
+
+### Added
+- **ck-qa**: a run leaves nothing that grows — its logs, stamps and run records age out after `CK_QA_KEEP_DAYS` (default 7), and the Docker containers its test commands created in this checkout (compose, testcontainers) are removed once stopped, with the volumes only they used; a removed worktree's stopped containers go too, a still-running one is listed in a `NOTE`. `CK_QA_DOCKER=0` turns the Docker part off. New `ck-qa docker-free <worktree>` and read-only `docker-orphans`. The block is byte-identical in ck-code-lite's `ck-lite-qa` and gated by plugin-doctor.
+- **doctor**: `docker` (containers of removed worktrees) and `qa logs` (≥ 1 GB in `$TMPDIR`) rows.
+
+### Changed
+- **ck-reclaim**: also removes the worktree's Docker containers and its own compose project's volumes; build P8 runs it before removing a merged worktree, so a worktree's test database no longer outlives it in the Docker VM.
+
 ## [7.24.2] — 2026-10-27
 
 ### Changed
