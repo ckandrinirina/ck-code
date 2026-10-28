@@ -794,7 +794,7 @@ check_disk() {
     kb="$(ck_kb_of "${wts[@]}")"; gb="$(awk -v k="$kb" 'BEGIN{printf "%.1f", k/1048576}')"
     if [ "$kb" -ge 1048576 ]; then
       row disk "${#wts[@]} linked worktree(s) hold $gb GB" WARN
-      [ "$QUIET" -eq 1 ] || note "merged: git worktree remove --force <path> · kept: ck-reclaim <path> (frees build output, keeps source)"
+      [ "$QUIET" -eq 1 ] || note "merged: ck-reclaim <path>, then git worktree remove --force <path> · kept: ck-reclaim <path> (frees build output and Docker containers, keeps source)"
     else
       row disk "${#wts[@]} linked worktree(s), $gb GB" OK
     fi
@@ -807,6 +807,22 @@ check_disk() {
     [ "$QUIET" -eq 1 ] || note "rebuildable — e.g. cargo clean in the crate dir; never deleted automatically"
   else
     row "build output" "$gb GB in this checkout" OK
+  fi
+  # Docker: a removed worktree's test containers keep their volumes in the Docker VM's disk,
+  # which never shrinks. ck-qa removes the stopped ones on its next run.
+  local orph n
+  orph="$("$SCRIPT_DIR/ck-qa.sh" docker-orphans 2>/dev/null)"
+  if [ -n "$orph" ]; then
+    n="$(printf '%s\n' "$orph" | grep -c .)"
+    row docker "$n container(s) of removed worktrees: $(printf '%s\n' "$orph" | awk '{printf "%s%s", (NR>1?", ":""), $1}')" WARN
+    [ "$QUIET" -eq 1 ] || note "docker rm -f -v <name>… frees them; their compose volumes: docker volume ls -f dangling=true"
+  fi
+  # ck-qa's own logs and records in $TMPDIR age out after CK_QA_KEEP_DAYS on every run
+  local t="${TMPDIR:-/tmp}"; t="${t%/}"
+  kb="$(find "$t" -maxdepth 1 \( -name 'ck-[0-9]*.log*' -o -name 'ck-qa' -o -name 'ck-qa-run' \) -exec du -sk {} + 2>/dev/null | awk '{s+=$1} END{print s+0}')"
+  if [ "$kb" -ge 1048576 ]; then
+    row "qa logs" "$(awk -v k="$kb" 'BEGIN{printf "%.1f", k/1048576}') GB of ck-qa logs in $t" WARN
+    [ "$QUIET" -eq 1 ] || note "the next ck-qa run prunes those older than CK_QA_KEEP_DAYS (default 7); lower it to keep less"
   fi
   return 0
 }
