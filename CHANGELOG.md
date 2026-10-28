@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.25.1] — 2026-10-28
+
+### Fixed
+- **ck-qa**: log pruning lets `find` delete old files itself and then the empty run directories, instead of piping paths to `rm -rf` — a symlink planted in a shared `/tmp` can no longer steer a deletion.
+
 ## [7.25.0] — 2026-10-28
 
 ### Added
