@@ -1294,10 +1294,10 @@ rm -rf "$WT_DIR"
 echo
 echo "=== ck-report ==="
 RT_DIR="$(mktemp -d)"
-RTO="$(printf '{"session_id":"s1","hook_event_name":"PostToolUse","tool_input":{"command":"ck-qa run x"},"tool_response":{"stderr":"%s/scripts/ck-qa.sh: line 9: syntax error near unexpected token"}}' "$PLUGIN_ROOT" | TMPDIR="$RT_DIR" ck-report hook)"
+RTO="$(printf '{"session_id":"s1","hook_event_name":"PostToolUse","tool_input":{"command":"ck-qa run x"},"tool_response":{"stderr":"%s/scripts/ck-qa.sh: line 9: syntax error near unexpected token"}}' "$PLUGIN_ROOT" | XDG_CACHE_HOME="$RT_DIR" ck-report hook)"
 assert_contains "ck-report hook: a crash in ck-code's own script is flagged" "$RTO" '"hookEventName":"PostToolUse"'
 assert_contains "ck-report hook: names the ck-code report skill" "$RTO" "ck-code:report skill"
-RTN="$(printf '{"session_id":"s1","hook_event_name":"PostToolUseFailure","tool_input":{"command":"ck-qa run x"},"error":"ck-qa: ERROR — no id"}' | TMPDIR="$RT_DIR" ck-report hook)"
+RTN="$(printf '{"session_id":"s1","hook_event_name":"PostToolUseFailure","tool_input":{"command":"ck-qa run x"},"error":"ck-qa: ERROR — no id"}' | XDG_CACHE_HOME="$RT_DIR" ck-report hook)"
 assert_eq "ck-report hook: a deliberate ERROR line is not a bug" "" "$RTN"
 rm -rf "$RT_DIR"
 
