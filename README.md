@@ -138,6 +138,8 @@ issues stay valid.
 - **An in-session mod** — a band above the prompt with the active story, the plan's counts and the recommended next command; a live agents pane during a parallel build; the manual-test checklist as a pane with Pass/Skip buttons; dashboard commands (`/ck-status`, `/ck-next`, …) that print at once with no model turn; a per-skill time and token profile; guards on generated views and `git clean -x`; and no AI attribution in a ck-code project's commits and PRs. See [The ck-code mod](#the-ck-code-mod)
 - **Native Claude Code integration** — `SessionStart`/`PostToolUse` hooks (auto-reload generated experts, inject project status + migration notice, config-gated auto-format), the mod's prompt router (every free-text prompt goes to the best-fit skill), a subagent status line for parallel builds, and built-in `/goal`, `/code-review`, `/fast` pairings documented in `references/native-commands.md`
 - **Tests leave no disk behind** — `ck-qa` prunes its own logs and records after 7 days (`CK_QA_KEEP_DAYS`), and after each run removes the Docker containers its test commands created in this checkout once they have stopped, with the volumes only they used (`CK_QA_DOCKER=0` turns that off). A container still running is only listed. Removing or parking a worktree goes through `ck-reclaim`, which also removes that worktree's containers and its own compose volumes, so a worktree's test database never outlives it in the Docker VM. `/ck-code:doctor` warns on containers whose worktree is gone. For a machine-wide cleanup, use ck-tools' `/ck-tools:disk-clean`
+- **Parallel runs clean up after themselves** — a merged worktree is removed even while Claude Code's session-long `claude agent` lock is on it (`ck-worktree unlock` lifts that lock only when its session is gone or is this one). Agent worktrees earlier runs left behind, merged and clean, are offered for retirement in one question (retired by default under `--auto`), and the wait loops an agent wrote by hand are stopped at the end of a run (`ck-qa reap`). Fresh worktrees fill their submodules from the main checkout instead of cloning them again
+- **Bugs in ck-code get reported** — a crash in ck-code's own scripts is spotted by a hook and turned into a GitHub issue draft; `/ck-code:report` does the same for anything you notice. Private paths, names and tokens are scrubbed, duplicates are found first, and nothing is filed without your yes
 - **RTK-aware command forms (optional)** — [RTK](https://github.com/ckandrinirina/rtk) is a third-party `PreToolUse` hook that filters command output before it reaches context, returning a full test suite as its failures alone. ck-code writes the command forms its hook recognizes (`npm run test`, never the unfilterable `npm test` alias) so the savings need no setup, never hardcodes an `rtk` prefix, and never requires the tool. `/ck-code:doctor` reports whether it is installed and wired. Slow commands (suite, lint, typecheck, e2e) run once per code state into a `$TMPDIR` log that is read instead of re-run. RTK still filters that form, while QA runs through `ck-qa` are capped by its 40-line failure tail instead. See `references/rtk.md`
 
 ## Install
@@ -606,6 +608,7 @@ exists. On a repo with no code yet, `init` only sets up the dependencies and han
 | `/ck-code:guide` | Router: no arg → next step from state; free text → best-fit skill; `--command <name>` → syntax (read-only, recommends only) | plain-language task / `--command` | recommended command + prerequisite + next step |
 | `/ck-code:migrate` | Upgrade a v6, older (v3–v5) **or ck-code-lite** project to the v7 layout: previews the tested `ck-migrate` conversion, asks once, lands one revertable commit | — | converted project (one commit) |
 | `/ck-code:explain` | Explain what was just implemented + manual verification steps; a free-text feature request explains that feature and gives a full manual test guide; `--epic NN` explains that epic's goal and the goal of every story in it | `[file-or-concept]` / `<feature description>` / `--epic NN` | walkthrough + verification steps, feature + test guide, or epic + story goals |
+| `/ck-code:report` | Report a bug in ck-code itself — a skill, script, hook or the band doing the wrong thing. Drafts a GitHub issue on this repo with home paths, project names, emails and tokens scrubbed, finds an existing report first, and files only after your one yes (`gh` not signed in → a saved draft and a prefilled link). A crash in ck-code's own scripts is spotted by a `PostToolUse` hook and handed to it automatically (`--auto <signature>`) | what you saw (optional) | a GitHub issue, or a comment on the existing one |
 | `/ck-code:doctor` | Health report — layout stamp (older, newer, or an unmet `requires:`), story frontmatter that will not parse, committed or stale views, unresolvable `blocked_by` ids, feature-doc slug drift, stale or invalid team skills, orphan epic branches, board mapping, the ck-code-required guard. `--fix` reconciles delivery, the board and GitHub Issues in one pass (with or without a board), confirms any unproven direct merge, and commits the story files | `[tasks/<slug>] [--quiet] [--fix]` | findings + fixes; with `--fix`, one bookkeeping commit |
 | `/ck-code:config` | Project settings in `tasks/SETTINGS.md` — GitHub issue tracking on or off, the trunk branch every PR targets, the GitHub Projects board (create, adopt, re-map, reorder), a plan's integration level, and whether build asks about expert skills | `show` / `board` / `trunk <branch>` / `integration <plan> <level>` / `experts ask\|none` / `on` / `off` | `tasks/SETTINGS.md`, the plan record, board mapping |
 
@@ -709,6 +712,8 @@ ck-code/
 │   ├── ck-affected                # → scripts/ck-affected.sh
 │   ├── ck-qa                      # → scripts/ck-qa.sh
 │   ├── ck-reclaim                 # → scripts/ck-reclaim.sh
+│   ├── ck-worktree                # → scripts/ck-worktree.sh
+│   ├── ck-report                  # → scripts/ck-report.sh
 │   ├── ck-team                    # → scripts/ck-team.sh
 │   ├── ck-migrate                 # → scripts/ck-migrate.sh
 │   └── ck-bootstrap               # → scripts/ck-bootstrap.sh
@@ -729,6 +734,8 @@ ck-code/
 │   ├── ck-affected.sh             # the areas and tests a diff can reach (import trace, workspace areas, .ck-test-areas)
 │   ├── ck-qa.sh                   # run QA commands once per code state (reuse, parallel, narrowed re-runs, wait past the Bash cap)
 │   ├── ck-reclaim.sh              # free a kept worktree's build output (target/, node_modules/…), keep its source
+│   ├── ck-worktree.sh             # lift Claude Code's agent lock, sweep merged agent worktrees, fill submodules
+│   ├── ck-report.sh               # bug reporter: crash hook, scrub, dedupe, file (identical in all three plugins)
 │   ├── ck-team.sh                 # the team-skill refresh contract (SOURCES digest)
 │   ├── ck-migrate.sh              # deterministic v6 → v7 conversion
 │   ├── ck-bootstrap.sh            # the committed ck-code-required guard
@@ -751,6 +758,7 @@ ck-code/
 │   ├── guide/                     # state/intent/command router
 │   ├── migrate/                   # v6, older and ck-code-lite projects → v7
 │   ├── doctor/                    # project health report (+ --fix reconciliation)
+│   ├── report/                    # report a ck-code bug as a scrubbed GitHub issue
 │   ├── config/                    # tasks/SETTINGS.md, board, integration level
 │   └── explain/                   # post-implementation walkthrough
 ├── tests/                         # smoke.sh (scripts, CI) + evals.sh (skill routing, local)
