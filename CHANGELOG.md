@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.26.0] — 2026-10-29
+
+### Added
+- **report**: new skill — reports a bug in ck-code itself as a GitHub issue. The body is scrubbed of home paths, project names, emails and tokens, duplicates are found first, and nothing is filed before the user's one yes. Without `gh` it saves a draft and prints a prefilled link.
+- **auto-report hook**: `PostToolUse`/`PostToolUseFailure` on Bash runs `ck-report hook`, which spots a crash in ck-code's own scripts (bash runtime error, Python traceback, awk crash), flags each signature once per session and hands it to `report`. The reporter is byte-identical in ck-code, ck-code-lite and ck-tools, and the doctor gates it.
+- **ck-worktree**: `unlock` lifts Claude Code's `claude agent … (pid N)` lock from a finished worktree, only when N is gone or is this session. `sweep <target> [--list]` retires earlier runs' agent worktrees that are merged, clean and idle for 15 min, and only those under `.claude/worktrees/`. `submodules <root>` fills a fresh worktree's submodules from the main checkout (#2).
+- **ck-qa**: `reap` stops this session's leftover hand-written wait loops (until/while … sleep on a QA run, a pgrep or a task output file) (#2).
+
+### Changed
+- **build**: parallel mode lifts the agent lock before removing a merged worktree. It offers earlier runs' stale agent worktrees for retirement in the P3 question (retired by default under `--auto`), runs `ck-qa reap` before cleanup, and passes `Main checkout:` so agents fill submodules (#2).
+- **story-implementer**, **qa-validator**, **story-cycle**: `ck-qa wait` in the foreground is the only way to wait. Hand-written `until`/`while … sleep` loops, `pgrep` waits and polls of a task's output file are forbidden (#2).
+- **test-craft**: every temp file, settings file, port or database a test creates gets a per-run unique name, because sibling worktrees run the same suite at once (#2).
+- **plan**: a story's `files` lists every shared registration file it adds an entry to, so stories that register in the same file are never scheduled side by side (#2).
+
 ## [7.25.1] — 2026-10-28
 
 ### Fixed
