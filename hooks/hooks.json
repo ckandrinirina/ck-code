@@ -1,5 +1,5 @@
 {
-  "description": "ck-code hooks: settings hooks for session start and formatting, and the mod (hooks module) for routing, guards, band, panes and zero-model commands",
+  "description": "ck-code hooks: settings hooks for session start and formatting, and the mod (hooks module) for routing, guards, band, panes and zero-model commands, and the bug reporter that spots a crash in this plugin's own scripts",
   "modules": [
     "./mod/register.tsx"
   ],
@@ -21,6 +21,28 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/format.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/ck-report.sh hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/ck-report.sh hook",
+            "timeout": 10
           }
         ]
       }

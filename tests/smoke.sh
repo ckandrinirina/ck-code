@@ -1272,6 +1272,36 @@ assert_contains "ck-doctor disk: reports this checkout's build output" "$RCD" "i
 rm -rf "$RC_DIR"
 
 echo
+echo "=== ck-worktree: agent locks and sweep ==="
+WT_DIR="$(mktemp -d)"; WT_DIR="$(cd "$WT_DIR" && pwd -P)"
+( cd "$WT_DIR" && git init -q m && cd m && echo x > x && git add x && git -c user.email=t@t -c user.name=t commit -qm i && git branch -M main && printf '.claude/\n' > .git/info/exclude )
+WA="$WT_DIR/m/.claude/worktrees"; mkdir -p "$WA"
+wt_age() { g="$(git -C "$1" rev-parse --absolute-git-dir)"; touch -t 202001010000 "$g/HEAD" "$g/logs/HEAD" 2>/dev/null; }
+( cd "$WT_DIR/m" && git worktree add -q -b agent-a "$WA/agent-a" && git worktree lock --reason "claude agent agent-a (pid 99999)" "$WA/agent-a" \
+  && git worktree add -q -b agent-z "$WA/agent-z" && git worktree lock --reason "mine" "$WA/agent-z" \
+  && git worktree add -q -b agent-d "$WA/agent-d" && cd "$WA/agent-d" && echo d > d && git add d && git -c user.email=t@t -c user.name=t commit -qm d ) >/dev/null 2>&1
+wt_age "$WA/agent-a"; wt_age "$WA/agent-d"; wt_age "$WA/agent-z"
+assert_contains "ck-worktree unlock: keeps a lock that is not Claude Code's" "$(cd "$WT_DIR/m" && ck-worktree unlock "$WA/agent-z")" "LOCKED"
+WTL="$(cd "$WT_DIR/m" && ck-worktree sweep main --list)"
+assert_contains "ck-worktree sweep --list: a merged, clean, idle agent worktree is stale" "$WTL" "stale agent-a"
+assert_contains "ck-worktree sweep --list: unmerged work is kept" "$WTL" "kept agent-d"
+WTS="$(cd "$WT_DIR/m" && ck-worktree sweep main)"
+assert_contains "ck-worktree sweep: lifts a dead session's lock and retires" "$WTS" "retired agent-a"
+assert_contains "ck-worktree sweep: keeps a foreign lock" "$WTS" "agent-z ($WA/agent-z) — locked (mine)"
+assert_contains "ck-worktree sweep: counts" "$WTS" "sweep: 1 retired · 2 kept"
+rm -rf "$WT_DIR"
+
+echo
+echo "=== ck-report ==="
+RT_DIR="$(mktemp -d)"
+RTO="$(printf '{"session_id":"s1","hook_event_name":"PostToolUse","tool_input":{"command":"ck-qa run x"},"tool_response":{"stderr":"%s/scripts/ck-qa.sh: line 9: syntax error near unexpected token"}}' "$PLUGIN_ROOT" | TMPDIR="$RT_DIR" ck-report hook)"
+assert_contains "ck-report hook: a crash in ck-code's own script is flagged" "$RTO" '"hookEventName":"PostToolUse"'
+assert_contains "ck-report hook: names the ck-code report skill" "$RTO" "ck-code:report skill"
+RTN="$(printf '{"session_id":"s1","hook_event_name":"PostToolUseFailure","tool_input":{"command":"ck-qa run x"},"error":"ck-qa: ERROR — no id"}' | TMPDIR="$RT_DIR" ck-report hook)"
+assert_eq "ck-report hook: a deliberate ERROR line is not a bug" "" "$RTN"
+rm -rf "$RT_DIR"
+
+echo
 echo "=== shellcheck ==="
 echo
 echo "=== ck-release: facts and lessons, offline ==="

@@ -35,6 +35,7 @@ duplicating the workflow graph.
    /ck-code:explain      (Anytime) Explain what was just built + verify steps
    /ck-code:config       (Anytime) Project settings — issue tracking, trunk, GitHub Project
                         board, a plan's integration level (config integration)
+   /ck-code:report       (Anytime) Report a bug in ck-code itself as a GitHub issue (one yes)
    /ck-code:doctor       (Anytime) Report what is broken in the project + how to fix it
    /ck-code:doctor --fix (Anytime) Reconcile delivery, board and Issues with GitHub, commit
                         the changed story/epic/plan records

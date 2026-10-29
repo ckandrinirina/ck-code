@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-report — see scripts/ck-report.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-report.sh" "$@"
