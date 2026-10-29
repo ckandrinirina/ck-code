@@ -48,8 +48,12 @@ prompt: |
   Base SHA: <git rev-parse "$TARGET" after the P4 wave-start commit>
   Cycle: <absolute path of references/story-cycle.md — this skill's base directory + /references/story-cycle.md>
   Settled: <the P3/S2 answers and `--auto` assumptions for this story, or "nothing">
+  Main checkout: <$ROOT — the absolute toplevel P1 recorded>
 
   Your task:
+  0. Repo with a `.gitmodules` → `ck-worktree submodules <Main checkout>` once, before any
+     build: a fresh worktree's submodules are empty, and it clones each against the main
+     checkout's copy instead of N agents cloning from the network at once.
   1. `Read` the Cycle file once and follow it from "Placement — delegated" to "RETURN".
      It owns TDD, SOLID, the scans, QA and committing. Never load the ck-code:build skill.
   2. **Commit after every TDD cycle / phase** so an early stop still leaves resumable,

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-worktree — see scripts/ck-worktree.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-worktree.sh" "$@"

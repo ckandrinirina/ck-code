@@ -57,7 +57,10 @@ commands, never from skipping a check:
   state so a later step that may reuse it (`--reuse`) skips an identical run
   ([§ QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)). A run
   past the 600 s Bash cap (a serial e2e suite) prints `ck-qa: RUNNING`. Continue it with
-  `ck-qa wait <id>`, and never start it again or poll its output.
+  `ck-qa wait <id>`, and never start it again or poll its output. `ck-qa wait`, in the
+  foreground with a 600000 ms Bash timeout, is the only way to wait: never write an
+  `until`/`while … sleep` loop, a `pgrep` wait or a poll of a task's output file — it outlives
+  the agent, and some never end. A call moved to the background is waited on with `ck-qa wait`.
 - **Keep the inner loop targeted.** Every RED (4.4) and GREEN (5.2/5.3) of each cycle, and each
   refactoring (6.2) run the story's own test files. Lint only the files the story touched,
   by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,

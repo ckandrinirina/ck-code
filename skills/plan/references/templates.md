@@ -200,6 +200,9 @@ not generic TDD phases.
 
 - `blocked_by` / `files` — inline flow `[a, b]` or empty `[]`. `files` lists the paths the
   story creates or modifies (the conflict-detection key); `[]` when unknown (`build` fills it).
+  It includes every shared registration file the story adds an entry to — app/route/module
+  registration, a build's source list, translation catalogs, a DI or plugin registry: two
+  stories registering in one file conflict on every merge, and only `files` shows the overlap.
 - `issue:` / `prior_status:` — left empty by `plan`; `plan --publish` writes `issue`, `fix`/`build` manage `prior_status`.
 - `pr:` / `delivery:` — the integration axis, also left empty by `plan`. `ship` writes both
   when it opens a PR; `ck-project sync` promotes `delivery` to `merged`. Never set them by

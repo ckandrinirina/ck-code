@@ -65,6 +65,7 @@ takes its row here, announced in one line (`Auto: <decision>`) where it would ha
 | P3 level switch (level `story`) | **Switch this plan to epic level**: it is local, and the run cannot land anywhere else |
 | P3 team gate | **Continue without experts this time**, named in the final report. `/ck-code:team` is interactive, so it is never run from here |
 | P3 wave-plan confirmation | every story kept |
+| P3 stale agent worktrees | `RETIRE` — `ck-worktree sweep "$TARGET"`; only merged, clean, idle ones go |
 | P3 criteria ambiguity | the narrowest reading that matches the literal criterion and the existing code, passed to the agent as `Settled: assumed <reading>` and listed in the report |
 | P3 design pending | build without it; each UI story is named in the report |
 | P5 ⚠ deletion review | **Exclude this story** (branch kept, reported), never accepted unseen |
@@ -191,6 +192,13 @@ branch, so the plan's level is never switched for it).
 **`--epic NN` always orchestrates**, even when one story remains: it dispatches that story
 solo at P4 (no worktree), because an epic run keeps the orchestrator's context clean and lands
 every story the same way on `$TARGET`.
+
+**Stale agent worktrees.** `ck-worktree sweep "$TARGET" --list` names earlier runs' agent
+worktrees (under `.claude/worktrees/`) that are merged into `$TARGET`, clean and idle for 15 min —
+nothing in them can be lost, but each holds its build output. Any `stale` line adds one
+question to P3's `AskUserQuestion`: `RETIRE` → `ck-worktree sweep "$TARGET"`, its count line
+in the report; `KEEP` → listed, untouched. Unmerged, dirty, freshly used and hand-made
+worktrees are reported only, never swept.
 
 **Background check, last.** With `$TARGET` checked out, run `ck-headless`. `ck-headless: OK` →
 go on. `FOREGROUND` lines → before any wave, dispatch the one
@@ -566,6 +574,7 @@ worktree's test containers and their volumes outlive it in the Docker VM:
 ```bash
 git branch --merged "$TARGET" --format='%(refname:short)' | grep -qx "<branch>" || echo "NOT MERGED — keep"
 ck-reclaim "<path>"                    # <path>: the branch's row in `git worktree list`
+ck-worktree unlock "<path>"            # Claude Code's agent lock lasts the session, not the agent
 git worktree remove --force "<path>"
 ```
 
@@ -617,6 +626,11 @@ main checkout on `$TARGET` — the [solo dispatch](agent-prompts.md#per-story-im
 with `$TARGET` as its branch (`git rev-parse --abbrev-ref HEAD` guard) and its `Cycle:` line,
 plus the user's issue report and a pointer to [completion.md § 8.5.3 Bug-Fix Sub-Loop](completion.md#853--manual-test-bug-fix-sub-loop).
 It runs that sub-loop and commits the fix on `$TARGET`; then re-ask. The story stays merged — this is a fix, not a re-open.
+
+**Stop leftover wait loops.** `ck-qa reap` — every agent has returned, so a shell of this
+session still looping on a QA run is a leftover an agent wrote by hand; its `stopped N` line
+goes in the report. A `LOCKED` line from `ck-worktree unlock` names a lock it may not lift
+(another live session, or not Claude Code's): report it, never `git worktree unlock` by hand.
 
 **Cleanup.** After the merge and its check settle, `git worktree prune` and confirm only the
 main worktree and the worktrees of held, blocked or conflicted stories remain. `prune` only

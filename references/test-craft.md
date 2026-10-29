@@ -28,6 +28,10 @@ test misses costs that much and protects nothing.
   stub the code under test or its in-module collaborators. Assert on outcomes, never on
   which mocks were called in which order, unless the call *is* the behaviour (a sent email,
   a published message).
+- **Unique per-run scratch.** Every temp file, directory, settings file, port or database a
+  test creates gets a per-run unique name (`mkdtemp`, the framework's tmp fixture, a random
+  port). Parallel builds run the same suite at once in sibling worktrees, and a fixed name
+  makes them collide at random.
 
 ## Never write
 
