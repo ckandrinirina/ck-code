@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.26.1] — 2026-10-29
+
+### Security
+- **report**: the hook keeps its state in a private `~/.cache/ck-report` (mode 700, owner-checked, never through a symlink) instead of a shared `/tmp`, and writes through `mktemp` + `mv`. The context it gives the model is fixed wording only (the error kind, the script and the line), never the captured output line. `file`/`comment` post only drafts under `~/.claude/ck-reports/`, and they are no longer pre-approved in `allowed-tools`. `scrub` also hides `KEY=value` secrets, credentials in URLs, Bearer tokens, JWTs, PEM blocks and base64 that contains `/`.
+
 ## [7.26.0] — 2026-10-29
 
 ### Added
