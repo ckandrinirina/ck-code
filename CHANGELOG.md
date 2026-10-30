@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.27.1] — 2026-10-30
+
+### Security
+- **replicate**: the `shot --fonts` summary line records only plain font file names (at most 20) and prints them quoted — a card is untrusted, and its requested file names reached the agent verbatim.
+
 ## [7.27.0] — 2026-10-30
 
 ### Added
