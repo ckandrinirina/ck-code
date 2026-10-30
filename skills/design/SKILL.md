@@ -573,8 +573,10 @@ project uuid, or a project name. Empty means "pick from a list" or "refresh".
      steps 1–7. `mkdir -p docs/architecture/design-system/cards` before the first write.
    - **Present** → run [§ Freshness protocol](../../references/design-system.md#freshness-protocol)
      from Tier 0. Announce which tier the run started at in one line. A link resolving to a
-     **different** `projectId` than the cached one is a design-system switch — confirm via
-     `AskUserQuestion` before replacing the cache, since every cached card is invalidated.
+     **different** `projectId` than the cached one pairs or replaces per
+     [§ Design system and design together](../../references/design-system.md#design-system-and-design-together)
+     — asked via `AskUserQuestion` before anything is written, since a replace invalidates
+     every cached card.
 3. **Close every pending link** (first successful link only). Glob
    `docs/specs/*/.metadata.json`; for each whose `designSystem.status` is `awaiting-link`,
    set `status: "linked"`, `projectId`, `projectUrl` (the URL the user supplied, or the

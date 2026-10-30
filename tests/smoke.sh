@@ -1501,6 +1501,12 @@ if command -v node >/dev/null 2>&1 && [ "$(node -p 'process.versions.node.split(
   assert_contains "ck-replicate cli: reads the root and both subcommands" "$RC_OUT" "3 commands read"
   assert_contains "ck-replicate cli: cli.md holds a subcommand's help" "$(cat "$RR/cli/cli.md")" "fake serve [--port N]"
   assert_eq "ck-replicate cli: never runs anything but help" "absent" "$([ -e "$RR/fake.ran" ] && cat "$RR/fake.ran" || echo absent)"
+  printf '<html></html>' >"$RR/card.html"
+  RF_OUT=$(ck-replicate shot "$RR/card.html" --fonts "$RR/none" --out "$RR/s" 2>&1); RF_RC=$?
+  assert_eq "ck-replicate shot: a missing --fonts folder exits 2" 2 "$RF_RC"
+  assert_contains "ck-replicate shot: names the missing --fonts folder" "$RF_OUT" "no such folder"
+  ck-replicate shot https://example.com --fonts "$RR" --out "$RR/s" >/dev/null 2>&1
+  assert_eq "ck-replicate shot: --fonts on a URL exits 2" 2 "$?"
   ck-replicate bogus >/dev/null 2>&1; assert_exit "ck-replicate: an unknown command exits 2" 2 "$?"
   rm -rf "$RR"
 else

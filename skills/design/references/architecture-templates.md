@@ -452,11 +452,13 @@ sync. Key order is fixed:
 
 ```json
 {
-  "projectId": "[uuid from list_projects]",
+  "projectId": "[uuid from list_projects or the link]",
   "projectName": "[project name]",
-  "projectUpdatedAt": "[updatedAt from list_projects, verbatim]",
+  "projectType": "[system | design]",
+  "projectUpdatedAt": "[updatedAt from list_projects, verbatim | null for a design]",
   "syncedAt": "[YYYY-MM-DD of this run]",
   "tokensPath": "pending",
+  "pairedProject": "[omitted unless a second project is paired — same five keys]",
   "cards": [
     { "path": "components/button/index.html", "group": "Actions",
       "name": "Primary buttons", "sha256": "[digest]", "cached": true }

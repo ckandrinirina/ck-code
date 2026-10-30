@@ -319,7 +319,7 @@ Copy the brief to the clipboard, best-effort — `pbcopy`, else `wl-copy`, else
 `xclip -selection clipboard`, each `< <briefPath>`; none available → the file is the prompt.
 Then print the hand-off — three lines, no more:
 
-1. Open [claude.ai/design](https://claude.ai/design) and start a **design system** project.
+1. Open [claude.ai/design](https://claude.ai/design) and start a **design system** project (a design project links too).
 2. Paste the brief (already on the clipboard, else the contents of `<briefPath>`).
 3. When it is ready, copy the URL and run `/ck-code:design ds <url>` — in this session or
    any later one.

@@ -1,6 +1,7 @@
 # Claude Design System — Shared Procedure
 
-Owns the ck-code ↔ `claude.ai/design` integration: how a project links a design system,
+Owns the ck-code ↔ `claude.ai/design` integration: how a project links a design system — or a
+regular design project ([§ Regular design projects](#regular-design-projects)) —
 how the local cache stays fresh, how `build` reproduces a component exactly, and how every
 touchpoint behaves when the integration is absent.
 
@@ -65,6 +66,7 @@ when a component's source actually changed.
 | Foundations (groups `Type`, `Colors`, `Spacing`, `Radii`, `Shadows`, `Brand`) | eagerly, at first sync — token extraction needs them |
 | Component | lazily, the first time a story implements that component |
 | Binary asset (image, font file) | never — record `cached: false, reason: binary` |
+| Every other file of a regular design project | eagerly, at first sync ([§ Regular design projects](#regular-design-projects)) |
 
 Skip any card over 256 KiB (the tool's own `get_file` cap) with
 `cached: false, reason: too-large`. Cache cards between 64 KiB and 256 KiB but add
@@ -86,6 +88,7 @@ The one home of the design-system metadata.
 {
   "projectId": "…",
   "projectName": "…",
+  "projectType": "system",
   "projectUpdatedAt": "…",
   "syncedAt": "…",
   "tokensPath": "pending",
@@ -113,7 +116,8 @@ with `cached: false` has no `sha256`.
 | Key | Meaning |
 |---|---|
 | `projectId`, `projectName` | the linked Claude Design project |
-| `projectUpdatedAt` | the project's `updatedAt` at the last sync; the freshness check compares against it |
+| `projectType` | `system` (a design system) or `design` (a regular design project); absent reads as `system` |
+| `projectUpdatedAt` | the project's `updatedAt` at the last sync; the freshness check compares against it. `null` for a `design`, which `list_projects` never lists |
 | `syncedAt` | when this cache was last synced |
 | `tokensPath` | `"pending"` until the first UI story materializes the token file, then its repo-relative path ([Token materialization](#token-materialization)) |
 | `cards[]` | the inventory, one entry per remote card |
@@ -122,20 +126,22 @@ with `cached: false` has no `sha256`.
 
 Run only from `/ck-code:design ds` when `docs/architecture/design-system/` does not exist.
 
-1. `DesignSync { method: "list_projects" }`. Empty result → tell the user to create a
-   design system at `claude.ai/design` first, then stop. Nothing is written.
+1. `DesignSync { method: "list_projects" }` — it lists design systems only. Empty result →
+   tell the user to create a design system at `claude.ai/design`, or to paste the URL of a
+   design project (`/ck-code:design ds <url>`), then stop. Nothing is written.
 2. Present the projects via `AskUserQuestion` (name + owner + `updatedAt`), always with a
    Cancel option. Cancel writes nothing.
-3. `DesignSync { method: "get_project", projectId }` — confirm
-   `type: PROJECT_TYPE_DESIGN_SYSTEM`. A regular project cannot become a design system
-   (the type is fixed at creation), so a wrong type is a hard stop with that explanation,
-   not a warning.
+3. `DesignSync { method: "get_project", projectId }` → its `type`.
+   `PROJECT_TYPE_DESIGN_SYSTEM` → `projectType: system`; any other type →
+   `projectType: design`, linked the same way
+   ([§ Regular design projects](#regular-design-projects)) — never refused, never converted.
 4. `DesignSync { method: "list_files", projectId }` — build the inventory.
-5. Fetch every foundations card with `get_file`, write each to `cards/<path>`, and record
-   its `sha256`.
+5. Fetch every foundations card — for a `design`, every non-binary file — with `get_file`,
+   issued together in one message; write each to `cards/<path>` exactly as returned — copy the
+   file when the tool output was saved to one, never retype or reflow it — and record its `sha256`.
 6. Extract tokens (below) and write `index.md` + `manifest.json` (with
    `"tokensPath": "pending"`).
-7. Report: project name, card count, tokens extracted, low-confidence extractions.
+7. Report: project name and type, card count, tokens extracted, low-confidence extractions.
 
 ### From a handed-back URL
 
@@ -157,8 +163,9 @@ already chose from is the friction this path removes.
    `projectUrl` in the pending-link write-back below.
 
 The same argument re-links an already-linked project only after confirmation, and a
-different uuid than the cached `projectId` is always confirmed — switching design systems
-invalidates every cached card.
+different uuid than the cached `projectId` is always confirmed: a project of the other type
+pairs or replaces ([§ Design system and design together](#design-system-and-design-together)),
+one of the same type replaces that project's cached cards.
 
 ### Token extraction
 
@@ -175,6 +182,66 @@ Cards are free-form HTML, so extraction is best-effort and must never guess sile
 
 Never infer a value that appears in no card. A missing token is a gap to report, not a
 blank to fill.
+
+**Themes.** A property redefined under a theme selector (`[data-theme="day"]`, `.dark`,
+`@media (prefers-color-scheme: dark)`) is one token with a value per theme — the value cell
+reads `<theme>: <value> · <theme>: <value>`, the selector named in the row — and
+materialization emits each theme under that same selector, verbatim.
+
+## Regular design projects
+
+A Claude Design project that is not a design system — screens drawn directly, often beside a
+page of tokens — links read-only like one. Nothing is converted and nothing is written to the
+user's account. What differs:
+
+- **Only by link.** `list_projects` lists design systems only, so a design is linked from its
+  URL or uuid (§ From a handed-back URL), never picked from the list.
+- **Every non-binary file is cached at first sync** — its pages share a runtime they need to
+  render, and a design has few files — so lookup step 2 never fires for it.
+- **Classified by file** — a design has no card groups. In `index.md` § Components, each page
+  (`*.html`, including `*.dc.html`) is a `Screens` row named after its file; a page named for a
+  design system, tokens, styles or foundations is read for `## Foundations` too; scripts, JSON
+  and stylesheets are `Runtime` rows — cached, never ported. Binary files stay
+  `cached: false, reason: binary`.
+- **Tokens** are the CSS custom properties its pages and shared files define, by
+  § Token extraction — a page-local literal is not promoted to a token.
+- **No component cards.** A design draws its components inside its screens. The design map
+  points each component at the screen that draws it (`save→Mixer.dc.html`), and that screen's
+  markup is its spec under [Fidelity rules](#fidelity-rules). Lookup step 3 (build from tokens)
+  applies only to a component no screen draws.
+- **Rendered markup.** A page may render through its runtime — `{{ … }}` bindings, loop
+  elements, a script holding its sample data. The spec is what renders: read the markup with
+  the data its script supplies, and let the card shot settle what it looks like.
+- **Freshness has no Tier 0** — no `updatedAt` reaches it. Refresh starts at Tier 1 and
+  refetches every cached file at Tier 2, rewriting only a changed digest.
+
+The fidelity loop, the 3-pass limit and QA are the same for both types.
+
+## Design system and design together
+
+A project may link **one design system and one regular design** at once — the system for its
+tokens and component cards, the design for the screens drawn with them. The first project
+linked keeps the top-level manifest keys and `cards/<path>`; the second is the **paired**
+project:
+
+- `manifest.json` gains `"pairedProject": { "projectId", "projectName", "projectType",
+  "projectUpdatedAt", "syncedAt" }`, after `tokensPath`; its card entries carry the
+  `paired/` prefix in `path`, cached under `cards/paired/<path>` — two projects' files never
+  collide, and a card's relative assets still resolve inside its own folder.
+- **Linking a project of the other type** while one is linked → `AskUserQuestion`: `Use both
+  (Recommended)` pairs it, `Replace` swaps the whole cache, `Cancel` writes nothing. A link of
+  the **same** type as a linked project replaces that project's cards only, after
+  confirmation. Never more than two projects, never two of one type.
+- **Precedence**, applied by the design map:
+  - **Tokens** — the system's are canonical. A custom property only the design defines is
+    added with the design page as its source. One both define with different values is a `⚠️`
+    row naming both values: on the design's screens the screen's value wins (the card is the
+    spec), everywhere else the system's.
+  - **Screens** — the design's pages first; a system `Screens` card covers only a screen the
+    design does not draw.
+  - **Components** — the system's component card first; else the screen that draws it.
+- **Freshness** runs per project, each by its own tiers; the report names both.
+- **Unpairing** — delete `cards/paired/`, the `pairedProject` key and its rows in `index.md`.
 
 ## Pending link
 
@@ -263,8 +330,8 @@ Tiered, so an unchanged design system costs exactly one call.
 | 2 | `get_file` per flagged path → `shasum -a 256` → rewrite only if the digest differs | Tier 1 produced paths | `cards/` + `manifest.json` updated (`projectUpdatedAt`, `syncedAt` rewritten) |
 
 **Fallback (required, not optional):** `list_projects` is documented to return
-`updatedAt`, but if the field is absent, empty, or not comparable to the stored value,
-skip Tier 0 and start at Tier 1. Never treat a missing `updatedAt` as "unchanged" — that
+`updatedAt`, but if the field is absent, empty, or not comparable to the stored value —
+always, for a `projectType: design` — skip Tier 0 and start at Tier 1. Never treat a missing `updatedAt` as "unchanged" — that
 would pin the cache forever. Say in one line which tier the run started at.
 
 Tier 2 refetches a card only when it is already `cached: true`. A `cached: false`
@@ -282,6 +349,9 @@ Followed by `build`/`fix` when implementing UI, and restated in the generated
 0. **Design map first.** Before writing any UI code, map every screen and component the story
    builds to its card path — a `Screens` card per screen, a component card per component — or
    to `no card`. Decide it from `index.md` § Components, never from memory of a similar design.
+   A regular design project has no component cards: a component maps to the screen that draws
+   it; with a paired project, the system's component card first, then that screen
+   ([§ Design system and design together](#design-system-and-design-together)).
    The map is recorded with the fidelity line ([Design fidelity loop](#design-fidelity-loop)).
 1. **Cached card exists** (`cards/<path>` present and in the inventory) → read the local
    file and port it per [Fidelity rules](#fidelity-rules). **No network call.**
@@ -312,6 +382,11 @@ component cards). It shoots and diffs with `ck-replicate`, the engine
 [`replicate.md`](replicate.md) uses; a card is shot from its local file, served over a
 throwaway `127.0.0.1` server so its relative assets and fonts load.
 
+0. **Fonts.** A card's font files are binary and never cached, so the card shot borrows the
+   app's: port each `@font-face` keeping its file name, and pass the app's font folder(s) as
+   `--fonts <dir>[,<dir>]`. The engine serves a font the card asks for from there, matched by
+   file name with any extension, and prints `fonts N from --fonts · missing <files>`. A missing
+   font is a difference to fix — the app does not load that face yet — never a `(content)` one.
 1. **Viewport.** Shoot at the size the card was drawn for: a fixed frame width in its CSS
    (`width`/`max-width` on `body` or its root) → `--viewport <width>x<height>`; a fluid card →
    `--viewport both` (1440×900 and 390×844).
@@ -319,7 +394,7 @@ throwaway `127.0.0.1` server so its relative assets and fonts load.
 
    ```bash
    OUT="$(git rev-parse --git-dir)/ck-fidelity"; DS="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)/docs/architecture/design-system"
-   ck-replicate shot "$DS/cards/screens/settings/index.html" --root "$DS/cards" --out "$OUT/settings-card" --viewport both
+   ck-replicate shot "$DS/cards/screens/settings/index.html" --root "$DS/cards" --fonts public/fonts --out "$OUT/settings-card" --viewport both
    ```
 
 3. **Run.** Web stack with a dev command in the architecture docs → start it in the background

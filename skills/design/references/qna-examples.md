@@ -226,7 +226,7 @@ Options:
   - Design first (Recommended) — I write a complete prompt for claude.ai/design from these
     answers; once you hand back its URL, every component is built against its exact tokens
     and markup.
-  - Link one I have — I already have a design system at claude.ai/design; ck-code caches it
+  - Link one I have — I already have a design system or design at claude.ai/design; ck-code caches it
     in the repo now.
   - Skip — build UI from the architecture docs alone. /ck-code:design ds links one later.
 ```
@@ -235,8 +235,8 @@ Options:
 
 ```
 === DESIGN SYSTEM SYNC ===
-Project:    [name] ([projectId])
-Started at: Tier [0|1] ([reason])
+Project:    [name] ([projectId]) · [system | design][ · paired with [name] ([type])]
+Started at: Tier [0|1] ([reason]) — one line per linked project
 Result:     [up to date — 1 call | 3 cards added, 1 changed, 0 removed]
 Tokens:     [n] extracted ([m] low-confidence — confirm the ⚠️ rows)
 Cached:     [n] cards, [size]

@@ -522,7 +522,8 @@ Cached at `docs/architecture/design-system/`. Refresh with `/ck-code:design ds`.
 
 ## After GREEN
 Run the Design fidelity loop of ck-code's `references/design-system.md` — shoot the card and
-the built screen, diff, fix up to 3 passes, record the `Design fidelity` line.
+the built screen (`--fonts` the app's font folder), diff, fix up to 3 passes, record the
+`Design fidelity` line.
 
 ## Rules
 [the rules from design-system.md § Fidelity rules, verbatim]

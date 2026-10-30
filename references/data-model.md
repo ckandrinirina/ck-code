@@ -292,8 +292,8 @@ is in [`templates.md`](../skills/spec/references/templates.md).
 ## Design-system metadata
 
 `docs/architecture/design-system/manifest.json` is the **one** home of the design-system
-metadata: `projectId`, `projectName`, `projectUpdatedAt`, `syncedAt`, `tokensPath`, and
-the per-card `cards[]`. `index.md` beside it has no frontmatter; it is the human-readable
+metadata: `projectId`, `projectName`, `projectType`, `projectUpdatedAt`, `syncedAt`,
+`tokensPath`, the optional `pairedProject`, and the per-card `cards[]`. `index.md` beside it has no frontmatter; it is the human-readable
 body (tokens, inventory, fidelity rules). See [`design-system.md`](design-system.md).
 
 ## Project settings (`tasks/SETTINGS.md`)
