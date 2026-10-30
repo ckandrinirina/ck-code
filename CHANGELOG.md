@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.27.0] — 2026-10-30
+
+### Added
+- **design ds**: links a regular Claude Design project, not only a design system — each page is cached as a screen card with its runtime, its CSS variables (with per-theme values) become the tokens, and each component is built from the screen that draws it; read-only, nothing converted. A project can link a design system and a design together (`pairedProject`, `cards/paired/`): the system's tokens and component cards, the design's screens.
+- **ck-replicate 1.2.0**: `shot --fonts <dir>[,<dir>]` serves a card's font files from the app's own fonts, matched by file name, and lists the missing ones — the cache never holds binary fonts, so card shots rendered in fallback fonts.
+
 ## [7.26.1] — 2026-10-29
 
 ### Security
