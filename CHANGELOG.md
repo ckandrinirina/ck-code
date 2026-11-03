@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.28.0] — 2026-11-03
+
+### Changed
+- **ck-qa**: `run` and `wait` return within 170 s (`CK_QA_WAIT`, was 540). Claude Code now moves a background sub-agent's Bash call to the background after 180 s, whatever its timeout, and builders answered with hand-written poll loops (500+ calls backgrounded across 9 projects in 10 days).
+- **ck-qa CPU queue**: a run that has waited 30 s (`CK_QA_OVERFLOW`, `0` = never) starts beside the busy slots when the 1-minute load is under half the cores, at most one such start per 30 s machine-wide. Measured slot waits reached about 29 min per task on one parallel plan, behind runs that were barely using the CPU.
+
+### Fixed
+- **ck-qa**: a command still running after `CK_QA_TIMEOUT` seconds (default 3600, `0` = none) is stopped with its whole process group and reports `FAIL — timed out`. Hung runs had held a CPU slot for 2 to 8 hours and starved every other worktree.
+
 ## [7.27.1] — 2026-10-30
 
 ### Security
