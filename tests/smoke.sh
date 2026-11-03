@@ -708,6 +708,19 @@ assert_contains "ck-qa slots: a dead holder's slot is taken back" "$(CK_QA_SLOTS
 assert_contains "ck-qa slots: a nested run uses its parent's slot" \
   "$(CK_QA_SLOTS=1 CK_QA_WAIT=20 QA run 01-07 t='ck-qa run 01-08 u=true')" "ck-qa: PASS"
 assert_eq "ck-qa slots: every slot is freed after the run" "" "$(ls "$QSL")"
+mkdir -p "$QSL/1"; sleep 60 & QHOLD=$!; echo "$QHOLD" >"$QSL/1/pid"
+assert_contains "ck-qa slots: CK_QA_OVERFLOW=0 never starts beside a busy slot" \
+  "$(CK_QA_SLOTS=1 CK_QA_OVERFLOW=0 CK_QA_WAIT=3 QA run 01-10 t='true')" "queued for a CPU slot"
+QL="$( (sysctl -n vm.loadavg 2>/dev/null | tr -d '{}' | awk '{print $1}'; cut -d' ' -f1 /proc/loadavg 2>/dev/null) | head -1)"
+if [ $(( ${QL%%.*} * 2 )) -lt "$(getconf _NPROCESSORS_ONLN)" ]; then
+  assert_contains "ck-qa slots: a waiting run starts beside busy slots on a half-idle machine" \
+    "$(CK_QA_SLOTS=1 CK_QA_OVERFLOW=1 CK_QA_WAIT=20 QA run 01-11 t='true')" "half-idle"
+else echo "  SKIP ck-qa slots: idle start (this machine's load is too high to test it)"; fi
+kill "$QHOLD" 2>/dev/null; wait "$QHOLD" 2>/dev/null; CK_QA_WAIT=10 QA wait 01-10 >/dev/null; rm -rf "$QSL"
+QA_TO="$(CK_QA_TIMEOUT=1 CK_QA_WAIT=60 QA run 01-12 t='sleep 41; echo late')"
+assert_contains "ck-qa deadline: a run past CK_QA_TIMEOUT fails as timed out" "$QA_TO" "t: FAIL — timed out after 1s"
+assert_contains "ck-qa deadline: the timed-out run reports FAIL" "$QA_TO" "ck-qa: FAIL — t"
+assert_eq "ck-qa deadline: the timed-out command's processes are stopped" "" "$(pgrep -f 'sleep 41')"
 rm -rf "$QA_REPO" "$QA_TMP"
 
 echo "=== ck-qa: leaves nothing that grows ==="

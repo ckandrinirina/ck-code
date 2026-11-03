@@ -158,17 +158,29 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   of that command reports `REUSED`. It is refused when the label has no recorded run in this
   directory. The narrowed commands per runner are in
   [`qa-scope.md` § Re-runs after a failure](../skills/build/references/qa-scope.md#re-runs-after-a-failure--only-what-is-left).
-- **A run can outlast one Bash call.** One Bash call is capped at 600 s, after which Claude
-  Code moves it to the background. A serial e2e suite passes that cap. An agent then polls an
-  empty output file or starts a second copy of the suite against the same test database.
-  Both happened on a measured e2e epic. To avoid this, `ck-qa run` starts the commands
-  detached and waits up to `CK_QA_WAIT` seconds (default 540). A longer run prints
+- **A run can outlast one Bash call.** Claude Code moves a background sub-agent's Bash call
+  to the background after 180 s, whatever its `timeout` (600 s for the main agent). A serial
+  e2e suite or an app build passes that cap. An agent then polls an empty output file or
+  starts a second copy of the suite against the same test database. Both happened on a
+  measured e2e epic, and 580 hand-written poll loops on one parallel plan. To avoid this,
+  `ck-qa run` starts the commands detached and waits up to `CK_QA_WAIT` seconds (default
+  170, under the 180 s cap). A longer run prints
   `ck-qa: RUNNING` (exit 3), and **`ck-qa wait <id>`** picks up the same run and prints its
   result. Call it again until the result arrives. Give every `ck-qa` Bash call a
   `timeout` of `600000`. If a call is moved to the background anyway, run `ck-qa wait <id>`.
   Never poll the output file, never `sleep`, and never repeat the `run`. A repeated identical
   `run` only attaches to the existing run, and a different command set for an id that is
   still running is refused.
+- **A run has a deadline.** A command still running after `CK_QA_TIMEOUT` seconds (default
+  3600, `0` = none; time queued for a slot does not count) is stopped with every process it
+  started, and reports `FAIL — timed out`. Hung runs held a CPU slot for 2 to 8 hours and
+  starved every other worktree. Treat a timeout as a failure to diagnose (a hang, a lost
+  container, a watch-mode runner), never as a reason to raise the deadline and re-run.
+- **The CPU queue starts a waiting run on an idle machine.** All `CK_QA_SLOTS` slots
+  (cores ÷ 8) can be held by runs that barely use the CPU (linking, a serial test, a Docker
+  wait). After `CK_QA_OVERFLOW` seconds of waiting (default 30, `0` = never), a run starts
+  anyway when the 1-minute load is under half the cores, at most one such start per 30 s
+  on the machine.
 
 ## Where ck-code gains the most
 

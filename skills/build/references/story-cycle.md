@@ -56,9 +56,9 @@ commands, never from skipping a check:
   The 6.3 check and every QA pass run through `ck-qa`, which stamps each pass with its code
   state so a later step that may reuse it (`--reuse`) skips an identical run
   ([§ QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)). A run
-  past the 600 s Bash cap (a serial e2e suite) prints `ck-qa: RUNNING`. Continue it with
-  `ck-qa wait <id>`, and never start it again or poll its output. `ck-qa wait`, in the
-  foreground with a 600000 ms Bash timeout, is the only way to wait: never write an
+  longer than 170 s (under the 180 s after which a sub-agent's Bash call is moved to the
+  background) prints `ck-qa: RUNNING`. Continue it with `ck-qa wait <id>`, and never start
+  it again or poll its output. `ck-qa wait`, in the foreground, is the only way to wait: never write an
   `until`/`while … sleep` loop, a `pgrep` wait or a poll of a task's output file — it outlives
   the agent, and some never end. A call moved to the background is waited on with `ck-qa wait`.
 - **Keep the inner loop targeted.** Every RED (4.4) and GREEN (5.2/5.3) of each cycle, and each
