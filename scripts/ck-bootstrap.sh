@@ -90,7 +90,24 @@ fi
 
 [ "$installed" = yes ] && exit 0
 
-printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"⛔ ck-code is REQUIRED in this project and is not installed. This repo keeps its plan, stories and architecture in the ck-code layout (tasks/VERSION.md), and every command that reads or writes that state ships with the plugin. STOP before doing anything else here: do not plan, implement, commit, edit tasks/ or docs/architecture/, and never improvise a stand-in for a /ck-code:* command. Give the user these commands and wait: /plugin marketplace add ckandrinirina/ck-code — then /plugin install ck-code@ck-marketplace — then restart the session."}}'
+say() { printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$1"; }
+STOP='STOP before doing anything else here: do not plan, implement, commit, edit tasks/ or docs/architecture/, and never improvise a stand-in for a /ck-code:* command.'
+
+# A cloud session (CLAUDE_CODE_REMOTE=true) never installs the plugins a repo enables in
+# .claude/settings.json, and the user has no machine of their own there to install it on.
+# So the guard installs it: the session is a throwaway VM, the plugin is the one this repo
+# already declares, and /reload-plugins makes it live without a restart.
+if [ "${CLAUDE_CODE_REMOTE:-}" = true ] && command -v claude >/dev/null 2>&1; then
+  claude plugin marketplace add ckandrinirina/ck-code >/dev/null 2>&1
+  if claude plugin install ck-code@ck-marketplace --scope user >/dev/null 2>&1; then
+    say "ck-code was just installed into this cloud session by the repo guard (.claude/ck-code-required.sh), but its /ck-code:* commands load only after a plugin reload. $STOP Ask the user to type /reload-plugins (or start a new session), then carry on with their request."
+  else
+    say "⛔ ck-code is REQUIRED in this project and installing it into this cloud session failed. $STOP Tell the user: the cloud environment needs network access to github.com (the default Trusted level allows it); then run claude plugin install ck-code@ck-marketplace in this session, or continue locally, over SSH, or with Remote Control, where installed plugins load."
+  fi
+  exit 0
+fi
+
+say "⛔ ck-code is REQUIRED in this project and is not installed. This repo keeps its plan, stories and architecture in the ck-code layout (tasks/VERSION.md), and every command that reads or writes that state ships with the plugin. $STOP Give the user these commands and wait: /plugin marketplace add ckandrinirina/ck-code — then /plugin install ck-code@ck-marketplace — then /reload-plugins."
 EOF
 }
 
@@ -100,15 +117,20 @@ guard_installed_version() {
 }
 
 # ---- settings ----------------------------------------------------------------
-# Two keys, both of which must be committed to be worth anything:
+# Three keys, all of which must be committed to be worth anything:
 #   hooks.SessionStart      runs the guard on every clone
 #   enabledPlugins          opts this project in, so the install the guard asks for
-#                           actually takes effect here without a second manual step
+#                           actually takes effect here without a second manual step;
+#                           an explicit false (a vendored copy beside it) is kept
+#   extraKnownMarketplaces  names where ck-marketplace lives, so a trusted session on a
+#                           machine that never added it (a teammate, an SSH host) is
+#                           offered the install instead of an unresolvable plugin id
 settings_write() {
   mkdir -p "$(dirname "$SETTINGS")"
   if ! command -v python3 >/dev/null 2>&1; then
     warn "python3 not found — merge this into $SETTINGS_REL by hand:"
     printf '        "enabledPlugins": { "ck-code@ck-marketplace": true },\n'
+    printf '        "extraKnownMarketplaces": { "ck-marketplace": { "source": { "source": "github", "repo": "ckandrinirina/ck-code" } } },\n'
     printf '        "hooks": { "SessionStart": [ { "hooks": [ { "type": "command", "command": "%s" } ] } ] }\n' "$GUARD_CMD"
     return 1
   fi
@@ -131,10 +153,18 @@ changed = []
 ep = data.get('enabledPlugins')
 if not isinstance(ep, dict):
     ep = {}
-if ep.get('ck-code@ck-marketplace') is not True:
+if 'ck-code@ck-marketplace' not in ep:
     ep['ck-code@ck-marketplace'] = True
     changed.append('enabledPlugins')
 data['enabledPlugins'] = ep
+
+mk = data.get('extraKnownMarketplaces')
+if not isinstance(mk, dict):
+    mk = {}
+if 'ck-marketplace' not in mk:
+    mk['ck-marketplace'] = {'source': {'source': 'github', 'repo': 'ckandrinirina/ck-code'}}
+    changed.append('extraKnownMarketplaces')
+data['extraKnownMarketplaces'] = mk
 
 hooks = data.get('hooks')
 if not isinstance(hooks, dict):
@@ -279,6 +309,12 @@ cmd_check() {
     row "settings" "SessionStart hook wired"
   else
     row "settings" "NOT wired in $SETTINGS_REL"
+    note "run: ck-bootstrap install"
+  fi
+  if grep -q '"ck-marketplace"' "$SETTINGS" 2>/dev/null; then
+    row "marketplace" "ck-marketplace declared"
+  else
+    row "marketplace" "NOT declared in $SETTINGS_REL"
     note "run: ck-bootstrap install"
   fi
   check_delivery

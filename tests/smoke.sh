@@ -517,6 +517,39 @@ BOOTSTRAP_OUT=$(ck-bootstrap check 2>&1); BOOTSTRAP_RC=$?
 assert_exit "ck-bootstrap check: exits 0 (read-only report)" 0 "$BOOTSTRAP_RC"
 
 echo
+echo "=== ck-bootstrap guard: remote sessions ==="
+# A cloud session never installs the plugins a repo enables, so the guard installs it there.
+GB="$(mktemp -d)"; mkdir -p "$GB/repo/tasks" "$GB/cfg" "$GB/stub"
+printf 'layout: v7\n' > "$GB/repo/tasks/VERSION.md"
+git -C "$GB/repo" init -q && mkdir -p "$GB/repo/.claude"
+printf '{"enabledPlugins":{"ck-code@ck-marketplace":false}}\n' > "$GB/repo/.claude/settings.json"
+(cd "$GB/repo" && "$PLUGIN_ROOT/scripts/ck-bootstrap.sh" install >/dev/null 2>&1)
+GSET="$(cat "$GB/repo/.claude/settings.json")"
+assert_contains "ck-bootstrap: declares where ck-marketplace lives" "$GSET" '"repo": "ckandrinirina/ck-code"'
+assert_contains "ck-bootstrap: keeps an explicit enabledPlugins false" "$GSET" '"ck-code@ck-marketplace": false'
+printf '#!/bin/sh\necho "$*" >> "%s/calls"\n[ -f "%s/fail" ] && exit 1\nexit 0\n' "$GB" "$GB" > "$GB/stub/claude"
+chmod +x "$GB/stub/claude"
+guard() { (cd "$GB/repo" && env -i HOME="$GB" PATH="$GB/stub:/usr/bin:/bin" CLAUDE_CONFIG_DIR="$GB/cfg" CLAUDE_PROJECT_DIR="$GB/repo" "$@" bash .claude/ck-code-required.sh); }
+G_LOCAL="$(guard)"
+assert_contains "guard (local): asks for the install and /reload-plugins" "$G_LOCAL" "/reload-plugins"
+assert_eq "guard (local): never installs anything itself" "" "$(cat "$GB/calls" 2>/dev/null)"
+G_CLOUD="$(guard CLAUDE_CODE_REMOTE=true)"
+assert_contains "guard (cloud): installs the plugin at user scope" "$(cat "$GB/calls")" "plugin install ck-code@ck-marketplace --scope user"
+assert_contains "guard (cloud): tells the user to /reload-plugins" "$G_CLOUD" "was just installed"
+touch "$GB/fail"
+G_FAIL="$(guard CLAUDE_CODE_REMOTE=true)"
+assert_contains "guard (cloud): a failed install names the network fix" "$G_FAIL" "github.com"
+if [ "$HAVE_JQ" -eq 1 ]; then
+  for out in "$G_LOCAL" "$G_CLOUD" "$G_FAIL"; do
+    assert_true "guard: emits valid JSON" "$(printf '%s' "$out" | jq -e . >/dev/null 2>&1; echo $?)"
+  done
+fi
+mkdir -p "$GB/cfg/plugins/cache/ck-marketplace/ck-code/9.9.9/.claude-plugin"
+touch "$GB/cfg/plugins/cache/ck-marketplace/ck-code/9.9.9/.claude-plugin/plugin.json"
+assert_eq "guard: silent once the plugin is installed" "" "$(guard CLAUDE_CODE_REMOTE=true)"
+rm -rf "$GB"
+
+echo
 echo "=== hook scripts (statusline / session-start / subagent-statusline) ==="
 STATUSLINE_JSON=$(printf '{"workspace":{"current_dir":"%s"}}' "$FIXTURE")
 STATUSLINE_OUT=$(printf '%s' "$STATUSLINE_JSON" | "$PLUGIN_ROOT/scripts/statusline.sh" 2>&1); STATUSLINE_RC=$?

@@ -299,7 +299,8 @@ On **Swap**: set `"ck-code-lite@ck-marketplace": false` and
 takes effect after a session restart. On **Leave it**: change neither key yourself and say
 so in the report. Never edit any other key in that file.
 
-**`ck-bootstrap install` sets `"ck-code@ck-marketplace": true` regardless of this answer.**
+**`ck-bootstrap install` adds `"ck-code@ck-marketplace": true` regardless of this answer**
+(it keeps only an explicit value already there, which a lite project never has).
 It is the guard installer `migrate` Phase 4 runs beside the stamp
 ([`version-gate.md`](../../../references/version-gate.md)), and it opts the project into the
 plugin whose layout the stamp now claims. So **Leave it** does not mean "ck-code stays
@@ -318,7 +319,10 @@ On top of the standard `migrate` report:
   with the `/ck-code:design` follow-up
 - the plan record: `integration: story`, and `/ck-code:config integration` to change it
 - the plugin swap: the answer, **and the final value of both `enabledPlugins` keys**.
-  `ck-code@ck-marketplace` is `true` either way because `ck-bootstrap install` sets it, so
+  `ck-code@ck-marketplace` is `true` either way because `ck-bootstrap install` adds it, so
   say plainly whether `ck-code-lite@ck-marketplace` is still `true` and how to turn it off
+- the lite plugin guard, when `.claude/ck-code-lite-required.sh` exists: it goes silent once
+  `tasks/PLAN.md` is renamed, so it is left in place; say the user may delete it and its
+  `SessionStart` entry
 - lite artifacts renamed / bannered
 - a moved design system, with `/ck-code:team --regenerate` as the follow-up
