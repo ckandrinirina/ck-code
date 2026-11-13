@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.29.1] — 2026-11-13
+
+### Fixed
+- **no-ai-guard, ck-bootstrap, ck-doctor, ck-checklist, ck-migrate**: every embedded Python runs with `python3 -I`. A stdin or `-c` script puts the working directory first on `sys.path`, so a `json.py` in a cloned project ran as code — in `no-ai-guard`'s case on every Bash call.
+- **ck-bootstrap**: refuses to write when `.claude`, the guard or `.claude/settings.json` is a symlink, so a cloned repo cannot redirect the write outside the project.
+
 ## [7.29.0] — 2026-11-13
 
 ### Added
