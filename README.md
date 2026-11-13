@@ -190,11 +190,25 @@ the session opens with:
    docs/architecture/, and never improvise a stand-in for a /ck-code:* command.
    /plugin marketplace add ckandrinirina/ck-code
    /plugin install ck-code@ck-marketplace
+   /reload-plugins
 ```
+
+### Local, SSH, Remote Control and cloud sessions
+
+Where the session runs decides where ck-code has to be installed:
+
+| Session | Plugins come from | What the guard does |
+|---|---|---|
+| Local (terminal, Desktop) and **Remote Control** | this machine's `~/.claude` | nothing once installed |
+| Desktop **SSH** | the remote host's `~/.claude` | the committed `extraKnownMarketplaces` entry makes a trusted session there offer the install; otherwise it asks for it |
+| **Cloud** (claude.ai/code, Desktop or mobile cloud sessions) | nothing: a cloud session never installs the plugins a repo enables | installs `ck-code@ck-marketplace` itself (`CLAUDE_CODE_REMOTE=true`), then asks you to type `/reload-plugins` once |
+
+The cloud install needs the environment to reach github.com, which the default network level
+allows. A project thread in the cloud runs no repo hooks, so it gets no ck-code.
 
 | Command | What it does |
 |---|---|
-| `ck-bootstrap install` | write the guard, wire the SessionStart hook, opt the project into the plugin (idempotent) |
+| `ck-bootstrap install` | write the guard, wire the SessionStart hook, opt the project into the plugin and declare where `ck-marketplace` lives (idempotent; an explicit `false` is kept) |
 | `ck-bootstrap check` | guard version, whether it is wired, and whether it is actually committed |
 | `ck-bootstrap remove` | delete the guard and unwire it |
 
