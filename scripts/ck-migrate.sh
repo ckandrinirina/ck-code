@@ -181,7 +181,7 @@ while IFS= read -r mj; do
   grep -q '"stage"' "$mj" || continue
   say "spec     $mj: drop stage"
   if [ "$DRY" -eq 0 ]; then
-    python3 - "$mj" <<'PY' || die "could not rewrite $mj"
+    python3 -I - "$mj" <<'PY' || die "could not rewrite $mj"
 import re, sys
 p = sys.argv[1]
 lines = open(p).read().split("\n")
@@ -204,7 +204,7 @@ dsm=docs/architecture/design-system/manifest.json
 if [ -f "$dsi" ] && [ "$(head -1 "$dsi")" = "---" ]; then
   say "design   $dsi frontmatter → $dsm"
   if [ "$DRY" -eq 0 ]; then
-    python3 - "$dsi" "$dsm" <<'PY' || die "could not move the design-system metadata"
+    python3 -I - "$dsi" "$dsm" <<'PY' || die "could not move the design-system metadata"
 import json, os, re, sys
 idx, man = sys.argv[1], sys.argv[2]
 text = open(idx).read()

@@ -459,7 +459,7 @@ check_design_system() {
     note "run /ck-code:design ds to rebuild the cache manifest"
     return 0
   fi
-  if ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$ds/manifest.json" 2>/dev/null; then
+  if ! python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$ds/manifest.json" 2>/dev/null; then
     row "design system" "manifest.json is not valid JSON" WARN
     note "run /ck-code:design ds to rebuild the cache manifest"
     return 0
@@ -475,7 +475,7 @@ check_design_system() {
     fi
     got=$(shasum -a 256 "$f" 2>/dev/null | awk '{print $1}')
     [ "$got" = "$want" ] || bad="$bad$path: digest differs from manifest"$'\n'
-  done < <(python3 -c '
+  done < <(python3 -I -c '
 import json,sys
 for c in json.load(open(sys.argv[1])).get("cards", []):
     if c.get("cached") and c.get("sha256"):
@@ -510,7 +510,7 @@ check_specs() {
   [ "$HAVE_PY" -eq 1 ] || { row "spec metadata" "python3 missing — check skipped" WARN; return 0; }
 
   local bad pending
-  bad=$(python3 - "${files[@]}" <<'EOF'
+  bad=$(python3 -I - "${files[@]}" <<'EOF'
 import json, sys
 KEYS = ["slug","title","language","audience","createdAt","updatedAt","status",
         "tags","github","linkedDesign","designSystem"]

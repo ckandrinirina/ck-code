@@ -402,7 +402,7 @@ cmd_import() {
     return 0
   fi
   command -v python3 >/dev/null 2>&1 || die "import needs python3"
-  python3 - "$PLAN" "$TODAY" <<'PY' || exit 1
+  python3 -I - "$PLAN" "$TODAY" <<'PY' || exit 1
 import glob, os, re, sys
 plan, today = sys.argv[1], sys.argv[2]
 idx = os.path.join(plan, "CHECKLIST.md")

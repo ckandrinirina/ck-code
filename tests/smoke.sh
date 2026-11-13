@@ -547,6 +547,11 @@ fi
 mkdir -p "$GB/cfg/plugins/cache/ck-marketplace/ck-code/9.9.9/.claude-plugin"
 touch "$GB/cfg/plugins/cache/ck-marketplace/ck-code/9.9.9/.claude-plugin/plugin.json"
 assert_eq "guard: silent once the plugin is installed" "" "$(guard CLAUDE_CODE_REMOTE=true)"
+mkdir -p "$GB/sym/tasks/" "$GB/sym/.claude" && git -C "$GB/sym" init -q && : > "$GB/victim"
+ln -s "$GB/victim" "$GB/sym/.claude/ck-code-required.sh"
+(cd "$GB/sym" && "$PLUGIN_ROOT/scripts/ck-bootstrap.sh" install >/dev/null 2>&1); SYM_RC=$?
+assert_exit "ck-bootstrap: refuses a symlinked guard path" 1 "$SYM_RC"
+assert_eq "ck-bootstrap: never writes through the symlink" "" "$(cat "$GB/victim")"
 rm -rf "$GB"
 
 echo

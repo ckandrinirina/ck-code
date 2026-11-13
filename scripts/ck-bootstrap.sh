@@ -134,7 +134,7 @@ settings_write() {
     printf '        "hooks": { "SessionStart": [ { "hooks": [ { "type": "command", "command": "%s" } ] } ] }\n' "$GUARD_CMD"
     return 1
   fi
-  SETTINGS="$SETTINGS" GUARD_CMD="$GUARD_CMD" python3 - <<'PY'
+  SETTINGS="$SETTINGS" GUARD_CMD="$GUARD_CMD" python3 -I - <<'PY'
 import json, os, sys
 path, guard = os.environ['SETTINGS'], os.environ['GUARD_CMD']
 data = {}
@@ -208,7 +208,7 @@ settings_drop() {
   [ -f "$SETTINGS" ] || return 0
   command -v python3 >/dev/null 2>&1 || {
     warn "python3 not found — remove the ck-code-required.sh hook from $SETTINGS_REL by hand"; return 1; }
-  SETTINGS="$SETTINGS" python3 - <<'PY'
+  SETTINGS="$SETTINGS" python3 -I - <<'PY'
 import json, os, sys
 path = os.environ['SETTINGS']
 try:
@@ -274,6 +274,11 @@ check_delivery() {
 cmd_install() {
   local had
   had=$(guard_installed_version) || had=""
+  # A cloned repo could commit these paths as symlinks; following one would overwrite a file
+  # outside the project.
+  if [ -L "$ROOT/.claude" ] || [ -L "$GUARD" ] || [ -L "$SETTINGS" ]; then
+    warn ".claude, $GUARD_REL or $SETTINGS_REL is a symlink — nothing written"; return 1
+  fi
   mkdir -p "$(dirname "$GUARD")"
   emit_guard > "$GUARD" || { warn "could not write $GUARD_REL"; return 1; }
   chmod +x "$GUARD" 2>/dev/null
