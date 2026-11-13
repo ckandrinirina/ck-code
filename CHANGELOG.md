@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.29.0] — 2026-11-13
+
+### Added
+- **ck-bootstrap guard v2**: in a cloud session (`CLAUDE_CODE_REMOTE=true`), which never installs the plugins a repo enables, the committed `.claude/ck-code-required.sh` installs `ck-code@ck-marketplace` itself and asks for `/reload-plugins`; a failed install names the network fix. Locally it now ends with `/reload-plugins` instead of a restart.
+- **ck-bootstrap**: `.claude/settings.json` now also declares `extraKnownMarketplaces.ck-marketplace` (github `ckandrinirina/ck-code`), so a trusted session on a machine or SSH host that never added the marketplace is offered the install instead of an unresolvable plugin id. `check` reports it.
+
+### Changed
+- **ck-bootstrap**: an explicit `"ck-code@ck-marketplace": false` is kept instead of flipped to `true`, so a project that deliberately runs another copy is not given duplicate commands. Existing projects get the new guard at their next session start (guard version 1 → 2).
+- **migrate** (lite-migration): reports the ck-code-lite guard, which goes silent once `tasks/PLAN.md` is renamed.
+
 ## [7.28.0] — 2026-11-03
 
 ### Changed
