@@ -904,6 +904,42 @@ assert_contains "ck-affected --area: a declared area runs its e2e specs" "$(AFF 
 assert_not_contains "ck-affected --area: and never the other declared area" "$(AFF HEAD --area --tests)" "e2e/client"
 rm -rf "$AF"
 
+# A CMake/Catch2 project: #include traced to the test files, named to Catch2 by file tag.
+AF="$(mktemp -d)"
+afw CMakeLists.txt 'project(x)'
+afw src/core/Clip.h '#pragma once'
+afw src/core/Clip.cpp '#include "Clip.h"'
+afw src/core/Track.h '#include "core/Clip.h"'
+afw src/core/Track.cpp '#include "Track.h"'
+afw src/ui/Panel.h '#pragma once'
+afw src/ui/ClipPanel.h '#pragma once'
+afw tests/ClipTests.cpp '#include "core/Clip.h"'
+afw tests/TrackTests.cpp '#  include <core/Track.h>'
+afw tests/PanelTests.cpp '#include "ui/Panel.h"
+#include "ui/ClipPanel.h"'
+afw tests/engine_test.cc '#include "core/Track.h"'
+( cd "$AF" && git init -q && git add -A && git -c user.email=s@s -c user.name=s commit -qm init )
+echo '//' >>"$AF/src/core/Clip.cpp"
+AF_T=$(AFF HEAD --tests)
+assert_contains "ck-affected: C++ — a changed .cpp runs the tests including its header" "$AF_T" "tests/ClipTests.cpp"
+assert_contains "ck-affected: C++ — and through a header that includes it" "$AF_T" "tests/TrackTests.cpp"
+assert_contains "ck-affected: C++ — a *_test.cc file is a test" "$AF_T" "tests/engine_test.cc"
+assert_not_contains "ck-affected: C++ — a header of a longer name is not a match" "$AF_T" "PanelTests"
+assert_eq "ck-affected --command: {tags} names each test file as a Catch2 filename tag" \
+  "run -# '[#ClipTests],[#TrackTests],[#engine_test]'" "$(AFF HEAD --command full 'run -# {tags}')"
+AFR
+echo '//' >>"$AF/tests/PanelTests.cpp"
+assert_eq "ck-affected: C++ — an edited test file runs itself" "tests/PanelTests.cpp" "$(AFF HEAD --tests)"
+AFR
+echo '#' >>"$AF/CMakeLists.txt"
+assert_contains "ck-affected: C++ — the root CMakeLists.txt is FULL" "$(AFF HEAD)" "ck-affected: FULL"
+AFR
+afw src/core/CMakeLists.txt 'add_library(core Clip.cpp)'
+echo '//' >>"$AF/src/core/Clip.h"
+assert_eq "ck-affected: C++ — a nested CMakeLists.txt is never FULL, its code is traced" \
+  "tests/ClipTests.cpp tests/TrackTests.cpp tests/engine_test.cc" "$(AFF HEAD --tests | tr '\n' ' ' | sed 's/ $//')"
+rm -rf "$AF"
+
 
 echo
 echo "=== ck-project against a fake gh ==="

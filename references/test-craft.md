@@ -28,6 +28,12 @@ test misses costs that much and protects nothing.
   stub the code under test or its in-module collaborators. Assert on outcomes, never on
   which mocks were called in which order, unless the call *is* the behaviour (a sent email,
   a published message).
+- **One test file per source file.** A test goes in the test file that mirrors the file
+  under test (`orders.service.ts` → `orders.service.test.ts`, `Clip.cpp` → `ClipTests.cpp`),
+  created when missing. Never append to a catch-all file (`App.test.tsx`, `misc.test.ts`),
+  and never mount the root `App` to test one component unless the criterion is about the app
+  shell. `ck-affected` picks a test file by what it imports: a file that imports the whole
+  app runs on every change, and its runtime lands on every story.
 - **Unique per-run scratch.** Every temp file, directory, settings file, port or database a
   test creates gets a per-run unique name (`mkdtemp`, the framework's tmp fixture, a random
   port). Parallel builds run the same suite at once in sibling worktrees, and a fixed name

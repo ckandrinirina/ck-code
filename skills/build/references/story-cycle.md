@@ -62,7 +62,8 @@ commands, never from skipping a check:
   `until`/`while … sleep` loop, a `pgrep` wait or a poll of a task's output file — it outlives
   the agent, and some never end. A call moved to the background is waited on with `ck-qa wait`.
 - **Keep the inner loop targeted.** Every RED (4.4) and GREEN (5.2/5.3) of each cycle, and each
-  refactoring (6.2) run the story's own test files. Lint only the files the story touched,
+  refactoring (6.2) run the story's own test files — on Catch2, the test binaries with
+  `-# '[#ClipTests]'`, never the whole `ctest` ([`qa-scope.md` § Catch2](qa-scope.md#catch2--one-process-per-binary)). Lint only the files the story touched,
   by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,
   `ruff check app/x.py`). Never run a package-wide lint and `grep` it for one file: measured
   at 60–120 s a call, it ran up to seven times in one story. A package-wide typecheck runs at

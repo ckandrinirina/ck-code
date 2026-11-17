@@ -18,7 +18,7 @@ single-story QA uses it too:
 | `package.json` | the declared `test`, `lint`, and typecheck scripts — typically `npm run test`, `npx eslint .`, `npx tsc --noEmit`, `npx prettier --check .` |
 | `pyproject.toml` | `pytest`, plus the declared lint/format/type checks — typically `ruff check .`, `black --check .`, `mypy .` |
 | `go.mod` | `go test ./... && go vet ./...` |
-| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)); with registered tests, `ctest --test-dir build --output-on-failure -j "${CK_QA_JOBS:-4}"` ([§ Parallel ctest](#parallel-ctest)) |
+| `CMakeLists.txt` | `cmake --build build --config Release`, then verify the artifact (C++/JUCE build-log and `clang-format` rules: [tdd-walkthrough.md](tdd-walkthrough.md#juce-test-runner-rules)); with registered tests, `ctest --test-dir build --output-on-failure -j "${CK_QA_JOBS:-4}"` ([§ Parallel ctest](#parallel-ctest)); story scope on Catch2 v3 runs each test binary once, filtered by file ([§ Catch2](#catch2--one-process-per-binary)) |
 
 A project's `guide-conventions` skill overrides this table when it names canonical commands.
 No manifest match → ask once and reuse.
@@ -28,10 +28,32 @@ No manifest match → ask once and reuse.
 `ctest` runs one test at a time unless given `-j`, and a Catch2 or GoogleTest suite registers
 hundreds of small tests: measured on a 590-test suite, 82 s serial against 10 s with `-j 8`,
 same result. `CK_QA_JOBS` is the run's share of the cores, set by `ck-qa`. Once per project,
-when `docs/architecture/dev-guide.md` `## Testing` names no `ctest` line yet, run the suite once
-with `-j` and once without: record the `-j` command there only when both pass, otherwise the
-serial one with the reason (tests sharing a file, port or directory). Later stories use the
-recorded line. Never weaken a test to make it parallel.
+when `docs/architecture/dev-guide.md` `## Testing` names no `ctest` line yet, **or names one
+with neither `-j` nor `--parallel` and no recorded serial reason** (a line written before this
+rule — measured at 2,745 cases and 13–21 min a run, every run), run the suite once with `-j`:
+`PASS` → record the `-j` line; `FAIL` → run it once serially, and record the serial line with
+the reason (tests sharing a file, port or directory) only when the serial run passes. Later
+stories use the recorded line. Never weaken a test to make it parallel.
+
+### Catch2 — one process per binary
+
+`catch_discover_tests` registers every `TEST_CASE` as its own ctest test, so ctest starts the
+binary once per case: the median case took 0.13 s, nearly all of it process start. Story
+scope skips ctest. It builds the test targets, then runs **each test binary once** with
+Catch2's file-name tags, which select the cases of the affected test files only — measured
+at 0.2 s for two files against 13 min for the suite:
+
+```
+<the test row's configure and build> && for t in <the test binaries>; do if ! "$t" -# {tags} --allow-running-no-tests; then exit 1; fi; done
+```
+
+`{tags}` is `ck-affected`'s filter (`'[#ClipTests],[#TrackTests]'`, one tag per test file,
+its name without the extension). A binary holding none of those files runs nothing and passes.
+Record this line once per project in `dev-guide.md` `## Testing` beside the `ctest` one,
+naming the binaries by the build folder's glob (`build/tests/tests/*_tests`). Catch2 v2 has
+no `--allow-running-no-tests`, GoogleTest has no file tags: both keep the `ctest -j` row at
+every scope. Area scope and P8 always run the `ctest -j` row: one process per case is what
+catches a case that passes only because another ran before it in the same process.
 
 ## Affected tests — the story-level test command
 
@@ -72,9 +94,12 @@ still the whole package. A story never writes `.ck-test-areas` unasked; editing 
 tests of every file importing those — the service's test, then the controller that uses
 the service and its test, up the chain. JS/TS and Python imports resolve to the file
 (relative paths, `@/` aliases, workspace package names, dotted and relative modules). Ruby,
-PHP and Go match by name, and Go adds a package's own tests. An area `ck-affected` marks
-`all` (its own manifest or test config changed, a Rust/C++/JVM file, a trace over 2000
-files) runs whole.
+PHP and Go match by name, and Go adds a package's own tests. C/C++ follows `#include`: a
+changed `Foo.cpp` or `Foo.h` reaches every file that includes a `Foo` header, then their
+includers; a test file is `*Tests.cpp`, `*_test.cc`, `test_*.c` or any source under `tests/`.
+A nested `CMakeLists.txt` is traced through its code; the root one and `*.cmake` are FULL. An
+area `ck-affected` marks `all` (its own manifest or test config changed, a Rust/JVM file, a
+trace over 2000 files) runs whole.
 
 **Area scope** runs every test of each reached area, plus each workspace package whose
 manifest depends on a reached one.
@@ -95,10 +120,11 @@ costs nothing:
 | area, every runner | `"$(ck-affected <base> --area --command '<full row>' '<row narrowed>')"` |
 
 The **narrowed row** is the full test row with the files spliced in: `{files}` is the test
-files, `{dirs}` their folders — `pytest {files}`, `npx vitest run {files}`,
-`npx playwright test {files}`, `bundle exec rspec {files}`, `vendor/bin/phpunit {files}`,
-`go test {dirs}`. The script prints the full row itself on FULL, for an `all` area whose
-tests live inside the source (cargo, CMake), and past 800 files. `"$(…)"` runs at the call,
+files, `{dirs}` their folders, `{tags}` their Catch2 file tags — `pytest {files}`,
+`npx vitest run {files}`, `npx playwright test {files}`, `bundle exec rspec {files}`,
+`vendor/bin/phpunit {files}`, `go test {dirs}`, the [§ Catch2](#catch2--one-process-per-binary)
+line. The script prints the full row itself on FULL, for an `all` area whose tests live
+inside the source (cargo), and past 800 files. `"$(…)"` runs at the call,
 so `ck-qa` stamps the resolved command, and the validator's identical expression on the same
 tree resolves to the same string and reports `REUSED`. The vitest, jest and Playwright story
 commands use the runner's own module graph, which a `ck-affected` story list matches; keep
