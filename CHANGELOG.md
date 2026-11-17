@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.30.0] — 2026-11-17
+
+### Added
+- **ck-affected**: C/C++ is traced through `#include` (a changed `Foo.cpp` or `Foo.h` reaches every file including a `Foo` header, transitively), C/C++ test files are recognised (`*Tests.cpp`, `*_test.cc`, `test_*.c`, sources under `tests/`), and `--command` splices `{tags}`, a Catch2 file-tag filter. C++ stories no longer run the whole suite.
+- **build** (qa-scope): on Catch2 v3, story scope and the inner loop run each test binary once with `-# {tags}` instead of one ctest process per case — measured at 13–21 min a run on a 2,745-case suite, 0.2 s for two files. Area scope and P8 keep `ctest -j`.
+- **test-craft**: one test file per source file, never a catch-all or root-`App` test, so the affected-test trace selects only what a change reaches.
+
+### Changed
+- **build** (qa-scope): an existing `ctest` line with neither `-j` nor `--parallel` and no recorded serial reason gets the one-time parallel check, not only a project's first ctest line.
+
+### Fixed
+- **ck-affected**: `CMakeLists.txt` was classed as a `.txt` asset, so changing a C++ build ran no tests at story scope; the root one (and `*.cmake`, presets, meson, vcpkg, conan) is now FULL, and a nested one is traced through its code.
+
 ## [7.29.1] — 2026-11-13
 
 ### Fixed
