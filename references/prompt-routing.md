@@ -16,7 +16,7 @@ ck-code router — this project uses ck-code. Before acting on this prompt, pick
 | new functionality no story covers — large, or new work to break into epics, stories, a roadmap | `plan` |
 | expert or guide skills are stale after a stack or folder change, a package migration, or a major dependency bump | `team --refresh` |
 | stakeholder-facing feature spec | `spec` |
-| link a Claude Design URL, or refresh the linked design system | `design ds [url]` |
+| link a Claude Design or Figma URL, refresh the linked design, draw the brief in Figma, see the design in a browser | `design ds [url]` / `design ds figma` / `design ds preview` |
 | architecture, tech choices, data or flow design; bloated docs → `design optimize` | `design` |
 | expert or guide skills, house coding conventions | `team` |
 | progress, status, which story is next | `track` |

@@ -9,6 +9,9 @@ through [`story-cycle.md`](../skills/build/references/story-cycle.md) and
 [`skill-detection.md`](skill-detection.md), and [`qa-validation.md`](qa-validation.md).
 Those files say *when*; this file says *how*.
 
+The same engine imports a Figma file (`ck-replicate figma`, owned by [figma.md](figma.md)) and
+serves the design preview (`ck-replicate preview`, [design-system.md § Preview](design-system.md#preview)).
+
 ## The off switch
 
 No `docs/replica/` directory → no touchpoint does anything. It is created only by an explicit

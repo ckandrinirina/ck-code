@@ -1,7 +1,7 @@
 ---
 name: design
-description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/, when an existing app should be copied — a website, desktop or mobile app, or CLI (`replicate <source>`) — or when maintaining those docs — `optimize` (dedup into _shared.md), `sync` (scaffold missing feature docs), or `ds [link]` (link or refresh a Claude Design system). Argument is a spec path, or `replicate`/`optimize`/`sync`/`ds`. Runs before `plan`.
-argument-hint: "[path-to-spec | replicate <url|app|cli cmd|path> | optimize | sync | ds [design-url]]"
+description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/, when an existing website, app or CLI should be copied (`replicate <source>`), or when maintaining those docs — `optimize` (dedup into _shared.md), `sync` (scaffold missing feature docs), or `ds [link]` (link or refresh a Claude Design project or Figma file, create one in Figma, preview it). Argument is a spec path, or `replicate`/`optimize`/`sync`/`ds`. Runs before `plan`.
+argument-hint: "[path-to-spec | replicate <url|app|cli cmd|path> | optimize | sync | ds [claude.ai/design or figma.com URL | figma | preview]]"
 effort: high
 allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) Bash(pbcopy*) Bash(wl-copy*) Bash(xclip*) Bash(ck-replicate*) DesignSync Skill
 ---
@@ -26,8 +26,10 @@ whole design→plan bridge, and every layer's content lives in the feature doc t
 - **Feature** (spec path, docs already exist) — add or extend one feature doc, globals kept consistent.
 - **optimize** (maintenance) — measure per-doc tokens, dedup repeated content into `_shared.md`.
 - **sync** (maintenance) — scaffold feature docs for epics in `EPICS_INDEX` that lack one.
-- **ds** (optional) — link a Claude Design system, from a pasted `claude.ai/design` URL or
-  by picking one, and refresh its git-tracked cache.
+- **ds** (optional) — link a Claude Design project or a Figma file, from a pasted
+  `claude.ai/design` or `figma.com` URL or by picking one, and refresh its git-tracked cache;
+  `ds figma` draws the brief in a new Figma file; `ds preview` opens the cached design in a
+  browser.
 - **replicate** — capture an existing app (website, Electron, macOS, Android, iOS, CLI, source
   tree or screenshots) into `docs/replica/<slug>/REPLICA.md`, then design from it.
 
@@ -72,7 +74,7 @@ this PASSes.
 
 `LITE — tasks/PLAN.md` → a ck-code-lite project, so the wrong plugin, not an old layout:
 [redirect to ck-code-lite](../../references/version-gate.md#lite--redirect-to-ck-code-lite) —
-print its `↪` line, run `ck-code-lite:design <url>` for `ds [url]`, `ck-code-lite:start <spec>` for a spec path (`optimize`/`sync` → the BLOCK instead), and **stop**. Never offer to run `/ck-code:migrate` for it.
+print its `↪` line, run `ck-code-lite:design <url>` for `ds [url]` (`ck-code-lite:design preview` for `ds preview`, `ck-code-lite:design figma` for `ds figma`), `ck-code-lite:start <spec>` for a spec path (`optimize`/`sync` → the BLOCK instead), and **stop**. Never offer to run `/ck-code:migrate` for it.
 
 Applies in ALL modes, and runs **once, in the orchestrator** — never inside a fan-out subagent.
 
@@ -559,8 +561,25 @@ never runs this is unaffected by it.
 [`design-system.md`](../../references/design-system.md) owns the procedure. Do not restate
 its rules here; run them.
 
-Everything after `ds` in `$ARGUMENTS` is the **link** — a `claude.ai/design` URL, a bare
-project uuid, or a project name. Empty means "pick from a list" or "refresh".
+Everything after `ds` in `$ARGUMENTS` is the **link** — a `claude.ai/design` URL, a
+`figma.com` URL, a bare project uuid, or a project name. Empty means "pick from a list" or
+"refresh". Two words are sub-modes instead:
+
+- **`ds preview`** — no `docs/architecture/design-system/` → say so and stop. Otherwise start
+  [§ Preview](../../references/design-system.md#preview) with `run_in_background`, relay its URL
+  and counts in two lines, say how to stop it, and that a reload shows a later build's shots.
+  Nothing else runs.
+- **`ds figma`** — create the design in Figma from the newest brief
+  (`docs/specs/*/design-brief.md` whose `.metadata.json` reads `awaiting-link`, else
+  `docs/design-brief.md`); none → hand off to `/ck-code:spec` to write one, and stop. Then
+  [figma.md § Create in Figma](../../references/figma.md#create-in-figma); a file URL coming back
+  continues as a Figma link below.
+
+**A `figma.com` link** → [figma.md](../../references/figma.md): probe the tier (§ Tiers) and run
+§ Import for it — `mkdir -p docs/architecture/design-system/cards` first, a linked project of
+another source pairs or replaces as in step 2 — then steps 3–5 below. No `DesignSync` is needed,
+so step 1 is skipped; a cache that is already Figma refreshes by re-running its import with
+`figmaSource`. The report adds the tier and names every frame whose rebuild matched under 98 %.
 
 1. **Tool check.** If the `DesignSync` tool is unavailable in this session, print the one
    line from [§ When DesignSync is unavailable](../../references/design-system.md#when-designsync-is-unavailable)

@@ -289,11 +289,13 @@ answered; the decline is recorded as `none` and is a decision, not a gap.
 
 ### 5.2 The offer
 
-One `AskUserQuestion`, one question, three options, in this order:
+One `AskUserQuestion`, one question, four options, in this order:
 
 - **Design first — write the brief (Recommended)** — generates `design-brief.md` here: the
   paste-ready prompt for claude.ai/design, built from the spec just written.
-- **Already have one** — the user already has a design system at `claude.ai/design`; skip
+- **Design first in Figma** — the same brief, drawn in a new Figma file
+  ([figma.md § Create in Figma](../../references/figma.md#create-in-figma)).
+- **Already have one** — the user already has a Claude Design project or a Figma file; skip
   the brief and print the link command directly (`/ck-code:design ds <url>`).
 - **Not now** — recorded as `none`; UI is built from the architecture docs alone.
 
@@ -323,6 +325,10 @@ Then print the hand-off — three lines, no more:
 2. Paste the brief (already on the clipboard, else the contents of `<briefPath>`).
 3. When it is ready, copy the URL and run `/ck-code:design ds <url>` — in this session or
    any later one.
+
+**Design first in Figma** → the same brief and metadata, then instead of those three lines
+run [figma.md § Create in Figma](../../references/figma.md#create-in-figma); a Figma file URL
+coming back is linked with `/ck-code:design ds <url>`, which closes this pending link.
 
 Say explicitly that the work stops here and nothing is waiting on them: the reminder
 survives on disk and reappears at the start of any future session in this project. Then go
