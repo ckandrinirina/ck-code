@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.32.2] — 2026-11-19
+
+### Fixed
+- **ck-replicate** 1.3.2 (`figma pull`): a frame with a fractional size (526.33 × 2327.16) now gets its rebuild check — the viewport is the size of Figma's own PNG, recorded as `viewport` in `figma.json` — and the fidelity loop uses that size. SVG exports are requested 100 per call and assets download 16 at a time (a 30-frame file with 1,281 SVGs dropped from 7.5 minutes).
+
 ## [7.32.1] — 2026-11-19
 
 ### Fixed
