@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.31.0] — 2026-11-19
+
+### Added
+- **ck-qa**: a failing run prints up to three lessons from `~/.claude/ck-lessons.md` whose error regex matches the failed log, the fixes another project on this machine already found. It prints nothing when no lesson matches, so a passing or unmatched run costs no tokens.
+- **build** (story-cycle) / **story-implementer**: a QA failure fixed in the environment (a missing tool or browser, a busy port, a stopped service, a stale cache) rather than the code is recorded with `ck-release learn qa,on-error`; a code bug never is. **qa-validator** carries any `lesson:` line into its verdict verbatim.
+
 ## [7.30.0] — 2026-11-17
 
 ### Added
