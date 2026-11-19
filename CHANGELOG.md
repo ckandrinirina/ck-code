@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.32.1] — 2026-11-19
+
+### Fixed
+- **ck-replicate** 1.3.1 (`figma`): every CSS value from a Figma file is sanitized before it reaches `index.html` or `spec.md` — font names allowlisted, blend modes from a fixed set, image refs validated, `<` escaped — so a hostile layer cannot break out of `<style>`. Asset downloads are pinned to Figma's own hosts and its S3 bucket (not every `amazonaws.com` host), and each redirect hop is re-checked.
+
 ## [7.32.0] — 2026-11-19
 
 ### Added
