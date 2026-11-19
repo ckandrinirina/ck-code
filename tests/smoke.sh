@@ -699,6 +699,10 @@ assert_contains "ck-qa run: in order, stops at the first failure" "$QA_SEQ" "b: 
 QA_PAR=$(QA run 01-01 --parallel a='exit 3' b='echo lint-broke; exit 1' c='true')
 assert_contains "ck-qa run --parallel: reports every failure" "$QA_PAR" "ck-qa: FAIL — a b"
 assert_contains "ck-qa run --parallel: shows each failing log's tail" "$QA_PAR" "lint-broke"
+printf '%s\n' "- qa,on-error :: EADDRINUSE :: free the port first :: x 2026" >"$QA_TMP/lessons.md"
+QA_LES=$(CK_LESSONS="$QA_TMP/lessons.md" QA run 01-01 p='echo "listen EADDRINUSE :3000"; exit 1')
+assert_contains "ck-qa run: a failure prints the lesson its log matches" "$QA_LES" "lesson: qa,on-error :: EADDRINUSE"
+assert_not_contains "ck-qa run: no lesson when nothing matches" "$(CK_LESSONS="$QA_TMP/lessons.md" QA run 01-01 p='exit 1')" "lesson:"
 assert_contains "ck-qa run: a command that edits the tree is flagged" "$(QA run 01-01 fmt='echo x >>a.txt')" "changed the working tree"
 assert_contains "ck-qa run --reuse: a tree-editing command is never stamped" "$(QA run 01-01 --reuse fmt='true; echo x >>a.txt')" "fmt: PASS"
 git -C "$QA_REPO" checkout -q -- a.txt

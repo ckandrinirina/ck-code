@@ -359,6 +359,12 @@ the orchestrator: P8 once per wave, or the scope S5 gives a single story.
 inline report's verdict and enters the same loop; never treat it as a separate outcome, and
 never re-run the suite here to confirm it.
 
+**Known fixes.** A `lesson:` line under a `ck-qa` failure is a fix another project already
+found: try it first. When a failure came from the environment (a missing tool or browser, a
+busy port, a stopped service, a stale cache), not the code, record its fix once it works:
+`ck-release learn qa,on-error '<regex matching the error line>' '<the fix>'`. Never record a
+code bug.
+
 **Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`
 via `AskUserQuestion` (wording in output-blocks); never silently continue past 3. On NEEDS
 FIXES inside the loop: fix each issue → re-run Phase 6, whose 6.3 is a `--rerun` of only the
