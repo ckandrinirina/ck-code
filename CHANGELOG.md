@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.32.0] — 2026-11-19
+
+### Added
+- **design** `ds`: a `figma.com` URL links a Figma frame, page or file into `docs/architecture/design-system/` exactly — Figma's own 1× render as the fidelity reference, the raw layer tree, every layer's CSS derived by fixed rules in `spec.md`, a static `index.html` rebuild checked against the render, SVG icons, image fills and named-style tokens. Without a personal access token, the official Figma plugin's MCP gives the mcp tier. Contract: `references/figma.md`.
+- **design** `ds figma` draws the brief in a new Figma file through the official Figma plugin and links it; `ds preview` serves the cached design (tokens, cards, Figma frames beside their rebuild, design · app · diff with an overlay) on 127.0.0.1. **spec** offers **Design first in Figma**.
+- **ck-replicate** 1.3.0: `figma pull | render | fetch` and `preview`; `diff` composites transparency over white. The token is sent only to api.figma.com and never written.
+
 ## [7.31.0] — 2026-11-19
 
 ### Added
