@@ -3,7 +3,7 @@ name: build
 description: Use when implementing stories from `tasks/` end-to-end with TDD — one story, several independent stories at once in isolated worktrees, or a whole epic in dependency-ordered waves, optionally unattended. Also implements a bug-status story handed off by `/ck-code:fix` (Bug-Fix Mode). Argument is an optional story path (with `--quick` or `--full`), space-separated story IDs, or `--epic NN`, any of them with `--auto`; with no argument, picks interactively.
 argument-hint: "[story-path [--quick|--full]] | [story-ids...] | --epic NN [--auto]"
 effort: medium
-allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-affected*) Bash(ck-headless*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(ck-replicate*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
+allowed-tools: Bash(ck-story*) Bash(ck-qa*) Bash(ck-affected*) Bash(ck-headless*) Bash(ck-heavy*) Bash(ck-view*) Bash(ck-index*) Bash(ck-project*) Bash(ck-plan*) Bash(ck-epic*) Bash(ck-bootstrap*) Bash(ck-reclaim*) Bash(ck-replicate*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git merge-base*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git switch*) Bash(git merge*) Bash(git revert*) Bash(git worktree*) Bash(gh issue*) Bash(ls*) Bash(find*) Bash(grep*) Bash(awk*) Bash(sed*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -291,6 +291,10 @@ In the same call, `ck-headless`. Its `FOREGROUND` lines go into the dispatch pro
 `Background:`, and the builder converts them first, without asking
 ([background-tests.md](../../references/background-tests.md)). `ck-headless: OK` adds nothing.
 
+Also `ck-heavy detect && ck-heavy list`, in each code repository the story's `files:` touch: the
+suites become the dispatch's `Heavy:` lines, and `CANDIDATE` lines become S2's question
+([heavy-tests.md](../../references/heavy-tests.md#undeclared-suites-once-per-repository-before-the-first-dispatch)).
+
 **S2 — Route, then one question.** Fix the route first ([QUICK ROUTE](#quick-route)) and
 announce it in one line. Then resolve the base exactly as Phase 3.5 does (same batched call,
 `resolve_base`, same four signals, same level rule — an objection to the derived base is a
@@ -307,6 +311,7 @@ most 4 questions** — the agent cannot ask anything, so everything is settled h
   and its three answers from [`design-system.md` § Pending at build
   time](../../references/design-system.md#pending-at-build-time). A pasted URL links it here,
   before S3.
+- **Heavy suites** — S1's `CANDIDATE` lines: keep them out of the build, or run them in it.
 
 **`--auto`:** S1 still stops on a dirty path, but it reports the paths and asks nothing. S2
 asks no question. It takes the recommended base option, continues without experts when the
@@ -569,6 +574,8 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
   manual gate here. Inline only when this context has no `Agent` tool.
 - **QUICK ROUTE** — eligibility checked, never assumed; QUICK skips the QA agent, never the
   QA commands, RED where a test covers the change, or the manual gate.
+- **Heavy tests** — a declared DB, container or e2e suite never runs in a build: only the file
+  a story wrote or edited, marked `ck-heavy: EE-SS`; `ship` asks once per PR.
 - **Background tests** — `ck-headless` runs before dispatch; every `FOREGROUND` hit is
   converted before story code; every test runs through `ck-qa`.
 - **3.5** — plan and base branch confirmed in one gate before any code (single-story dispatch: base only, at S2); the base is **derived from the plan's `integration:` (`ck-plan get`), resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`. The level is never asked here.
@@ -617,6 +624,7 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
 - **Never take the QUICK ROUTE on a story that fails one eligibility condition**, for a bug
   story, or in PARALLEL MODE, and never skip its S5 `ck-qa` run — QUICK drops ceremony, never
   a check.
+- **Never run a heavy suite in a build or a QA pass** ([heavy-tests.md](../../references/heavy-tests.md)) — only the file the story wrote or edited, and never mark a story done on a spec no run has passed.
 - **Never let a test open a window in front of the user** — convert every `ck-headless` hit
   before story code, never ask whether to, and never run an e2e command outside `ck-qa`
   ([background-tests.md](../../references/background-tests.md)).

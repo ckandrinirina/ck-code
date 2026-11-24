@@ -420,6 +420,8 @@ Rules:
   not more unit tests, and never a manual API-client walkthrough.
 - **Each E2E story is still S or M, one dispatch** (3.2). When coverage exceeds one
   dispatch, split by journey (happy-path, error/edge, each integration point) — never one oversized E2E story.
+- Its specs are heavy ([heavy-tests.md](../../references/heavy-tests.md)): one spec file per journey, so
+  the story can run its own file alone and the rest wait for the PR.
 - Give each an ordered `## Implementation Tasks` list: set up fixtures → drive the flow → assert observable outcomes.
 
 Do not fold this into another epic, and do not skip it because "the stories already

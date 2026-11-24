@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# ck-heavy — see scripts/ck-heavy.sh.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+exec "$here/../scripts/ck-heavy.sh" "$@"

@@ -3,7 +3,7 @@ name: ship
 description: Use when finished work needs committing and its PR and linked GitHub Issue opened or updated after a story or fix — or for any standalone commit. `--promote` promotes a completed epic (its PR, or its merge into the plan branch) or opens the PR for a whole plan. Argument is an optional story path, or `--promote` with `--epic NN` or a `tasks/<plan>` path. Issue work needs `gh` authenticated.
 argument-hint: "[path-to-story.md] | --promote [--epic NN | tasks/<plan>]"
 effort: medium
-allowed-tools: Bash(ck-checklist count*) Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(ck-team drift*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
+allowed-tools: Bash(ck-heavy*) Bash(ck-qa*) Bash(ck-checklist count*) Bash(ck-story*) Bash(ck-plan*) Bash(ck-index*) Bash(ck-project*) Bash(ck-bootstrap*) Bash(ck-team drift*) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git rev-parse*) Bash(git rev-list*) Bash(git symbolic-ref*) Bash(git ls-files*) Bash(git fetch*) Bash(git add*) Bash(git commit*) Bash(git checkout*) Bash(git merge*) Bash(git stash*) Bash(git push*) Bash(gh auth status*) Bash(gh repo view*) Bash(gh pr*) Bash(gh issue*) Bash(gh api*) Bash(awk*) Bash(find*) Bash(grep*) Bash(ls*) Skill
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -277,6 +277,12 @@ message. At level `epic`/`plan` a free-text answer may also ask for a story PR i
 `<parent>` instead of the merge (5.B with `--base <parent>`, keeping the story branch). The
 happy path costs one round-trip.
 
+**Heavy tests.** When option 1 opens or updates a PR into the trunk (STANDALONE MODE included, with
+no id), run `ck-heavy scope` first. Anything but `NONE` adds the heavy-tests question to this same
+call, as a second question
+([heavy-tests.md](../../references/heavy-tests.md#at-the-pr--one-question)). The run itself happens
+after Phase 4 and before the push.
+
 Only with no `trunk_branch`, a `develop` branch present, and a default that is not
 `develop` (`git rev-parse --verify --quiet origin/develop`) is the PR base genuinely
 ambiguous — then add a **second question to the same call** ("PR base?" `<default>` /
@@ -317,6 +323,8 @@ Present hash, branch, file count, first message line.
 
 ### 5.A Update existing PR
 
+0. Run the heavy tests 3.3 chose, if any. A `FAIL` stops here with nothing pushed
+   ([heavy-tests.md](../../references/heavy-tests.md#at-the-pr--one-question)). 5.B starts the same way.
 1. `git push origin "$(git branch --show-current)"`.
 2. Record the pointer when the story does not already carry it — a PR opened by hand, or
    before this step existed, still needs `pr:` or the story can never reach Done:
@@ -459,6 +467,12 @@ Neither a missing file nor zero open items adds a prompt. Otherwise ask once, **
 **Not yet**. **Not yet** stops here and prints `/ck-code:verify tasks/<plan>`. It warns, never
 blocks, and makes no `Skill` call.
 
+**Heavy tests.** Before a gate that opens a PR into the trunk, or marks one ready, run
+`ck-heavy scope` on the branch that PR comes from and fold its question into the gate's own call. Run
+the answer there, before the push
+([heavy-tests.md](../../references/heavy-tests.md#at-the-pr--one-question)). Level `plan`'s epic
+merge and draft PR ask nothing: the plan gate asks once, for every epic.
+
 Then run the **epic gate**, and — at level `plan`, when its condition holds — the **plan
 gate**, both defined with their staleness handling in
 [`branch-topology.md`](../../references/branch-topology.md#promotion):
@@ -526,7 +540,7 @@ Skip this step in STANDALONE MODE (no `tasks/` writes) and when the repo has no 
 ## PHASE 7: SUMMARY
 
 Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
-Story (status + delivery/path), Next steps. State the delivery plainly — "in review, not
+Story (status + delivery/path), Heavy tests (linked / affected / whole / not run), Next steps. State the delivery plainly — "in review, not
 yet on `<trunk>`" — so "done" is never mistaken for "shipped"; it turns to `merged` on the
 first reconcile after the PR lands. Worked shape: [examples.md](references/examples.md).
 
@@ -589,6 +603,7 @@ phase.
 - **Never open a PR whose only content is a `delivery:`/`pr:` change** — it is derived state; commit it on the current branch (§3.1, §6.6).
 - **Always relay `ck-index: WARN` lines** — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
+- **Never push a PR branch whose chosen heavy run failed, and never hide a skipped one** — the PR body says it was not run ([heavy-tests.md](../../references/heavy-tests.md)). Never run a heavy suite the user did not choose.
 - **Never ask the user for the PR base branch** — derive it from `trunk_branch` and the plan's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); fold a second question into the 3.3 call only on a genuine `main`/`develop` ambiguity with no `trunk_branch` set.
 - **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, several consumers.
 - **Never merge without the clean-tree guard**, and never leave a merge half-applied — `git merge --abort`, return to the story branch, report the conflicting paths, and stop.

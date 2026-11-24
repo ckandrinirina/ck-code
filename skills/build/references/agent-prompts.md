@@ -114,6 +114,10 @@ return object and the resume below are unchanged:
    `Background: FOREGROUND <file>:<line> <kind> — <text>` line per S1 `ck-headless` hit. With
    hits, add: `Convert each Background hit first, per <absolute path of
    ../../references/background-tests.md>, and commit it as its own commit before RED.`
+5. **Add one `Heavy: <suite> — <globs>` line per suite** S1's `ck-heavy list` printed, then
+   `Never run a heavy file you did not write or edit; mark yours — <absolute path of
+   ../../references/heavy-tests.md> § In the build.` A fan-out or solo wave dispatch carries the
+   same lines.
 
 A QA failure or a manual-test report goes back to the **same agent** by `SendMessage`, worded
 like the resume below with the failing criteria or the user's report in place of
@@ -207,7 +211,8 @@ prompt: |
   <branch>. Run these stack commands exactly, in one call, WITHOUT --reuse:
     ck-qa run EE-SS [--parallel] test='<affected-tests command against the Base SHA>' lint='<changed-file lint>' <label>='<command>' …
     <concrete commands from qa-scope.md at story scope (§ Affected tests) — the
-     full rows when `ck-affected` prints FULL; typecheck/build are always full rows>
+     full rows when `ck-affected` prints FULL; typecheck/build are always full rows;
+     never a label for a `.ck-heavy-tests` suite>
   Take the first failure's short excerpt (failing test names / lint / type errors) from the
   tail it prints or from its log, and never re-run a command to see more of its output.
   Use a 600000 ms Bash timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the
@@ -254,7 +259,7 @@ prompt: |
     ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, or the single-story scope's>' <label>='<command>' …
     <this story's stack commands from qa-scope.md, at the scope 6.3 resolved:
      story scope lints the changed files, area scope each reached component's full row;
-     typecheck/build full>
+     typecheck/build full; never a label for a `.ck-heavy-tests` suite>
   Take a short excerpt of each failure (failing test names, lint or type errors) from the
   tail it prints or from its log, never by re-running the command. Use a 600000 ms Bash
   timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the result prints, and never

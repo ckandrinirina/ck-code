@@ -35,6 +35,10 @@ ones — the fix may have side effects on previously-passing criteria.
 
 ## Step 2 — Run the test suite at the caller's scope
 
+Never run a `.ck-heavy-tests` file or suite. A criterion only a heavy spec proves passes on the
+spec's assertions plus the builder's own run of that file (`ck-qa` log `EE-SS-heavy`), and
+`ck-heavy unmarked <base> <id>` printing a file is an Issue ([`heavy-tests.md`](heavy-tests.md)).
+
 Run the tests the caller's scope names, not just the new ones, and watch for regressions in
 previously-green tests. **Story scope** is every test the diff can affect. **Area scope** is
 every test of each area the diff reaches (the whole suite only when `ck-affected` prints

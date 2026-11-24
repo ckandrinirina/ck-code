@@ -26,6 +26,7 @@ guard first. The branch is not this run's to choose, and there is no user to ask
 | 6.3 + 7 | **One run**, as Phase 7 says below. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
 | 8.5 | Skipped. The orchestrator runs manual sign-off: once per wave after it lands, or at S6 for a single story. A resume carrying a manual-test or QA report runs the 8.5.3 Bug-Fix Sub-Loop ([completion.md](completion.md)) or the QA fixes on the same branch, commits, and returns the verdict again. |
 | 8.7 | No ship. Commit after **every** TDD cycle, so an early stop still leaves resumable work, then return the [verdict](#return). |
+| `Heavy:` | The suites `ck-heavy list` printed. They never run in the build: write and mark the spec, and run only the file you wrote or edited, per [`heavy-tests.md` § In the build](../../../references/heavy-tests.md#in-the-build). |
 | `Background:` | One line per foreground e2e setup. Before RED, convert each per [`background-tests.md`](../../../references/background-tests.md), confirm `ck-headless` prints OK, and commit it alone as `test(e2e): run e2e suites in the background`. It is not story scope: log it under `## Unplanned Changes`, and leave it out of QUICK's step-up count. |
 
 Uncommitted work cannot be merged or resumed, and on a solo run it leaves the shared branch
@@ -83,6 +84,8 @@ commands, never from skipping a check:
   and build are never scoped
   ([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command),
   [§ Re-runs after a failure](qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
+- **A heavy suite waits for the PR.** Never run a database, container or e2e file you did not
+  write or edit, whatever `ck-affected` says: measured at 5–15 min per call, several calls a story.
 - **Stay inside the repo.** Never `find /` or search `$HOME`, because each such search hit the
   120 s Bash timeout. A relative link in this skill (`references/story-template.md`)
   resolves against the `Base directory for this skill` line printed when the skill loaded.
@@ -219,6 +222,8 @@ conventions: naming (`.test.ts`, `_test.rs`, `test_*.py`), location (co-located,
 `__tests__/`, `tests/`), framework, assertion style, mock/stub patterns. Follow loaded guide
 skills. An e2e test launches its browser or app in the background, never in front of the user
 ([`background-tests.md`](../../../references/background-tests.md)).
+Prefer a fast test for a behaviour one can prove. A file of a `Heavy:` suite is marked with the
+story and run alone ([`heavy-tests.md`](../../../references/heavy-tests.md#in-the-build)).
 
 **4.3 Write the next test.** Pick the next acceptance criterion (worked mapping in
 [tdd-walkthrough.md](tdd-walkthrough.md)) and write **one** test for its

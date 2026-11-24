@@ -70,6 +70,7 @@ takes its row here, announced in one line (`Auto: <decision>`) where it would ha
 | P3 design pending | build without it; each UI story is named in the report |
 | P5 ⚠ deletion review | **Exclude this story** (branch kept, reported), never accepted unseen |
 | P7 a story without `QA: PASS` | held (fan-out) or the run stops (solo), as below; never asked |
+| P1 undeclared heavy suites | **Keep them out of the build**, the written lines named in the report |
 | P8 merge | merge every eligible branch (the default already) |
 | P8 post-wave `QA: FAIL` | hard stop: branches kept, nothing reverted, reported |
 | P8 manual gate | **deferred**: the wave completes as on PASS so its dependents schedule; its steps go into the final checklist |
@@ -207,6 +208,11 @@ verify from git: one new commit, a clean tree, and `ck-headless: OK` on a re-run
 starts on a foreground suite: every peer's QA would open the window. A conversion that returns
 `blocked` stops the run with its reason. Under `--auto` the conversion still runs, with no
 question ([background-tests.md](../../../references/background-tests.md)).
+
+**Heavy suites, same call.** `ck-heavy detect && ck-heavy list` in each code repository the scope
+touches. The suites go into every dispatch as `Heavy:` lines, and `CANDIDATE` lines add one question to
+P3's call. A new `.ck-heavy-tests` is committed on `$TARGET` before any wave, because a worktree
+sees only committed work ([heavy-tests.md](../../../references/heavy-tests.md)).
 
 ## P2 — Plan the waves
 

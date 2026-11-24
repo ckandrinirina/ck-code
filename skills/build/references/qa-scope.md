@@ -23,6 +23,10 @@ single-story QA uses it too:
 A project's `guide-conventions` skill overrides this table when it names canonical commands.
 No manifest match → ask once and reuse.
 
+**Heavy suites are never QA.** A database, container or e2e suite declared in
+`.ck-heavy-tests` has no row here at any scope, FULL included: `ck-affected` drops its files,
+and `ship` runs it once per PR ([heavy-tests.md](../../../references/heavy-tests.md)).
+
 ### Parallel ctest
 
 `ctest` runs one test at a time unless given `-j`, and a Catch2 or GoogleTest suite registers
@@ -115,7 +119,7 @@ costs nothing:
 | --- | --- |
 | story, vitest | `npx vitest run --changed <base> --passWithNoTests` |
 | story, jest | `npx jest --changedSince <base> --passWithNoTests` |
-| story, Playwright e2e | `npx playwright test --only-changed=<base> --pass-with-no-tests` |
+| story, Playwright e2e not declared heavy | `npx playwright test --only-changed=<base> --pass-with-no-tests` |
 | story, any other runner | `"$(ck-affected <base> --command '<full row>' '<row narrowed>')"` |
 | area, every runner | `"$(ck-affected <base> --area --command '<full row>' '<row narrowed>')"` |
 

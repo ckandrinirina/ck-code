@@ -1464,6 +1464,85 @@ assert_not_contains "ck-headless: a config that sets E2E_HEADLESS clears electro
 HLW src/main/index.ts "const background = process.env.E2E_HEADLESS === '1'"
 assert_contains "ck-headless: both halves converted is OK" "$(HLR)" "ck-headless: OK"
 rm -rf "$HL"
+
+echo
+echo "=== ck-heavy: slow suites stay out of the build ==="
+HV="$(mktemp -d)"
+HVW() { mkdir -p "$HV/$(dirname "$1")"; printf '%s\n' "$2" >"$HV/$1"; }
+HVR() { ( cd "$HV" && ck-heavy "$@" 2>&1 ); }
+HVA() { ( cd "$HV" && ck-affected "$@" 2>&1 ); }
+( cd "$HV" && git init -q && git config user.email t@t && git config user.name t )
+HVW package.json '{"scripts":{"test":"vitest","test:e2e:db":"vitest --config vitest.config.e2e.ts"}}'
+HVW vitest.config.e2e.ts "export default { test: { include: ['db/**/*.e2e.spec.ts'] } }"
+HVW src/orders.ts "export const n = 1"
+HVW src/users.ts "export const u = 1"
+HVW src/orders.spec.ts "import { n } from './orders'"
+HVW db/orders.e2e.spec.ts "// ck-heavy: 69-03 70-01
+import { n } from '../src/orders'"
+HVW db/repos/users.e2e.spec.ts "/* ck-heavy: epic-71 */
+import { u } from '../../src/users'"
+HVW db/old.e2e.spec.ts "import { n } from '../src/orders'"
+assert_contains "ck-heavy detect: a DB script is a candidate" "$(HVR detect)" 'package.json script "test:e2e:db"'
+assert_contains "ck-heavy detect: and its config, with the files it includes" "$(HVR detect)" "vitest.config.e2e.ts config include"
+assert_contains "ck-heavy detect: counts them" "$(HVR detect)" "ck-heavy: 2 undeclared"
+assert_contains "ck-heavy list: no declaration" "$(HVR list)" "NONE — no .ck-heavy-tests"
+( cd "$HV" && git add -A && git commit -qm start ); printf "export const n = 3\n" >"$HV/src/orders.ts"
+assert_contains "ck-affected: an undeclared DB spec still runs" "$(HVA HEAD --tests)" "db/orders.e2e.spec.ts"
+HVW .ck-heavy-tests "# slow
+db: db/**/*.e2e.spec.ts | npm run test:e2e:db -- {files}
+broken line"
+assert_contains "ck-heavy list: a suite, **/ matching no folder too" "$(HVR list)" "3 files"
+assert_contains "ck-heavy list: a malformed line is warned about" "$(HVR list)" "WARN — .ck-heavy-tests line 3 ignored"
+HVW .ck-heavy-tests "db: db/**/*.e2e.spec.ts | npm run test:e2e:db -- {files}"
+assert_contains "ck-heavy detect: declared is OK" "$(HVR detect)" "ck-heavy: OK"
+( cd "$HV" && git add -A && git commit -qm base )
+HVW src/orders.ts "export const n = 2"
+assert_eq "ck-affected: a heavy test never joins the story scope" "src/orders.spec.ts" "$(HVA HEAD --tests)"
+assert_eq "ck-affected --command: nor the command" "one 'src/orders.spec.ts'" "$(HVA HEAD --command full 'one {files}')"
+assert_eq "ck-affected --heavy: the heavy tests the change reaches" "db/old.e2e.spec.ts
+db/orders.e2e.spec.ts" "$(HVA HEAD --heavy --tests)"
+assert_contains "ck-heavy scope: counts linked, affected and whole" "$(HVR scope HEAD 69-03)" "db linked=1 affected=2 whole=3"
+assert_eq "ck-heavy command: linked names the marked file" "npm run test:e2e:db -- 'db/orders.e2e.spec.ts'" "$(HVR command db linked HEAD 69-03)"
+assert_eq "ck-heavy command: a second id on the same marker" "npm run test:e2e:db -- 'db/orders.e2e.spec.ts'" "$(HVR command db linked HEAD 70-01)"
+assert_eq "ck-heavy command: a bare number is the epic" "npm run test:e2e:db -- 'db/orders.e2e.spec.ts'" "$(HVR command db linked HEAD 69)"
+assert_eq "ck-heavy command: 6 is not epic 69" ": no db tests" "$(HVR command db linked HEAD 6)"
+assert_eq "ck-heavy command: an epic marker belongs to its stories" "npm run test:e2e:db -- 'db/repos/users.e2e.spec.ts'" "$(HVR command db linked HEAD 71-04)"
+assert_eq "ck-heavy command: and to the epic" "npm run test:e2e:db -- 'db/repos/users.e2e.spec.ts'" "$(HVR command db linked HEAD 71)"
+assert_eq "ck-heavy command: whole names every file of the suite, never a bare runner" "npm run test:e2e:db -- 'db/old.e2e.spec.ts' 'db/orders.e2e.spec.ts' 'db/repos/users.e2e.spec.ts'" "$(HVR command db whole HEAD)"
+assert_eq "ck-heavy command: only runs the named file" "npm run test:e2e:db -- 'db/old.e2e.spec.ts'" "$(HVR command db only db/old.e2e.spec.ts)"
+assert_contains "ck-heavy command: only refuses a file of no suite" "$(HVR command db only src/orders.spec.ts)" "is not a file of suite db"
+assert_contains "ck-heavy command: an unknown suite is refused" "$(HVR command api whole HEAD)" "no suite named api"
+assert_contains "ck-heavy: a base that is an option is refused" "$(HVR scope --output=x)" "must be a revision"
+assert_contains "ck-heavy: an unknown base is refused" "$(HVR scope nope)" "base nope not found"
+assert_contains "ck-heavy scope: nothing linked is NONE" "$( cd "$HV" && git stash -q && ck-heavy scope HEAD 99-01; git stash pop -q )" "ck-heavy: NONE — no heavy test"
+HVW db/new.e2e.spec.ts "x"
+assert_eq "ck-heavy unmarked: a new heavy file without its story" "db/new.e2e.spec.ts" "$(HVR unmarked HEAD 69-04)"
+assert_contains "ck-heavy command: an unmarked new file is linked anyway" "$(HVR command db linked HEAD 69-04)" "db/new.e2e.spec.ts"
+HVW db/new.e2e.spec.ts "// ck-heavy: 69-04"
+assert_eq "ck-heavy unmarked: marked is silent" "" "$(HVR unmarked HEAD 69-04)"
+HVW "db/it's \$(touch PWNED).e2e.spec.ts" "// ck-heavy: 69-04"
+( cd "$HV" && bash -c "$(ck-heavy command db linked HEAD 69-04 | sed 's/^npm run test:e2e:db --/ls/')" >/dev/null 2>&1 )
+assert_eq "ck-heavy command: a file name is data, never run" "no" "$([ -e "$HV/PWNED" ] && echo yes || echo no)"
+rm -f "$HV/db/it's"*
+mkdir -p "$HV/prisma/migrations"; HVW prisma/migrations/1.sql "select 1"
+assert_contains "ck-heavy scope: a migration affects the whole suite" "$(HVR scope HEAD 69-03)" "affected=4 whole=4"
+assert_contains "ck-affected: and is FULL without it" "$(HVA HEAD)" "ck-affected: FULL"
+rm -rf "$HV/prisma"; rm -f "$HV/db/old.e2e.spec.ts"
+assert_contains "ck-heavy scope: a deleted heavy file is never run" "$(HVR scope HEAD 69-03)" "whole=3"
+HVW .ck-heavy-tests "db: db/**/*.e2e.spec.ts | cd db && npx vitest run {files}"
+assert_eq "ck-heavy command: cd <dir> gets paths relative to it" "cd db && npx vitest run 'orders.e2e.spec.ts'" "$(HVR command db only db/orders.e2e.spec.ts)"
+HVW .ck-heavy-tests "db: db/**/*.e2e.spec.ts | make db-tests"
+assert_eq "ck-heavy command: no {files} always runs whole" "make db-tests" "$(HVR command db linked HEAD 69-03)"
+HVW .ck-heavy-tests "none"
+assert_contains "ck-heavy list: none is the owner's opt-out" "$(HVR list)" "NONE — declared none"
+assert_contains "ck-heavy detect: and is never asked again" "$(HVR detect)" "ck-heavy: OK"
+assert_contains "ck-affected: none keeps every test in the scope" "$(HVA HEAD --tests)" "db/orders.e2e.spec.ts"
+HVW package.json '{"scripts":{"test":"vitest"}}'; rm -f "$HV/vitest.config.e2e.ts" "$HV/.ck-heavy-tests"
+assert_contains "ck-heavy detect: a repo with no slow suite is OK" "$(HVR detect)" "OK — no slow suite found"
+rm -rf "$HV"
+if [ -f "$LITE_ROOT/bin/ck-lite-heavy" ]; then
+  assert_eq "ck-heavy: ck-code-lite's copy differs only in its name" "" "$(diff <(sed 1,31d "$PLUGIN_ROOT/scripts/ck-heavy.sh") <(sed -e 1,32d -e 's/ck-lite-heavy: /ck-heavy: /g' -e 's|/ck-lite-heavy\.|/ck-heavy.|' "$LITE_ROOT/bin/ck-lite-heavy"))"
+fi
 echo
 echo "=== audit fixes: empty size column, option without value, backslash criterion, co-author guard ==="
 AF="$(mktemp -d)"

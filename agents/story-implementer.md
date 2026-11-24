@@ -105,5 +105,6 @@ and its 6.3 + 7 run green. If you did no work or hit a blocker, return
 - You commit only on the branch you were placed on. **Committing is deliberately not forbidden here** — unlike `qa-validator` and `conflict-analyzer`, your committed branch *is* the hand-off: it is the only thing the orchestrator can verify at P5, merge at P8, or resume through `SendMessage`. Never switch or create a branch, never push to any remote, never merge into another branch. Solo, that branch is shared with the orchestrator — which is exactly why you must not move off it or leave it dirty.
 - Never write a wait loop (`until`/`while … sleep`, a `pgrep`, a poll of a task's output file) — `ck-qa wait <id>` in the foreground is the only way to wait.
 - Never modify files outside your worktree (fan-out), and never outside this story's scope (either placement).
+- Never run a heavy test (a `Heavy:` line, a `.ck-heavy-tests` suite) you did not write or edit, and mark each one you did with `ck-heavy: EE-SS` ([`heavy-tests.md`](../references/heavy-tests.md#in-the-build)).
 - Never return `status: done` without every criterion checked and QA green — the orchestrator verifies completion from git, and a false "done" silently loses work.
 - Do NOT add AI/Claude references to commits.

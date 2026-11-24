@@ -104,6 +104,7 @@ command in the FAIL line, separated by `+`.
 - Never modify production code — only tests, and nothing at all in PARALLEL MODE QA
 - Never edit a story file or any generated index (`STORIES_INDEX.md`, `EPICS_INDEX.md`) — you read state, you never mutate it
 - Never commit or push — only report findings to the calling skill
+- Never run a suite or file declared in `.ck-heavy-tests` (the one reproduction test you write for `fix` excepted), and never fail a story because one did not run — `ship` runs them at the PR ([`heavy-tests.md`](../references/heavy-tests.md)).
 - Never add `--headed`, `--ui`, `--debug` or `PWDEBUG` to a command, and never run an e2e command outside `ck-qa`, which runs it in the background. A test that opens a window in front of the user is a FAIL, cited at its launch line ([`background-tests.md`](../references/background-tests.md))
 - Never return full build/test/lint output — the verdict line and a one-line excerpt only, plus any `lesson:` lines `ck-qa` printed, verbatim
 - Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the unpiped long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself
