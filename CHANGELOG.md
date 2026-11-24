@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.33.0] — 2026-11-24
+
+### Added
+- **ck-heavy** and `references/heavy-tests.md`: slow suites (database, container, e2e) declared in `.ck-heavy-tests` never run inside a build or a QA pass. Each heavy spec names its story (`// ck-heavy: 69-03`). Measured on one project: 92 serial DB specs cost about 11 h of waiting in two weeks; one story's specs are now 1 file, against 16 affected and 92 in the suite.
+- **ship**: asks once per PR into the trunk whether to run the heavy tests — the specs linked to this story or epic, every spec the change affects, the whole suite, or skip. A failed run pushes nothing; a skipped one is written in the PR body.
+- **build**: offers once to declare the slow suites `ck-heavy detect` finds (`none` keeps them in the build).
+
+### Changed
+- **build / qa-validator / story-implementer**: a story runs only the heavy spec file it wrote or edited, for RED and GREEN; P7, P8 and single-story QA take no heavy command.
+- **ck-affected**: drops declared heavy files from story and area scope; `--heavy` lists only those.
+- **migrate**: `lite-migration.md` maps `test-integration` lines and leaves `.ck-heavy-tests` alone.
+
 ## [7.32.2] — 2026-11-19
 
 ### Fixed
