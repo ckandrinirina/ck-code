@@ -722,7 +722,8 @@ QA_NONE=$(QA wait 09-09); QA_NONE_RC=$?
 assert_exit "ck-qa wait: an id with no run exits 2" 2 "$QA_NONE_RC"
 assert_contains "ck-qa run: every command runs with E2E_HEADLESS=1 and without PWDEBUG" \
   "$(PWDEBUG=1 QA run 08-08 bg='test "$E2E_HEADLESS" = 1 && test -z "${PWDEBUG:-}"')" "bg: PASS"
-CK_QA_WAIT=0 QA run 01-03 slow='sleep 30' >/dev/null
+# Only the wrapper is killed: its worker keeps the CPU slot until the command ends, so keep it short.
+CK_QA_WAIT=0 QA run 01-03 slow='sleep 3' >/dev/null
 kill "$(cat "$QA_TMP"/ck-qa-run/*-01-03/pid)"; kill_wait=0
 while kill -0 "$(cat "$QA_TMP"/ck-qa-run/*-01-03/pid)" 2>/dev/null && [ "$kill_wait" -lt 20 ]; do sleep 0.1; kill_wait=$((kill_wait+1)); done
 assert_contains "ck-qa wait: a run that died without a result says so" "$(QA wait 01-03)" "stopped without a result"
@@ -737,8 +738,8 @@ assert_contains "ck-qa run --rerun: a narrowed pass says it re-ran" "$(QA run 01
 assert_contains "ck-qa run --rerun: the full command is stamped on the new state" \
   "$(QA run 01-04 --reuse test='echo full; false')" "test: REUSED"
 assert_eq "ck-qa since: the record moves to the latest run" "$(QA state)" "$(git -C "$QA_REPO" rev-parse "$(QA since 01-04 test)^{tree}")"
-QSL="$QA_TMP/ck-cpu-slots"; mkdir -p "$QSL/1"; sleep 4 & QHOLD=$!; echo "$QHOLD" >"$QSL/1/pid"
-QA_Q="$(CK_QA_SLOTS=1 CK_QA_WAIT=1 QA run 01-05 b='echo "$CMAKE_BUILD_PARALLEL_LEVEL $CK_QA_JOBS" >"'"$QA_TMP"'/share"')"
+QSL="$QA_TMP/ck-cpu-slots"; mkdir -p "$QSL/1"; sleep 12 & QHOLD=$!; echo "$QHOLD" >"$QSL/1/pid"
+QA_Q="$(CK_QA_SLOTS=1 CK_QA_WAIT=4 QA run 01-05 b='echo "$CMAKE_BUILD_PARALLEL_LEVEL $CK_QA_JOBS" >"'"$QA_TMP"'/share"')"
 assert_contains "ck-qa slots: a run waits while every CPU slot is held" "$QA_Q" "queued for a CPU slot"
 assert_contains "ck-qa slots: a reused command needs no slot" \
   "$(CK_QA_SLOTS=1 CK_QA_WAIT=1 QA run 01-04 --reuse test='echo full; false')" "test: REUSED"
@@ -749,7 +750,8 @@ mkdir -p "$QSL/1"; echo 999999 >"$QSL/1/pid"
 assert_contains "ck-qa slots: a dead holder's slot is taken back" "$(CK_QA_SLOTS=1 CK_QA_WAIT=10 QA run 01-06 t='true')" "ck-qa: PASS"
 assert_contains "ck-qa slots: a nested run uses its parent's slot" \
   "$(CK_QA_SLOTS=1 CK_QA_WAIT=20 QA run 01-07 t='ck-qa run 01-08 u=true')" "ck-qa: PASS"
-assert_eq "ck-qa slots: every slot is freed after the run" "" "$(ls "$QSL")"
+# o<n> is the half-idle throttle's marker, not a slot.
+assert_eq "ck-qa slots: every slot is freed after the run" "" "$(ls "$QSL" | grep -v '^o')"
 mkdir -p "$QSL/1"; sleep 60 & QHOLD=$!; echo "$QHOLD" >"$QSL/1/pid"
 assert_contains "ck-qa slots: CK_QA_OVERFLOW=0 never starts beside a busy slot" \
   "$(CK_QA_SLOTS=1 CK_QA_OVERFLOW=0 CK_QA_WAIT=3 QA run 01-10 t='true')" "queued for a CPU slot"
@@ -811,7 +813,8 @@ afw packages/ui/src/button.test.ts "import { Button } from './button'"
 afw apps/marketing/package.json '{"name":"marketing"}'
 afw apps/marketing/src/home.test.ts 'x'
 ( cd "$AF" && git init -q && git add -A && git -c user.email=s@s -c user.name=s commit -qm init )
-AFF() { ( cd "$AF" && ck-affected "$@" 2>&1 ); }
+# LC_ALL=C: the expected lists are in byte order, and macOS sorts by the locale otherwise.
+AFF() { ( cd "$AF" && LC_ALL=C ck-affected "$@" 2>&1 ); }
 AFR() { git -C "$AF" checkout -q -- . && git -C "$AF" clean -qfd; }
 
 echo '//' >>"$AF/apps/backoffice/src/orders/orders.service.ts"
