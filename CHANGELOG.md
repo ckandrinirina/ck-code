@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.34.0] — 2026-11-25
+
+### Added
+- **mod**: a desktop notification when a build run of two or more builders finishes, needs you or stops on an API error, once per run (`notify` setting).
+- **agents**: `context-scout`, `researcher`, `qa-validator` and `conflict-analyzer` list `REPL`, so they can use Claude Code's experimental Code Mode. Without Code Mode the name is ignored.
+- **plugin.json**: `engines["claude-code"]` is `>=2.1.287`. Claude Code 2.0.15 to 2.1.75 cannot load a plugin that has it.
+
+### Changed
+- **mod**: the agents pane shows each builder's ticked criteria and diff (`5/8 63% · +214/-18`), read by the new `agent-progress.sh`. It replaces the `subagentStatusLine` rows, a setting Claude Code 2.1.323 removed.
+- **mod**: no `tool.call` hook matches Bash or every tool any more. By Claude Code's mod API such a hook turns off a tool's move to the background, and ck-code's ran in every project. The `git clean -x` guard now sits at the permission check, and `/ck-profile` counts tool calls from each response.
+- **README**: tested against Claude Code 2.1.330; Code Mode needs 2.1.327.
+
+### Fixed
+- **no-ai-guard**: `git -C <dir> commit`, `git -c k=v commit`, `gh --repo o/r pr create`, `gh pr -R o/r create` and a command split over lines no longer slip past; `gh … merge|review|close|reopen` is now covered.
+
+### Removed
+- `settings.json` and `scripts/subagent-statusline.sh`.
+
 ## [7.33.0] — 2026-11-24
 
 ### Added
