@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.0] — 2026-11-25
+
+### Added
+- **ck-qa start / gate / waive / lane-free** and `references/qa-lane.md`: the background lane. A suite runs once, on the code as it stood, in a checkout of its own, while the build goes on. `gate` says whether the work may be shipped. `wait --end` waits without a limit, for a background Bash call. Measured over three weeks: builders waited 58 h and QA agents 39 h in front of `ck-qa`, and the same suite ran two or three times per story.
+- **ck-qa**: a red label is run again on the base commit. A failure that was already there is `BASELINE`, not red, and only new failure lines are listed. A label that timed out runs once more when the machine is calm. A newer run of the same commands replaces one still queued, and covers it.
+- **.ck-qa-lane**: an optional file, `setup: <command>` for a step the lane needs, or `off` to run in your checkout.
+
+### Changed
+- **build**: nobody waits for a test run. A builder runs its own story's tests, changed-file lint and one typecheck, then returns. The per-story review reads the code and runs no command. One background run per story or wave replaces the builder's closing run, the per-branch QA run and the post-wave run. The manual test is asked while it goes on, and the next wave starts, one wave ahead at most.
+- **ship**: the QA gate (4.3) is the one place that waits. Nothing is pushed, promoted or merged into the trunk without `ck-qa gate` GREEN or NONE.
+- **qa-validator**: reviews the diff against the acceptance criteria; it no longer runs suites. Its findings no longer arrive after the suite: 47 of 102 measured failures were review findings held back by a green run.
+- **ck-qa**: background runs have their own CPU slot, at a lower priority, so a builder's quick run never queues behind one.
+- **doctor**: the lane is not counted as a leftover worktree.
+
 ## [7.34.0] — 2026-11-25
 
 ### Added
