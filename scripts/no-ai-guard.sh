@@ -34,9 +34,14 @@ sys.stdout.write(ti.get("command") or "")
 [ -n "$cmd" ] || exit 0
 
 # Only artefact-writing commands are in scope. A `git log --grep` that happens to
-# mention a trailer is a read and must not be blocked.
-printf '%s' "$cmd" | grep -Eq \
-  'git[[:space:]]+(commit|tag|merge|revert|cherry-pick)|gh[[:space:]]+(pr|issue|release)[[:space:]]+(create|edit|comment)' \
+# mention a trailer is a read and must not be blocked. Options may stand before the
+# subcommand (`git -C <dir> commit`, `gh --repo o/r pr create`) or between a gh noun and
+# its verb, and a command may be split over lines, so the scope test reads one line.
+word="(\"[^\"]*\"|'[^']*'|[^[:space:]]+)"
+git_opts="([[:space:]]+(-[cC]|--git-dir|--work-tree|--namespace|--exec-path)[[:space:]]+$word|[[:space:]]+-[^[:space:]]+)*"
+gh_opts="([[:space:]]+(-R|--repo)[[:space:]]+$word|[[:space:]]+-[^[:space:]]+)*"
+printf '%s' "$cmd" | tr '\n\\' '  ' | grep -Eq \
+  "git${git_opts}[[:space:]]+(commit|tag|merge|revert|cherry-pick)|gh${gh_opts}[[:space:]]+(pr|issue|release)${gh_opts}[[:space:]]+(create|edit|comment|merge|review|close|reopen)" \
   || exit 0
 
 # Match the trailer/footer FORMS, never a bare mention of the words. This repo and
