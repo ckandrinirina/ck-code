@@ -21,6 +21,8 @@ export type CkAgentRow = {
   kind: string;
   status: string;
   secs: number;
+  // A live builder's ticked criteria and diff ("5/8 63% · +214/-18"), "" or absent before any.
+  progress?: string;
 };
 
 // One builder's mirrored task list (hooks/mod/theme.ts BoardEntry): its TaskCreate,

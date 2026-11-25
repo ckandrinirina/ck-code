@@ -7,6 +7,9 @@ import {
   fillText,
   isLiteLayout,
   isWaveRunOver,
+  runNotice,
+  parseProgress,
+  progressInput,
   openStoryIds,
   storyTotal,
   countsLine,
@@ -155,6 +158,40 @@ describe('misc', () => {
     ])
     expect(text).toContain('| ck-code:build | 1 | 1m00s')
     expect(profileReport([])).toContain('No turns')
+  })
+})
+
+describe('agent progress', () => {
+  test('one input line per live builder: id, story id, cwd', async () => {
+    const rows = [
+      { id: 'a1', type: 'ck-code:story-implementer', status: 'running', name: 'story-02-01', description: 'x', cwd: '/wt' },
+      { id: 'a2', type: 'ck-code:story-implementer', status: 'running', description: 'Implement 02-03: y', cwd: '/w2' },
+      { id: 'a3', type: 'ck-code:qa-validator', status: 'running', name: 'qa-02-01', description: 'x', cwd: '/w3' },
+      { id: 'a4', type: 'ck-code:story-implementer', status: 'completed', name: 'story-02-04', description: 'x', cwd: '/w4' },
+      { id: 'a5', type: 'ck-code:story-implementer', status: 'running', name: 'story-02-05', description: 'x' },
+    ]
+    expect(progressInput(rows)).toBe('a1\u001f02-01\u001f/wt\na2\u001f02-03\u001f/w2\n')
+    expect(progressInput([])).toBe('')
+  })
+  test('output lines map agent ids to their progress', async () => {
+    const m = parseProgress('a1\u001f5/8 63% · +214/-18\nnoise\na2\u001f+3/-0\n')
+    expect(m.get('a1')).toBe('5/8 63% · +214/-18')
+    expect(m.get('a2')).toBe('+3/-0')
+    expect(m.size).toBe(2)
+  })
+})
+
+describe('the end-of-run notification', () => {
+  const run = { reason: 'answer', builders: 3, live: false, inProgress: 0, done: 5, total: 8, nouns: 'stories' }
+  test('finished, needing the person, or stopped by an error', async () => {
+    expect(runNotice(run)).toBe('Build run finished — 5/8 stories done')
+    expect(runNotice({ ...run, inProgress: 2 })).toBe('Build run needs you — 2 still in progress, 5/8 stories done')
+    expect(runNotice({ ...run, reason: 'error', live: true })).toContain('API error')
+  })
+  test('one builder, a live builder or an interrupt says nothing', async () => {
+    expect(runNotice({ ...run, builders: 1 })).toBe(undefined)
+    expect(runNotice({ ...run, live: true })).toBe(undefined)
+    expect(runNotice({ ...run, reason: 'aborted' })).toBe(undefined)
   })
 })
 

@@ -274,6 +274,35 @@ export function isLive(status: string): boolean {
   return LIVE.has(status);
 }
 
+// agent-progress.sh's input: one line per live builder that has a story id and a folder.
+export function progressInput(
+  rows: readonly {
+    id: string;
+    type: string;
+    status: string;
+    name?: string;
+    description: string;
+    cwd?: string;
+  }[],
+): string {
+  let out = "";
+  for (const a of rows) {
+    if (shortAgentType(a.type) !== "build" || !isLive(a.status) || !a.cwd) continue;
+    const story = /\d+-\d+/.exec(`${a.name ?? ""} ${a.description}`)?.[0] ?? "";
+    out += `${a.id}\u001f${story}\u001f${a.cwd}\n`;
+  }
+  return out;
+}
+
+export function parseProgress(stdout: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const line of stdout.split("\n")) {
+    const at = line.indexOf("\u001f");
+    if (at > 0) out.set(line.slice(0, at), line.slice(at + 1));
+  }
+  return out;
+}
+
 export function shortAgentType(type: string): string {
   switch (type) {
     case "ck-code:story-implementer":
@@ -462,6 +491,29 @@ export function isWaveRunOver(run: {
   inProgress: number;
 }): boolean {
   return run.reason === "answer" && run.builders >= 2 && run.inProgress === 0;
+}
+
+// Kept word for word in both plugins' mods. The desktop notification for the end of a build
+// run of two or more builders, or undefined: the run finished, stopped with work still in
+// progress (a failed QA, a held task, a question), or died on an API error. An interrupt is
+// the person's own, and a turn that ends with builders still live is not the end.
+export function runNotice(run: {
+  reason: string;
+  builders: number;
+  live: boolean;
+  inProgress: number;
+  done: number;
+  total: number;
+  nouns: string;
+}): string | undefined {
+  if (run.builders < 2) return undefined;
+  const score = `${run.done}/${run.total} ${run.nouns} done`;
+  if (run.reason === "error" || run.reason === "refusal")
+    return `Build run stopped by an API error — ${score}`;
+  if (run.reason !== "answer" || run.live) return undefined;
+  return run.inProgress === 0
+    ? `Build run finished — ${score}`
+    : `Build run needs you — ${run.inProgress} still in progress, ${score}`;
 }
 
 export const COMPACT_INSTRUCTIONS =

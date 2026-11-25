@@ -10,7 +10,7 @@ function project(on: On, isOurs = true) {
   on('session.root', () => ({ value: '/p' }))
   on('fs.exists', (_$, e) => ({ value: isOurs && (e.path === '/p/docs/architecture' || e.path === '/p/tasks') }))
   on('fs.list', () => ({ value: [] }))
-  on('agent.list', () => ({ value: [{ id: 'a1', description: 'Build 03-02', type: 'ck-code:story-implementer', status: 'running' }] }))
+  on('agent.list', () => ({ value: [{ id: 'a1', description: 'Build 03-02', type: 'ck-code:story-implementer', status: 'running' }] }) as never)
   on('process.run', (_$, e) => {
     const out = (e.argv[0] ?? '').endsWith('ck-view.sh')
       ? 'COUNTS: ready=1 in_progress=1 done=2\nRECOMMEND: /ck-code:build 03-03\nWHY: next ready story'

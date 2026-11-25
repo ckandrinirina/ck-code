@@ -555,7 +555,7 @@ assert_eq "ck-bootstrap: never writes through the symlink" "" "$(cat "$GB/victim
 rm -rf "$GB"
 
 echo
-echo "=== hook scripts (statusline / session-start / subagent-statusline) ==="
+echo "=== hook scripts (statusline / session-start / agent-progress) ==="
 STATUSLINE_JSON=$(printf '{"workspace":{"current_dir":"%s"}}' "$FIXTURE")
 STATUSLINE_OUT=$(printf '%s' "$STATUSLINE_JSON" | "$PLUGIN_ROOT/scripts/statusline.sh" 2>&1); STATUSLINE_RC=$?
 assert_exit "statusline.sh: exits 0" 0 "$STATUSLINE_RC"
@@ -608,17 +608,18 @@ assert_contains "ck-doctor: an unmet requires: is an ERROR" "$REQ_DOC" "requires
 cp "$FIXTURE/.version.bak" tasks/VERSION.md; rm -f "$FIXTURE/.version.bak"
 assert_eq "session-start.sh: never rewrites the stamp" "" "$(git status --porcelain -- tasks/VERSION.md)"
 
-if [ "$HAVE_JQ" -eq 1 ]; then
-  SUBAGENT_JSON=$(cat <<EOF
-{"tasks":[{"id":"t1","name":"story-02-03","type":"agent","status":"running","description":"Implement invoice generation","label":"story-02-03","startTime":"","tokenCount":12345,"cwd":"$FIXTURE"}]}
-EOF
-)
-  SUBAGENT_OUT=$(printf '%s' "$SUBAGENT_JSON" | "$PLUGIN_ROOT/scripts/subagent-statusline.sh" 2>&1); SUBAGENT_RC=$?
-  assert_exit "subagent-statusline.sh: exits 0" 0 "$SUBAGENT_RC"
-  assert_contains "subagent-statusline.sh: renders a row for the dispatched story" "$SUBAGENT_OUT" "02-03"
-else
-  log_skip "subagent-statusline.sh: jq not on PATH — script no-ops by design, skipping content assertion"
-fi
+AP_US=$(printf '\037')
+AP_WT="$(mktemp -d)"; cp -R "$FIXTURE/." "$AP_WT"
+AP_STORY="$AP_WT/tasks/2026-01-01_demo/epics/02_payments/stories/03_invoice.md"
+printf '\n## Acceptance Criteria\n\n- [x] one\n- [ ] two\n' >> "$AP_STORY"
+AP_OUT=$(printf 'a1%s02-03%s%s\na2%s%s/nowhere\n' "$AP_US" "$AP_US" "$AP_WT" "$AP_US" "$AP_US" | "$PLUGIN_ROOT/scripts/agent-progress.sh" 2>&1); AP_RC=$?
+assert_exit "agent-progress.sh: exits 0" 0 "$AP_RC"
+assert_eq "agent-progress.sh: the row is keyed by the agent id" "a1" "${AP_OUT%%"$AP_US"*}"
+assert_contains "agent-progress.sh: counts the worktree's ticked criteria" "$AP_OUT" "%"
+assert_not_contains "agent-progress.sh: an agent with nothing to show prints no row" "$AP_OUT" "a2"
+assert_eq "agent-progress.sh: no input prints nothing" "" "$(printf '' | "$PLUGIN_ROOT/scripts/agent-progress.sh" 2>&1)"
+rm -rf "$AP_WT"
+assert_true "no settings.json: subagentStatusLine was removed in Claude Code 2.1.323" "$([ ! -f "$PLUGIN_ROOT/settings.json" ]; echo $?)"
 
 # The prompt router is the mod's prompt.submit hook since 7.13.0: tests/mod/hooks.test.ts.
 
@@ -1591,6 +1592,27 @@ assert_eq "no-ai-guard: blocks a noreply@anthropic.com co-author trailer" 2 "$(n
 
 co-authored-by: Some Bot <noreply@anthropic.com>"')"
 assert_eq "no-ai-guard: allows a human co-author" 0 "$(nag 'git commit -m "x
+
+Co-authored-by: Ann <ann@example.com>"')"
+# Options before the subcommand, or between a gh noun and its verb, never hide the command.
+NAG_T='
+
+Co-Authored-By: Claude <a@b.c>'
+nag_blocks() { assert_eq "no-ai-guard: blocks $1" 2 "$(nag "$2")"; }
+nag_blocks "git -C <dir> commit" "git -C ../wt commit -m \"x$NAG_T\""
+nag_blocks "git -C with a quoted path" "git -C '/a b/wt' commit -m \"x$NAG_T\""
+nag_blocks "git -c k=v commit" "git -c user.name=x commit -m \"x$NAG_T\""
+nag_blocks "git --no-pager -C commit" "git --no-pager -C wt commit -m \"x$NAG_T\""
+nag_blocks "git --git-dir=d commit" "git --git-dir=d/.git commit -m \"x$NAG_T\""
+nag_blocks "a commit split over lines" "git \\
+  commit -m \"x$NAG_T\""
+nag_blocks "a Code Mode compound" "cd 'app' && git commit -m \"x$NAG_T\""
+nag_blocks "gh --repo pr create" 'gh --repo a/b pr create --body "Generated with [Claude Code](https://x)"'
+nag_blocks "gh -R pr create" 'gh -R a/b pr create --body "Generated with [Claude Code](https://x)"'
+nag_blocks "gh pr -R create" 'gh pr -R a/b create --body "Generated with [Claude Code](https://x)"'
+nag_blocks "gh pr merge --body" 'gh pr merge 4 --squash --body "Co-Authored-By: Claude <a@b.c>"'
+assert_eq "no-ai-guard: a git -C log --grep is a read" 0 "$(nag 'git -C wt log --grep "Co-Authored-By: Claude"')"
+assert_eq "no-ai-guard: git -C commit with a human co-author" 0 "$(nag 'git -C wt commit -m "x
 
 Co-authored-by: Ann <ann@example.com>"')"
 

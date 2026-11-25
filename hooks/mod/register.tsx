@@ -6,13 +6,14 @@
 //
 //   prompt.submit      routes free-text prompts (was scripts/prompt-router.sh)
 //   attribution.text   no AI attribution in commits and PRs (references/no-ai-references.md)
-//   tool.call          guards: generated views, `git clean -x/-X`; counts for the profiler
+//   tool.call          guards: generated views (tool.check: `git clean -x/-X`)
 //   command.*          zero-model commands, last-command hand-off, de-duplicated command list
 //   AbovePrompt band   progress bar, active story, recommended next command, merged-PR notes
 //   toasts             a cheer when a story is done, a bigger one when every story is
 //   panes              agents cockpit during a build; verify checklist with buttons
 //   turn.*             per-skill time and token profile (/ck-profile)
 //   cost guard         caps effort at high, gates Fable on the user, cheap default subagent model
+//   ui.notify          a desktop notification when a build run finishes or needs the person
 //   session.compact    compacts the session once a wave run of builders has finished
 //   look               flat-glyph tool rows and groups, workflow words (look.tsx, theme.ts)
 //   task board         the builders' own task lists, mirrored into the band
@@ -48,11 +49,14 @@ import {
   openStoryIds,
   parseChecklistNext,
   parseMergedPrs,
+  parseProgress,
   parseState,
   parseStoriesIndex,
   percent,
   profileReport,
   progressBar,
+  progressInput,
+  runNotice,
   shortAgentType,
   splitArgs,
   storySuggestions,
@@ -87,6 +91,7 @@ const AGENTS_PANE = "ck-agents";
 const VERIFY_PANE = "ck-verify";
 const PR_POLL_MS = 5 * 60 * 1000;
 const AGENT_POLL_MS = 3000;
+const PROGRESS_EVERY = 3;
 const BAND_ACTIONS_MS = 8000;
 
 // Module variables start over on a reload; what must outlive one is in $.state or $.store.
@@ -95,6 +100,7 @@ let guardsOn = true;
 let bandOn = true;
 let prWatchOn = true;
 let compactOn = true;
+let notifyOn = true;
 let costGuardOn = true;
 let themeOn = true;
 let lookRoot = "";
@@ -104,6 +110,8 @@ const boardLabels = new Map<string, string>();
 // Story builders dispatched from the main loop since the last compaction. Not reset per turn:
 // background builders end in later notification turns, which dispatch none themselves.
 let builders = 0;
+// The builder count the last notification spoke for: one run is announced once.
+let noticed = 0;
 let routingCache: string | undefined;
 let stories: StoryRow[] = [];
 let progress: Progress | undefined;
@@ -120,6 +128,11 @@ let autoOpenAgents = true;
 let isFullscreen = false;
 const firstSeen = new Map<string, number>();
 const endedAt = new Map<string, number>();
+// A builder's ticked criteria and diff by agent id, refreshed every PROGRESS_EVERY polls; the
+// last one stays after the builder ends and its worktree is gone.
+let progressOf = new Map<string, string>();
+let progressPolls = 0;
+let isProbing = false;
 
 type Turn = {
   at: number;
@@ -328,11 +341,28 @@ async function pollMergedPrs($: EngineInterface): Promise<boolean> {
 
 // ---- agents cockpit ------------------------------------------------------------------
 
+async function probeProgress($: EngineInterface, stdin: string): Promise<void> {
+  if (isProbing || stdin === "") return;
+  isProbing = true;
+  try {
+    const ran = await $.process.run([`${$.plugin.root}/scripts/agent-progress.sh`], {
+      stdin,
+      timeoutMs: 15_000,
+    });
+    progressOf = new Map([...progressOf, ...parseProgress(ran.stdout)]);
+  } catch {
+    // The pane shows its rows without the progress field.
+  } finally {
+    isProbing = false;
+  }
+}
+
 async function pollAgents($: EngineInterface): Promise<void> {
   const now = await $.clock.now();
   const mine = (await $.agent.list()).filter((a) =>
     a.type.startsWith("ck-code:"),
   );
+  if (progressPolls++ % PROGRESS_EVERY === 0) void probeProgress($, progressInput(mine));
   const rows: CkAgentRow[] = mine.map((a) => {
     const start = firstSeen.get(a.id) ?? now;
     firstSeen.set(a.id, start);
@@ -344,6 +374,7 @@ async function pollAgents($: EngineInterface): Promise<void> {
       kind: shortAgentType(a.type),
       status: a.status,
       secs: Math.round((end - start) / 1000),
+      progress: progressOf.get(a.id) ?? "",
     };
   });
   await update($, agents, () => rows);
@@ -500,6 +531,14 @@ async function pickPlan(
 
 // ---- profiler ------------------------------------------------------------------------
 
+// Counted from each response, not at tool.call: a tool.call hook on every tool would turn off
+// every tool's move to the background, in every project.
+function countTools(uses: readonly { name: string }[]): void {
+  if (!turn) return;
+  turn.tools += uses.length;
+  turn.agents += uses.filter((u) => u.name === "Agent").length;
+}
+
 async function saveTurn($: EngineInterface, record: TurnRecord): Promise<void> {
   const key = `profile:${rootCache}`;
   const old = ((await $.store.get(key)) as TurnRecord[] | undefined) ?? [];
@@ -523,14 +562,24 @@ async function addLateUsage(
   ]);
 }
 
-// ---- compaction after a wave run --------------------------------------------------------
+// ---- the end of a wave run: a notification, then compaction ----------------------------
+
+// Kept word for word in both plugins' mods. A desktop app holds it a few seconds and drops it
+// when the person is back first; a terminal raises it at once, by the person's own setting.
+async function notify($: EngineInterface, title: string, text: string): Promise<void> {
+  try {
+    await $.ui.notify(text, { title, key: "run", delayMs: 5000, untilBack: true });
+  } catch {
+    // No surface to notify on, or a Claude Code without $.ui.notify.
+  }
+}
 
 // Runs between turns: $.session.compact rejects while one runs, and a person who has already
 // typed the next prompt keeps the session as it is. The next command (ship --promote, verify)
 // starts from the story files, not from the transcript. Background builders end in later
 // turns, so the count runs since the last compaction and every clean turn end checks it,
 // once no builder is still live. An interrupt or an error keeps the count for a later turn.
-async function compactAfterWaves(
+async function afterBuilders(
   $: EngineInterface,
   reason: string,
 ): Promise<void> {
@@ -539,14 +588,30 @@ async function compactAfterWaves(
     const live = (await $.agent.list()).some(
       (a) => a.type === "ck-code:story-implementer" && isLive(a.status),
     );
-    if (live) return;
+    if (live && reason === "answer") return;
     const state = parseState((await script($, "ck-view.sh", ["state"])).stdout);
     const inProgress = state?.counts.in_progress;
-    if (inProgress === undefined) return;
-    if (!isWaveRunOver({ reason, builders, inProgress })) return;
+    if (state === null || inProgress === undefined) return;
+    if (notifyOn && noticed !== builders) {
+      const text = runNotice({
+        reason,
+        builders,
+        live,
+        inProgress,
+        done: state.counts.done ?? 0,
+        total: storyTotal(state.counts),
+        nouns: "stories",
+      });
+      if (text) {
+        noticed = builders;
+        await notify($, "ck-code", text);
+      }
+    }
+    if (!compactOn || live || !isWaveRunOver({ reason, builders, inProgress })) return;
     const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS });
     // Compacted, or skipped (the next prompt is typed): either way this run is spent.
     builders = 0;
+    noticed = 0;
     $.ui.toast(
       out.skip
         ? `ck-code: not compacted, ${out.skip}`
@@ -588,6 +653,7 @@ export const register: Register = (on, options) => {
   bandOn = options.band !== false;
   prWatchOn = options.pr_watch !== false;
   compactOn = options.compact_after_waves !== false;
+  notifyOn = options.notify !== false;
   costGuardOn = options.cost_guard !== false;
   themeOn = options.theme !== false;
   updateOn = options.update_check !== false;
@@ -652,8 +718,8 @@ export const register: Register = (on, options) => {
   });
 
   // ---- the cost guard: effort cap, the Fable gate, a cheap default subagent model ----
-  // Kept word for word in both plugins' mods. Runs in every project, not only adopted ones:
-  // it is a spending rule, not a workflow rule. Off with the cost_guard option.
+  // Kept word for word in both plugins' mods, but for countTools (a module may hold only one
+  // unmatched turn.step). Runs in every project, not only adopted ones: it is a spending rule, not a workflow rule. Off with the cost_guard option.
 
   on("tool.call", { tool: "Agent" }, async ($, e, next) => {
     const g = costGuardOn ? guardDispatch(e) : undefined;
@@ -663,7 +729,9 @@ export const register: Register = (on, options) => {
 
   on("turn.step", async function* ($, e, next) {
     const effort = costGuardOn ? cappedEffort(e.effort) : e.effort;
-    return yield* next(effort === e.effort ? e : { ...e, effort });
+    const out = yield* next(effort === e.effort ? e : { ...e, effort });
+    countTools(out?.toolUses ?? []);
+    return out;
   });
 
   // ---- routing, attribution, hand-off ----
@@ -702,7 +770,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e));
 
   on("session.end", async ($, e, next) => {
-    if (e.reason === "clear") builders = 0;
+    if (e.reason === "clear") builders = noticed = 0;
     if (e.reason === "clear" && lastCommand) {
       await $.store.set(`handoff:${await projectRoot($)}`, {
         command: lastCommand,
@@ -762,14 +830,25 @@ export const register: Register = (on, options) => {
     return why && (await projectKind($)) === "code" ? { deny: why } : next(e);
   }).catch(($, e, next) => next(e));
 
-  on("tool.call", { tool: "Bash" }, async ($, e, next) => {
-    const why = guardsOn ? gitCleanReason(e.command) : undefined;
-    return why && (await projectKind($)) === "code" ? { deny: why } : next(e);
+  // At the permission check, never at tool.call: a tool.call hook on Bash, even one that only
+  // passes the call on, turns off the command's move to the background and its live output.
+  on("tool.check", { tool: "Bash" }, async ($, e, next) => {
+    const command = (e.input as { command?: unknown } | undefined)?.command;
+    const why =
+      guardsOn && typeof command === "string" ? gitCleanReason(command) : undefined;
+    return why && (await projectKind($)) === "code"
+      ? { decision: "deny", reason: why }
+      : next(e);
   }).catch(($, e, next) => next(e));
 
   // ---- agents cockpit: a ck-code agent dispatched from the main loop starts the poll ----
 
   on("tool.call", { tool: "Agent" }, async ($, e, next) => {
+    if (
+      e.agentId === undefined &&
+      e.subagent_type === "ck-code:story-implementer"
+    )
+      builders += 1;
     if (
       e.agentId === undefined &&
       e.subagent_type?.startsWith("ck-code:") &&
@@ -829,20 +908,6 @@ export const register: Register = (on, options) => {
     return next(e);
   });
 
-  on("tool.call", async ($, e, next) => {
-    if (turn) {
-      turn.tools += 1;
-      if (e.tool === "Agent") turn.agents += 1;
-    }
-    if (
-      e.tool === "Agent" &&
-      e.agentId === undefined &&
-      e.subagent_type === "ck-code:story-implementer"
-    )
-      builders += 1;
-    return next(e);
-  }).catch(($, e, next) => next(e));
-
   on("skill.prompt", async ($, e, next) => {
     if (turn && turn.skill === "-" && e.skill.startsWith("ck-code:"))
       turn.skill = e.skill;
@@ -872,8 +937,8 @@ export const register: Register = (on, options) => {
     $.clock.after(50, () => void refreshBand($));
     await wakeBand($);
     void pruneBoard($);
-    if (compactOn && builders >= 2 && e.reason === "answer")
-      $.clock.after(500, () => void compactAfterWaves($, e.reason));
+    if ((compactOn || notifyOn) && builders >= 2 && e.reason !== "aborted")
+      $.clock.after(500, () => void afterBuilders($, e.reason));
     return out;
   });
 
@@ -909,7 +974,7 @@ export const register: Register = (on, options) => {
         ? rows
             .map(
               (r) =>
-                `${r.status.padEnd(9)} ${r.kind.padEnd(5)} ${r.label} · ${fmtSeconds(r.secs)}`,
+                `${r.status.padEnd(9)} ${r.kind.padEnd(5)} ${r.label}${r.progress ? ` · ${r.progress}` : ""} · ${fmtSeconds(r.secs)}`,
             )
             .join("\n")
         : "No ck-code agent has run in this session.",
@@ -1135,6 +1200,7 @@ export const register: Register = (on, options) => {
             >
               {agentGlyph(r)} {r.kind.padEnd(5)}{" "}
               {fmtSeconds(r.secs).padStart(6)} {r.label}
+              {r.progress ? ` · ${r.progress}` : ""}
             </Text>
           ))}
         </Box>

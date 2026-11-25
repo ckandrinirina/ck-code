@@ -1,64 +1,32 @@
 #!/usr/bin/env bash
-# ck-code subagentStatusLine: renders one compact row body per visible subagent
-# in the agent panel (used by /ck-code:build PARALLEL MODE worktree implementers).
+# ck-code agent-progress: what a token count cannot tell you about a running builder.
+# The mod's agents pane (/ck-agents) runs it while builders are live.
 #
-# Input: a single JSON object on stdin with a `.tasks` array; each task has
-# id, name, type, status, description, label, startTime, tokenCount, cwd.
-# Output: one formatted line per task, in order:
+# Input, one line per agent, fields joined by US (0x1f): agent id, story id, cwd.
+# Output, one line per agent that has something to show:
 #
-#   ⚡ story-02-01 · Implement 02-01 filter service · 5/8 63% · +214/-18 · 159.5k tok
+#   <agent id><US>5/8 63% · +214/-18
 #
-# The two middle fields are what a token count cannot tell you: how far the agent's
-# story has got (acceptance criteria ticked, read from that agent's OWN worktree) and
-# whether it has written any code at all — the check `build` P5 later re-derives with
-# git. An agent that reports success having changed nothing is the failure this row
-# makes visible while it is still happening.
+# The first field is how far the agent's story has got (acceptance criteria ticked, read
+# from that agent's OWN worktree). The second is whether it has written any code at all —
+# the check `build` P5 later re-derives with git. An agent that reports success having
+# changed nothing is the failure this makes visible while it is still happening.
 #
-# Costs zero model tokens: the panel is drawn by the terminal, not by the model.
-#
-# Safe by design: if `jq` is unavailable it prints nothing and exits 0, so
-# Claude Code falls back to its default `name · description · tokens` row. Every
-# probe is optional — a row degrades field by field, and never disappears.
+# Costs zero model tokens: the pane is drawn by Claude Code, not by the model.
+# Safe by design: needs only awk and git, every probe is optional, always exits 0.
 
-command -v jq >/dev/null 2>&1 || exit 0
-
-# US (0x1f) joins the fields: unlike a tab it is not IFS whitespace, so an empty
-# description or token count cannot collapse and shift the fields after it.
+# US is not IFS whitespace, so an empty field cannot collapse and shift the ones after it.
 US=$(printf '\037')
-
-# The story id and the token formatting are done here rather than per row in the
-# shell: jq is already parsing every task, and each field pulled into this one pass
-# is one fewer process spawned per row (rows re-render while a fan-out runs).
-rows=$(jq -r --arg us "$US" '
-  def glyph(s):
-    if   s=="running" or s=="in_progress" then "⚡"
-    elif s=="completed" or s=="done"      then "✓"
-    elif s=="failed" or s=="error"        then "✗"
-    elif s=="queued" or s=="pending"      then "…"
-    else "•" end;
-  def ktok(n):
-    if   n == null then ""
-    elif n >= 1000 then "\((n / 100 | floor) / 10)k tok"
-    else                "\(n) tok" end;
-  # `story-EE-SS` from the dispatch label, with the description as fallback since it
-  # carries the id too — a row must not lose its progress field to a rename.
-  def sid: [ ((.label // "") + " " + (.description // "")) | scan("[0-9]+-[0-9]+") ]
-           | first // "";
-  .tasks[]? |
-    [ glyph(.status),
-      (.label // .name // .type // "task"),
-      (.description // ""),
-      ktok(.tokenCount),
-      sid,
-      (.cwd // "") ] | join($us)
-' 2>/dev/null) || exit 0
-
+rows=$(cat 2>/dev/null) || exit 0
 [ -n "$rows" ] || exit 0
+
+# A cloned repository's git config must not run a program just to draw a pane.
+pgit() { git -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"; }
 
 # The branch the fan-out was cut from, resolved once for every row: the worktrees
 # share one repository, and the main worktree is the one sitting on $TARGET.
 target=""
-first_cwd=$(printf '%s\n' "$rows" | awk -F"$US" 'NF >= 6 && $6 != "" { print $6; exit }')
+first_cwd=$(printf '%s\n' "$rows" | awk -F"$US" 'NF >= 3 && $3 != "" { print $3; exit }')
 if [ -n "$first_cwd" ] && [ -d "$first_cwd" ]; then
   common=$(git -C "$first_cwd" rev-parse --git-common-dir 2>/dev/null)
   # `${var%/*}` rather than dirname: the row probes must need nothing but awk and git.
@@ -70,8 +38,8 @@ if [ -n "$first_cwd" ] && [ -d "$first_cwd" ]; then
   [ -n "$main_dir" ] && target=$(git -C "$main_dir" branch --show-current 2>/dev/null)
 fi
 
-while IFS="$US" read -r glyph label desc tok id cwd; do
-  [ -n "$glyph" ] || continue
+while IFS="$US" read -r agent id cwd; do
+  [ -n "$agent" ] || continue
 
   # Criteria progress, counted in the worktree's OWN copy of the story — the agent ticks
   # boxes there, so the main checkout reads 0% until the merge lands. The views are not
@@ -144,19 +112,16 @@ while IFS="$US" read -r glyph label desc tok id cwd; do
   # no implementation yet, however many tokens have been spent.
   dstat=""
   if [ -n "$target" ] && [ -n "$cwd" ] && [ -d "$cwd" ]; then
-    dstat=$(git -C "$cwd" diff --shortstat "$target" 2>/dev/null | awk '
+    dstat=$(pgit -C "$cwd" diff --no-ext-diff --no-textconv --shortstat "$target" 2>/dev/null | awk '
       { i = 0; d = 0
         if (match($0, /[0-9]+ insertion/)) i = substr($0, RSTART, RLENGTH) + 0
         if (match($0, /[0-9]+ deletion/))  d = substr($0, RSTART, RLENGTH) + 0
         if (i || d) printf "+%d/-%d", i, d }')
   fi
 
-  line="$glyph $label"
-  [ -n "$desc" ]  && line="$line · $desc"
-  [ -n "$crit" ]  && line="$line · $crit"
-  [ -n "$dstat" ] && line="$line · $dstat"
-  [ -n "$tok" ]   && line="$line · $tok"
-  printf '%s\n' "$line"
+  line=$crit
+  [ -n "$dstat" ] && line="${line:+$line · }$dstat"
+  [ -n "$line" ] && printf '%s%s%s\n' "$agent" "$US" "$line"
 done <<EOF
 $rows
 EOF
