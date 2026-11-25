@@ -1,7 +1,7 @@
 ---
 name: qa-validator
 description: Use when `/ck-code:build` (single-story or PARALLEL MODE) or `/ck-code:fix` needs an isolated QA pass — runs the stack's build/test/lint in its own context and returns a compact verdict, reproduces bugs with failing tests, or validates acceptance criteria with file:line citations.
-tools: Read, Bash, Grep, Glob, Write, Edit
+tools: Read, Bash, Grep, Glob, Write, Edit, REPL
 model: haiku
 effort: low
 color: yellow
