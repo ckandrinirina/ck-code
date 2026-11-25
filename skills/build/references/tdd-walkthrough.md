@@ -161,7 +161,7 @@ Issue handling and common refactorings: rules in story-cycle.md Phase 6.2.
 
 The per-stack build/test/lint commands are the manifest table in
 [qa-scope.md](qa-scope.md#per-stack-commands) — the single source for
-both Phase 7 (run by every building agent) and PARALLEL MODE P7. Detect the manifest, run that row's commands, and
+the own check (6.3, narrowed to the story) and the background run (S5, P8). Detect the manifest, run that row's commands, and
 let a project's `guide-conventions` skill override them when it names canonical ones.
 
 ---

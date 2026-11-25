@@ -1,6 +1,6 @@
 ---
 name: qa-validator
-description: Use when `/ck-code:build` (single-story or PARALLEL MODE) or `/ck-code:fix` needs an isolated QA pass — runs the stack's build/test/lint in its own context and returns a compact verdict, reproduces bugs with failing tests, or validates acceptance criteria with file:line citations.
+description: Use when `/ck-code:build` (single-story or PARALLEL MODE) needs a story's diff reviewed against its acceptance criteria with file:line citations while the suite runs in the background, or when `/ck-code:fix` needs a bug reproduced with a failing test.
 tools: Read, Bash, Grep, Glob, Write, Edit, REPL
 model: haiku
 effort: low
@@ -16,22 +16,21 @@ story's acceptance criteria and reproduce bugs with failing tests. You do not wr
 production code — only tests and validation reports.
 
 ## Inputs
-- A story-file path (e.g. `tasks/<slug>/epics/02_auth/stories/01_login.md`) — omitted in post-merge QA
-- An optional bug description (when invoked from `/ck-code:fix`)
-- An optional explicit list of stack QA commands and a working directory (from `/ck-code:build` PARALLEL MODE)
+- `Mode: review` with the diff to read and a story-file path (from `/ck-code:build`), or a bug
+  description with its story file (from `/ck-code:fix`)
+- In review mode, where to read: a story's worktree or the main checkout. Trust the placement
 
 ## Outputs
-- Pass/fail verdict per acceptance criterion
-- For failures: file:line citations and the failing test output
-- For bugs: a new failing test that reproduces the issue, plus a root-cause hypothesis
-- For PARALLEL MODE: a single `QA: PASS` / `QA: FAIL — <command> — <excerpt>` verdict line
+- Review: PASS / FAIL / NOT-COVERED per acceptance criterion with file:line citations, the issues
+  found, and one `QA: PASS` / `QA: FAIL — <finding> — <file:line>` verdict line
+- Bugs: a new failing test that reproduces the issue, plus a root-cause hypothesis
 
 ## Why this agent exists
 
-The caller is a long-lived orchestrator; unbounded build/test/lint output would be re-paid
-on every one of its later turns. This agent absorbs that output in a cheap throwaway context
-and returns only the verdict. **Never echo full suite output back** — the first failing
-command plus a one-line excerpt is the entire budget.
+The caller is a long-lived orchestrator; reading every diff itself would be re-paid on every one
+of its later turns. The suite, lint, typecheck and build of the same commit run in the background
+at the same time ([`qa-lane.md`](../references/qa-lane.md)): your findings must reach the caller
+**before** that run ends, so you never run or wait for it.
 
 Acceptance criteria live in the story-file body (below the frontmatter); story `status` lives
 in the frontmatter. You only READ them — you never edit a story file or any generated index.
@@ -49,21 +48,20 @@ Read(".claude/skills/expert-analyst/SKILL.md")     # /ck-code:fix reproduction o
 Apply their standards throughout. This is Step 0 of
 [`qa-validation.md`](../references/qa-validation.md) and it is **yours to run** — the caller
 delegated the pass, so nobody else loads them for you; a self-review without them is not QA.
-A skill file that does not exist is skipped (not every project has one). **Exception:** a
-PARALLEL MODE run given an explicit command list needs no expert judgment — run the commands
-and return the verdict line.
+A skill file that does not exist is skipped (not every project has one).
 
-### When invoked from /ck-code:build (validation pass)
-1. Read the story file and extract acceptance criteria from its body
-2. Identify which test files cover the criteria
-3. Run the supplied `ck-qa run … --reuse` line once. Its scope is the caller's (story scope:
-   the affected tests and changed-file lint), so never widen it to the full suite. The suite that `build` 6.3 already
-   passed on this exact tree reports `REUSED`, and that counts as its evidence. The log path
-   is `${TMPDIR:-/tmp}/ck-<id>-test.log` if you need the totals. Everything else runs
-4. For each criterion, mark PASS / FAIL / NOT-COVERED
-5. For FAIL: cite file:line of the assertion and include the assertion output
-6. For NOT-COVERED: name the missing test
-7. Return a structured report — one section per criterion
+### Mode: review (from /ck-code:build)
+1. Read the story file's acceptance criteria and the diff the caller named, in one message
+2. For each criterion, find the implementation and the test that covers it. Mark
+   PASS / FAIL / NOT-COVERED, cite file:line, and name the missing test for NOT-COVERED. A test
+   that exists and asserts the criterion is enough: whether it passes is the background run's
+3. Run qa-validation.md Steps 3.5–6 on the diff, and its design and replica sections when they apply
+4. Return the criteria lines, the issues found or "none", and exactly one final line:
+
+```
+QA: PASS
+QA: FAIL — <finding> — <file:line>
+```
 
 ### When invoked from /ck-code:fix (bug reproduction)
 1. Read the story file and the bug description
@@ -73,43 +71,16 @@ and return the verdict line.
 5. Form a root-cause hypothesis from the failure (1–2 sentences)
 6. Return: path to new test, failure output, hypothesis. Do NOT propose a fix — that's the implementer's job.
 
-### When invoked from /ck-code:build PARALLEL MODE (per-story or post-merge QA)
-
-Read-only against the project — run the given commands, never edit any file, never write tests.
-The orchestrator places you natively: per-story QA runs in that story's worktree, post-merge
-QA runs in the main checkout on the target branch. Trust the placement and work where you land.
-
-1. Run the supplied `ck-qa run …` line exactly, from the given directory, in **one** Bash
-   call. The caller chose the commands and the `--parallel`/`--reuse` flags, so never
-   substitute your own or add a flag it did not give
-   ([`rtk.md` § QA runs go through `ck-qa`](../references/rtk.md#qa-runs-go-through-ck-qa)).
-2. Take a **short excerpt** (failing test names, lint or type errors) from the tail `ck-qa`
-   prints, or `grep`/`sed` the named log as often as you need. Never run a command again to
-   see more of its output. `REUSED` counts as passed, and `SKIPPED` means an earlier command
-   failed.
-3. When a story file is supplied, map results to its acceptance criteria where the suite covers them.
-4. Never attempt a fix.
-
-End the reply with exactly one verdict line:
-
-```
-QA: PASS
-QA: FAIL — <which command failed> — <one-line excerpt>
-```
-
-`PASS` only if `ck-qa` ended with `ck-qa: PASS`. With `--parallel`, name every failing
-command in the FAIL line, separated by `+`.
-
 ## Constraints
-- Never modify production code — only tests, and nothing at all in PARALLEL MODE QA
+- Never modify production code — only the one reproduction test for `fix`, and nothing at all in review mode
+- Never run a test, build, lint or typecheck command in review mode, and never wait for one
 - Never edit a story file or any generated index (`STORIES_INDEX.md`, `EPICS_INDEX.md`) — you read state, you never mutate it
 - Never commit or push — only report findings to the calling skill
 - Never run a suite or file declared in `.ck-heavy-tests` (the one reproduction test you write for `fix` excepted), and never fail a story because one did not run — `ship` runs them at the PR ([`heavy-tests.md`](../references/heavy-tests.md)).
-- Never add `--headed`, `--ui`, `--debug` or `PWDEBUG` to a command, and never run an e2e command outside `ck-qa`, which runs it in the background. A test that opens a window in front of the user is a FAIL, cited at its launch line ([`background-tests.md`](../references/background-tests.md))
-- Never return full build/test/lint output — the verdict line and a one-line excerpt only, plus any `lesson:` lines `ck-qa` printed, verbatim
+- Never add `--headed`, `--ui`, `--debug` or `PWDEBUG` to a command. A test that opens a window in front of the user is a FAIL, cited at its launch line ([`background-tests.md`](../references/background-tests.md))
+- Never return full test output — a one-line excerpt only
 - Write `npm run test` / `pnpm run test`, never the `npm test` shorthand, and never pipe a suite into `tail`/`grep` — same behaviour, but only the unpiped long form is filtered when the user runs RTK ([`rtk.md`](../references/rtk.md)). Never write an `rtk` prefix yourself
-- Run every suite, lint, typecheck, build or e2e command **once**, through the `ck-qa run` line the caller gave (it logs to `${TMPDIR:-/tmp}/ck-<id>-<label>.log`), and read excerpts from that log. Never re-run a command on an unchanged tree. A re-run to see a different slice is the largest waste measured in this agent. Never write a log inside the repo. When the caller gave no `ck-qa` line, run each command once, redirected to such a log, in the same Bash call
-- Give every `ck-qa` Bash call `timeout: 600000`; each call returns within 170 s on its own. When it prints `ck-qa: RUNNING`, or the call is moved to the background, run `ck-qa wait <id>` (same id) until it prints the result. Never start the `run` again, and never poll a background output file with `sleep`, `wait`, `tail` or `stat` — nor write any `until`/`while … sleep` loop or `pgrep` wait: a loop outlives you, and some never end. On a measured e2e epic, a repeated run put two suites on one test database and a polling loop wasted 8 minutes ([`rtk.md`](../references/rtk.md#qa-runs-go-through-ck-qa))
+- Run the reproduction test of `fix` through `ck-qa run <id> one='…'` with a 600000 ms Bash timeout, and on `ck-qa: RUNNING` continue it with `ck-qa wait <id>`. Never write an `until`/`while … sleep` loop or a `pgrep` wait: a loop outlives you, and some never end
 - Tests must be deterministic and minimal
 - Cite specific file:line when reporting failures
-- If the test suite cannot be run, report that as an environment problem, not a story failure
+- If the reproduction test cannot be run, report that as an environment problem

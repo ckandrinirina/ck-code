@@ -177,8 +177,8 @@ This prevents "grep-driven debugging" — reasoning about a fix without understa
 **Always delegate reproduction to `ck-code:qa-validator`** (Haiku) — it writes the minimal
 failing test and returns a root-cause hypothesis, keeping verbose test output off the
 orchestrator. The dispatch call is
-[agent-prompts.md § Inline QA dispatch](../build/references/agent-prompts.md#inline-qa-dispatch)
-(its `fix` variant: bug description instead of a command list, one failing test, no verdict
+[agent-prompts.md § Reviewer](../build/references/agent-prompts.md#reviewer-s5-and-p7)
+(its `fix` variant: bug description instead of a review, one failing test, no verdict
 line). Do the steps below inline **only** when that subagent_type is unregistered.
 
 ### 4.1 Locate the Buggy Code

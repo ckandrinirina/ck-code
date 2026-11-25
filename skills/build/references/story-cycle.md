@@ -23,8 +23,8 @@ guard first. The branch is not this run's to choose, and there is no user to ask
 | 1.6 / 8.6 | `ck-story set … --no-sync`, then `ck-story files` against the prompt's `Base SHA`, on **this story's frontmatter only**. Never regenerate an index or commit a view. The orchestrator regenerates once on the target. 1.6 is normally a no-op, because the orchestrator flipped the story to `in-progress` before dispatch, so finding it there is not drift. In Bug-Fix Mode the story never goes from `bug` to `in-progress`. |
 | 3.2 / 3.5 | Present the plan and ask no question. Never create, switch, rebase or reset a branch. The prompt's `Settled:` line binds like a user's answer. An ambiguity it leaves open that blocks progress returns `status: blocked`. Never guess it. |
 | 4–6.2 | Unchanged. RED still gates GREEN. |
-| 6.3 + 7 | **One run**, as Phase 7 says below. Never delegate to `qa-validator`, because the orchestrator runs one per story. |
-| 8.5 | Skipped. The orchestrator runs manual sign-off: once per wave after it lands, or at S6 for a single story. A resume carrying a manual-test or QA report runs the 8.5.3 Bug-Fix Sub-Loop ([completion.md](completion.md)) or the QA fixes on the same branch, commits, and returns the verdict again. |
+| 6.3 / 7 | 6.3 is the **own check**, and it is the last thing you run. Phase 7 is the orchestrator's: never run the suite or the build, never delegate to `qa-validator`. |
+| 8.5 | Skipped. The orchestrator runs manual sign-off: once per wave after it lands, or at S6 for a single story. A resume carrying a manual-test report, review findings or a red background run runs the 8.5.3 Bug-Fix Sub-Loop ([completion.md](completion.md)) or the fixes on the same branch, then the own check, commits, and returns the verdict again. |
 | 8.7 | No ship. Commit after **every** TDD cycle, so an early stop still leaves resumable work, then return the [verdict](#return). |
 | `Heavy:` | The suites `ck-heavy list` printed. They never run in the build: write and mark the spec, and run only the file you wrote or edited, per [`heavy-tests.md` § In the build](../../../references/heavy-tests.md#in-the-build). |
 | `Background:` | One line per foreground e2e setup. Before RED, convert each per [`background-tests.md`](../../../references/background-tests.md), confirm `ck-headless` prints OK, and commit it alone as `test(e2e): run e2e suites in the background`. It is not story scope: log it under `## Unplanned Changes`, and leave it out of QUICK's step-up count. |
@@ -36,8 +36,8 @@ Stage explicit paths only. Never run `ck-index`, `git checkout -b`, `git switch 
 `git rebase`, `git reset` or any `git worktree` command.
 
 **Inline fallback** (a `build` with no `Agent` tool): the user is present. Phases 1.3–1.6 already
-ran in `SKILL.md`, 3.2 may ask, 3.5 runs `SKILL.md`'s gate, 6.3 and 7 stay separate (with
-no `Agent` tool to dispatch it, 7 runs its commands inline),
+ran in `SKILL.md`, 3.2 may ask, 3.5 runs `SKILL.md`'s gate, 7 runs here (the review inline, the
+run in the lane),
 `ck-story` runs without `--no-sync`, and 8.5 and 8.7 run in `SKILL.md`.
 
 ## TOOL-CALL DISCIPLINE
@@ -50,40 +50,24 @@ commands, never from skipping a check:
   does not need another call's result goes into **one message**. Examples: the source files
   a change touches, plus their tests; `git status` beside `git log`. Chain dependent shell
   steps with `&&` in one Bash call rather than across turns.
-- **Run slow commands once per code state.** The full suite, lint, typecheck, build, and e2e
-  commands are captured to a `$TMPDIR` log and read from there. Never re-run one on an
-  unchanged tree to see a different slice of its output
-  ([`rtk.md` § Slow commands](../../../references/rtk.md#slow-commands--run-once-read-the-log)).
-  The 6.3 check and every QA pass run through `ck-qa`, which stamps each pass with its code
-  state so a later step that may reuse it (`--reuse`) skips an identical run
-  ([§ QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)). A run
-  longer than 170 s (under the 180 s after which a sub-agent's Bash call is moved to the
-  background) prints `ck-qa: RUNNING`. Continue it with `ck-qa wait <id>`, and never start
-  it again or poll its output. `ck-qa wait`, in the foreground, is the only way to wait: never write an
+- **Never wait on a suite.** The suite, the full lint and the build run once, in the background,
+  after you return ([qa-lane.md](../../../references/qa-lane.md)). Your own commands are the fast
+  ones below. A slow command you do need (a heavy file, a compile) goes through `ck-qa`, is never
+  re-run on an unchanged tree to see another slice of its log, and past 170 s prints
+  `ck-qa: RUNNING`: continue it with `ck-qa wait <id>` in the foreground, and never write an
   `until`/`while … sleep` loop, a `pgrep` wait or a poll of a task's output file — it outlives
-  the agent, and some never end. A call moved to the background is waited on with `ck-qa wait`.
+  the agent, and some never end.
 - **Keep the inner loop targeted.** Every RED (4.4) and GREEN (5.2/5.3) of each cycle, and each
   refactoring (6.2) run the story's own test files — on Catch2, the test binaries with
   `-# '[#ClipTests]'`, never the whole `ctest` ([`qa-scope.md` § Catch2](qa-scope.md#catch2--one-process-per-binary)). Lint only the files the story touched,
   by path, from the package that owns the lint config (`npx eslint src/a.ts src/b.tsx`,
   `ruff check app/x.py`). Never run a package-wide lint and `grep` it for one file: measured
-  at 60–120 s a call, it ran up to seven times in one story. A package-wide typecheck runs at
-  most once per GREEN subtask, through `ck-qa`, and the build never runs in the inner loop. A
+  at 60–120 s a call, it ran up to seven times in one story. A package-wide typecheck runs once,
+  in the own check (6.3), and the build never runs here. A
   test run that compiles first (CMake, cargo, Swift, Gradle, Xcode, .NET) goes through `ck-qa`
   too, so worktrees building at once share the machine's CPU slots instead of each taking every
-  core ([§ QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)). The suite,
-  lint, typecheck and build run once through `ck-qa`, at 6.3 and in QA (7), where regressions
-  are caught. A linter that takes no file paths waits for 6.3/7 too.
-- **Check the story's scope, then only what is left.** The 6.3/7 suite and lint run at
-  **story scope**: the affected tests and the changed files, resolved by `ck-affected`. The
-  one exception is the **area-scope** backstop, every test of each area the diff reaches
-  (never an area it does not), which runs where the regression outside the story's reach is
-  caught: P8 once per wave, and the single-story QA (S5) on the story that completes its epic
-  and on every story at level `story`. A re-run after a red check or a NEEDS FIXES round runs only the
-  failed tests plus those affected since the last run (`ck-qa run <id> --rerun`). Typecheck
-  and build are never scoped
-  ([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command),
-  [§ Re-runs after a failure](qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
+  core ([§ QA runs go through `ck-qa`](../../../references/rtk.md#qa-runs-go-through-ck-qa)).
+  A linter that takes no file paths waits for the background run.
 - **A heavy suite waits for the PR.** Never run a database, container or e2e file you did not
   write or edit, whatever `ck-affected` says: measured at 5–15 min per call, several calls a story.
 - **Stay inside the repo.** Never `find /` or search `$HOME`, because each such search hit the
@@ -119,8 +103,7 @@ changes four phases and nothing else:
 - **6.1** is skipped, and the three scan references are not loaded. Read the diff once for a
   restating comment or dead code.
 
-6.3 + 7 run unchanged, as the delegated single run at story scope, and the orchestrator
-re-checks it at S5.
+The own check (6.3) is unchanged, and the orchestrator starts the same background run.
 
 **QUICK steps up to LEAN by itself** the moment the change outgrows it: the diff (`tasks/` and
 a `Background:` commit excluded) reaches more than 3 files or 40 changed lines, adds a file,
@@ -134,8 +117,8 @@ saying so; an explicit user request for a full pass wins over the table.
 
 **The route NEVER skips:** the version gate (0), skill detection + report (2; QUICK reports its
 one line), the plan+branch gate (3.5), failing-tests-before-implementation (4; QUICK as above),
-the `## Unplanned Changes` log (5.2/6.2), the 6.3 + 7 run and its cap (7), or the manual-test
-gate (8.5). A LEAN story
+the `## Unplanned Changes` log (5.2/6.2), the own check (6.3), the background run and its gate, or the
+manual-test gate (8.5). A LEAN story
 that grows past its `size:` during Phase 5 switches to FULL for 6.1 — say so when it happens.
 
 ## PHASE 2: SKILL DETECTION & CONTEXT LOADING (BLOCKING GATE)
@@ -296,19 +279,20 @@ introduce interface/trait for dependency inversion, split large functions, move 
 correct module per `folder-structure.md`. Refactors touching files outside the story's `files:` set
 also log to `## Unplanned Changes` (same `- <path> — <what> — <why>` format as 5.2).
 
-**6.3 Final green check.** Resolve the scope first
-([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command)).
-It is **story scope** at level `epic`/`plan`, and **area scope** at level `story` or on the
-story that completes its epic. Then run the suite once through `ck-qa`, using the **same
-`test=` command string** Phase 7 will hand the validator. For example, story scope is
-`ck-qa run EE-SS test='npx vitest run --changed <base> --passWithNoTests'`, and area scope is
-`ck-qa run EE-SS test="$(ck-affected <base> --area --command 'npx vitest run' 'npx vitest run {files}')"`. Report REFACTOR as **one line** (output-blocks). This
-is where a regression the targeted runs could not see surfaces. On red, fix it and re-run
-only what is left: `ck-qa run EE-SS --rerun test='<failed files + affected since ck-qa since
-EE-SS test>'` ([§ Re-runs after a failure](qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
-A green 6.3, including a green `--rerun`, is stamped on the code state under the full
-`test=` command, so Phase 7 reads it instead of running the suite again on the same tree. **Delegated, 6.3 folds
-into Phase 7** (see there).
+### 6.3 Own check
+
+One call, after the last refactor, on what this story wrote — the cheap failures, never the
+suite:
+
+```bash
+ck-qa run EE-SS --parallel own='<test row> <this story's test files>' lint='<lint row> <changed files>' types='<typecheck row>'
+```
+
+`own` is the story's own test files (Catch2: the test binaries with their `-# '[#Tags]'`). Drop
+`lint` when the linter takes no paths, and `types` when the stack has no separate typecheck (a
+compile is the background run's). Fix what is red and run the same call again. Report REFACTOR
+as **one line** (output-blocks). A regression elsewhere is the background run's to find: never
+widen this call to look for one.
 
 ### 6.4 Visual fidelity (UI stories with a linked design or a cited `S-NN` only)
 
@@ -319,61 +303,27 @@ into Phase 7** (see there).
 - **Cited replica screen** → run [`replicate.md` § Fidelity loop](../../../references/replicate.md#fidelity-loop)
   now — shoot, diff, compare, one fix pass, record the `Fidelity S-NN:` line.
 
-A fix pass changes code after 6.3's green, so re-run the same 6.3 command through
-`ck-qa run EE-SS --rerun` before Phase 7. Neither applies → skip, silently.
+A fix pass changes code after 6.3, so run the own check again. Neither applies → skip, silently.
 
 ---
 
-## PHASE 7: QA VALIDATION
+## PHASE 7: QA — the orchestrator's
 
-QA reviews the work — this is **not** a self-review.
+**Delegated, skip it.** Return after 8.6: the orchestrator starts the background run and the
+review on your commit, at once and together, and goes on working
+([qa-lane.md](../../../references/qa-lane.md)). Neither is yours to run, start or wait for. A
+finding or a red run comes back as a resume: fix it (Phase 6 rules, a failing test first for a
+behaviour defect), run the own check, commit, return the verdict again.
 
-**Always delegate to the `ck-code:qa-validator` agent** (Haiku) — it absorbs the verbose
-suite/build/lint output in its own context and returns a compact verdict. The dispatch call —
-model, cwd, story path, stack commands, return shape — is
-[agent-prompts.md § Inline QA dispatch](agent-prompts.md#inline-qa-dispatch); do
-not improvise it. Run the heavy commands inline **only** when that subagent_type is
-unregistered or there is no `Agent` tool (the inline fallback), or when delegated (where the orchestrator runs `qa-validator` per story
-instead).
-
-Mark the QA task `in_progress`, then follow [`qa-validation.md`](../../../references/qa-validation.md)
-— it loads the QA experts, validates every acceptance criterion, runs the suite +
-code-quality checks (commands per stack in [tdd-walkthrough.md](tdd-walkthrough.md)),
-and checks architecture compliance against the feature doc. Present the QA Report
-(output-blocks).
-
-**Nothing may change the tree between 6.3 and this dispatch.** The validator runs with
-`--reuse`, so the suite that 6.3 just passed on this exact code state reports `REUSED`, and
-lint, typecheck and build still run (concurrently where the stack allows). Any edit in
-between is a new state, and the suite simply runs again. The validator still reviews every
-acceptance criterion, the architecture and the code quality itself. Only the repeated
-command is skipped, never the judgement.
-
-**Delegated, 6.3 and 7 are one run.** Phase 7's command set is the final green check, at
-**story scope** against the prompt's `Base SHA`: the affected-tests `test=` and the
-changed-file lint, or the full rows when `ck-affected` prints FULL
-([qa-scope.md](qa-scope.md#affected-tests--the-story-level-test-command)). Typecheck and build
-stay full. Run it with `ck-qa run <id> --parallel …` (no `--reuse`, and no `--parallel` for a
-shared build lock). A failing run is followed by a `--rerun` of only what is left
-([§ Re-runs](qa-scope.md#re-runs-after-a-failure--only-what-is-left)). Never run the suite at
-6.3 and again at 7 on the same tree, because back to back, in one agent, they measure the same
-state. Every other check in `qa-validation.md` still runs here. The area scope runs later in
-the orchestrator: P8 once per wave, or the scope S5 gives a single story.
-
-**A delegated `QA: FAIL` is a `NEEDS FIXES` verdict** — the agent's verdict line replaces the
-inline report's verdict and enters the same loop; never treat it as a separate outcome, and
-never re-run the suite here to confirm it.
+**Inline fallback** (no `Agent` tool): commit, start the lane run as `qa-lane.md` says, review
+the diff here with [`qa-validation.md`](../../../references/qa-validation.md) in `review` mode,
+then 8.5. Iteration cap = 3, then `FIX MANUALLY / ACCEPT AS-IS / ABORT` (wording in output-blocks).
 
 **Known fixes.** A `lesson:` line under a `ck-qa` failure is a fix another project already
 found: try it first. When a failure came from the environment (a missing tool or browser, a
 busy port, a stopped service, a stale cache), not the code, record its fix once it works:
 `ck-release learn qa,on-error '<regex matching the error line>' '<the fix>'`. Never record a
 code bug.
-
-**Gate — iteration cap = 3.** At iteration 3, escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT`
-via `AskUserQuestion` (wording in output-blocks); never silently continue past 3. On NEEDS
-FIXES inside the loop: fix each issue → re-run Phase 6, whose 6.3 is a `--rerun` of only the
-tests affected since the last pass → re-run this phase with a fresh QA check.
 
 ---
 
@@ -469,7 +419,7 @@ criteria_met: <checked>/<total>
 route:        QUICK | LEAN | FULL     # the route the story finished on, after any step-up
 ```
 
-`done` only when every acceptance criterion is checked and the 6.3 + 7 run is green. A run that
+`done` only when every acceptance criterion is checked and the own check (6.3) is green. A run that
 did no work or hit a blocker returns `partial` or `blocked`, never `done`. A missing block is
 read as `partial`, and the orchestrator verifies from git either way.
 
@@ -484,8 +434,7 @@ read as `partial`, and the orchestrator verifies from git either way.
 - **Never ship code that reimplements what the repo already has** — 6.1 scans the diff for it, 6.2 collapses it, QA Step 3.5 verifies the scan ran ([`reuse-first.md`](../../../references/reuse-first.md#redundancy-scan-implementation)).
 - **Never ship a comment that restates the code or runs longer than it needs, or code that needs one to be read** — 6.1 runs the comment & readability scan, 6.2 fixes each hit, QA Step 3.5 verifies it ran ([`code-craft.md`](../../../references/code-craft.md#comment--readability-scan-implementation)).
 - **Never touch a file outside the story's `files:` without logging it** to `## Unplanned Changes` in the same Edit pass (5.2/6.2).
-- **Never re-run a slow command on an unchanged tree** — read the `$TMPDIR` log it already wrote ([TOOL-CALL DISCIPLINE](#tool-call-discipline)). The inner loop is targeted: the story's test files, and lint on touched files only. Never run a package-wide lint to check one file, and never build in the inner loop.
-- **Never repeat a whole scope after a failure** — re-run the failed tests plus those affected since the last run with `ck-qa run <id> --rerun`, and fall back to the full command only on a crash, a config change or no recorded run ([qa-scope.md § Re-runs](qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
+- **Never run the suite, the full lint or the build in a builder, and never wait on one** — they run once, in the background, after the return ([qa-lane.md](../../../references/qa-lane.md)). The inner loop and the own check are the story's test files, lint on touched files and one typecheck. Never re-run a slow command on an unchanged tree.
 - **Never `find /` or search outside the repo** — resolve this file's links against its own directory and dependency types in the repo's `node_modules`.
 - **Never widen a bug fix beyond its recorded Fix Plan** (Bug-Fix Mode).
-- **Delegated, never ask, never ship, never run `ck-index`, and never change branch** — and never return `done` without every criterion checked and the 6.3 + 7 run green.
+- **Delegated, never ask, never ship, never run `ck-index`, and never change branch** — and never return `done` without every criterion checked and the own check green.

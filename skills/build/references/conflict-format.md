@@ -66,13 +66,13 @@ Conflict analysis (dry-run merges onto <$TARGET>):
 
 No overlaps at all → "No conflicts detected — all branches merge cleanly."
 
-## P7 — QA Report
+## P7 — Review Report
 
 ```
-QA (per branch, delegated to qa-validator):
+Review (per branch, delegated to qa-validator — the suites run in the background):
 ─────────────────────────────────────────────────────
   02-05  →  QA: PASS
-  03-01  →  QA: FAIL — cargo clippy — 2 warnings treated as errors  → BLOCKED from merge
+  03-01  →  QA: FAIL — criterion 2 NOT-COVERED — src/lib.rs:41  → back to its agent (1/3)
 ─────────────────────────────────────────────────────
 ```
 
@@ -80,9 +80,9 @@ QA (per branch, delegated to qa-validator):
 
 ```
 Summary:
-  ✓ Ready to merge:  story-02-05  (QA passed, conflict-free)
+  ✓ Ready to merge:  story-02-05  (review passed, conflict-free)
   ◐ Incomplete:      story-03-04  (stuck after resume cap — recommend splitting)
-  ⚠ Review needed:   story-03-01  (QA failed: clippy errors)
+  ⚠ Review needed:   story-03-01  (review failed 3 times: criterion 2)
   🚫 Blocked/failed: story-02-06  (empty diff)
 
 What would you like to do?
@@ -95,6 +95,8 @@ A solo wave already sitting on `$TARGET` drops option 1 — say
 `Merge: none needed (solo on <$TARGET>).` and go straight to the regenerate.
 
 ## P8 — Post-Merge Check Prompt
+
+Asked while the wave's background run goes on.
 
 Run on `$TARGET` in the main checkout, where every merged story sits together.
 

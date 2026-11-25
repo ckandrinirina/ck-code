@@ -788,6 +788,206 @@ assert_not_contains "ck-qa run: CK_QA_DOCKER=0 prints no Docker line" "$( cd "$Q
 rm -rf "$QA_REPO" "$QA_TMP"
 
 echo
+echo "=== ck-qa lane: a background run never blocks and never sees an edit ==="
+LN="$(mktemp -d)"; LN="$(cd "$LN" && pwd -P)"; mkdir "$LN/repo" "$LN/tmp"
+( cd "$LN/repo" && git init -q -b main && git config user.email s@s && git config user.name s \
+  && mkdir -p node_modules/dep packages/a sub && echo 1 >node_modules/dep/i && ln -s "$LN/repo/packages/a" node_modules/a \
+  && printf 'node_modules\n.env\n' >.gitignore && echo SECRET=1 >.env && echo '{}' >package.json && echo '{}' >package-lock.json \
+  && echo v1 >sub/v && echo a >packages/a/i && git add -A && git commit -qm one )
+LQ() { ( cd "$LN/repo" && TMPDIR="$LN/tmp" CK_QA_LANE_DIR="$LN/lanes" CK_QA_DOCKER=0 ck-qa "$@" 2>&1 ); }
+lncommit() { ( cd "$LN/repo" && echo "$1" >sub/v && git commit -qam "$1" ); }
+lnlog() { cat "$LN"/tmp/ck-*-"$1"-"$2".log; }
+assert_contains "lane gate: no run yet is NONE" "$(LQ gate)" "gate NONE"
+LN_ONE="$(git -C "$LN/repo" rev-parse HEAD)"
+LN_T0=$SECONDS
+LN_S="$(LQ start L1 --base HEAD t='sleep 4; cat sub/v .env; pwd; readlink node_modules/a; cat node_modules/dep/i' s='@echo "echo from {base}"')"
+assert_contains "lane start: returns at once" "$LN_S" "STARTED — L1"
+assert_eq "lane start: without waiting for the command" "yes" "$([ $((SECONDS - LN_T0)) -lt 4 ] && echo yes || echo no)"
+echo edited >"$LN/repo/sub/v"
+LN_G="$(LQ gate)"; LN_GRC=$?
+assert_contains "lane gate: a running run is PENDING" "$LN_G" "gate PENDING — L1"
+assert_exit "lane gate: PENDING exits 3" 3 "$LN_GRC"
+assert_contains "lane wait --end: prints the result" "$(LQ wait L1 --end)" "ck-qa: PASS"
+LN_LOG="$(lnlog L1 t)"
+assert_contains "lane: checks the commit, not the edit" "$LN_LOG" "v1"
+assert_contains "lane: copies a gitignored .env" "$LN_LOG" "SECRET=1"
+assert_contains "lane: runs in its own checkout" "$LN_LOG" "$LN/lanes/"
+assert_eq "lane: a link into the caller's checkout is moved into the lane" "" "$(printf '%s\n' "$LN_LOG" | grep -F "$LN/repo/packages")"
+assert_contains "lane: {base} and @ are resolved in the lane" "$(lnlog L1 s)" "from $LN_ONE"
+assert_contains "lane gate: a passed run is GREEN" "$(LQ gate)" "gate GREEN"
+assert_eq "lane: the caller's checkout is untouched" " M sub/v" "$(git -C "$LN/repo" status --porcelain)"
+lncommit v2
+LN_G="$(LQ gate)"; LN_GRC=$?
+assert_contains "lane gate: code changed since is UNCHECKED" "$LN_G" "gate UNCHECKED"
+assert_exit "lane gate: UNCHECKED exits 5" 5 "$LN_GRC"
+LQ gate --again >/dev/null; LQ wait L1 --end >/dev/null
+assert_contains "lane gate --again: checks the new commit" "$(LQ gate)" "gate GREEN"
+assert_contains "lane: {base} moves to the last commit that passed" "$(lnlog L1 s)" "from $LN_ONE"
+( cd "$LN/repo" && mkdir tasks && echo x >tasks/PLAN.md && echo x >NOTES.md && git add -A && git commit -qm docs )
+assert_contains "lane gate: a docs or tasks commit keeps GREEN" "$(LQ gate)" "gate GREEN"
+LN_DOC="$(git -C "$LN/repo" rev-parse HEAD)"
+# red, then a later story whose own base is newer must still cover the red one
+lncommit broken
+LQ start L2 --base HEAD~1 u='@echo "echo from {base}; exit 1"' >/dev/null; LQ wait L2 --end >/dev/null; LN_RC=$?
+assert_exit "lane wait --end: a red run exits 1" 1 "$LN_RC"
+LN_G="$(LQ gate)"; LN_GRC=$?
+assert_contains "lane gate: a failed run is RED" "$LN_G" "u (L2): RED"
+assert_exit "lane gate: RED exits 1" 1 "$LN_GRC"
+assert_contains "lane gate --base: runs already behind the base do not count" "$(LQ gate --base HEAD)" "gate NONE"
+lncommit v4
+LQ start L3 --base HEAD u='@echo "echo from {base}; exit 1"' >/dev/null; LQ wait L3 --end >/dev/null
+assert_contains "lane start: the base reaches back over a red run" "$(lnlog L3 u)" "from $LN_DOC"
+LQ waive L3 "flaky service" >/dev/null
+assert_contains "lane waive: the gate names it and lets it through" "$(LQ gate)" "u (L3): WAIVED — flaky service"
+assert_not_contains "lane waive: no RED left" "$(LQ gate)" "gate RED"
+# a queued run is replaced by a newer one of the same commands
+LQ start L4 --base HEAD w='sleep 4; echo {base}' >/dev/null; sleep 1
+LN_Q="$(git -C "$LN/repo" rev-parse HEAD)"
+lncommit v5; LQ start L5 --base HEAD w='sleep 4; echo {base}' >/dev/null
+lncommit v6
+assert_contains "lane start: replaces a queued run of the same commands" "$(LQ start L6 --base HEAD w='sleep 4; echo {base}')" "replaced the queued run(s): L5"
+LN_SUP="$(LQ wait L5 --end)"; LN_RC=$?
+assert_contains "lane: the replaced run says so" "$LN_SUP" "SUPERSEDED"
+assert_exit "lane: a replaced run exits 4" 4 "$LN_RC"
+LQ wait L6 --end >/dev/null
+assert_contains "lane: the newer run covers the replaced one" "$(lnlog L6 w)" "$LN_Q"
+# uncommitted work
+echo wip >"$LN/repo/sub/v"
+LQ start L7 --at work z='grep -q wip sub/v' >/dev/null
+assert_contains "lane start --at work: checks the working copy" "$(LQ wait L7 --end)" "z: PASS"
+( cd "$LN/repo" && git commit -qam wip )
+assert_not_contains "lane gate: the same content committed stays checked" "$(LQ gate)" "z (L7)"
+# setup problems are named, and never read as green
+LQ start L8 q='@false' >/dev/null
+assert_contains "lane: a failed scope command is a FAIL, never an empty pass" "$(LQ wait L8 --end)" "FAIL — setup: the q scope command failed"
+assert_contains "lane gate: a run that could not start is RED" "$(LQ gate)" "q (L8): RED — SETUP"
+LQ waive L8 "test of the test" >/dev/null
+( cd "$LN/repo" && echo 'setup: echo no such tool; exit 3' >.ck-qa-lane && git add -A && git commit -qm setup )
+LQ start L9 r='true' >/dev/null
+assert_contains "lane: a failed setup command is named" "$(LQ wait L9 --end)" "the .ck-qa-lane setup failed: no such tool"
+LQ waive L9 "test of the test" >/dev/null
+( cd "$LN/repo" && echo off >.ck-qa-lane && git commit -qam off )
+assert_contains "lane off: says to leave the checkout alone" "$(LQ start L10 x='pwd')" "leave it alone"
+assert_contains "lane off: runs in the caller's checkout" "$(LQ wait L10 --end; lnlog L10 x)" "$LN/repo"
+LN_D="$(LQ start L11 x='echo {base}')"; LN_RC=$?
+assert_exit "lane start: {base} without --base is refused" 2 "$LN_RC"
+LN_D="$(LQ start L11 x='true' x='false')"; LN_RC=$?
+assert_exit "lane start: a label given twice is refused" 2 "$LN_RC"
+# failures that were there before the work are not the work's
+( cd "$LN/repo" && echo >.ck-qa-lane && echo 'old.ts(3,1): error TS1 old' >errs && git add -A && git commit -qm debt )
+LN_B="$(git -C "$LN/repo" rev-parse HEAD)"
+( cd "$LN/repo" && echo 'old.ts(9,4): error TS1 old' >errs && git commit -qam moved )
+LQ start B1 --base "$LN_B" types='! grep error errs' ok='true' >/dev/null
+LN_O="$(LQ wait B1 --end)"; LN_RC=$?
+assert_contains "lane baseline: a failure already at the base is BASELINE" "$LN_O" "types: BASELINE"
+assert_exit "lane baseline: it does not fail the run" 0 "$LN_RC"
+assert_contains "lane baseline: the labels after it still ran" "$LN_O" "ok: PASS"
+assert_contains "lane baseline: the gate names it" "$(LQ gate --base "$LN_B")" "types (B1): BASELINE"
+assert_not_contains "lane baseline: and is not RED" "$(LQ gate --base "$LN_B")" "gate RED"
+( cd "$LN/repo" && printf 'old.ts(9,4): error TS1 old\nnew.ts(1,1): error TS2 new\n' >errs && git commit -qam worse )
+LQ start B2 --base "$LN_B" types='! grep error errs' >/dev/null
+LN_O="$(LQ wait B2 --end)"; LN_RC=$?
+assert_exit "lane baseline: one new failure fails the run" 1 "$LN_RC"
+assert_contains "lane baseline: and only the new one is listed" "$(printf '%s\n' "$LN_O" | sed -n '/new since/,$p')" "new.ts: error TS2 new"
+assert_not_contains "lane baseline: the old one is not" "$(printf '%s\n' "$LN_O" | sed -n '/new since/,$p')" "old.ts"
+( cd "$LN/repo" && printf 'old.ts(9,4): error TS1 old\nold.ts(12,4): error TS1 old\n' >errs && git commit -qam twice )
+LQ start B3 --base "$LN_B" types='! grep error errs' >/dev/null
+LQ wait B3 --end >/dev/null; LN_RC=$?
+assert_exit "lane baseline: a second copy of an old failure is new" 1 "$LN_RC"
+LQ start B4 --base "$LN_B" types='exit 7' >/dev/null
+LQ wait B4 --end >/dev/null; LN_RC=$?
+assert_exit "lane baseline: a silent failure is never excused" 1 "$LN_RC"
+LQ waive B4 "test of the test" >/dev/null; LQ waive B3 "test of the test" >/dev/null
+( cd "$LN/repo" && mkdir -p ig && echo ig >>.gitignore && echo key >key.json && echo key.json >>.gitignore && git add -A && git commit -qm ignore && echo x >ig/big )
+LQ start B5 k='cat key.json; test ! -e ig/big' >/dev/null
+assert_contains "lane: a file ignored by itself is copied, an ignored folder is not" "$(LQ wait B5 --end)" "k: PASS"
+# a background run never makes a foreground one wait
+CK_QA_SLOTS=1 LQ start P1 x='sleep 6' >/dev/null; sleep 2; LN_T0=$SECONDS
+assert_contains "lane: a foreground run takes a CPU slot at once while the lane runs" \
+  "$(CK_QA_SLOTS=1 CK_QA_OVERFLOW=0 CK_QA_WAIT=20 LQ run P2 y='true')" "ck-qa: PASS"
+assert_eq "lane: and did not queue behind it" "yes" "$([ $((SECONDS - LN_T0)) -lt 4 ] && echo yes || echo no)"
+LQ wait P1 --end >/dev/null
+# a timeout on a busy machine gets a second run
+LQ start R1 x="[ -e $LN/once ] || { touch $LN/once; echo 'Error: Test timed out in 5000ms'; exit 1; }" z='true' >/dev/null
+LN_O="$(LQ wait R1 --end)"; LN_RC=$?
+assert_contains "lane: a label that timed out passes on a second run" "$LN_O" "x: PASS on a second run"
+assert_exit "lane: and the run is green" 0 "$LN_RC"
+LQ start R2 x="echo n >>$LN/twice; echo 'Test timed out'; exit 1" >/dev/null
+LQ wait R2 --end >/dev/null; LN_RC=$?
+assert_exit "lane: timing out twice is red" 1 "$LN_RC"
+assert_eq "lane: after exactly two runs" "2" "$(wc -l <"$LN/twice" | tr -d ' ')"
+LQ start R3 x="echo n >>$LN/plain; echo 'assertion failed'; exit 1" >/dev/null; LQ wait R3 --end >/dev/null
+assert_eq "lane: an ordinary failure is not repeated" "1" "$(wc -l <"$LN/plain" | tr -d ' ')"
+# a lost run is never green
+( cd "$LN/repo" && echo >.ck-qa-lane && git commit -qam on )
+LQ start L12 y='sleep 43' >/dev/null; sleep 2
+LN_R="$(cat "$LN"/tmp/ck-qa-run/*-L12.lane)"; pkill -P "$(head -n 1 "$LN_R/pid")"; kill "$(head -n 1 "$LN_R/pid")"; pkill -f 'sleep 43'; sleep 1
+assert_contains "lane gate: a run killed half way is LOST" "$(LQ gate)" "y (L12): LOST"
+pkill -f "__lane $LN_R"; sleep 1
+# --- what an adversarial review broke ---
+LQ gate >/dev/null; LN_M="$(git -C "$LN/repo" rev-parse HEAD)"
+( cd "$LN/repo" && git checkout -qb rv )
+lnc() { ( cd "$LN/repo" && printf '%s\n' "$2" >"$1" && git add -A && git commit -qm "$2" ); }
+lnr() { local id="$1"; shift; LQ start "$id" "$@" >/dev/null; LQ wait "$id" --end; }
+lnc rv1 bad; lnr A1 --base "$LN_M" a1='exit 1' >/dev/null
+( cd "$LN/repo" && git commit -q --amend -m amended )
+assert_contains "lane gate: an amend never erases a red run" "$(LQ gate --base "$LN_M")" "gate UNCHECKED"
+LQ gate --again --base "$LN_M" >/dev/null; LQ wait A1 --end >/dev/null
+assert_contains "lane gate: checked again, it is red again" "$(LQ gate --base "$LN_M")" "gate RED"
+LQ waive A1 ok >/dev/null; lnc rv1 worse
+assert_not_contains "lane waive: a waiver ends when the code changes" "$(LQ gate --base "$LN_M")" "gate GREEN"
+assert_contains "lane waive: it is UNCHECKED then" "$(LQ gate --base "$LN_M")" "a1 (A1): UNCHECKED"
+lnr A1 --base "$LN_M" a1='exit 1' >/dev/null; LQ waive A1 ok >/dev/null
+lnc code BAD
+LN_O="$(lnr A2 fix='echo GOOD >code' chk='grep -q GOOD code')"
+assert_contains "lane: a command that rewrites tracked files is a FAIL" "$LN_O" "fix: FAIL — it changes tracked files"
+assert_contains "lane: and the next label reads the commit, not the rewrite" "$LN_O" "ck-qa: FAIL — fix chk"
+LQ waive A2 ok >/dev/null
+LN_O="$(lnr A3 --parallel fix='echo GOOD >code' slow='sleep 2; grep -q GOOD code')"
+assert_contains "lane: nor in parallel" "$LN_O" "ck-qa: FAIL — fix slow"; LQ waive A3 ok >/dev/null
+assert_contains "lane: a verdict printed by the command is not the verdict" "$(lnr A4 t='echo "t: PASS — log x"; exit 1')" "ck-qa: FAIL — t"; LQ waive A4 ok >/dev/null
+mkdir -p "$LN/repo/wrap"; lnc lintout 'a.ts error: old'
+LN_W="$(git -C "$LN/repo" rev-parse HEAD)"
+printf 'a.ts error: old\nb.ts bad format\n' >"$LN/repo/lintout"; ( cd "$LN/repo" && git commit -qam two )
+assert_contains "lane baseline: a new file with no keyword is still new" \
+  "$(lnr A5 --base "$LN_W" l='cat lintout; echo "ELIFECYCLE Command failed with exit code 1."; exit 1')" "ck-qa: FAIL — l"; LQ waive A5 ok >/dev/null
+lnc lintout 'a.ts error: old'; LN_W="$(git -C "$LN/repo" rev-parse HEAD)"; lnc other x
+assert_contains "lane baseline: never for a chained command" \
+  "$(lnr A6 --base "$LN_W" l='cat lintout && false')" "ck-qa: FAIL — l"; LQ waive A6 ok >/dev/null
+assert_contains "lane baseline: the same failure in one command is" \
+  "$(lnr A7 --base "$LN_W" l='! cat lintout')" "l: BASELINE"
+lnc run.sh 'cat lintout; exit 1'; LN_W="$(git -C "$LN/repo" rev-parse HEAD)"; lnc run.sh 'cat lintout; exit 137'
+assert_contains "lane baseline: never when the command died another way" \
+  "$(lnr A8 --base "$LN_W" l='sh run.sh')" "ck-qa: FAIL — l"; LQ waive A8 ok >/dev/null
+# a green that covered less never narrows a wider check
+lnc w1 x; LN_O1="$(git -C "$LN/repo" rev-parse HEAD)"; lnc w2 x; LN_O2="$(git -C "$LN/repo" rev-parse HEAD)"; lnc w3 x
+lnr C1 --base "$LN_O2" cv='echo from {base}' >/dev/null
+lnr C2 --base "$LN_O1" cv='echo from {base}' >/dev/null
+assert_contains "lane {base}: a narrower green is not a wider one's base" "$(lnlog C2 cv)" "from $LN_O1"
+lnc w4 x; lnr C3 --base "$LN_O1" cv='echo from {base}' >/dev/null
+assert_contains "lane {base}: a green that covered it is" "$(lnlog C3 cv)" "from $(git -C "$LN/repo" rev-parse HEAD~1)"
+# stale output, the caller's git environment, a reused pid
+( cd "$LN/repo" && echo dist >>.gitignore && git add -A && git commit -qm ig )
+lnr D1 b='mkdir -p dist; echo old >dist/o' >/dev/null
+assert_contains "lane: an old ignored output is not there for the next commit" "$(lncommit d2; lnr D2 b='test ! -e dist/o')" "b: PASS"
+LN_HEAD="$(git -C "$LN/repo" symbolic-ref HEAD)"; echo st >"$LN/repo/staged"; git -C "$LN/repo" add staged
+( cd "$LN/repo" && GIT_DIR="$LN/repo/.git" GIT_WORK_TREE="$LN/repo" TMPDIR="$LN/tmp" CK_QA_LANE_DIR="$LN/lanes" CK_QA_DOCKER=0 ck-qa start E1 e='true' >/dev/null ); LQ wait E1 --end >/dev/null
+assert_eq "lane: under a hook's GIT_DIR the caller's branch stays" "$LN_HEAD" "$(git -C "$LN/repo" symbolic-ref HEAD)"
+assert_eq "lane: and its staged file" "A  staged" "$(git -C "$LN/repo" status --porcelain staged)"
+git -C "$LN/repo" commit -qm staged
+LN_L="$(find "$LN/lanes" -mindepth 1 -maxdepth 1 -type d -name 'repo-*' ! -name '*.lock*')"
+mkdir "$LN_L.lock"; printf '%s\nMon Jan  1 00:00:00 2001\n' $$ >"$LN_L.lock/pid"
+assert_contains "lane: a lock held by a reused pid is taken back" "$(lnr F1 f='true')" "ck-qa: PASS"
+mkdir "$LN_L.lock"; { echo $$; if [ -r /proc/$$/stat ]; then sed "s/.*) //" /proc/$$/stat | cut -d " " -f 20; else ps -o lstart= -p $$; fi; } >"$LN_L.lock/pid"
+LQ start F2 f2='true' >/dev/null; sleep 2
+assert_contains "lane: a live holder is waited for" "$(LQ gate --base "$LN_M")" "f2 (F2): PENDING"
+rm -rf "${LN_L:?}.lock"; LQ wait F2 --end >/dev/null
+assert_contains "lane-free: removes the lane" "$(LQ lane-free)" "lane freed"
+assert_eq "lane-free: leaves no worktree behind" "1" "$(git -C "$LN/repo" worktree list | wc -l | tr -d ' ')"
+assert_contains "lane-free: nothing left" "$(LQ lane-free)" "no lane"
+rm -rf "${LN:?}"
+
+echo
 echo "=== ck-affected: only the tests a change can reach ==="
 # A workspace monorepo: backoffice and client both use a shared ui package; marketing uses nothing.
 AF="$(mktemp -d)"

@@ -15,7 +15,7 @@ hooks:
 # Build — TDD Story Implementation
 
 Implements stories from `tasks/` using Test-Driven Development, SOLID principles, and
-automated QA. Cycle: plan → test-drive one behaviour at a time (RED → GREEN, repeated) → refactor + prune tests → QA → complete.
+automated QA that runs in the background. Cycle: plan → test-drive one behaviour at a time (RED → GREEN, repeated) → refactor + prune tests → QA → complete.
 
 **Every story is implemented by a sub-agent — never in this context.** **One story** —
 an explicit path, a single menu pick, or a hand-off from `/ck-code:fix` or
@@ -25,7 +25,8 @@ hands the [story cycle](#the-story-cycle-phases-1786) to one solo agent on its o
 dependency-ordered waves). Every gate below still applies. `--auto` runs either to the end
 with no question ([INPUT](#input)). A cosmetic `S` story takes the [QUICK ROUTE](#quick-route),
 which skips the ceremony a label change does not need and none of the checks. No test run ever
-opens a window in front of the user ([background-tests.md](../../references/background-tests.md)). A `status: bug` story runs in **Bug-Fix Mode** (Phase 1.3.5)
+opens a window in front of the user ([background-tests.md](../../references/background-tests.md)), and
+no run is ever waited on ([qa-lane.md](../../references/qa-lane.md)). A `status: bug` story runs in **Bug-Fix Mode** (Phase 1.3.5)
 inside whichever agent builds it. Argument shapes: [INPUT](#input).
 
 Story state lives in **story-file YAML frontmatter** (the single source of truth); the index
@@ -33,7 +34,7 @@ views are **generated, gitignored and never committed** — this skill changes f
 through `ck-story`, which regenerates them, and commits only story files. The plan record
 (`tasks/<plan>/OVERVIEW.md`) is read with `ck-plan get`. See [`data-model.md`](../../references/data-model.md).
 
-References for this context: [output-blocks.md](references/output-blocks.md) (compact present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings). The builder's references (`story-cycle.md`, `tdd-walkthrough.md`, `completion.md`, `story-template.md`, `bug-fix-mode.md`, `qa-scope.md`) are the agent's to read, never this context's.
+References for this context: [output-blocks.md](references/output-blocks.md) (compact present templates) · [examples.md](references/examples.md) (worked dialogues: interactive menu, bug-fix loop) · [agent-prompts.md](references/agent-prompts.md) (dispatch/resume prompts, return schema) · [native-commands.md](../../references/native-commands.md) (`/goal`, `/fast`, `/code-review` pairings). The builder's references (`story-cycle.md`, `tdd-walkthrough.md`, `completion.md`, `story-template.md`, `bug-fix-mode.md`) are the agent's to read, never this context's. [qa-lane.md](../../references/qa-lane.md) and [qa-scope.md](references/qa-scope.md) are read at the first S5 or P7.
 
 Parallel-mode references, read **only** when two or more stories are in scope: [parallel-mode.md](references/parallel-mode.md) (orchestration detail for P1–P9) · [wave-mode.md](references/wave-mode.md) (wave planning) · [conflict-format.md](references/conflict-format.md) (table/integrity/conflict/QA/summary formats).
 
@@ -287,7 +288,8 @@ never commits) and, in Bug-Fix Mode, the reproduction test the Bug Report names 
 it for build to commit). Any other dirty path stops the run — list the paths and ask the user
 to commit or stash them; the integrity gate (S5) needs a tree only the agent changes.
 
-In the same call, `ck-headless`. Its `FOREGROUND` lines go into the dispatch prompt as
+In the same call, `ck-qa gate --base <trunk>`: `RED` or `UNCHECKED` is work an earlier session left
+([qa-lane.md § The gate](../../references/qa-lane.md#the-gate)). And `ck-headless`. Its `FOREGROUND` lines go into the dispatch prompt as
 `Background:`, and the builder converts them first, without asking
 ([background-tests.md](../../references/background-tests.md)). `ck-headless: OK` adds nothing.
 
@@ -335,26 +337,32 @@ git rev-parse --abbrev-ref HEAD && git rev-parse HEAD   # the branch, then the B
 (QUICK takes the fast tier), plus the `Route:` line and any `Background:` lines.
 Never edit a file in this context while it runs.
 
-**S5 — Verify, then QA.** Run the solo integrity gate of
+**S5 — Verify, then start the checks — and wait for neither.** Run the solo integrity gate of
 [parallel-mode.md § P5](references/parallel-mode.md#p5--integrity-and-resume) against the S3
 Base SHA, with the branch from S3 as `$WORKBRANCH` (Bug-Fix Mode: the Bug Report's `**Status:** FIXED`
 line replaces the unchecked-criteria grep). Its classes and the 2-round resume cap
-apply unchanged; branch drift is a hard stop. On ✓ complete with `route: QUICK`, verify here
-instead of dispatching ([QUICK ROUTE](#quick-route) S5). Otherwise dispatch `ck-code:qa-validator`
-per [agent-prompts.md § Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch), at
-the single-story scope of
-[§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)
-against the Base SHA. **`QA: FAIL` is NEEDS FIXES:** `SendMessage` the same agent the failing
-criteria and excerpt, let it fix and commit, then re-run S5. Cap = 3 QA iterations, then
-escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (wording in
+apply unchanged; branch drift is a hard stop. On ✓ complete, in **one message**:
+
+1. `ck-qa start EE-SS …` on the branch's commit, at the single-story scope of
+   [qa-scope.md](references/qa-scope.md#affected-tests--the-story-level-test-command), and its
+   `ck-qa wait EE-SS --end` as a background Bash call
+   ([qa-lane.md § Start it](../../references/qa-lane.md#start-it));
+2. the reviewer, per [agent-prompts.md § Reviewer](references/agent-prompts.md#reviewer-s5-and-p7)
+   (`route: QUICK` → no reviewer: read the few-line diff against the criteria here).
+
+`QA: FAIL` from the review, or a red run
+([§ When it ends](../../references/qa-lane.md#when-it-ends)), is **NEEDS FIXES**: `SendMessage` the
+same agent, then S5 again on the new commit. Never hold a finding back for the run. Cap = 3
+iterations, then escalate `FIX MANUALLY / ACCEPT AS-IS / ABORT` (wording in
 [output-blocks.md](references/output-blocks.md)). Under `--auto` the cap ends the run instead:
 the branch is kept, the story goes back to `in-progress` — its builder already committed `done`,
 so run `ck-story set <story-path> status=in-progress --no-sync` (Bug-Fix Mode: `status=bug
 prior_status=<prior_status>`) and commit it on the branch as `chore(tasks): EE-SS back to
 in-progress — QA failed` — and the report says why.
 
-**S6 — Manual gate and hand-off, here.** Run Phase 8.5 in this context (both questions, one
-call). On QUICK the prompt is one or two steps that show the change, such as the screen and
+**S6 — Manual gate and hand-off, here.** As soon as the review passes, whatever the background
+run is doing: the user tests while the suite does. Run Phase 8.5 in this context (both questions,
+one call). On QUICK the prompt is one or two steps that show the change, such as the screen and
 the label it should now read. **PASS** — the agent already wrote `done` (or the restored `prior_status`) and `files:`
 with `--no-sync` and committed them, so only regenerate and sync, then apply the 8.7 answer:
 
@@ -364,11 +372,12 @@ ck-index tasks/<Plan> && ck-project sync tasks/<Plan>
 
 **ISSUES** — `SendMessage` the same agent the report; it runs the 8.5.3 Bug-Fix Sub-Loop on its
 branch and commits. Then S5 again and re-ask; cap = 3 cycles. `/ck-code:ship` then pushes the
-already-committed branch — it has nothing left to stage.
+already-committed branch — it has nothing left to stage — once `ck-qa gate` is green.
 
 **`--auto`:** the gate is deferred, never dropped. Regenerate and sync as on PASS, print the
 8.5.1 manual-testing steps as the run's checklist, and end with `/ck-code:ship <story-path>` as
-the next step. The ship answer is always SKIP, and nothing is pushed.
+the next step. The ship answer is always SKIP, and nothing is pushed. Last, `ck-qa wait EE-SS`
+until the run ends; a red one takes the S5 route above.
 
 ---
 
@@ -398,13 +407,9 @@ tier. The builder's QUICK deltas live in
 [story-cycle.md § 1.7](references/story-cycle.md#17-effort-route-from-frontmatter-size). It
 steps up to LEAN itself when the change grows, and returns its final route.
 
-**S5 — verify here, no QA agent.** When the verdict says `route: QUICK`, run in this context
-the exact command line the [Inline QA dispatch](references/agent-prompts.md#inline-qa-dispatch)
-would hand the validator, at the same scope, with `--reuse`:
-`ck-qa run EE-SS --reuse [--parallel] test='…' lint='…' typecheck='…' build='…'`. The builder's
-green run on this exact tree reports `REUSED`. Anything else runs and prints one line. `FAIL`
-is NEEDS FIXES, the same loop and cap as a validator `QA: FAIL`. A verdict with any other route
-gets the `qa-validator` dispatch as usual.
+**S5 — no reviewer.** When the verdict says `route: QUICK`, start the same background run and
+read the diff here against the criteria. A verdict with any other route gets the reviewer as
+usual.
 
 ---
 
@@ -496,7 +501,7 @@ pre-ask a gate whose outcome could change the work in between.
 
 **8.5.3** On `ISSUES` → enter the Bug-Fix Sub-Loop (eight ordered steps in
 [completion.md](references/completion.md) § 8.5.3): regression test (red) → minimum fix
-(green) → **mandatory** re-run of Phase 6 + Phase 7 → mark the `## Manual-Test Bugs` entry
+(green) → **mandatory** re-run of Phase 6, its own check, and S5 → mark the `## Manual-Test Bugs` entry
 `FIXED` → re-prompt at 8.5.1. **Cap = 3 cycles**; on the 3rd, escalate `FIX MANUALLY / ACCEPT
 AS-IS / ABORT` (template in [examples.md](references/examples.md)). Never continue past 3.
 
@@ -545,7 +550,8 @@ The four gates that bind even before that read: **P1** checks out and verifies `
 before any dispatch, and never lets it be the trunk (a `story`-level plan switches to `epic`
 at P3, or the run cancels) · **P3** never dispatches into a project with zero skills without
 asking, unless `tasks/SETTINGS.md` says `experts: none` or the run is `--auto` (agents cannot prompt) · **P5** derives "done" from git, never from an agent's self-report ·
-**P7/P8** never accept work that has not returned `QA: PASS`.
+**P7/P8** never merge work whose review has not returned `QA: PASS`, and never go two waves
+ahead of a background run that is not green.
 
 ---
 
@@ -568,16 +574,19 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
   detected, `Read` and reported before any code (zero project skills → the team gate, asked by
   this context at S2/P3 unless `experts: none`); SOLID at design and after refactor; each
   behaviour's test fails before its implementation; off-plan touches logged to
-  `## Unplanned Changes`; QA cap 3; `files:` records what the story actually touched.
+  `## Unplanned Changes`; the own check green; `files:` records what the story actually touched.
 - **SINGLE-STORY DISPATCH** — one story is built by one solo agent on its own branch, never in
-  the orchestrating context; S1 clean start, S2 one question, S5 integrity from git + QA, S6
+  the orchestrating context; S1 clean start, S2 one question, S5 integrity from git, then review and background run, S6
   manual gate here. Inline only when this context has no `Agent` tool.
-- **QUICK ROUTE** — eligibility checked, never assumed; QUICK skips the QA agent, never the
-  QA commands, RED where a test covers the change, or the manual gate.
+- **QUICK ROUTE** — eligibility checked, never assumed; QUICK skips the reviewer, never the
+  background run, RED where a test covers the change, or the manual gate.
 - **Heavy tests** — a declared DB, container or e2e suite never runs in a build: only the file
   a story wrote or edited, marked `ck-heavy: EE-SS`; `ship` asks once per PR.
 - **Background tests** — `ck-headless` runs before dispatch; every `FOREGROUND` hit is
   converted before story code; every test runs through `ck-qa`.
+- **Background run** — every story or wave is checked once, in the lane, on its commit
+  ([qa-lane.md](../../references/qa-lane.md)); the build goes on meanwhile, one wave ahead at most, and
+  nothing leaves the machine without `ck-qa gate` GREEN or NONE.
 - **3.5** — plan and base branch confirmed in one gate before any code (single-story dispatch: base only, at S2); the base is **derived from the plan's `integration:` (`ck-plan get`), resolved and shown with its reason**, never inherited from the branch this run was launched on; never `main`/`develop`. The level is never asked here.
 - **8.5** — manual-test gate; bug-fix loop cap = 3. Under `--auto`, deferred to the final
   checklist, never dropped.
@@ -590,7 +599,7 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
   merges on `main`/`develop`/`<trunk>`.
 - **P3 / P4 / P5 / P7 (PARALLEL MODE)** — team gate asked once per batch; every story
   implemented by an agent, worktrees only for waves of ≥ 2; "done" derived from git; nothing
-  merged or accepted without `QA: PASS`.
+  merged without a review `QA: PASS`, nothing promoted without a green gate.
 
 ## RULES
 
@@ -609,7 +618,8 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
 - **Never write a delta/journal doc** — commits are the history. The story body carries only
   the Implementation Summary, Unplanned Changes, and (bug flow) the Bug Report.
 - **Never reference AI, Claude, or generated-by notes** in a commit, branch name, or any git artefact — [full rule](../../references/no-ai-references.md).
-- **Never derive "done" from an agent's self-report** — derive it from git + the QA verdict.
+- **Never derive "done" from an agent's self-report** — derive it from git, the review and the background run.
+- **Never wait on a suite, a build or a lint while there is other work** — start it, move on, act on its notification ([qa-lane.md](../../references/qa-lane.md)). Never end a run calling it finished while one is pending.
 - **Never let an issue claim block the build, and never remove an existing assignee** — the
   claim (1.5, and P4 for a wave) is best-effort bookkeeping with `--add-assignee`; a `gh`
   failure is one reported line, not a stop.
@@ -619,10 +629,10 @@ follow it from **Placement — delegated** to **RETURN**. Skip every phase of th
 - **Never keep work off `<trunk>` by picking a different base** — name
   `/ck-code:config integration tasks/<Plan> <level>` and stop, or `ship` targets `<trunk>` from
   the stored level regardless.
-- **Never run a story-scope pass without an area-scope run after it** — P8 once per wave, the single-story S5 QA on the story that completes its epic and on every story at level `story`. Never narrow P8 below area scope, and never scope typecheck or build. Scope comes from `ck-affected`, never from reading imports; it prints FULL for repo-root config, migrations, fixtures, env files or a bare lockfile ([§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)).
+- **Never run a story-scope check without an area-scope run after it** — P8 once per wave, the single-story run on the story that completes its epic and on every story at level `story`. Never narrow P8 below area scope, and never scope lint, typecheck or build. Scope comes from `ck-affected`, never from reading imports; it prints FULL for repo-root config, migrations, fixtures, env files or a bare lockfile ([§ Affected tests](references/qa-scope.md#affected-tests--the-story-level-test-command)).
 - **Never `find /` or search outside the repo.**
 - **Never take the QUICK ROUTE on a story that fails one eligibility condition**, for a bug
-  story, or in PARALLEL MODE, and never skip its S5 `ck-qa` run — QUICK drops ceremony, never
+  story, or in PARALLEL MODE, and never skip its S5 background run — QUICK drops ceremony, never
   a check.
 - **Never run a heavy suite in a build or a QA pass** ([heavy-tests.md](../../references/heavy-tests.md)) — only the file the story wrote or edited, and never mark a story done on a spec no run has passed.
 - **Never let a test open a window in front of the user** — convert every `ck-headless` hit

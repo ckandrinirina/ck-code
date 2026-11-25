@@ -1,9 +1,8 @@
 # Sub-Agent Dispatch, Resume & Return Schema
 
 Prompt templates and the structured return contract for every sub-agent `build` dispatches:
-the per-story implementer (P4), its resume (P5), and QA (P7) in PARALLEL MODE, plus the
-[single-story dispatch](#single-story-dispatch) (S4) and the [Inline QA
-dispatch](#inline-qa-dispatch), which single-story `build` (S5) and `fix` Phase 4 read.
+the per-story implementer (P4), its resume (P5), and the [reviewer](#reviewer-s5-and-p7) (S5, P7), plus the
+[single-story dispatch](#single-story-dispatch) (S4) and `fix` Phase 4's reproduction.
 
 ## The structured return schema (all implementer agents)
 
@@ -23,7 +22,7 @@ greps prose:
 
 `status`/`criteria_met` are **hints**. The orchestrator's P5 gate decides "done" objectively
 from git (non-empty diff on `branch`, zero unchecked criteria in the story file, clean tree)
-plus the P7 QA verdict. `branch` is the field the orchestrator merges — the harness names the
+plus the review verdict and the background run. `branch` is the field the orchestrator merges — the harness names the
 worktree branch, so the agent must report it. On a **solo** dispatch the agent reports the
 branch it was placed on and must never have changed it; a `branch` that differs from
 `$WORKBRANCH` is branch drift and stops the wave (P5).
@@ -55,7 +54,8 @@ prompt: |
      build: a fresh worktree's submodules are empty, and it clones each against the main
      checkout's copy instead of N agents cloning from the network at once.
   1. `Read` the Cycle file once and follow it from "Placement — delegated" to "RETURN".
-     It owns TDD, SOLID, the scans, QA and committing. Never load the ck-code:build skill.
+     It owns TDD, SOLID, the scans, the own check and committing. Never run the suite or the
+     build: they run in the background after you return. Never load the ck-code:build skill.
   2. **Commit after every TDD cycle / phase** so an early stop still leaves resumable,
      committed work.
   3. At done (8.6), record what you actually touched in your own story, then commit
@@ -70,7 +70,7 @@ prompt: |
 
   Return the structured object {status, branch, commits, remaining, criteria_met}. Read
   `branch` from `git branch --show-current`. Report `status: done` only if build finished
-  with every criterion checked and QA green.
+  with every criterion checked and the own check green.
 ```
 
 ## Per-story implementer, solo (P4, wave of exactly 1)
@@ -119,8 +119,8 @@ return object and the resume below are unchanged:
    ../../references/heavy-tests.md> § In the build.` A fan-out or solo wave dispatch carries the
    same lines.
 
-A QA failure or a manual-test report goes back to the **same agent** by `SendMessage`, worded
-like the resume below with the failing criteria or the user's report in place of
+A review finding, a red background run or a manual-test report goes back to the **same agent** by `SendMessage`, worded
+like the resume below with the findings, the failing labels with their excerpt and log path, or the user's report in place of
 `remaining`, and on the same branch in the main checkout.
 
 ### Tier map — write the alias, never the tier name
@@ -132,7 +132,7 @@ invalid call. Translate before dispatch:
 
 | ck-code tier | `model:` value | Use for |
 |---|---|---|
-| fast | `${user_config.model_fast}` (default `haiku`) | trivial mechanical change, QA command runs |
+| fast | `${user_config.model_fast}` (default `haiku`) | trivial mechanical change, the reviewer |
 | balanced | `${user_config.model_balanced}` (default `sonnet`) | **the default** for a story implementer |
 | advanced | `${user_config.model_advanced}` (default `opus`) | novel algorithm, concurrency correctness, security/perf-critical path |
 
@@ -194,91 +194,39 @@ SendMessage({
 Re-run the P5 gate after each resume; cap 2 rounds. A resume that adds zero commits is
 stuck — flag it and stop, never merge it.
 
-## QA validator (P7, per story — and post-wave)
+## Reviewer (S5 and P7)
 
-Dispatched one per merge-candidate branch in a single parallel message; Haiku tier. It runs
-the given commands in its own context and returns only a verdict line. **Solo wave:** drop the
-`isolation` line — QA runs read-only against `$WORKBRANCH` in the main checkout, where the
-dependencies are already installed.
+One per ✓-complete story, dispatched in the same message as `ck-qa start`
+([qa-lane.md](../../../references/qa-lane.md#start-it)) — at P7, as soon as the story clears P5.
+It reads; the commands are the lane's. It never waits for them, and they never wait for it.
 
 ```
-subagent_type: ck-code:qa-validator   # falls back to inline commands if unregistered
+subagent_type: ck-code:qa-validator     # unregistered → review inline instead
 model: haiku
-description: "QA story EE-SS: <title>"
-isolation: worktree                    # fan-out only — per-branch QA gets that branch's worktree
+description: "Review story EE-SS: <title>"
 prompt: |
-  Run QA for story EE-SS, read-only — never edit any file. Check out / operate on branch
-  <branch>. Run these stack commands exactly, in one call, WITHOUT --reuse:
-    ck-qa run EE-SS [--parallel] test='<affected-tests command against the Base SHA>' lint='<changed-file lint>' <label>='<command>' …
-    <concrete commands from qa-scope.md at story scope (§ Affected tests) — the
-     full rows when `ck-affected` prints FULL; typecheck/build are always full rows;
-     never a label for a `.ck-heavy-tests` suite>
-  Take the first failure's short excerpt (failing test names / lint / type errors) from the
-  tail it prints or from its log, and never re-run a command to see more of its output.
-  Use a 600000 ms Bash timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the
-  result prints, and never start the run again.
-  End with exactly one line:
-    QA: PASS
-  or  QA: FAIL — <which command failed> — <one-line excerpt>
-  PASS only if every command succeeded.
-```
-
-**Post-wave QA (P8)** dispatches ONE qa-validator on `$TARGET` in the main checkout (no
-worktree — the wave's stories must sit together to surface integration failures). It guards
-on `git rev-parse --abbrev-ref HEAD == $TARGET`, runs the de-duplicated union of the wave's
-stories' commands **with `--reuse`** (`ck-qa run wave-N --reuse …`, then `ck-qa wait wave-N`
-while it prints `RUNNING`), and returns the same verdict line. Its `test=` and lint labels are
-always **area scope** against the wave's `Base SHA` (`ck-affected <base> --area`), never a
-story-scope command: this is the wave's one area-scope run. On a solo wave where nothing moved
-since P7, typecheck and build report `REUSED`, and the area's suite and lint run. After a fan-out merge a `QA: FAIL` there
-is a cross-branch integration failure by construction — each branch already passed in
-isolation. After a solo wave it means the target's own moving state broke what P7 had
-green.
-
-## Inline QA dispatch
-
-The single-story QA dispatch, used by `build` S5 and
-`fix` Phase 4 (the no-`Agent` fallback has nothing to dispatch with, so its Phase 7 runs the
-same commands inline). No `isolation` (the
-work is in the main checkout on its own branch) and no worktree; everything the agent needs
-is in the prompt, because it cannot ask.
-
-```
-subagent_type: ck-code:qa-validator     # unregistered → run the steps inline instead
-model: haiku
-description: "QA story EE-SS: <title>"
-prompt: |
-  Run QA for story EE-SS in <cwd — the component directory whose manifest owns the commands
-  below; the repo root unless the story lives in a sub-package>. Read-only: never edit a
-  file, never apply a fix.
-
+  Mode: review. Read-only: run no test, build, lint or typecheck command, edit no file.
+  They run in the background and are not your evidence.
+  Where: <the branch's worktree path (fan-out), or the main checkout>
+  Diff: git diff <Base SHA>...<branch>
   Story file: <repo-relative story path>   # acceptance criteria are in its body
 
-  Run these commands exactly, in one call, WITH --reuse (a command that already passed on
-  this exact tree — 6.3, or the agent's story-scope run — reports REUSED; everything else runs):
-    ck-qa run EE-SS --reuse [--parallel] test='<the 6.3 test command, or the single-story scope's>' <label>='<command>' …
-    <this story's stack commands from qa-scope.md, at the scope 6.3 resolved:
-     story scope lints the changed files, area scope each reached component's full row;
-     typecheck/build full; never a label for a `.ck-heavy-tests` suite>
-  Take a short excerpt of each failure (failing test names, lint or type errors) from the
-  tail it prints or from its log, never by re-running the command. Use a 600000 ms Bash
-  timeout. On `ck-qa: RUNNING`, run `ck-qa wait EE-SS` until the result prints, and never
-  start the run again.
-
-  Follow qa-validation.md Steps 0–7: load the QA expert skills yourself, verify every
-  acceptance criterion with file:line evidence, then the suite, the quality checks, the
-  redundancy/code-craft/test-prune spot-check and architecture compliance.
+  Follow qa-validation.md Steps 0–1 and 3.5–6: load the QA expert skills yourself, verify every
+  acceptance criterion with file:line evidence (the implementation and the test that covers it),
+  the redundancy/code-craft/test-prune spot-check, architecture compliance, and the design and
+  replica fidelity sections when they apply.
 
   Return, in this order:
     - one line per acceptance criterion: PASS | FAIL | NOT-COVERED, with file:line
     - the Issues Found rows (severity, description, file:line), or "none"
-    - exactly one final line:  QA: PASS   or   QA: FAIL — <command> — <excerpt>
+    - exactly one final line:  QA: PASS   or   QA: FAIL — <finding> — <file:line>
 ```
 
-`QA: FAIL` is a **NEEDS FIXES** verdict — the caller's normal QA loop, iteration cap and
-escalation apply unchanged.
+`QA: FAIL` is a **NEEDS FIXES** verdict: `SendMessage` the findings to the story's builder at
+once, without waiting for the background run, then the integrity gate, a new `ck-qa start` on the
+new commit, and a new review. Cap 3.
 
-**`fix` Phase 4 variant (reproduction, not validation).** Same `subagent_type` and `model`,
-but the agent is given the bug description instead of a command list, **may write one minimal
+**`fix` Phase 4 variant (reproduction, not review).** Same `subagent_type` and `model`,
+but the agent is given the bug description, **may write one minimal
 failing test**, and returns `{test path, failure output, root-cause hypothesis}` with no
 verdict line. It still never proposes a fix — the Fix Plan is `fix`'s own Phase 5.

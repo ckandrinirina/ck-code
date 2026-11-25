@@ -71,7 +71,7 @@ and the orchestrator merges by that name; solo, it must still be the branch you 
 on — a different value tells the orchestrator you drifted, and it stops the wave.
 
 `status: done` only when the cycle reached 8.6 with **every** acceptance criterion checked
-and its 6.3 + 7 run green. If you did no work or hit a blocker, return
+and its own check (6.3) green. If you did no work or hit a blocker, return
 `partial` / `blocked` — never `done`. A missing verdict is treated as `partial`.
 
 ## Workflow
@@ -83,8 +83,8 @@ and its 6.3 + 7 run green. If you did no work or hit a blocker, return
    in a worktree never fall back to the main checkout.
 2. `Read` the `Cycle:` file once and follow it from **Placement — delegated** to **RETURN**:
    no branch question, no `ck-index`, no manual-test gate (the orchestrator runs manual
-   testing, after the merge for a wave), and no ship. A later `SendMessage` carrying QA
-   failures or a manual-test report is a resume: fix on the same branch by the same cycle,
+   testing, after the merge for a wave), and no ship. A later `SendMessage` carrying review
+   findings, a red background run or a manual-test report is a resume: fix on the same branch by the same cycle,
    commit, and return the verdict again. You cannot prompt the user. No `Cycle:` line (an
    older orchestrator) → `Skill({ skill: "ck-code:build", args: "<story path>" })`, whose
    DELEGATED MODE sends you to the same file.
@@ -103,8 +103,9 @@ and its 6.3 + 7 run green. If you did no work or hit a blocker, return
 - Never implement outside the cycle — RED before GREEN, the Phase 2 skills loaded and reported, the 6.1 scans run — and never skip a phase it does not mark as skipped for you.
 - Update only THIS story's own frontmatter — `status` (always `--no-sync`) and `files:` (via `ck-story files`). Never edit, regenerate or commit the generated views (`STORIES_INDEX.md`, `EPICS_INDEX.md` — gitignored) and never run `ck-index` — the orchestrator regenerates the views once on the target branch after the wave. If build is about to touch a shared view or run the generator, skip that step.
 - You commit only on the branch you were placed on. **Committing is deliberately not forbidden here** — unlike `qa-validator` and `conflict-analyzer`, your committed branch *is* the hand-off: it is the only thing the orchestrator can verify at P5, merge at P8, or resume through `SendMessage`. Never switch or create a branch, never push to any remote, never merge into another branch. Solo, that branch is shared with the orchestrator — which is exactly why you must not move off it or leave it dirty.
+- Never run the suite, the full lint or the build, and never wait for one — they run in the background on your commit, after you return.
 - Never write a wait loop (`until`/`while … sleep`, a `pgrep`, a poll of a task's output file) — `ck-qa wait <id>` in the foreground is the only way to wait.
 - Never modify files outside your worktree (fan-out), and never outside this story's scope (either placement).
 - Never run a heavy test (a `Heavy:` line, a `.ck-heavy-tests` suite) you did not write or edit, and mark each one you did with `ck-heavy: EE-SS` ([`heavy-tests.md`](../references/heavy-tests.md#in-the-build)).
-- Never return `status: done` without every criterion checked and QA green — the orchestrator verifies completion from git, and a false "done" silently loses work.
+- Never return `status: done` without every criterion checked and the own check green — the orchestrator verifies completion from git, and a false "done" silently loses work.
 - Do NOT add AI/Claude references to commits.

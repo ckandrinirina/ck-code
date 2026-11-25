@@ -56,7 +56,7 @@ For each wave, in order:
    already needs one ([parallel-mode.md P3](parallel-mode.md) — the wave plan alone never
    triggers it); `PROCEED / DROP A STORY / ABORT` rides along only then.
 2. **Dispatch** this wave's stories through [parallel-mode.md](parallel-mode.md) P4, then walk
-   each through P5 (integrity/resume) → P7 (QA) **as its agent returns** — those two are
+   each through P5 (integrity/resume) → P7 (review) **as its agent returns** — those two are
    per-story and pipelined, never barriered on the wave. P6 (conflict, intra-wave only) is the
    barrier: it starts once every branch has cleared P5.
    - **A wave of ≥ 2 stories** fans out one worktree agent per story. The worktrees are cut
@@ -69,10 +69,11 @@ For each wave, in order:
    already on the target has nothing to merge — then **regenerate the views**,
    `ck-index tasks/<Plan>` followed by `ck-project sync tasks/<Plan>`, so the next wave's
    re-resolve sees these stories as `done` and their cards land in Done. Both are local;
-   the views are gitignored and never committed. Run the post-wave
-   QA on the target via a `qa-validator` agent, not inline.
+   the views are gitignored and never committed. Start the
+   wave's background run on the target (P8) and go on without waiting for it.
 4. **Verify** the merged wave on the target (the P8 manual gate) before the next wave builds
-   on it. A reverted story returns to `todo`/`in-progress`, holds its dependents, and its
+   on it. Its background run may still be going: the next wave starts anyway, the one after that
+   only once it is green ([qa-lane.md](../../../references/qa-lane.md)). A reverted story returns to `todo`/`in-progress`, holds its dependents, and its
    branch is kept.
 5. **Update Tasks** — this wave's merged, verified stories `completed`; a blocked or
    reverted story stays open with the reason recorded.

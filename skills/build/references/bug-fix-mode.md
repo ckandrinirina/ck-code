@@ -47,8 +47,9 @@ reproduction test GREEN. Log any touch outside the Fix Plan's `Files to modify` 
 Record it under the Bug Report as `### SOLID Verification` (bug-section-template Phase 6.1),
 not as a story-level SOLID summary.
 
-**Phase 7 — QA.** Full QA procedure **plus the minimalism check** — the diff must be the
-smallest change that resolves the root cause; flag any unrelated edit.
+**Phase 7 — QA.** The orchestrator's, as for a story: review and background run. The review adds
+**the minimalism check** — the diff must be the smallest change that resolves the root cause; flag
+any unrelated edit.
 
 **Phase 8 — Completion (Resolution, not Implementation Summary).**
 

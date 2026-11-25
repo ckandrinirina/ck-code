@@ -37,11 +37,10 @@ returning to 8.5.1:
    `story-template.md`). Status: `OPEN`.
 3. Write a failing regression test that reproduces the bug (TDD red).
 4. Apply the minimum fix; the regression test and the story's tests go green (TDD green).
-   Step 5's 6.3 then re-runs what the fix affects (`--rerun`).
 5. **MANDATORY:** Re-run **Phase 6 (Refactor)** on touched code — SOLID review, tests
    stay green.
-6. **MANDATORY:** Re-run **Phase 7 (QA)** with the full procedure in
-   `../../../references/qa-validation.md`. QA's own 3-iteration cap applies inside each
+6. **MANDATORY:** Run the own check (6.3), commit and return: the orchestrator starts the
+   background run and the review again (S5). Their 3-iteration cap applies inside each
    bug-fix cycle.
 7. Update the bug entry: `OPEN` → `FIXED` + fix summary + `path:line[,line]` Files Touched.
 8. Return to 8.5.1 against the new build.

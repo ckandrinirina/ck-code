@@ -4,6 +4,7 @@ Detail for `SKILL.md` § PARALLEL MODE. Read when two or more stories are in sco
 `--epic NN` orchestrates a single remaining story, or for the sections SINGLE-STORY DISPATCH
 links (P3 team gate, P5 solo integrity, model tier, affected tests). The orchestrator decides, verifies, and
 merges; it never builds, tests, or reads source.
+**It never waits on a run either**: read [qa-lane.md](../../../references/qa-lane.md) before P7.
 
 Companions: [agent-prompts.md](agent-prompts.md) (prompts + return schema) ·
 [wave-mode.md](wave-mode.md) (wave planning) ·
@@ -43,12 +44,12 @@ detailed in its section below.
 | **P4** | Dispatch the wave: **fan-out** (≥ 2) = one worktree `Agent` per story in a single message; **solo** (= 1) = one `Agent` on `$WORKBRANCH`, no worktree. Both `subagent_type: "ck-code:story-implementer"`, stable name `story-EE-SS`, `MODE: delegated` | Every story goes to an agent; a worktree only when a peer runs beside it. Tier the model by reasoning complexity, never `size` |
 | **P5** | Integrity **the moment an agent returns** → ✓ complete / ◐ incomplete (resume the same agent, cap 2) / ⚠ deletion review (ask accept-or-exclude) / 🚫 blocked | "Done" comes from git, never the agent's self-report |
 | **P6** | `ck-code:conflict-analyzer` dry-runs each ✓ branch onto `$TARGET` and returns a merge order | Cross-branch by construction — the fan-out wave's one barrier. **Skipped entirely on a solo wave.** Every dry-run is aborted; nothing lands here |
-| **P7** | One `ck-code:qa-validator` per ✓ story, launched as it clears P5 | Acceptable = ✓ complete + `QA: PASS` (+ conflict-free, fan-out only) |
-| **P8** | Fan-out: merge in P6's order — without asking when every branch is ✓, `QA: PASS` and conflict-free. Solo: nothing to merge. Then `ck-index` + `ck-project sync` **once** (local; no view is committed), run `qa-validator` on `$TARGET`, then the SKILL.md 8.5 manual gate once for the wave (deferrable for the remaining waves; deferred under `--auto`) | Never accept work that has not passed P7; a deferred gate is listed at P9, never dropped |
-| **P9** | Re-resolve the next wave from the regenerated index and loop from P3; when the epic is done, hand off to `/ck-code:ship --promote --epic NN` (one ask) | A held story keeps its branch (and worktree, if any) and holds its dependents; never tell the user to ship each story |
+| **P7** | One reviewer (`ck-code:qa-validator`, `Mode: review`) per ✓ story, launched as it clears P5 | It runs no command. Acceptable = ✓ complete + `QA: PASS` (+ conflict-free, fan-out only) |
+| **P8** | Fan-out: merge in P6's order — without asking when every branch is ✓, `QA: PASS` and conflict-free. Solo: nothing to merge. Then `ck-index` + `ck-project sync` **once** (local; no view is committed), **start the wave's one background run** on `$TARGET` ([qa-lane.md](../../../references/qa-lane.md)) and, without waiting for it, the SKILL.md 8.5 manual gate once for the wave (deferrable for the remaining waves; deferred under `--auto`) | Never accept work that has not passed P7; a deferred gate is listed at P9, never dropped |
+| **P9** | Re-resolve the next wave from the regenerated index and loop from P3 while the run goes on — one wave ahead at most; when the epic is done, hand off to `/ck-code:ship --promote --epic NN` (one ask) | A held story keeps its branch (and worktree, if any) and holds its dependents; never tell the user to ship each story |
 
 **P5 and P7 are pipelined, P6 and P8 are barriers.** P5 and P7 judge one story against
-itself, so each walks them as soon as its agent returns — the fastest story's QA runs
+itself, so each walks them as soon as its agent returns — the fastest story's review runs
 while the slowest is still coding. P6 derives an order from the overlaps *between* branches
 and P8 merges into a moving `$TARGET`; neither can start on a partial set. Barriering P5 or
 P7 on the whole wave is the single largest avoidable delay in this mode. On a solo wave the
@@ -69,16 +70,17 @@ takes its row here, announced in one line (`Auto: <decision>`) where it would ha
 | P3 criteria ambiguity | the narrowest reading that matches the literal criterion and the existing code, passed to the agent as `Settled: assumed <reading>` and listed in the report |
 | P3 design pending | build without it; each UI story is named in the report |
 | P5 ⚠ deletion review | **Exclude this story** (branch kept, reported), never accepted unseen |
-| P7 a story without `QA: PASS` | held (fan-out) or the run stops (solo), as below; never asked |
+| P7 a story whose review fails 3 times | held (fan-out) or the run stops (solo), as below; never asked |
 | P1 undeclared heavy suites | **Keep them out of the build**, the written lines named in the report |
 | P8 merge | merge every eligible branch (the default already) |
-| P8 post-wave `QA: FAIL` | hard stop: branches kept, nothing reverted, reported |
+| P8 red background run | fixed forward like any other; a third red run is a hard stop: nothing reverted, reported |
 | P8 manual gate | **deferred**: the wave completes as on PASS so its dependents schedule; its steps go into the final checklist |
 | P9 hand-off | **Not yet**: nothing is promoted, shipped or pushed |
 
-Everything else is unchanged: the integrity gate, `QA: PASS` before any merge, the post-wave
-area-scope QA, held branches never merged. A hard stop (dirty tree, branch drift, a red post-wave
-QA, a resume cap reached on every story) still ends the run. It is reported, never asked. A
+Everything else is unchanged: the integrity gate, a review `QA: PASS` before any merge, the wave's
+background run, held branches never merged. The run ends only once its last background run has
+(`ck-qa wait wave-N` in the foreground, with nothing else left to do). A hard stop (dirty tree,
+branch drift, the red-run cap, a resume cap reached on every story) still ends the run. It is reported, never asked. A
 project with no manifest row for its QA commands is refused before P1 writes anything
 (`--auto needs QA commands`).
 
@@ -130,8 +132,9 @@ git rev-parse --abbrev-ref HEAD                                 # must print $TA
 ```
 
 HEAD anywhere else stops the run — every later step assumes it: P4 commits the wave marker
-there, fan-out worktrees are cut from its HEAD, P8 merges into it, and the post-wave QA and
-manual gate run on it.
+there, fan-out worktrees are cut from its HEAD, P8 merges into it, and the wave's background run
+and manual gate check it. Then `ck-qa gate --base <parent>`: what an earlier session left red or
+unchecked comes first ([qa-lane.md § The gate](../../../references/qa-lane.md#the-gate)).
 
 **Announce it, with its reason** — one line, before any wave is planned, so a run launched on
 an unrelated branch is visible rather than surprising at merge time:
@@ -391,7 +394,8 @@ checkout and its commits are already where they need to be.
 
 The tree must be clean at dispatch (P1 already enforced that) and stays the agent's alone
 until it returns — never dispatch a solo agent while a fan-out wave is still in flight, and
-never edit files in this context while one is running.
+never edit files in this context while one is running. A pending background run is no agent: it
+has its own checkout, and never holds a dispatch back beyond the one-wave-ahead rule.
 
 ### Worktree dependency bootstrap (fan-out only)
 
@@ -490,7 +494,7 @@ Classify (report format: [conflict-format.md](conflict-format.md)):
   story is ✓ complete and walks on to P7; **Exclude this story** → treat it as 🚫 blocked,
   keep the branch, report it. Never decide either way on the agent's behalf.
 
-Never trust the agent's word; a story is done only when this gate and P7 QA agree.
+Never trust the agent's word; a story is done only when this gate, P7 and the background run agree.
 
 ## P6 — Conflict analysis (dry-run stage, before any merge)
 
@@ -498,7 +502,7 @@ Never trust the agent's word; a story is done only when this gate and P7 QA agre
 none. Say so in one line (`Conflicts: skipped (solo wave).`) and go to P7.
 
 **The fan-out wave's one barrier** — starts only once every branch has cleared P5, and runs
-while the P7 QA already dispatched is still in flight. It never waits for QA.
+while the P7 reviews already dispatched are still in flight. It never waits for one.
 
 **Guard the checkout first** — the dry-runs happen in the main checkout, so a wrong HEAD or a
 dirty tree would either measure the wrong target or leave a half-merge behind:
@@ -518,35 +522,26 @@ merge order (fewest overlaps first) — aborting every dry-run so nothing lands.
 conflict report ([conflict-format.md](conflict-format.md)); no overlaps → "all branches merge
 cleanly." One branch → nothing to compare; skip.
 
-## P7 — QA, one validator per story
+## P7 — Review, one reviewer per story
 
-Dispatch one `ck-code:qa-validator` agent (Haiku tier) per ✓-complete story **as soon as it
-clears P5** — batch whatever cleared in the same turn into one message, but never hold a
-cleared branch waiting on a slower peer (the P4 single-message rule governs the implementer
-fan-out, not this one). QA judges one story's branch against itself, so it needs no other
-branch. Each runs its stack's build/test/lint in its own cheap context and returns
-a compact `QA: PASS` / `QA: FAIL — <cmd> — <excerpt>` verdict, keeping the heavy output off
-this context (prompt: [agent-prompts.md](agent-prompts.md)).
+Dispatch one reviewer per ✓-complete story **as soon as it clears P5**
+([agent-prompts.md § Reviewer](agent-prompts.md#reviewer-s5-and-p7)) — batch whatever cleared in
+the same turn into one message, but never hold a cleared branch waiting on a slower peer. It reads
+the branch where it stands (the story's worktree in a fan-out, `$WORKBRANCH` solo), with no
+`isolation` and **no command**: the suite, lint, typecheck and build of the whole wave run once,
+at P8, so nothing here costs a worktree install or a wait.
 
-**Solo wave:** dispatch the same validator **without `isolation`**, against `$WORKBRANCH` in
-the main checkout — there is no worktree to check out and re-install. It stays read-only, so
-it cannot disturb the checkout.
+`QA: FAIL` → `SendMessage` the findings to the same agent, then P5 and a new review on the new
+commit; cap 3. Still failing → the story is **BLOCKED**: held out of the merge in a fan-out, its
+branch kept. Its builder already committed `done`, so revert that on its branch (in its worktree,
+fan-out): `ck-story set <story-path> status=in-progress --no-sync` (Bug-Fix Mode: `status=bug
+prior_status=<prior_status>`), committed as `chore(tasks): EE-SS back to in-progress — QA failed`.
+Acceptable = ✓ complete + `QA: PASS`, plus conflict-free in a fan-out wave.
 
-Resolve each story's commands, its scope and any re-run from [qa-scope.md](qa-scope.md): the
-per-stack command table, story versus area scope, and how a check is re-run after a failure.
-
-**P7 never passes `--reuse`**, so its run is always
-fresh against the committed branch. That fresh run is the whole point of P7. Mark any QA-failing story **BLOCKED** — from merge in
-a fan-out wave — and keep its branch. Its builder already committed `done`, so revert that on
-its branch (in its worktree, fan-out): `ck-story set <story-path> status=in-progress --no-sync`
-(Bug-Fix Mode: `status=bug prior_status=<prior_status>`), committed as
-`chore(tasks): EE-SS back to in-progress — QA failed`. Acceptable = ✓ complete + `QA: PASS`, plus conflict-free
-in a fan-out wave.
-
-A solo wave that QA-fails has its work sitting on `$WORKBRANCH` with nothing to withhold, so
-"blocked" means *do not proceed to the manual gate or the next wave*: report the failure, keep
-the commits (plus the status revert above, committed on `$WORKBRANCH`), and offer the same P8 choices (fix agent on `$WORKBRANCH`, or stop for review).
-Never advance P9 past a red solo story — its dependents would build on broken code.
+A solo story's work already sits on `$WORKBRANCH`, with nothing to withhold. Blocked there means
+*do not proceed to the manual gate or the next wave*: report it, keep the commits (plus the status
+revert above), and offer a fix agent on `$WORKBRANCH` or a stop for review. Never advance P9 past a
+blocked solo story — its dependents would build on it.
 
 ## P8 — Merge, regenerate, verify
 
@@ -595,32 +590,24 @@ ck-project sync tasks/<Plan>
 ```
 
 Both are local bookkeeping: the views are gitignored, so there is **nothing to commit** —
-never stage a view. The sync moves every story merged in this wave to Done and rolls the epic card up; a board failure is reported and never blocks the merge ([`github-projects.md`](../../../references/github-projects.md)). Then dispatch **one** post-merge `ck-code:qa-validator` on
-`$TARGET` in the main checkout (the union of the wave's stories' commands, de-duplicated) — a
-merge does not make integration failures cheap to find. `QA: FAIL` here is a cross-branch
-integration failure by construction; keep the branches and offer `git revert -m 1 <merge-sha>`
-or a fix agent on `$TARGET`.
+never stage a view. The sync moves every story merged in this wave to Done and rolls the epic card up; a board failure is reported and never blocks the merge ([`github-projects.md`](../../../references/github-projects.md)). 
 
-**Post-wave QA runs with `--reuse`.** A command that already passed on this exact code
-state, in this checkout, reports `REUSED` instead of running again. After a fan-out merge the
-state is new, so everything runs. The P7 runs happened in other worktrees, so they never
-count here.
+**Then start the wave's one background run**, on `$TARGET`'s HEAD, and go on at once
+([qa-lane.md § Start it](../../../references/qa-lane.md#start-it)): `ck-qa start wave-N --base
+<the wave's Base SHA> …`, one per component or code repository the wave touched, at **area scope**
+([qa-scope.md](qa-scope.md#affected-tests--the-story-level-test-command)) — every test of each
+area the wave reaches, plus full lint, typecheck and build, the whole repo only when `ck-affected`
+prints FULL. It replaces the per-branch suites and the post-merge suite: one run, on exactly the
+commits that landed, in a checkout where a file nobody committed does not exist. A solo wave
+starts it the same way. Announce it and continue: `QA: wave-N running in the background — going on.`
 
-**The post-wave QA runs at area scope** against the wave's `Base SHA` — every test and the
-full lint of each area the wave reaches, the whole repo only when `ck-affected` prints FULL —
-never a story-scope command
-([qa-scope.md § Affected tests](qa-scope.md#affected-tests--the-story-level-test-command)). It is the wave's only
-area-scope run.
+**A red run is fixed forward on `$TARGET`** ([§ When it ends](../../../references/qa-lane.md#when-it-ends)).
+When a fan-out wave was merged it may be a cross-branch failure, since each branch was green in
+its own files. `git revert -m 1 <merge-sha>` (solo: `git revert <sha>` of the wave's commits) is
+for a story that must come back out, the user's call.
 
-**Solo wave:** dispatch this post-wave QA too, even though P7 just passed on the same branch.
-P7 ran only the story scope, so the area's suite and full lint always run here. Typecheck
-and build report `REUSED` when nothing moved since P7, because P7 already checked exactly this
-tree in this checkout.
-Its failure is not a cross-branch integration failure (there was no merge); recover with a
-fix agent on `$WORKBRANCH`, or `git revert <sha>` of this wave's commits when the story must
-come back out.
-
-**Manual gate (SKILL.md 8.5, once per wave — solo waves included).** Ask the operator to
+**Manual gate (SKILL.md 8.5, once per wave — solo waves included).** Asked while the background
+run goes on, never after it. Ask the operator to
 exercise the wave's work on `$TARGET` in the main checkout (`AskUserQuestion` `PASS / ISSUES`)
 — the only place every story of the wave sits together with real dependencies. A solo wave is
 not exempt: one story still lands on the shared target, and the gate is what keeps it from
@@ -655,7 +642,10 @@ say `Cleanup: none (solo on <$TARGET>).` rather than skipping the step silently.
 
 ## P9 — Next wave
 
-Re-resolve the following wave from the freshly regenerated index and loop from P3. A story
+**Wave N+1 starts while wave N's run is pending; wave N+2 waits until it is green.** Before each
+dispatch, `ck-qa gate --base <parent>`: RED → its fix first (qa-lane.md says when); more than the
+last wave pending → nothing left to do but the run, so end the turn and let the notification
+resume it. Otherwise re-resolve the following wave from the freshly regenerated index and loop from P3. A story
 held back from merge stays non-`done` and holds every story that depends on it — those cannot
 dispatch. When no scheduled story remains, print the batch report naming every held,
 `UNSCHEDULABLE`, and blocked story with its reason. Any wave whose manual gate was deferred
@@ -663,6 +653,9 @@ dispatch. When no scheduled story remains, print the batch report naming every h
 [§ Auto mode](#auto-mode----auto) here, before the hand-off. A deferred gate is still a gate:
 the first hand-off option becomes `/ck-code:verify --epic NN`, and promotion waits for it.
 Under `--auto` there is no ask at all: print the checklist and the two commands, then stop.
+
+**The hand-off waits for the gate.** With a run still pending, report the batch as built and name
+what is running; the hand-off comes when it is green, after `ck-qa lane-free`.
 
 Then hand off — **DIRECT, one ask** per
 [`skill-invocation.md`](../../../references/skill-invocation.md). The merged stories sit on

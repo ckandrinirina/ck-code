@@ -52,7 +52,7 @@ where the run has no such commit, it is its own commit: `chore(tests): declare t
   run here (no Docker, no service) is reported as **not run**, never as passed.
 - **Never run another heavy file**, not as a regression check, at 6.3, or because a migration
   changed. `FULL` from `ck-affected` means the full rows of the fast suites only.
-- **QA never runs one.** 6.3, 7, P7, S5 and P8 take no heavy label, and a full row that chains a
+- **QA never runs one.** The own check (6.3) and the background run (S5, P8) take no heavy label, and a full row that chains a
   heavy suite is replaced by its fast part. A criterion proved only by a heavy spec passes on the
   builder's own `ck-qa` run of that file plus the spec's assertions, cited by `file:line`: the one place a builder's run is QA's evidence. `not run` is NEEDS FIXES unless
   the user accepts it.
@@ -100,4 +100,4 @@ result.
 
 A skipped or partial run is never silent. The PR body ends (above any `Closes` footer) with one
 plain line: `Database and end-to-end tests: not run before this PR.` or `… : run for this change
-only.` Phase 7 reports the same.
+only.` The review reports the same.

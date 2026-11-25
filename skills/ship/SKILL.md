@@ -309,6 +309,14 @@ git show --stat HEAD
 
 Present hash, branch, file count, first message line.
 
+### 4.3 QA gate — the one place that waits
+
+`ck-qa gate --base <what this branch merges into>`, in each code repository involved, and act on
+its last line per [qa-lane.md § The gate](../../references/qa-lane.md#the-gate): `GREEN` or `NONE`
+goes on; `PENDING` and `UNCHECKED` hold the push while the PR text is prepared; `RED` stops here,
+with nothing pushed. **Commit only** skips it. A merge into `<parent>` (level `epic`/`plan`) is
+stopped by `RED` alone, since the promotion gates again. STANDALONE MODE runs it too.
+
 ## PHASE 5: PR (CREATE OR UPDATE)
 
 ### 5.1 Route by the 3.3 answer
@@ -325,7 +333,7 @@ Present hash, branch, file count, first message line.
 
 0. Run the heavy tests 3.3 chose, if any. A `FAIL` stops here with nothing pushed
    ([heavy-tests.md](../../references/heavy-tests.md#at-the-pr--one-question)). 5.B starts the same way.
-1. `git push origin "$(git branch --show-current)"`.
+1. `git push origin "$(git branch --show-current)"` (after 4.3).
 2. Record the pointer when the story does not already carry it — a PR opened by hand, or
    before this step existed, still needs `pr:` or the story can never reach Done:
 
@@ -354,7 +362,7 @@ Present hash, branch, file count, first message line.
 ### 5.B Create new PR
 
 1. The base is the one 3.3 resolved and the user approved — never ask again.
-2. `git push -u origin <branch-name>`.
+2. `git push -u origin <branch-name>` (after 4.3).
 3. PR title = commit first line (≤70 chars). PR body is plain language for non-engineers
    — no story IDs, AC checkboxes, or test tallies. Bodies (new behaviour / bug fix) + the
    exact `gh pr create` command + post-create output: [pr-templates.md](references/pr-templates.md).
@@ -473,6 +481,10 @@ the answer there, before the push
 ([heavy-tests.md](../../references/heavy-tests.md#at-the-pr--one-question)). Level `plan`'s epic
 merge and draft PR ask nothing: the plan gate asks once, for every epic.
 
+**QA gate.** [4.3](#43-qa-gate--the-one-place-that-waits) on the branch being promoted, with the
+base its PR targets: nothing is merged into the plan branch, opened, or marked ready before
+`GREEN` or `NONE`.
+
 Then run the **epic gate**, and — at level `plan`, when its condition holds — the **plan
 gate**, both defined with their staleness handling in
 [`branch-topology.md`](../../references/branch-topology.md#promotion):
@@ -540,7 +552,7 @@ Skip this step in STANDALONE MODE (no `tasks/` writes) and when the repo has no 
 ## PHASE 7: SUMMARY
 
 Present: Commit (hash/branch/message), PR (url/status), Issues updated (story #, epic #),
-Story (status + delivery/path), Heavy tests (linked / affected / whole / not run), Next steps. State the delivery plainly — "in review, not
+Story (status + delivery/path), QA gate (GREEN / NONE, and any WAIVED or BASELINE line), Heavy tests (linked / affected / whole / not run), Next steps. State the delivery plainly — "in review, not
 yet on `<trunk>`" — so "done" is never mistaken for "shipped"; it turns to `merged` on the
 first reconcile after the PR lands. Worked shape: [examples.md](references/examples.md).
 
@@ -603,6 +615,7 @@ phase.
 - **Never open a PR whose only content is a `delivery:`/`pr:` change** — it is derived state; commit it on the current branch (§3.1, §6.6).
 - **Always relay `ck-index: WARN` lines** — a skipped story is invisible in every generated view while its file still exists ([stories-index.md](../../references/stories-index.md)).
 - **Never commit directly to `main` or `develop`** (Phase 1).
+- **Never push, open a PR, promote or merge into the trunk without `ck-qa gate` GREEN or NONE** (4.3), never read `PENDING` as green, and never hide a `WAIVED` or `BASELINE` line from the PR body.
 - **Never push a PR branch whose chosen heavy run failed, and never hide a skipped one** — the PR body says it was not run ([heavy-tests.md](../../references/heavy-tests.md)). Never run a heavy suite the user did not choose.
 - **Never ask the user for the PR base branch** — derive it from `trunk_branch` and the plan's `integration:` level via [`branch-topology.md`](../../references/branch-topology.md#resolution); fold a second question into the 3.3 call only on a genuine `main`/`develop` ambiguity with no `trunk_branch` set.
 - **Never restate the branch-topology rule** in this file — link to [`branch-topology.md`](../../references/branch-topology.md). One definition, several consumers.

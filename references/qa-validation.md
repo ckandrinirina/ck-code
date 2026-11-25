@@ -1,8 +1,8 @@
 # QA Validation — Shared Procedure
 
-Used by `build` (Phase 7) and, for its acceptance-criteria and regression checks, by
-`fix` (Phase 4) — both delegate to the `ck-code:qa-validator` agent and run these steps
-inline only when that agent is unregistered.
+The **review** half of QA, used by `build` (S5, P7) through the `ck-code:qa-validator` agent, and
+inline only when that agent is unregistered. Its other half, the commands, runs in the background
+on the same commit ([`qa-lane.md`](qa-lane.md)): a review never runs one and never waits for one.
 
 ## Step 0 — Load QA expert skills (mandatory)
 
@@ -33,33 +33,12 @@ For EACH acceptance criterion in the original story:
 For bug-fix flows: re-check ALL acceptance criteria, not just the broken
 ones — the fix may have side effects on previously-passing criteria.
 
-## Step 2 — Run the test suite at the caller's scope
+## Steps 2 and 3 — the background run's
 
-Never run a `.ck-heavy-tests` file or suite. A criterion only a heavy spec proves passes on the
-spec's assertions plus the builder's own run of that file (`ck-qa` log `EE-SS-heavy`), and
+The suite, lint, typecheck and build are the lane's, at the scope `build` resolved. A review
+checks only what they cannot: a criterion a heavy spec alone proves passes on the spec's
+assertions plus the builder's own run of that file (`ck-qa` log `EE-SS-heavy`), and
 `ck-heavy unmarked <base> <id>` printing a file is an Issue ([`heavy-tests.md`](heavy-tests.md)).
-
-Run the tests the caller's scope names, not just the new ones, and watch for regressions in
-previously-green tests. **Story scope** is every test the diff can affect. **Area scope** is
-every test of each area the diff reaches (the whole suite only when `ck-affected` prints
-FULL). `build` resolves which one applies, and an area-scope run always follows a story-scope
-one
-([`qa-scope.md` § Affected tests](../skills/build/references/qa-scope.md#affected-tests--the-story-level-test-command)). The suite and the Step 3 checks run together in one
-`ck-qa run <id> --reuse [--parallel] …` call
-([`rtk.md` § QA runs go through `ck-qa`](rtk.md#qa-runs-go-through-ck-qa)). A suite that
-`build` 6.3 already passed on this exact tree reports `REUSED`, and that counts as its
-evidence. Read failures from the printed tail or the log, and never re-run the suite to see
-them. Run exactly the `test=` command the caller gave, and never widen it to the full suite
-on your own.
-
-## Step 3 — Code-quality checks
-
-Run all applicable quality tools for the stack, lint at the same scope as Step 2 (changed
-files at story scope). Detect the component's manifest and run that row of the per-stack
-command table in
-[`qa-scope.md`](../skills/build/references/qa-scope.md#per-stack-commands)
-— the single source for both inline and PARALLEL MODE QA. Zero compiler
-warnings in project-owned files is the bar.
 
 ## Step 3.5 — Redundancy, code-craft and test-prune check
 
@@ -110,8 +89,7 @@ report justifies, flag it and ask the user to narrow scope.
 Emit a QA Report with:
 
 - Per-criterion PASS / FAIL.
-- Test totals + new regressions.
-- Code-quality results.
+- Background run: its id, and its result once it has one.
 - Redundancy check (scan ran; findings, if any).
 - Test-prune check (scan ran; tests pruned, if any).
 - Architecture compliance.
@@ -131,10 +109,8 @@ calling skill's completion phase.
 
 - **Iteration < 3:** announce `[N]/3`, fix each issue (for a behaviour
   defect, write its failing test first if none exists, then fix code; a quality, lint or
-  architecture finding gets no new test), re-run any refactor pass, then
-  re-run QA from Step 1 with a fresh check. The suite in that re-run checks only what is left,
-  meaning the failed tests plus those affected since the last run
-  ([§ Re-runs after a failure](../skills/build/references/qa-scope.md#re-runs-after-a-failure--only-what-is-left)).
+  architecture finding gets no new test), re-run any refactor pass, commit,
+  then review again from Step 1 beside a new background run.
 - **Iteration = 3:** **escalate to user** with three options:
   - **A) FIX MANUALLY** — apply specific fixes the user suggests.
   - **B) ACCEPT AS-IS** — proceed, recording each remaining issue under the story's
@@ -184,8 +160,7 @@ lists as remaining where a replica token or component would have fixed it.
   always escalate.
 - **Always load the QA expert skills** before validating. A self-review
   without them is not QA.
-- **Tests must stay green throughout** — if Step 2 turns up regressions,
-  fix them before moving on.
+- **Never hold a finding back for the background run**, and never run a command to support one.
 - **Never accept a duplicate because the tests are green** — Step 3.5 findings are real
   issues; a passing suite says nothing about code the repo already had.
 - **Never skip Step 4** (architecture compliance) — the bug or feature

@@ -112,11 +112,12 @@ so they take a CPU slot (below). The rule is for the commands that cost minutes.
 
 ### QA runs go through `ck-qa`
 
-The suite check (`build` 6.3) and every QA pass (Phase 7, P7, P8) run their commands
-through `ck-qa`, which applies this rule mechanically and extends it **across** agents:
+The builder's own check (`build` 6.3) and every heavy or e2e file run through `ck-qa run`, which
+applies this rule mechanically. The suites run through `ck-qa start`, in the background
+([qa-lane.md](qa-lane.md)):
 
 ```bash
-ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx tsc --noEmit'
+ck-qa run 02-05 --parallel own='npx vitest run src/cart.test.ts' lint='npx eslint src/cart.ts' types='npx tsc --noEmit'
 ```
 
 - It writes `ck-<project hash>-<id>-<label>.log` files (a short hash of the repo root keeps two projects apart), prints one line per command plus the last
@@ -125,8 +126,8 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   inside the script, and the 40-line tail is the cap instead.
 - Each pass is stamped with its **code state**, meaning the git tree of the working copy
   (untracked files included), plus the directory and the exact command. With `--reuse`, a
-  command that already passed on that exact triple reports `REUSED` and does not run. Only
-  the QA steps named in `build` pass `--reuse`, and P7 never does.
+  command that already passed on that exact triple reports `REUSED` and does not run. The lane
+  always reuses: its checkout holds the commit and nothing else.
 - `--parallel` runs independent commands concurrently and reports every failure in one
   pass. Never pass it for commands that share a build lock or output directory (cargo's
   `target/`, one CMake build tree). Those stay one chained `label='a && b'` command.
@@ -149,15 +150,6 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
   `Docker — removed …` line says so. One still running is listed in a `NOTE` and left alone.
   `CK_QA_DOCKER=0` turns this off. `ck-qa docker-free <worktree>` (inside `ck-reclaim`)
   removes all of a parked or removed worktree's containers.
-- **A re-run checks only what is left.** Every command that ran on an unchanged tree records
-  its last run for (id, label, directory): a snapshot commit of that code state and the full
-  command. `ck-qa since <id> <label>` prints the snapshot, which is the ref a runner's
-  `--changed` flag narrows against. `ck-qa run <id> --rerun <label>='<narrowed command>'`
-  marks the command as the failed tests plus those affected since the snapshot. When it
-  passes, it stamps the label's recorded full command on the new state, so a later `--reuse`
-  of that command reports `REUSED`. It is refused when the label has no recorded run in this
-  directory. The narrowed commands per runner are in
-  [`qa-scope.md` § Re-runs after a failure](../skills/build/references/qa-scope.md#re-runs-after-a-failure--only-what-is-left).
 - **A run can outlast one Bash call.** Claude Code moves a background sub-agent's Bash call
   to the background after 180 s, whatever its `timeout` (600 s for the main agent). A serial
   e2e suite or an app build passes that cap. An agent then polls an empty output file or
@@ -187,7 +179,7 @@ ck-qa run 02-05 --parallel test='npm run test' lint='npx eslint .' types='npx ts
 | Phase | Command | Why it matters |
 |---|---|---|
 | `build` Phase 4/6 — the TDD loop | the project's `test` command | run on every RED and GREEN of each one-behaviour cycle; `rtk test` returns failures only |
-| `build` Phase 7 / `ck-code:qa-validator` | suite + lint + typecheck at the story's scope | the biggest single output in the workflow, and it repeats per QA iteration (cap 3). `ck-qa` keeps it out of RTK's reach, so its tail cap is what bounds it |
+| the background run (`build` S5, P8) | suite + lint + typecheck + build at the story's scope | the biggest single output in the workflow. `ck-qa` keeps it out of RTK's reach, so its tail cap is what bounds it |
 | `build` PARALLEL MODE | per-worktree suites | multiplied by the number of stories in the wave |
 | `ship`, `doctor --fix` | `git`, `gh` | many small calls whose boilerplate dominates their signal |
 | `fix` Phase 4 | reproduction test runs | tight loop, repeated until the bug reproduces |
@@ -218,8 +210,8 @@ for, doing nothing), or when a different tool named `rtk` shadows it on `PATH`.
   same behaviour, and only the long form is filtered.
 - **Never pipe a stack command** (`cargo test | head`, `npm run test | tail`) — the piped
   command is left unfiltered, and RTK already returns failures only. `&&` chains are fine.
-- **Never repeat a whole suite after a fix** — re-run only the failed tests plus those
-  affected since the last run, through `ck-qa run <id> --rerun`.
+- **Never run a suite in the foreground** — `ck-qa start` runs it in the background lane
+  ([qa-lane.md](qa-lane.md)).
 - **Never re-run a slow command on an unchanged tree** — capture it once to a `$TMPDIR` log
   and read slices of the log ([§ Slow commands](#slow-commands--run-once-read-the-log)). QA
   commands go through `ck-qa`, which enforces this across agents too.

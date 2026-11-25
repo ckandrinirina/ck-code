@@ -788,6 +788,8 @@ check_disk() {
   local main wts=() w kb gb
   main="$(git rev-parse --show-toplevel 2>/dev/null)"
   while IFS= read -r w; do
+    # the QA lane is ck-qa's: copy-on-write clones, freed by lane-free
+    case "$w" in */.ck-qa/lanes/*) continue ;; esac
     [ -n "$w" ] && [ "$w" != "$main" ] && [ -d "$w" ] && wts+=("$w")
   done < <(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
   if [ "${#wts[@]}" -gt 0 ]; then

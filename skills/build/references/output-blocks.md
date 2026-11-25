@@ -99,11 +99,10 @@ changed unexpectedly. Then say what and why, because that *is* actionable.
 - [x] Criterion 1 — PASS
 - [ ] Criterion 3 — FAIL: [specific reason]
 
-### Test Results
-- Total: [X]  Passing: [X]  Failing: [X]  New regressions: [X]
+### Background Run
+- [id]: RUNNING / PASS / FAIL — [labels]
 
 ### Code Quality
-- Type checking / Linting / Formatting: PASS / FAIL
 - Redundancy scan (6.1): ran — [N] collapsed / CLEAN
 - Test-prune scan (6.1): ran — [N] pruned / CLEAN
 
