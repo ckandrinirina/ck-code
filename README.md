@@ -432,7 +432,7 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **The ck look** | terminal | In a ck-code project, flat one-cell glyphs replace the default tool rows: `⌕` searches (Grep, Glob, WebSearch), `≡` reads, `✎` writes, `±` edits, `❯` shell, `⇣` fetches, `◈` agents, `✦` skills, `☐`/`▣` tasks, `⌁` MCP, each with what it is about and its state (`◌` running, `✓` done, `✗` failed). A folded run of reads and searches is one line (`✓ ≡ 3 · ⌕ 2 (ctrl+o)`); ctrl+o and `--verbose` still unfold it. The spinner and the turn's last line use workflow words (*Test-driving…*, *Shipped for 12s*). Desktop keeps its own rows. The `theme` setting turns it off |
 | **Task board** | band | A story builder's own `TaskCreate`/`TaskUpdate` list lives in its sub-agent and never reached the session's task list. The mod mirrors it: one band line per running builder, `◈ Build 03-02 ▰▰▱▱ 2/4 ▸ Running the failing test`, gone once the builder ends |
 | **Commands with no model turn** | everywhere | `/ck-status`, `/ck-next`, `/ck-progress` (`[tasks/<plan>]`), `/ck-waves <NN>`, `/ck-check` (`ck-doctor --quiet`): the script's output, printed at once — even mid-turn — at zero tokens of model output |
-| **Agents pane** | terminal, Desktop | A progress header (`2 running · 3 done ▰▰▰▰▰▰▱▱▱▱`), then a live row per ck-code agent (build · qa · merge) with its elapsed time: a turning `◐` while it runs, a green `✓` or a red `✗` once it ends. Opens by itself when two story builders run at once in the fullscreen layout on a wide terminal (≥ 144 columns), never again once you close it, and never by itself on the main screen (`/tui default`), where it would sit inline above the prompt; `/ck-agents` opens it, or prints the rows where nothing draws. A status-line entry counts running and done agents |
+| **Agents pane** | terminal, Desktop | A progress header (`2 running · 3 done ▰▰▰▰▰▰▱▱▱▱`), then a live row per ck-code agent (build · qa · merge) with its elapsed time: a turning `◐` while it runs, a green `✓` or a red `✗` once it ends, and a builder's [progress](#per-agent-progress) (`5/8 63% · +214/-18`). Opens by itself when two story builders run at once in the fullscreen layout on a wide terminal (≥ 144 columns), never again once you close it, and never by itself on the main screen (`/tui default`), where it would sit inline above the prompt; `/ck-agents` opens it, or prints the rows where nothing draws. A status-line entry counts running and done agents |
 | **Verify pane** | terminal, Desktop | `/ck-verify-pane [tasks/<plan>]`: the next three checklist items with **Pass**, **Skip**, **Steps** (shows the item's steps) and **Fail…** (fills `/ck-code:verify … failed:` so the skill takes your words and the fix hand-off). It opens with the keyboard on it: Tab walks the buttons, and **p**/**s**/**f**/**t** press the first item's Pass/Skip/Fail…/Steps, so it works with no click in `/tui default`. Records through `ck-checklist.sh`; commit with `/ck-code:verify` or `/ck-code:ship` |
 | **Profile** | everywhere | `/ck-profile`: per ck-code skill, turns, wall time, tool calls, agents dispatched, the main loop's tokens (output and cache read) and the agents' tokens, over this project's last 200 turns. `/ck-profile reset` clears it |
 | **Cost guard** | every project | Caps every model request and every subagent dispatch at `high` effort (`xhigh`/`max` become `high`); refuses a `fable` dispatch until you approve it in an `AskUserQuestion`; gives an `Explore` or `claude-code-guide` dispatch with no `model:` `haiku`, and a `general-purpose` one `sonnet`, instead of your session model. Registered agents keep their own tier. The only part active outside a ck-code project — it is a spending rule, not a workflow rule |
@@ -443,10 +443,11 @@ or `disableAllHooks`, or on an older Claude Code, every skill still does the who
 | **One command list** | everywhere | With ck-code-lite installed too, a ck-code project hides `ck-code-lite:*` from the typeahead, and a lite project hides `ck-code:*` but `migrate`, `guide` and `init`. A hidden command still runs when typed; the list follows a `migrate` or `design` that changes the project's kind |
 | **Hand-off across `/clear`** | everywhere | The last `/ck-code:*` command run before a `/clear` is given to the next conversation once, within 6 hours |
 | **Update check** | toast + band | When the marketplace serves a newer ck-code than the one loaded, one toast per new version and a band row until you update: `▸ ck-code 7.20.0 is out (you have 7.17.0) · /plugin update ck-code@ck-marketplace, then restart`. Checked at most every 6 hours (the answer is cached), never for a `--plugin-dir` checkout, and never under `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` or `CK_UPDATE_CHECK=off` |
+| **Build-run notification** | terminal, Desktop | A desktop notification when a run of two or more story builders finishes (`Build run finished — 5/8 stories done`), needs you (a failed QA, a held story, a question: `Build run needs you — 2 still in progress`) or stops on an API error. Once per run; Desktop holds it 5 s and drops it if you are back first, a terminal follows your `preferredNotifChannel`. The `notify` setting turns it off |
 | **Compact after a wave run** | everywhere | Once two or more story builders have been dispatched since the last compaction, the first turn that ends cleanly with no builder still running and no story left `in-progress` compacts the session — background builders included, whose run ends in a later turn — between turns (same as `/compact`, with a hint to keep the stories built, branches, PRs, the manual-test checklist and the next command). Skipped after an interrupt or an error, while a story is held, or once you have typed the next prompt. A toast says it happened |
 
-Seven settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
-parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, `cost_guard`, `theme`, `update_check`, all on by default. The rest costs nothing until
+Eight settings (in `/plugin` → ck-code → configure, or `pluginConfigs` in settings) turn
+parts off: `guards`, `band`, `pr_watch`, `compact_after_waves`, `notify`, `cost_guard`, `theme`, `update_check`, all on by default. The rest costs nothing until
 you use it. `--safe-mode` starts a session with no mod at all (and none of your other
 customizations).
 
@@ -516,13 +517,14 @@ report, so an idle session falls back to project-wide story counts: `ck-code 12/
 Only `awk` and `git` are required; the whole line costs ~50ms to draw, and a fan-out now adds
 nothing beyond one `git worktree list` — the per-worktree story-file reads are gone.
 
-### Per-agent rows
+### Per-agent progress
 
-`scripts/subagent-statusline.sh` ships enabled (a plugin *may* set `subagentStatusLine`)
-and renders one row per dispatched agent:
+Claude Code 2.1.323 removed the `subagentStatusLine` setting, so a builder's progress now
+shows on its row in the mod's agents pane (`/ck-agents`), read by `scripts/agent-progress.sh`
+about every 9 seconds while builders run:
 
 ```
-⚡ story-02-01 · Implement 02-01 filter service · 5/8 63% · +214/-18 · 159.5k tok
+◐ build  4m12s story-02-01 · 5/8 63% · +214/-18
 ```
 
 `5/8 63%` is that story's acceptance criteria, counted in the agent's own worktree copy of
@@ -543,8 +545,8 @@ not as a measurement.
 progress stays visible without spending output tokens or filling the context window —
 which is exactly why ck-code keeps its *printed* per-phase output to one line each.
 
-Claude Code only reads `statusLine` from user or project settings (a plugin's own
-`settings.json` may set `subagentStatusLine`, not `statusLine`), so this one is opt-in:
+Claude Code only reads `statusLine` from user or project settings, never from a plugin,
+so this one is opt-in:
 
 ```bash
 CK=$(find ~/.claude/plugins -type d -name ck-code | head -1)
@@ -718,7 +720,6 @@ ck-code/
 │   ├── hooks.json                 # SessionStart + PostToolUse(format) + the mod's module
 │   └── mod/                       # the mod: register.tsx (hooks, band, panes, commands) + logic.ts (pure rules)
 ├── types/index.d.ts               # the mod's $.state contract
-├── settings.json                  # subagent status line
 ├── CHANGELOG.md
 ├── bin/                           # added to the Bash tool's PATH while the plugin is enabled
 │   ├── ck-index                   # → scripts/ck-index.sh   (skills call the bare command)
@@ -764,7 +765,7 @@ ck-code/
 │   ├── format.sh                  # PostToolUse auto-format (config-gated)
 │   ├── no-ai-guard.sh             # PreToolUse guard: blocks AI trailers in commits/PRs
 │   ├── statusline.sh              # opt-in status bar: active story + plan counts
-│   └── subagent-statusline.sh
+│   └── agent-progress.sh          # a live builder's ticked criteria and diff, for the agents pane
 ├── skills/
 │   ├── init/                      # adopt a project: dependencies + as-built architecture
 │   ├── spec/                      # stakeholder-ready feature spec (create + adjust)
@@ -820,12 +821,14 @@ file that has drifted from it.
 > `.claude/skills/expert-*/` and `guide-*/` folders; **v4** moved story state into
 > frontmatter. The details are in `CHANGELOG.md`.
 
-- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.16.0 is built
-  and tested against Claude Code 2.1.299** (checked 2026-10-14). Its newest version-gated
+- **Claude Code** — required (CLI, IDE extension, or desktop app). **ck-code 7.34.0 is built
+  and tested against Claude Code 2.1.330** (checked 2026-11-25; its mod tests also pass on 2.1.323). Its newest version-gated
   features, and the release each first appeared in:
 
   | Feature | Used by | Claude Code |
   |---|---|---|
+  | Code Mode (`REPL` in an agent's `tools`) | `context-scout`, `researcher`, `qa-validator`, `conflict-analyzer` | 2.1.327 |
+  | `engines` in `plugin.json` | the plugin asks for Claude Code ≥ 2.1.287 | 2.1.323 |
   | Mod `turn.step` effort rewrite | the cost guard's effort cap | 2.1.299 or earlier |
   | Mods (`modules` in `hooks/hooks.json`) | the ck-code mod: prompt router, band, panes, commands, guards | 2.1.287 |
   | `omitClaudeMd` agent field | `conflict-analyzer` | 2.1.271 |
@@ -835,6 +838,11 @@ file that has drifted from it.
   | `userConfig` fixed `options` | the three model-tier settings | 2.1.271 |
   | `.worktreeinclude` (project file, optional) | `build` PARALLEL MODE worktrees | 2.1.280 or earlier |
   | `/goal` (recommended, user-typed) | `build` NEXT | 2.1.139 |
+
+  **Code Mode** (experimental, opt-in, terminal only): needs 2.1.327 with ck-code enabled, because
+  2.1.323 to 2.1.326 refuse to start Code Mode beside a mod that hooks tool calls. The guards and
+  the formatter match the usual tool names, which calls made from a script carry too. Built to
+  Claude Code's documented contract; not yet exercised in a live Code Mode build.
 
   On an older release, update with `claude update`. The Claude Code version each release was
   checked against is recorded here and in the `CHANGELOG.md` entry that raised it.
