@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.4] — 2026-11-26
+
+### Changed
+- **report hook**: reads the plugin manifest only when a Bash result looks like a crash, about 14 ms less on every Bash call in every project.
+- **team drift**: the stack fingerprint picks manifests out before its loop instead of walking every file in bash, at every session start that checks team drift. Same fingerprint; 1.2 s to 0.2 s on a 9,000-file repository.
+- **hooks**: SessionStart has a 30 s timeout and the format hook 60 s, instead of the 600 s default. The update-check timer is cancelled before being re-armed.
+- **plugin-doctor** (repo tooling): `update.tsx`, `theme.ts` and `look.tsx` must stay identical across the plugins that ship them.
+
 ## [7.35.3] — 2026-11-26
 
 ### Fixed
