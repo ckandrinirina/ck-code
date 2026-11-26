@@ -1356,6 +1356,9 @@ TS="$(mktemp -d)"
   printf '[dependencies]\naxum = "0.7"\nserde = { version = "1.0", features = ["derive"] }\n[dependencies.sqlx]\nversion = "0.8.1"\n' > svc/Cargo.toml
   printf '[project]\ndependencies = [\n  "fastapi[all]>=0.110",\n]\n' > pyproject.toml
   printf 'module x\nrequire (\n\tgithub.com/gin-gonic/gin v1.9.1\n\tgolang.org/x/net v0.20.0 // indirect\n)\n' > go.mod
+  mkdir -p api web/lib
+  printf 'pytest==7.4.0\n' > api/requirements-dev.txt
+  printf '{ "dependencies": { "left-pad": "1.3.0" } }\n' > web/lib/my-package.json
   printf '# Tech stack\n\n- React 18\n' > docs/architecture/tech-stack.md
   printf -- '---\nname: guide-react\ndescription: Use when writing React.\n---\n<!-- ck-code:team GENERATED — x -->\n' > .claude/skills/guide-react/SKILL.md
   printf -- '---\nname: guide-redux\ndescription: Use when writing Redux.\n---\n<!-- ck-code:team GENERATED — x -->\n' > .claude/skills/guide-redux/SKILL.md
@@ -1370,6 +1373,9 @@ assert_contains "ck-team stack: pyproject extras do not end the list" "$TS_STACK
 assert_contains "ck-team stack: go direct requirement" "$TS_STACK" "dep go github.com/gin-gonic/gin 1"
 assert_not_contains "ck-team stack: go indirect requirement skipped" "$TS_STACK" "golang.org/x/net"
 assert_contains "ck-team stack: a manifest's folder" "$TS_STACK" "dir web"
+assert_contains "ck-team stack: a requirements-*.txt in a subfolder" "$TS_STACK" "dep pypi pytest 7"
+assert_contains "ck-team stack: that requirements file's folder" "$TS_STACK" "dir api"
+assert_not_contains "ck-team stack: a file merely ending in package.json is no manifest" "$TS_STACK" "left-pad"
 assert_eq "ck-team drift: empty without a snapshot" "" "$(cd "$TS" && ck-team drift)"
 assert_contains "ck-doctor: owned skills with no snapshot" "$(cd "$TS" && ck-doctor 2>&1)" "no stack snapshot"
 (cd "$TS" && ck-team snapshot)

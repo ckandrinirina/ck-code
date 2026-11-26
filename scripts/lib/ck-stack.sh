@@ -22,7 +22,10 @@ ck_stack() {
     | grep -Ev '(^|/)(node_modules|vendor|third_party|\.venv|venv|target|dist|build)/' )"
   {
     printf '%s\n' "$files" | awk -F/ 'NF>1 && $1 !~ /^\./ && $1 != "docs" && $1 != "tasks" { print "dir " $1 }'
-    printf '%s\n' "$files" | while IFS= read -r f; do
+    # the loop only ever acts on manifests: filter first, so a large tree is not walked in bash
+    printf '%s\n' "$files" \
+      | grep -E '(^|/)(package\.json|composer\.json|Cargo\.toml|pyproject\.toml|requirements[^/]*\.txt|go\.mod|pubspec\.yaml|Gemfile)$' \
+      | while IFS= read -r f; do
       case "${f##*/}" in
         package.json) eco=npm ;;
         composer.json) eco=composer ;;
