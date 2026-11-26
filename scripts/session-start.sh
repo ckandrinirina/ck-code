@@ -11,8 +11,9 @@
 #   (5) Keep the committed ".claude/ck-code-required.sh" guard current, so a clone
 #       of this repo on a machine with no ck-code is told to install it first.
 #
-# Writes nothing tracked by git: the stamp is never rewritten here, and the views sit
-# behind tasks/.gitignore. A session start never leaves the tree dirty.
+# The stamp is never rewritten here, and the views sit behind tasks/.gitignore. The one
+# tracked write is (5): a missing or outdated guard is installed (.claude/ck-code-required.sh
+# and its .claude/settings.json entry) and the notice tells the user to commit both.
 #
 # Best-effort by design: this must NEVER fail or block session startup, so it
 # avoids `set -e` and swallows every probe error. Output is a single JSON line.
