@@ -985,6 +985,17 @@ rm -rf "${LN_L:?}.lock"; LQ wait F2 --end >/dev/null
 assert_contains "lane-free: removes the lane" "$(LQ lane-free)" "lane freed"
 assert_eq "lane-free: leaves no worktree behind" "1" "$(git -C "$LN/repo" worktree list | wc -l | tr -d ' ')"
 assert_contains "lane-free: nothing left" "$(LQ lane-free)" "no lane"
+# the Claude Code sandbox: nohup cannot detach, setpriority is refused, and a background process
+# dies with the Bash call that started it, so runs stay in the foreground there
+SB="$LN/sandbox-bin"; mkdir -p "$SB"
+printf '#!/bin/sh\necho "nohup: cannot detach from console" >&2; exit 127\n' >"$SB/nohup"
+printf '#!/bin/sh\necho "nice: setpriority: Operation not permitted" >&2; exit 1\n' >"$SB/nice"
+chmod +x "$SB/nohup" "$SB/nice"
+SBQ() { ( cd "$LN/repo" && PATH="$SB:$PATH" SANDBOX_RUNTIME=1 CK_QA_WAIT=0 TMPDIR="$LN/tmp" CK_QA_LANE_DIR="$LN/lanes" CK_QA_DOCKER=0 ck-qa "$@" 2>&1 ); }
+assert_contains "sandbox run: waits in the foreground for its result" "$(SBQ run S-01 test='sleep 1; true')" "ck-qa: PASS"
+assert_contains "sandbox start: runs in the foreground" "$(SBQ start S-02 test='true')" "FINISHED — S-02"
+assert_contains "sandbox start: its result is there at once" "$(SBQ wait S-02 --end)" "ck-qa: PASS"
+assert_eq "sandbox start: in the checkout, no lane worktree" "1" "$(git -C "$LN/repo" worktree list | wc -l | tr -d ' ')"
 rm -rf "${LN:?}"
 
 echo

@@ -47,6 +47,8 @@ cd <component> && ck-qa wait <id> --end      # Bash run_in_background: true — 
   failure, the newer run covers it.
 - `STARTED … leave it alone` (the lane is `off` here): do not edit this checkout until the run
   ends.
+- `FINISHED … in the foreground` (Claude Code sandbox, where a background run dies with its
+  Bash call): the run already ended in this checkout; `wait --end` returns at once.
 - `ck-qa start` refused (no git, no commit) → `ck-qa run` with the same labels, in the
   foreground, and say so.
 
