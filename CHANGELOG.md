@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.1] — 2026-11-26
+
+### Changed
+- **ship**: once a PR is opened or updated, the summary points at Claude Code's built-in `/steward`, which fixes failing CI, conflicts and review comments until the PR is merged, and never merges. It never suggests the built-in `/ship`, which would commit the files `ship` left out without asking. `references/native-commands.md` explains the pairing.
+
 ## [7.35.0] — 2026-11-25
 
 ### Added
