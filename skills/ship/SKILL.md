@@ -556,6 +556,10 @@ Story (status + delivery/path), QA gate (GREEN / NONE, and any WAIVED or BASELIN
 yet on `<trunk>`" — so "done" is never mistaken for "shipped"; it turns to `merged` on the
 first reconcile after the PR lands. Worked shape: [examples.md](references/examples.md).
 
+- A PR was opened or updated → one line: `Watch it: type /steward — it fixes CI, conflicts and
+  review comments until merge, never merges (desktop app: the PR's Auto-fix)`. Never suggest
+  `/ship`, which re-commits the Excluded files unasked
+  ([native-commands.md](../../references/native-commands.md#steward--watch-the-pr-ship-opened-cc--21330-terminal)).
 - More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.
 - Epic complete → note the epic issue can be closed manually or auto-closes once all its
   checkboxes are checked.

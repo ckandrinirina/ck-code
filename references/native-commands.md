@@ -53,6 +53,19 @@ last one you typed, so you set it once per session.
 `--fix` applies the findings to the working tree; `--comment` posts them as inline PR comments.
 It is user-triggered — a ck-code skill cannot launch it for you.
 
+## `/steward` — watch the PR `ship` opened (CC ≥ 2.1.330, terminal)
+
+`ship` stops once the PR is open. `/steward` takes over from there: in this session it fixes
+failing checks, merges the base branch on a conflict and answers review comments, pushing each
+fix, until the PR is merged or closed. It never merges. Type it after `ship` reports a PR. It
+starts only from a line you type, never from a skill. In the desktop app, turn on the PR's
+**Auto-fix** instead.
+
+Reach for `/steward`, never the built-in `/ship`, after `ship`. `/ship` commits *every*
+uncommitted file with no confirmation, including what `ship` listed as Excluded, and runs a
+second review the QA gate already covered. Its fix commits carry no AI attribution here: the
+mod drops the engine's attribution text in a ck-code project.
+
 ## `/simplify` — the redundancy pass, applied
 
 `/simplify` reviews the changed code for reuse, simplification, efficiency and altitude, then
