@@ -557,7 +557,7 @@ yet on `<trunk>`" — so "done" is never mistaken for "shipped"; it turns to `me
 first reconcile after the PR lands. Worked shape: [examples.md](references/examples.md).
 
 - A PR was opened or updated → one line: `Watch it: type /steward — it fixes CI, conflicts and
-  review comments until merge, never merges (desktop app: the PR's Auto-fix)`. Never suggest
+  review comments until you merge; keep GitHub auto-merge off (desktop app: the PR's Auto-fix)`. Never suggest
   `/ship`, which re-commits the Excluded files unasked
   ([native-commands.md](../../references/native-commands.md#steward--watch-the-pr-ship-opened-cc--21330-terminal)).
 - More stories remain → suggest `/ck-code:track next` then `/ck-code:build`.

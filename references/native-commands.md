@@ -57,7 +57,8 @@ It is user-triggered — a ck-code skill cannot launch it for you.
 
 `ship` stops once the PR is open. `/steward` takes over from there: in this session it fixes
 failing checks, merges the base branch on a conflict and answers review comments, pushing each
-fix, until the PR is merged or closed. It never merges. Type it after `ship` reports a PR. It
+fix, until the PR is merged or closed. It never merges, but GitHub auto-merge would merge the PR the moment the watch turns it green, so
+**keep auto-merge off**: every merge stays the person's decision. Type it after `ship` reports a PR. It
 starts only from a line you type, never from a skill. In the desktop app, turn on the PR's
 **Auto-fix** instead.
 
