@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.3] — 2026-11-26
+
+### Fixed
+- **ck-qa**: runs work under the Claude Code sandbox. There `nohup` cannot detach (exit 127), a background process is killed when its Bash call ends, and `setpriority` is refused, so every `run` died without a result and the build stopped. Workers now ignore SIGHUP themselves instead of using `nohup`. When `SANDBOX_RUNTIME=1` (or `CK_QA_FOREGROUND=1`), `run` and `start` stay in the foreground and print their result, and the lane runs in the caller's checkout because the sandbox refuses `.git/worktrees`. The smoke suite simulates the sandbox.
+
 ## [7.35.2] — 2026-11-26
 
 ### Changed
