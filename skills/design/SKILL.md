@@ -1,9 +1,9 @@
 ---
 name: design
 description: Use when turning a project spec or feature description into feature-scoped architecture docs under docs/architecture/, when an existing website, app or CLI should be copied (`replicate <source>`), or when maintaining those docs — `optimize` (dedup into _shared.md), `sync` (scaffold missing feature docs), or `ds [link]` (link or refresh a Claude Design project or Figma file, create one in Figma, preview it). Argument is a spec path, or `replicate`/`optimize`/`sync`/`ds`. Runs before `plan`.
-argument-hint: "[path-to-spec | replicate <url|app|cli cmd|path> | optimize | sync | ds [claude.ai/design or figma.com URL | figma | preview]]"
+argument-hint: "[path-to-spec | replicate <url|app|cli cmd|path> | optimize | sync | ds [claude.ai/design, claude.ai/artifact or figma.com URL | figma | preview]]"
 effort: high
-allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) Bash(pbcopy*) Bash(wl-copy*) Bash(xclip*) Bash(ck-replicate*) DesignSync Skill
+allowed-tools: Bash(ck-bootstrap*) Bash(ck-index*) Bash(awk*) Bash(git ls-files*) Bash(git status*) Bash(git mv*) Bash(mkdir*) Bash(cp*) Bash(date*) Bash(shasum*) Bash(find*) Bash(grep*) Bash(ls*) Bash(sort*) Bash(xargs*) Bash(pbcopy*) Bash(wl-copy*) Bash(xclip*) Bash(ck-replicate*) DesignSync Artifact Skill
 ---
 
 # Design — Architecture Documenter & Maintainer
@@ -562,6 +562,7 @@ never runs this is unaffected by it.
 its rules here; run them.
 
 Everything after `ds` in `$ARGUMENTS` is the **link** — a `claude.ai/design` URL, a
+`claude.ai/artifact/…` or `claude.ai/code/artifact/…` URL (a design moved to claude.ai), a
 `figma.com` URL, a bare project uuid, or a project name. Empty means "pick from a list" or
 "refresh". Two words are sub-modes instead:
 
@@ -581,7 +582,14 @@ another source pairs or replaces as in step 2 — then steps 3–5 below. No `De
 so step 1 is skipped; a cache that is already Figma refreshes by re-running its import with
 `figmaSource`. The report adds the tier and names every frame whose rebuild matched under 98 %.
 
-1. **Tool check.** If the `DesignSync` tool is unavailable in this session, print the one
+**A claude.ai artifact link** (checked before any uuid in it) →
+[§ Link from an artifact](../../references/design-system.md#link-from-an-artifact) —
+`mkdir -p docs/architecture/design-system/cards` first, pairing or replacing as in step 2 — then
+steps 3–5. It needs `Artifact`, not `DesignSync`, so step 1 is skipped; a cache whose manifest
+has `artifactUrl` refreshes from that artifact by § Freshness protocol, never `DesignSync`.
+
+1. **Tool check** (skipped when the cached `manifest.json` has `artifactUrl` — that refresh
+   needs `Artifact`). If the `DesignSync` tool is unavailable in this session, print the one
    line from [§ When DesignSync is unavailable](../../references/design-system.md#when-designsync-is-unavailable)
    and STOP cleanly. Never error.
 2. **Branch on `docs/architecture/design-system/`:**

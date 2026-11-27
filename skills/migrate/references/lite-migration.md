@@ -206,7 +206,7 @@ Every target file comes from
 
 | lite path | v7 destination |
 |---|---|
-| `docs/design-system/` (`index.md`, `manifest.json`, `cards/`) | `git mv` to `docs/architecture/design-system/` — the cache format is identical by contract ([`design-system.md`](../../../references/design-system.md) § Cache layout), with one edit: `index.md`'s `## Off-ramp` is rewritten (see below). `manifest.json` `tokensPath` already names the repo-relative token file, so it carries over as-is |
+| `docs/design-system/` (`index.md`, `manifest.json`, `cards/`) | `git mv` to `docs/architecture/design-system/` — the cache format is identical by contract ([`design-system.md`](../../../references/design-system.md) § Cache layout), with one edit: `index.md`'s `## Off-ramp` is rewritten (see below). `manifest.json` `tokensPath` already names the repo-relative token file, so it carries over as-is, and so does `artifactUrl` (a design linked from a claude.ai artifact) — ck-code refreshes such a cache from the artifact by the same key |
 | `docs/design-brief.md` | stays where it is. With no `docs/architecture/design-system/`, it is ck-code's no-spec pending marker ([§ Pending link](../../../references/design-system.md#pending-link)) |
 | `docs/replica/<slug>/` (ck-code-lite 1.11.0+) | stays where it is — ck-code reads the same path and pack ([`replicate.md`](../../../references/replicate.md) § Pack layout). Its `.gitignore` lines carry over. Task criteria citing `S-NN` move verbatim into story criteria, which is how ck-code finds the pack; the `- Replica:` line under lite's `## Design` is not copied |
 
