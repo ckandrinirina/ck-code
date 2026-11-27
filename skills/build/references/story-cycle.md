@@ -9,8 +9,8 @@ orchestrator's gates.
 
 ## Placement — delegated
 
-The dispatch prompt begins `MODE: delegated` and names the story path, the `Base SHA` and, on
-a solo dispatch, the branch. The run is already on the branch it must work on. Fan-out puts
+The dispatch prompt begins `MODE: delegated` and names the placement (`worktree`, or
+`solo on <branch>`), the story path and the `Base SHA`. The run is already on the branch it must work on. Fan-out puts
 it in its own harness-created worktree. A solo wave or a single-story dispatch puts it on the
 branch the orchestrator checked out in the main checkout, and the prompt asks for the branch
 guard first. The branch is not this run's to choose, and there is no user to ask.

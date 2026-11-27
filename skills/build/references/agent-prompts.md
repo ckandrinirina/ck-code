@@ -33,91 +33,60 @@ Dispatched with `isolation: "worktree"` (the harness creates and places the work
 the agent never runs `git worktree add`, `checkout -b`, `rebase`, or `reset`).
 
 ```
-subagent_type: ck-code:story-implementer   # falls back to general-purpose
+subagent_type: ck-code:story-implementer   # unregistered → general-purpose + the Instructions line
 name: story-EE-SS                            # stable — P5 resumes it via SendMessage
 model: sonnet                                # literal alias only — see the tier map below
 isolation: worktree
 description: "Implement story EE-SS: <title>"
 prompt: |
   MODE: delegated
-
-  You are implementing story EE-SS in an isolated worktree the harness created for you.
-
+  Placement: worktree
   Story file: <repo-relative story path from the index File column>
   Base SHA: <git rev-parse "$TARGET" after the P4 wave-start commit>
   Cycle: <absolute path of references/story-cycle.md — this skill's base directory + /references/story-cycle.md>
   Settled: <the P3/S2 answers and `--auto` assumptions for this story, or "nothing">
   Main checkout: <$ROOT — the absolute toplevel P1 recorded>
-
-  Your task:
-  0. Repo with a `.gitmodules` → `ck-worktree submodules <Main checkout>` once, before any
-     build: a fresh worktree's submodules are empty, and it clones each against the main
-     checkout's copy instead of N agents cloning from the network at once.
-  1. `Read` the Cycle file once and follow it from "Placement — delegated" to "RETURN".
-     It owns TDD, SOLID, the scans, the own check and committing. Never run the suite or the
-     build: they run in the background after you return. Never load the ck-code:build skill.
-  2. **Commit after every TDD cycle / phase** so an early stop still leaves resumable,
-     committed work.
-  3. At done (8.6), record what you actually touched in your own story, then commit
-     the story file with your last cycle:
-       ck-story files <story path> $(git diff --name-only <Base SHA>...HEAD -- . ':!tasks')
-
-  Constraints:
-  - Edit only files relevant to this story, and only this story's own frontmatter (status
-    via `ck-story set … --no-sync`, files via `ck-story files`). Do NOT edit or commit the
-    generated views (STORIES_INDEX.md, EPICS_INDEX.md) and do NOT run ck-index — they are
-    gitignored, and the orchestrator regenerates them once after merge.
-
-  Return the structured object {status, branch, commits, remaining, criteria_met}. Read
-  `branch` from `git branch --show-current`. Report `status: done` only if build finished
-  with every criterion checked and the own check green.
 ```
+
+That is the whole prompt. Everything the agent does with it — the submodule fill, the cycle,
+committing every cycle, recording `files:` at 8.6, its frontmatter-only writes, never running
+the suite, the return object — is in its definition (`agents/story-implementer.md`). Never
+restate those steps or constraints here: each restatement costs about a thousand output tokens
+per story and stays in this context for the rest of the run.
+
+**Unregistered agent type** → `subagent_type: general-purpose` and one more line after
+`MODE: delegated`: `Instructions: <absolute path of ck-code/agents/story-implementer.md> — read
+it first and follow it as your own definition.` (this skill's base directory +
+`/../../agents/story-implementer.md`).
 
 ## Per-story implementer, solo (P4, wave of exactly 1)
 
-The dispatch above, with three deltas — everything else (subagent_type, stable name, model
-tiering, `MODE: delegated`, `Cycle:` and `Settled:` lines, task steps, constraints, return object) is identical:
+The dispatch above with two deltas — everything else is identical:
 
 1. **Drop `isolation`.** The agent runs in the main checkout on the branch the orchestrator
    already checked out (`$WORKBRANCH`).
-2. **Replace the opening line** with:
-   `You are implementing story EE-SS in the main checkout, already on branch <$WORKBRANCH>.`
-   `You are the only agent running — no worktree, no peer, nothing to isolate from.`
-3. **Insert the branch guard** directly after the `Base SHA:` line (on a solo dispatch that SHA is the P4 base SHA — the same commit):
-
-```
-  Branch guard — before your first edit, run `git rev-parse --abbrev-ref HEAD` and confirm
-  it prints <$WORKBRANCH>. If it does not, stop and return status "blocked" with the branch
-  you found; do not implement. Never run `git checkout -b`, `git switch -c`, `git rebase`,
-  `git reset`, or any `git worktree` command — the branch is the orchestrator's to choose.
-  Leave the tree clean when you return; uncommitted work fails the integrity gate.
-```
-
-The guard replaces the worktree. With no harness-owned worktree holding the agent in place,
-this instruction is the only thing keeping it off another branch — never dispatch solo
-without it.
+2. **`Placement: solo on <$WORKBRANCH>`** in place of `Placement: worktree`. The agent's
+   definition turns that line into the branch guard: it checks `git rev-parse --abbrev-ref
+   HEAD` before its first edit, returns `blocked` on any other branch, and never runs
+   `checkout -b`, `switch -c`, `rebase`, `reset` or a `git worktree` command. Never dispatch
+   solo without the line: with no worktree holding the agent in place, it is the only thing
+   keeping it off another branch.
 
 ## Single-story dispatch
 
 `build` SINGLE-STORY DISPATCH (S4) sends the **solo** dispatch above, with these deltas — the
 return object and the resume below are unchanged:
 
-1. **Branch.** `<$WORKBRANCH>` is the story's own `story/…` or `fix/…` branch from S3, not an
-   epic `$TARGET`; `Base SHA:` is the S3 `git rev-parse HEAD`. The branch guard is the same.
-2. **Replace the opening line** with:
-   `You are implementing story EE-SS in the main checkout, already on branch <branch>.`
-   `You are the only agent running. Your orchestrator owns QA sign-off, the manual test and shipping.`
-3. **Put the S2 answers in `Settled:`** — each acceptance criterion the user clarified and their
+1. **Branch.** `Placement: solo on <branch>` names the story's own `story/…` or `fix/…` branch
+   from S3, not an epic `$TARGET`; `Base SHA:` is the S3 `git rev-parse HEAD`.
+2. **Put the S2 answers in `Settled:`** — each acceptance criterion the user clarified and their
    reading of it (or the `--auto` assumption). The agent cannot ask; this is all it gets.
-4. **Add the route and any foreground hits** after `Settled:`:
+3. **Add the route and any foreground hits** after `Settled:`:
    `Route: QUICK` (or `LEAN`/`FULL`, the route S2 announced), then one
-   `Background: FOREGROUND <file>:<line> <kind> — <text>` line per S1 `ck-headless` hit. With
-   hits, add: `Convert each Background hit first, per <absolute path of
-   ../../references/background-tests.md>, and commit it as its own commit before RED.`
-5. **Add one `Heavy: <suite> — <globs>` line per suite** S1's `ck-heavy list` printed, then
-   `Never run a heavy file you did not write or edit; mark yours — <absolute path of
-   ../../references/heavy-tests.md> § In the build.` A fan-out or solo wave dispatch carries the
-   same lines.
+   `Background: FOREGROUND <file>:<line> <kind> — <text>` line per S1 `ck-headless` hit (the
+   cycle converts each before RED, per its `Background:` row).
+4. **Add one `Heavy: <suite> — <globs>` line per suite** S1's `ck-heavy list` printed. A
+   fan-out or solo wave dispatch carries the same lines.
 
 A review finding, a red background run or a manual-test report goes back to the **same agent** by `SendMessage`, worded
 like the resume below with the findings, the failing labels with their excerpt and log path, or the user's report in place of
@@ -216,11 +185,13 @@ prompt: |
   the redundancy/code-craft/test-prune spot-check, architecture compliance, and the design and
   replica fidelity sections when they apply.
 
-  Return, in this order:
-    - one line per acceptance criterion: PASS | FAIL | NOT-COVERED, with file:line
-    - the Issues Found rows (severity, description, file:line), or "none"
-    - exactly one final line:  QA: PASS   or   QA: FAIL — <finding> — <file:line>
+  Reply with only what needs work: each FAIL or NOT-COVERED criterion with file:line, the
+  Issues Found rows (severity, description, file:line), then exactly one final line:
+  QA: PASS   or   QA: FAIL — <finding> — <file:line>. A clean review is the one line QA: PASS.
 ```
+
+The reviewer judges every criterion but lists only the failing ones: a passing line would sit in
+this context for the rest of the run and change nothing.
 
 `QA: FAIL` is a **NEEDS FIXES** verdict: `SendMessage` the findings to the story's builder at
 once, without waiting for the background run, then the integrity gate, a new `ck-qa start` on the

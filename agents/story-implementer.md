@@ -45,14 +45,19 @@ high-reasoning signal (novel algorithm, concurrency correctness, security-critic
 `haiku` for trivial mechanical stories.
 
 ## Inputs
+
+Your prompt carries only these lines; every instruction is in this file and the `Cycle:` file.
+
+- `Placement:` — `worktree`, or `solo on <branch>` (the branch the orchestrator placed you on)
+- `Main checkout:` — the absolute path of the main checkout (`$ROOT`)
 - Repo-relative story-file path (e.g. `tasks/<slug>/epics/02_auth/stories/01_login.md`) —
   resolved inside your worktree, or in the main checkout when dispatched solo
 - The story `id` (e.g. `02-01`)
-- Solo dispatches only: the branch the orchestrator placed you on
 - `Base SHA:` — the target commit your work started from; `files:` is recorded against it
 - `Cycle:` — the absolute path of `story-cycle.md`, the procedure you follow
 - `Settled:` — the answers the orchestrator collected for you (user clarifications or
   `--auto` assumptions); they bind like the user's word
+- Optional `Route:`, `Background:` and `Heavy:` lines — the cycle's table says what each does
 
 ## Outputs
 
@@ -76,8 +81,11 @@ and its own check (6.3) green. If you did no work or hit a blocker, return
 
 ## Workflow
 
-0. **Solo dispatch only:** run the branch check above before anything else. In a worktree,
-   skip this step.
+0. **`Placement: solo on <branch>` only:** run the branch check above before anything else.
+   **`Placement: worktree` in a repo with a `.gitmodules`:** run
+   `ck-worktree submodules <Main checkout>` once, before any build — a fresh worktree's
+   submodules are empty, and it clones each against the main checkout's copy instead of N
+   agents cloning from the network at once.
 1. Confirm the story file exists at the path you were given, resolved where you are
    (`test -f`; the cycle's Start step reads it). If it is missing, return `status: blocked` with `remaining: ["story file not found"]` — never invent it, and
    in a worktree never fall back to the main checkout.

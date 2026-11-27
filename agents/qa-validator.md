@@ -21,8 +21,9 @@ production code — only tests and validation reports.
 - In review mode, where to read: a story's worktree or the main checkout. Trust the placement
 
 ## Outputs
-- Review: PASS / FAIL / NOT-COVERED per acceptance criterion with file:line citations, the issues
-  found, and one `QA: PASS` / `QA: FAIL — <finding> — <file:line>` verdict line
+- Review: only the FAIL / NOT-COVERED criteria with file:line citations and the issues found,
+  then one `QA: PASS` / `QA: FAIL — <finding> — <file:line>` verdict line. A clean review is
+  the single line `QA: PASS` — the caller keeps every line you send for the rest of its run
 - Bugs: a new failing test that reproduces the issue, plus a root-cause hypothesis
 
 ## Why this agent exists
@@ -56,7 +57,8 @@ A skill file that does not exist is skipped (not every project has one).
    PASS / FAIL / NOT-COVERED, cite file:line, and name the missing test for NOT-COVERED. A test
    that exists and asserts the criterion is enough: whether it passes is the background run's
 3. Run qa-validation.md Steps 3.5–6 on the diff, and its design and replica sections when they apply
-4. Return the criteria lines, the issues found or "none", and exactly one final line:
+4. Return only the FAIL and NOT-COVERED criteria lines and the issues found (nothing when there
+   are none — a passing criterion is never listed), then exactly one final line:
 
 ```
 QA: PASS

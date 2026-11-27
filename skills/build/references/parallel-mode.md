@@ -387,8 +387,8 @@ checkout and its commits are already where they need to be.
    the prompt's `Base SHA:` line the agent records `files:` against.
 3. **Announce**: `Solo: 1 story → dispatching 1 agent on <$WORKBRANCH> (no worktree).`
 4. **Dispatch one `Agent`** — same `subagent_type`, same stable `story-EE-SS` name, same
-   model tiering, same `MODE: delegated` prompt, but **no `isolation` field** and the extra
-   branch guard from [agent-prompts.md](agent-prompts.md) § solo: the agent verifies
+   model tiering, same `MODE: delegated` prompt, but **no `isolation` field** and
+   `Placement: solo on <$WORKBRANCH>` ([agent-prompts.md](agent-prompts.md) § solo): the agent verifies
    `git rev-parse --abbrev-ref HEAD` is `$WORKBRANCH` before its first edit and never runs
    `checkout -b`, `switch -c`, `rebase`, `reset`, or `worktree`.
 
