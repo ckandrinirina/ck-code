@@ -4,7 +4,7 @@
     "name": "ckandrinirina",
     "email": "ckandrinirina@gmail.com"
   },
-  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides), ck-code-lite (the same workflow trimmed to four skills and two files) and ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers — and a band with your 5-hour and weekly plan limits and pace).",
+  "description": "ckandrinirina's Claude Code marketplace: ck-code (spec-driven design → plan → build → ship workflow with per-project experts and tech guides), ck-code-lite (the same workflow trimmed to four skills and two files), ck-tools (repo-level utility skills — dependency upgrades, releases, issue/PR helpers — and a band with your 5-hour and weekly plan limits and pace) and ck-oneshot (build a whole new project in one run from its documents, then hand it over to ck-code-lite).",
   "plugins": [
     {
       "name": "ck-code",
@@ -16,7 +16,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-code-lite",
-        "ref": "v1.26.4"
+        "ref": "v1.27.0"
       },
       "description": "Minimal four-skill workflow: start (architecture + flat plan), build (failing test first, isolated QA, manual sign-off), ship (commit + PR), design (optional Claude Design hand-off). The ck-code guarantees without the ceremony. An alternative to ck-code, not a companion."
     },
@@ -28,6 +28,15 @@
         "ref": "v2.11.0"
       },
       "description": "Utility toolkit plugin: dependency upgrades, audits, snapshots, and other repo-level chores, plus a band above the prompt with your 5-hour and weekly plan limits and pace. Coexists with ck-code."
+    },
+    {
+      "name": "ck-oneshot",
+      "source": {
+        "source": "github",
+        "repo": "ckandrinirina/ck-oneshot",
+        "ref": "v1.0.0"
+      },
+      "description": "One-shot project builder: reads a spec, PRD, architecture or idea, asks once, builds the whole project in waves of subagents with a model per unit, verifies install, typecheck, build, lint and boot, then hands over in ck-code-lite's layout for adjustments."
     }
   ]
 }
