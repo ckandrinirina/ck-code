@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.7] — 2026-11-27
+
+### Fixed
+- **ck-qa**: under the Claude Code sandbox (runs in the main checkout), an untracked or uncommitted `docs/` file or Markdown file made a run fail with `FAIL — setup: the checkout is not at this commit any more`. The comparison now ignores what the gate never counts as code (`tasks/`, `docs/`, Markdown), the same as ck-code-lite 1.27.3; the shared lane block stays byte-identical.
+
 ## [7.35.6] — 2026-11-27
 
 ### Changed
