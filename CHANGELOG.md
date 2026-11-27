@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.6] — 2026-11-27
+
+### Changed
+- **build**: a story dispatch is now the story's details only (placement, story file, base SHA, cycle path, settled answers, main checkout), about a hundred tokens instead of about 1.2K of instructions repeated on every story. The steps and constraints already live in `story-implementer`, which gains the worktree submodule fill and the `Placement:` line that drives its branch guard. An unregistered agent type falls back to `general-purpose` told to read the agent file.
+- **qa-validator** (review mode): replies with only the FAIL and NOT-COVERED criteria and the issues found, and a clean review is the single line `QA: PASS`. Passing lines no longer sit in the orchestrator's context for the rest of the run.
+- Verified live on the playground epic: 3 stories built, story prompts 482–744 characters (about 4,800 before), clean reviews returned as `QA: PASS` alone, and failing reviews listed only their findings.
+
 ## [7.35.5] — 2026-11-27
 
 ### Changed
