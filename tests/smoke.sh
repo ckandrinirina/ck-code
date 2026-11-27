@@ -996,6 +996,14 @@ assert_contains "sandbox run: waits in the foreground for its result" "$(SBQ run
 assert_contains "sandbox start: runs in the foreground" "$(SBQ start S-02 test='true')" "FINISHED — S-02"
 assert_contains "sandbox start: its result is there at once" "$(SBQ wait S-02 --end)" "ck-qa: PASS"
 assert_eq "sandbox start: in the checkout, no lane worktree" "1" "$(git -C "$LN/repo" worktree list | wc -l | tr -d ' ')"
+# an uncommitted plan or doc is not code, as for the gate
+mkdir -p "$LN/repo/docs" && echo arch >"$LN/repo/docs/notes.txt" && echo notes >"$LN/repo/NOTES.md"
+SBQ start S-03 test='true' >/dev/null
+assert_contains "sandbox start: untracked docs and .md files are not a moved checkout" "$(SBQ wait S-03 --end)" "ck-qa: PASS"
+mkdir -p "$LN/repo/src" && echo code >"$LN/repo/src/new.ts"
+SBQ start S-04 test='true' >/dev/null
+assert_contains "sandbox start: an untracked code file still is" "$(SBQ wait S-04 --end)" "setup"
+rm -f "$LN/repo/src/new.ts"
 rm -rf "${LN:?}"
 
 echo
