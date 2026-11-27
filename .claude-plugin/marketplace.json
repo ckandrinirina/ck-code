@@ -34,7 +34,7 @@
       "source": {
         "source": "github",
         "repo": "ckandrinirina/ck-oneshot",
-        "ref": "v1.3.0"
+        "ref": "v1.4.0"
       },
       "description": "One-shot project builder: reads a spec, PRD, architecture or idea, asks once, builds the whole project in waves of subagents with a model per unit, verifies install, typecheck, build, lint and boot, then hands over in ck-code-lite's layout for adjustments. Also fixes a batch of issues in an existing project the same way."
     }
