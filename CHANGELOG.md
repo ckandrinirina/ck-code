@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [Semantic Vers
 
 ## [Unreleased]
 
+## [7.35.5] — 2026-11-27
+
+### Changed
+- **design ds**: links a Claude Design project that moved to claude.ai as a Migrated Design artifact (`claude.ai/artifact/<id>`, `claude.ai/code/artifact/<uuid>`) — read through the `Artifact` tool (`project/compat.json`, then every `project/*` file in one read), never `DesignSync`; the manifest records `artifactUrl` and a refresh re-reads the artifact and compares sha256. Pull-only. Same cache format and manifest key as ck-code-lite 1.27.1 and ck-oneshot 1.2.1, so `migrate`'s lite mapping carries `artifactUrl` over unchanged.
+
 ## [7.35.4] — 2026-11-26
 
 ### Changed
